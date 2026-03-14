@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "iQ9dDXoazbnclm-OPfs0m"
+uri = "file://apatris-dashboard-source.tar.gz"
+type = "unspecified"
+title = "Apatris Dashboard — Full Source Code"
