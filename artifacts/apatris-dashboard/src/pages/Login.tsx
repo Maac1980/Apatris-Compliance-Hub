@@ -46,25 +46,25 @@ export default function Login() {
       <div className="w-full max-w-md z-10 p-8 animate-fadeIn">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-2 shield-pulse" style={{
-            width: 220,
-            height: 150,
+            width: 200,
+            height: 115,
             overflow: "hidden",
             position: "relative",
-            WebkitMaskImage: "radial-gradient(ellipse 80% 90% at 50% 55%, black 55%, transparent 85%)",
-            maskImage: "radial-gradient(ellipse 80% 90% at 50% 55%, black 55%, transparent 85%)",
+            WebkitMaskImage: "radial-gradient(ellipse 75% 85% at 50% 45%, black 50%, transparent 80%)",
+            maskImage: "radial-gradient(ellipse 75% 85% at 50% 45%, black 50%, transparent 80%)",
           }}>
             <img
               src={`${import.meta.env.BASE_URL}images/logo_backup.png`}
               alt="Apatris Logo"
               style={{
-                width: 220,
-                height: 280,
+                width: 200,
+                height: 200,
                 objectFit: "cover",
-                objectPosition: "50% 12%",
+                objectPosition: "50% 5%",
                 mixBlendMode: "screen",
-                filter: "contrast(3) brightness(1.3)",
+                filter: "contrast(4) brightness(1.4)",
                 position: "absolute",
-                top: -15,
+                top: 0,
                 left: 0,
               }}
             />
