@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { useGetWorker } from "@workspace/api-client-react";
 import { StatusBadge } from "./ui/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 interface WorkerProfilePanelProps {
   workerId: string | null;
@@ -73,13 +74,13 @@ export function WorkerProfilePanel({
   onRenew,
   onNotify,
 }: WorkerProfilePanelProps) {
+  const { t } = useTranslation();
   const { data: worker, isLoading } = useGetWorker(workerId || "", {
     query: { enabled: !!workerId },
   });
 
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -92,7 +93,6 @@ export function WorkerProfilePanel({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         className={`fixed inset-0 bg-background/70 backdrop-blur-sm z-40 transition-opacity duration-300 ${
@@ -100,7 +100,6 @@ export function WorkerProfilePanel({
         }`}
       />
 
-      {/* Side Panel */}
       <div
         ref={panelRef}
         className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-white/10 shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-out ${
@@ -113,7 +112,6 @@ export function WorkerProfilePanel({
           </div>
         ) : (
           <div className="flex flex-col h-full">
-            {/* Header */}
             <div className="p-6 border-b border-white/5 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4">
                 <button
@@ -142,35 +140,32 @@ export function WorkerProfilePanel({
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-6 space-y-8 flex-1">
-              {/* Contact Info */}
               <div className="grid grid-cols-1 gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
                 <div className="flex items-center gap-3 text-sm">
                   <Mail className="w-4 h-4 text-primary flex-shrink-0" />
                   <span className="text-muted-foreground font-mono">
-                    {worker.email || "No email provided"}
+                    {worker.email || t("panel.noEmail")}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="w-4 h-4 text-primary flex-shrink-0" />
                   <span className="text-muted-foreground font-mono">
-                    {worker.phone || "No phone provided"}
+                    {worker.phone || t("panel.noPhone")}
                   </span>
                 </div>
               </div>
 
-              {/* Document Status */}
               <div>
                 <h3 className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-4">
-                  Compliance Timeline
+                  {t("panel.complianceTimeline")}
                 </h3>
                 <div className="space-y-3">
-                  <DocRow label="TRC Expiry" date={worker.trcExpiry} />
-                  <DocRow label="Work Permit Expiry" date={worker.workPermitExpiry} />
-                  <DocRow label="Contract End Date" date={worker.contractEndDate} />
+                  <DocRow label={t("panel.trcExpiry")} date={worker.trcExpiry} />
+                  <DocRow label={t("panel.workPermitExpiry")} date={worker.workPermitExpiry} />
+                  <DocRow label={t("panel.contractEndDate")} date={worker.contractEndDate} />
                   <div className="flex items-center justify-between p-3 rounded-lg bg-background border border-white/5">
-                    <span className="text-sm font-medium text-foreground">BHP Status</span>
+                    <span className="text-sm font-medium text-foreground">{t("panel.bhpStatus")}</span>
                     <span
                       className={`text-sm font-mono font-bold ${
                         worker.bhpStatus === "Active" ? "text-green-400" : "text-destructive"
@@ -182,16 +177,15 @@ export function WorkerProfilePanel({
                 </div>
               </div>
 
-              {/* Document Vault */}
               <div>
                 <h3 className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-4">
-                  Document Vault
+                  {t("panel.documentVault")}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {worker.passportAttachments?.map((att: any) => (
                     <AttachmentCard
                       key={att.id}
-                      title="Passport"
+                      title={t("panel.passport")}
                       filename={att.filename}
                       url={att.url}
                     />
@@ -199,7 +193,7 @@ export function WorkerProfilePanel({
                   {worker.contractAttachments?.map((att: any) => (
                     <AttachmentCard
                       key={att.id}
-                      title="Contract"
+                      title={t("panel.contract")}
                       filename={att.filename}
                       url={att.url}
                     />
@@ -207,26 +201,25 @@ export function WorkerProfilePanel({
                   {!worker.passportAttachments?.length &&
                     !worker.contractAttachments?.length && (
                       <div className="col-span-2 p-6 text-center rounded-xl border border-dashed border-white/10 text-muted-foreground text-sm font-mono">
-                        No documents uploaded
+                        {t("panel.noDocuments")}
                       </div>
                     )}
                 </div>
               </div>
             </div>
 
-            {/* Footer Actions */}
             <div className="p-6 border-t border-white/5 bg-background flex gap-3">
               <Button
                 className="flex-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold uppercase tracking-wider"
                 onClick={() => onNotify(worker)}
               >
-                Notify
+                {t("panel.notify")}
               </Button>
               <Button
                 className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-bold uppercase tracking-wider"
                 onClick={() => onRenew(worker)}
               >
-                Renew Doc
+                {t("panel.renewDoc")}
               </Button>
             </div>
           </div>

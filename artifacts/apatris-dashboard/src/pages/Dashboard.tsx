@@ -6,6 +6,7 @@ import {
   Search, Filter, LogOut, FileText, Bell, RefreshCcw
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -13,22 +14,58 @@ import { WorkerProfilePanel } from "@/components/WorkerProfilePanel";
 import { NotifyDialog, RenewDialog } from "@/components/ActionDialogs";
 import { ComplianceReportModal } from "@/components/ComplianceReportModal";
 
+function LanguageToggle() {
+  const { i18n } = useTranslation();
+  const current = i18n.language?.startsWith("pl") ? "pl" : "en";
+
+  const toggle = (lang: string) => {
+    i18n.changeLanguage(lang);
+  };
+
+  return (
+    <div className="flex items-center gap-1 bg-black/30 border border-white/10 rounded-lg p-1">
+      <button
+        onClick={() => toggle("en")}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
+          current === "en"
+            ? "bg-primary text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+            : "text-muted-foreground hover:text-white"
+        }`}
+        title="English"
+      >
+        <span className="text-sm leading-none">🇬🇧</span>
+        <span>EN</span>
+      </button>
+      <button
+        onClick={() => toggle("pl")}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
+          current === "pl"
+            ? "bg-primary text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+            : "text-muted-foreground hover:text-white"
+        }`}
+        title="Polski"
+      >
+        <span className="text-sm leading-none">🇵🇱</span>
+        <span>PL</span>
+      </button>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   
-  // Filters state
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [status, setStatus] = useState("");
 
-  // UI State
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [actionWorker, setActionWorker] = useState<any | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
-  // Queries
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
     specialization: specialization || undefined, 
@@ -51,7 +88,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative">
-      {/* Background glow effects */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full mix-blend-screen" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-destructive/10 blur-[120px] rounded-full mix-blend-screen" />
@@ -62,27 +98,29 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Logo" className="w-8 h-8 object-contain" />
           <h1 className="text-xl font-display font-bold tracking-widest uppercase">
-            Apatris <span className="text-primary font-light">Compliance</span>
+            {t("header.title")} <span className="text-primary font-light">{t("header.subtitle")}</span>
           </h1>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => setReportOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-display uppercase tracking-wide transition-colors text-white"
           >
             <FileText className="w-4 h-4 text-primary" />
-            Generate Report
+            <span className="hidden sm:inline">{t("header.generateReport")}</span>
           </button>
+
+          <LanguageToggle />
           
-          <div className="w-px h-6 bg-white/10 mx-2" />
+          <div className="w-px h-6 bg-white/10" />
           
           <div className="flex items-center gap-3">
             <div className="text-right hidden md:block">
               <p className="text-sm font-bold text-white leading-tight">{user?.name}</p>
               <p className="text-xs text-primary font-mono">{user?.role}</p>
             </div>
-            <button onClick={logout} className="p-2 text-muted-foreground hover:text-white transition-colors">
+            <button onClick={logout} title={t("header.logout")} className="p-2 text-muted-foreground hover:text-white transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -92,29 +130,10 @@ export default function Dashboard() {
       <main className="flex-1 p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard 
-            title="Total Workforce" 
-            value={stats?.total || "0"} 
-            icon={Users} 
-          />
-          <StatCard 
-            title="Critical (<30 Days)" 
-            value={stats?.critical || "0"} 
-            icon={ShieldAlert} 
-            variant="critical"
-          />
-          <StatCard 
-            title="Upcoming Renewals" 
-            value={stats?.warning || "0"} 
-            icon={Clock} 
-            variant="warning"
-          />
-          <StatCard 
-            title="Non-Compliant" 
-            value={stats?.nonCompliant || "0"} 
-            icon={AlertTriangle} 
-            variant="critical"
-          />
+          <StatCard title={t("stats.totalWorkforce")} value={stats?.total || "0"} icon={Users} />
+          <StatCard title={t("stats.critical")} value={stats?.critical || "0"} icon={ShieldAlert} variant="critical" />
+          <StatCard title={t("stats.upcomingRenewals")} value={stats?.warning || "0"} icon={Clock} variant="warning" />
+          <StatCard title={t("stats.nonCompliant")} value={stats?.nonCompliant || "0"} icon={AlertTriangle} variant="critical" />
         </div>
 
         {/* Command Bar */}
@@ -123,7 +142,7 @@ export default function Dashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input 
               type="text" 
-              placeholder="Search by Operator Name..." 
+              placeholder={t("table.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 rounded-lg text-sm font-mono text-white focus:outline-none focus:border-primary/50 transition-colors"
@@ -138,10 +157,10 @@ export default function Dashboard() {
                 onChange={(e) => setSpecialization(e.target.value)}
                 className="w-full pl-10 pr-8 py-2.5 bg-black/40 border border-white/5 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/50 transition-colors"
               >
-                <option value="">All Specs</option>
-                <option value="TIG">TIG Welders</option>
-                <option value="MIG">MIG Welders</option>
-                <option value="ARC">ARC Welders</option>
+                <option value="">{t("table.allSpecs")}</option>
+                <option value="TIG">{t("table.tigWelders")}</option>
+                <option value="MIG">{t("table.migWelders")}</option>
+                <option value="ARC">{t("table.arcWelders")}</option>
               </select>
             </div>
             <div className="relative flex-1 md:w-48">
@@ -151,11 +170,11 @@ export default function Dashboard() {
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full pl-10 pr-8 py-2.5 bg-black/40 border border-white/5 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/50 transition-colors"
               >
-                <option value="">All Statuses</option>
-                <option value="compliant">Compliant</option>
-                <option value="warning">Warning</option>
-                <option value="critical">Critical</option>
-                <option value="non-compliant">Non-Compliant</option>
+                <option value="">{t("table.allStatuses")}</option>
+                <option value="compliant">{t("table.compliant")}</option>
+                <option value="warning">{t("table.warning")}</option>
+                <option value="critical">{t("table.critical")}</option>
+                <option value="non-compliant">{t("table.nonCompliant")}</option>
               </select>
             </div>
           </div>
@@ -167,13 +186,13 @@ export default function Dashboard() {
             <table className="w-full text-left whitespace-nowrap">
               <thead className="bg-black/40 border-b border-white/10">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">Operator</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">Spec</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">TRC Expiry</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">Work Permit</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">BHP</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">Status</th>
-                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground text-right">Actions</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.operator")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.spec")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.trcExpiry")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.workPermit")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.bhp")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground">{t("table.status")}</th>
+                  <th className="px-6 py-4 text-xs font-display uppercase tracking-widest text-muted-foreground text-right">{t("table.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
@@ -188,7 +207,7 @@ export default function Dashboard() {
                 ) : workersData?.workers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground font-sans">
-                      No operators found matching criteria.
+                      {t("table.noResults")}
                     </td>
                   </tr>
                 ) : (
@@ -224,14 +243,14 @@ export default function Dashboard() {
                           <button 
                             onClick={(e) => handleNotify(e, worker)}
                             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
-                            title="Notify Worker"
+                            title={t("table.notifyWorker")}
                           >
                             <Bell className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={(e) => handleRenew(e, worker)}
                             className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
-                            title="Renew Document"
+                            title={t("table.renewDocument")}
                           >
                             <RefreshCcw className="w-4 h-4" />
                           </button>
@@ -246,7 +265,6 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Side Panel & Modals */}
       <WorkerProfilePanel 
         workerId={selectedWorkerId} 
         onClose={() => setSelectedWorkerId(null)} 

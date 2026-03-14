@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "react-i18next";
 import { Shield, ChevronRight } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,13 +19,12 @@ export default function Login() {
     if (success) {
       setLocation("/");
     } else {
-      setError("Invalid security credentials. Access denied.");
+      setError(t("login.invalidCredentials"));
     }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-background">
-      {/* Background Image & Effects */}
       <div className="absolute inset-0 z-0">
         <img
           src={`${import.meta.env.BASE_URL}images/login-bg.png`}
@@ -33,7 +34,6 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
       </div>
 
-      {/* Grid dot pattern */}
       <div
         className="absolute inset-0 z-0 opacity-30"
         style={{
@@ -53,11 +53,9 @@ export default function Login() {
             />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-widest uppercase">
-            Apatris <span className="text-primary">Compliance</span>
+            {t("login.title")} <span className="text-primary">{t("login.subtitle")}</span>
           </h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">
-            SECURE COMPLIANCE TERMINAL
-          </p>
+          <p className="text-muted-foreground font-mono text-sm mt-2">{t("login.terminal")}</p>
         </div>
 
         <form
@@ -72,7 +70,7 @@ export default function Login() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
-              Operator ID
+              {t("login.operatorId")}
             </label>
             <input
               type="email"
@@ -86,7 +84,7 @@ export default function Login() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
-              Passcode
+              {t("login.passcode")}
             </label>
             <input
               type="password"
@@ -104,19 +102,19 @@ export default function Login() {
           >
             <div className="flex items-center justify-center gap-2">
               <Shield className="w-4 h-4" />
-              <span>Initialize Session</span>
+              <span>{t("login.submit")}</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </form>
 
         <div className="mt-6 p-3 rounded-lg border border-white/5 bg-white/3 text-center space-y-1">
-          <p className="text-xs font-mono text-muted-foreground/70">Default credentials</p>
+          <p className="text-xs font-mono text-muted-foreground/70">{t("login.defaultCredentials")}</p>
           <p className="text-xs font-mono text-primary/80">admin@apatris.com &nbsp;/&nbsp; apatris2024</p>
         </div>
 
         <p className="text-center text-xs font-mono text-muted-foreground mt-4 opacity-40">
-          UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED
+          {t("login.unauthorized")}
         </p>
       </div>
     </div>
