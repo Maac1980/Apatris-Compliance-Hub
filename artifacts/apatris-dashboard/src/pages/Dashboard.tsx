@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -79,6 +80,18 @@ export default function Dashboard() {
   } as any);
   
   const { data: stats } = useGetWorkerStats();
+
+  // Live site list from Airtable — refreshes whenever a worker's site is updated
+  const { data: sitesData } = useQuery<{ sites: string[] }>({
+    queryKey: ["workers-sites"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/sites`);
+      if (!res.ok) throw new Error("Failed to fetch sites");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+  const availableSites = sitesData?.sites ?? [];
 
   const handleNotify = (e: React.MouseEvent, worker: any) => {
     e.stopPropagation();
@@ -220,21 +233,17 @@ export default function Dashboard() {
                 <option value="non-compliant">{t("table.nonCompliant")}</option>
               </select>
             </div>
-            <div className="relative flex-1 md:w-44">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="relative flex-1 md:w-52">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
               <select
                 value={site}
                 onChange={(e) => setSite(e.target.value)}
                 className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
               >
-                <option value="">All Sites</option>
-                <option value="Factory A">Factory A</option>
-                <option value="Factory B">Factory B</option>
-                <option value="Factory C">Factory C</option>
-                <option value="Project Site 1">Project Site 1</option>
-                <option value="Project Site 2">Project Site 2</option>
-                <option value="Project Site 3">Project Site 3</option>
-                <option value="Unassigned">Unassigned</option>
+                <option value="">All Clients / Projects</option>
+                {availableSites.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </div>
           </div>

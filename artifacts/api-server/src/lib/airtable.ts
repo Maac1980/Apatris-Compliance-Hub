@@ -129,23 +129,10 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
 
   const fieldsToCreate = [
     { name: "SPEC", type: "singleLineText" },
-    {
-      name: "ASSIGNED SITE",
-      type: "singleSelect",
-      options: {
-        choices: [
-          { name: "Factory A", color: "blueBright" },
-          { name: "Factory B", color: "greenBright" },
-          { name: "Factory C", color: "yellowBright" },
-          { name: "Project Site 1", color: "orangeBright" },
-          { name: "Project Site 2", color: "redBright" },
-          { name: "Project Site 3", color: "purpleBright" },
-          { name: "Unassigned", color: "grayBright" },
-        ],
-      },
-    },
+    { name: "SITE", type: "singleLineText" },
     { name: "TRC_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "PASSPORT_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "BHP_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "TRC Certificate", type: "multipleAttachments" },
     { name: "BHP Certificate", type: "multipleAttachments" },
     { name: "CONTRACT", type: "multipleAttachments" },
@@ -170,6 +157,55 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
   }
 
   return { created, skipped, errors };
+}
+
+/**
+ * Ensures the given site name exists as a choice in the ASSIGNED SITE singleSelect field.
+ * If it doesn't exist yet, adds it via the Airtable Meta API so free-text saves succeed.
+ */
+export async function ensureSiteChoice(siteName: string): Promise<void> {
+  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
+
+  // Fetch the current table schema
+  const metaRes = await fetch(`https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables`, {
+    headers: headers(),
+  });
+  if (!metaRes.ok) return; // best-effort — don't block the save
+
+  const metaData = (await metaRes.json()) as {
+    tables: Array<{
+      id: string;
+      name: string;
+      fields: Array<{ id: string; name: string; type: string; options?: { choices?: Array<{ name: string }> } }>;
+    }>;
+  };
+
+  const table = metaData.tables.find((t) => t.name.toLowerCase() === (AIRTABLE_TABLE_NAME ?? "welders").toLowerCase());
+  if (!table) return;
+
+  const siteField = table.fields.find((f) => f.name === "ASSIGNED SITE");
+  if (!siteField) return;
+
+  const existingChoices = siteField.options?.choices ?? [];
+  const alreadyExists = existingChoices.some((c) => c.name.toLowerCase() === siteName.toLowerCase());
+  if (alreadyExists) return;
+
+  // Add the new choice — pick a color from a rotating palette
+  const palette = ["cyanBright", "tealBright", "pinkBright", "greenBright", "blueBright", "orangeBright", "purpleBright"];
+  const color = palette[existingChoices.length % palette.length];
+
+  await fetch(
+    `https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables/${table.id}/fields/${siteField.id}`,
+    {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({
+        options: {
+          choices: [...existingChoices, { name: siteName, color }],
+        },
+      }),
+    }
+  );
 }
 
 export async function uploadAttachmentToRecord(

@@ -122,6 +122,23 @@ router.get("/workers", async (req, res) => {
   }
 });
 
+// GET /workers/sites — returns all unique ASSIGNED SITE values currently in Airtable
+router.get("/workers/sites", async (_req, res) => {
+  try {
+    const records = await fetchAllRecords();
+    const workers = records.map(mapRecordToWorker).filter(
+      (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
+    );
+    const sites = Array.from(
+      new Set(workers.map((w) => w.assignedSite).filter((s): s is string => !!s && s.trim() !== ""))
+    ).sort();
+    res.json({ sites });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
 // GET /workers/stats
 router.get("/workers/stats", async (_req, res) => {
   try {
@@ -417,7 +434,10 @@ router.patch("/workers/:id", async (req, res) => {
     if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
     if (body.specialization !== undefined) airtableFields["SPEC"] = body.specialization;
     if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
-    if (body.assignedSite !== undefined) airtableFields["ASSIGNED SITE"] = body.assignedSite;
+    if (body.assignedSite !== undefined) {
+      // Write to SITE (singleLineText) — accepts any company/project name freely
+      airtableFields["SITE"] = String(body.assignedSite).trim() || null;
+    }
 
     const updated = await updateRecord(req.params.id, airtableFields);
     res.json(mapRecordToWorker(updated));

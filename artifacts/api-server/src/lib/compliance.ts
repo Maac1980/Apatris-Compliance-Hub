@@ -122,7 +122,10 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "Years Experience", "Work Experience"]));
   const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "SPEC", "Specialization", "Welding Type"]));
 
-  const assignedSite = getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Site", "Factory", "Location"]));
+  // SITE is a free-text field; ASSIGNED SITE is a legacy singleSelect (read as fallback)
+  const assignedSite =
+    getString(resolveField(f, ["SITE", "Site"])) ??
+    getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Factory", "Location"]));
 
   const trcExpiry = getDate(resolveField(f, ["TRC Expiry", "TRC_EXPIRY", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
   const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));

@@ -1,22 +1,112 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle, MapPin } from "lucide-react";
+import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle, MapPin, ChevronDown, Plus } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
 const SPEC_OPTIONS = ["TIG", "MIG", "MAG", "MMA", "ARC / Electrode", "FCAW", "FABRICATOR"];
-const SITE_OPTIONS = [
-  "Factory A",
-  "Factory B",
-  "Factory C",
-  "Project Site 1",
-  "Project Site 2",
-  "Project Site 3",
-  "Unassigned",
-];
+
+// ─── Site Combobox ────────────────────────────────────────────────────────────
+// Searchable free-text input with dropdown suggestions.
+// Any value typed is valid — it will be saved as-is to Airtable.
+function SiteCombobox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Fetch live site list from API
+  const { data } = useQuery<{ sites: string[] }>({
+    queryKey: ["workers-sites"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/sites`);
+      if (!res.ok) throw new Error("Failed to fetch sites");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+  const liveSites = data?.sites ?? [];
+
+  // Sync incoming value when parent resets
+  useEffect(() => { setQuery(value); }, [value]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = liveSites.filter((s) =>
+    s.toLowerCase().includes(query.toLowerCase())
+  );
+  const isNew = query.trim() !== "" && !liveSites.some((s) => s.toLowerCase() === query.toLowerCase());
+
+  const select = (s: string) => {
+    setQuery(s);
+    onChange(s);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative w-full">
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          placeholder="Type or search site…"
+          onFocus={() => setOpen(true)}
+          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-3 pr-9 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 transition-colors"
+        />
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg bg-slate-800 border border-red-500/20 shadow-2xl overflow-hidden">
+          {/* Custom entry hint */}
+          {isNew && (
+            <button
+              type="button"
+              onMouseDown={() => select(query.trim())}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-red-400 hover:bg-red-500/10 border-b border-slate-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Add "<strong>{query.trim()}</strong>" as new site</span>
+            </button>
+          )}
+          {filtered.length === 0 && !isNew && (
+            <div className="px-3 py-3 text-xs text-gray-500 font-mono">No sites found — type to create one</div>
+          )}
+          {filtered.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={() => select(s)}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-left hover:bg-white/5 transition-colors ${
+                s === value ? "text-red-400 bg-red-500/10" : "text-gray-300"
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
+              {s}
+              {s === value && <span className="ml-auto text-[10px] text-red-400 font-bold">CURRENT</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface WorkerProfilePanelProps {
   workerId: string | null;
@@ -237,6 +327,7 @@ export function WorkerProfilePanel({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }),
         queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: ["workers-sites"] }),
       ]);
       toast({
         title: "✓ Welder Records Updated",
@@ -336,17 +427,13 @@ export function WorkerProfilePanel({
                       </select>
                     </div>
 
-                    {/* Assigned Site */}
+                    {/* Assigned Site — free-text combobox */}
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Assigned Site / Factory</label>
-                      <select
-                        value={editSite}
-                        onChange={(e) => setEditSite(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
-                      >
-                        <option value="">— Select Site —</option>
-                        {SITE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                        Client / Project Site
+                      </label>
+                      <SiteCombobox value={editSite} onChange={setEditSite} />
+                      <p className="text-[10px] text-gray-600 mt-1 font-mono">Type any name to add a new client or project</p>
                     </div>
 
                     {/* TRC Expiry */}
