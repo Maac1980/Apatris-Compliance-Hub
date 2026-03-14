@@ -255,15 +255,15 @@ export default function Dashboard() {
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
             <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "900px" }}>
               <colgroup>
-                <col style={{ width: "19%" }} /> {/* Operator */}
-                <col style={{ width: "7%" }}  /> {/* Spec */}
-                <col style={{ width: "13%" }} /> {/* Assigned Site */}
-                <col style={{ width: "10%" }} /> {/* TRC Expiry */}
-                <col style={{ width: "10%" }} /> {/* Passport Exp */}
-                <col style={{ width: "10%" }} /> {/* BHP */}
-                <col style={{ width: "9%" }}  /> {/* Docs */}
-                <col style={{ width: "9%" }}  /> {/* Status */}
-                <col style={{ width: "13%" }} /> {/* Actions */}
+                <col style={{ width: "19%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "13%" }} />
               </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
