@@ -255,15 +255,15 @@ export default function Dashboard() {
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
             <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "900px" }}>
               <colgroup>
-                <col style={{ width: "19%" }} />
+                <col style={{ width: "18%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "12%" }} />
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "16%" }} />
               </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
@@ -363,7 +363,7 @@ export default function Dashboard() {
                         <div className="flex justify-end items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)]"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)] whitespace-nowrap"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             <span>View / Edit</span>
