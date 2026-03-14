@@ -141,7 +141,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   );
 
   const bhpStatus = getString(
-    resolveField(f, ["BHP Status", "BHP_Status", "BHPStatus", "BHP", "Safety Status"])
+    resolveField(f, ["BHP EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP_Status", "BHPStatus", "BHP", "Safety Status"])
   );
 
   const contractEndDate = getDate(

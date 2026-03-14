@@ -111,7 +111,9 @@ router.get("/workers", async (req, res) => {
   try {
     const { search, specialization, status } = req.query as Record<string, string>;
     const records = await fetchAllRecords();
-    const allWorkers = records.map(mapRecordToWorker);
+    const allWorkers = records.map(mapRecordToWorker).filter(
+      (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
+    );
     const filtered = filterWorkers(allWorkers, search, specialization, status);
     res.json({ workers: filtered, total: filtered.length });
   } catch (err) {

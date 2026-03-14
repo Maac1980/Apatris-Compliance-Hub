@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Eye
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -244,28 +244,55 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-muted-foreground">
                         {worker.workPermitExpiry ? format(parseISO(worker.workPermitExpiry), 'MMM d, yyyy') : '-'}
                       </td>
-                      <td className={`px-6 py-4 font-bold ${worker.bhpStatus === 'Active' ? 'text-success' : 'text-destructive'}`}>
-                        {worker.bhpStatus || '-'}
+                      <td className="px-6 py-4 font-mono text-sm">
+                        {(() => {
+                          const v = worker.bhpStatus;
+                          if (!v) return <span className="text-muted-foreground">-</span>;
+                          const d = new Date(v);
+                          if (!isNaN(d.getTime()) && v.includes('-')) {
+                            const expired = d < new Date();
+                            return (
+                              <span className={expired ? 'text-destructive font-bold' : 'text-success font-bold'}>
+                                {format(parseISO(v), 'MMM d, yyyy')}
+                              </span>
+                            );
+                          }
+                          const lower = v.toLowerCase();
+                          return (
+                            <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>
+                              {v}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={(e) => handleNotify(e, worker)}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
-                            title={t("table.notifyWorker")}
+                        <div className="flex justify-end items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedWorkerId(worker.id); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 hover:border-blue-400/60 text-xs font-bold uppercase tracking-wide transition-all"
                           >
-                            <Bell className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View</span>
                           </button>
-                          <button 
-                            onClick={(e) => handleRenew(e, worker)}
-                            className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
-                            title={t("table.renewDocument")}
-                          >
-                            <RefreshCcw className="w-4 h-4" />
-                          </button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={(e) => handleNotify(e, worker)}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                              title={t("table.notifyWorker")}
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={(e) => handleRenew(e, worker)}
+                              className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
+                              title={t("table.renewDocument")}
+                            >
+                              <RefreshCcw className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
