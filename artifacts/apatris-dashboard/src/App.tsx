@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 // Pages
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Apply from "@/pages/Apply";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/apply" component={Apply} />
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>

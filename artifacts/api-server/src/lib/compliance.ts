@@ -12,7 +12,10 @@ export interface Worker {
   id: string;
   name: string;
   specialization: string;
+  experience: string | null;
+  qualification: string | null;
   trcExpiry: string | null;
+  passportExpiry: string | null;
   workPermitExpiry: string | null;
   bhpStatus: string | null;
   contractEndDate: string | null;
@@ -21,6 +24,8 @@ export interface Worker {
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
   passportAttachments: Attachment[];
+  trcAttachments: Attachment[];
+  bhpAttachments: Attachment[];
   contractAttachments: Attachment[];
 }
 
@@ -64,17 +69,12 @@ function computeStatus(worker: Partial<Worker>): {
   status: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
 } {
-  const bhp = worker.bhpStatus?.toLowerCase();
-
-  // Non-compliant if BHP is expired
-  if (bhp === "expired") {
-    return { status: "non-compliant", daysUntilNextExpiry: null };
-  }
-
   const expiryDays = [
     daysUntil(worker.trcExpiry ?? null),
+    daysUntil(worker.passportExpiry ?? null),
     daysUntil(worker.workPermitExpiry ?? null),
     daysUntil(worker.contractEndDate ?? null),
+    daysUntil(worker.bhpStatus ?? null),
   ].filter((d): d is number => d !== null);
 
   if (expiryDays.length === 0) {
@@ -83,30 +83,16 @@ function computeStatus(worker: Partial<Worker>): {
 
   const minDays = Math.min(...expiryDays);
 
-  // Already expired
-  if (minDays < 0) {
-    return { status: "non-compliant", daysUntilNextExpiry: minDays };
-  }
-
-  if (minDays < 30) {
-    return { status: "critical", daysUntilNextExpiry: minDays };
-  }
-
-  if (minDays < 60) {
-    return { status: "warning", daysUntilNextExpiry: minDays };
-  }
+  if (minDays < 0) return { status: "non-compliant", daysUntilNextExpiry: minDays };
+  if (minDays < 30) return { status: "critical", daysUntilNextExpiry: minDays };
+  if (minDays < 60) return { status: "warning", daysUntilNextExpiry: minDays };
 
   return { status: "compliant", daysUntilNextExpiry: minDays };
 }
 
-// Flexible field mapping — tries multiple common field name patterns
-function resolveField(
-  fields: Record<string, unknown>,
-  candidates: string[]
-): unknown {
+function resolveField(fields: Record<string, unknown>, candidates: string[]): unknown {
   for (const key of candidates) {
     if (key in fields) return fields[key];
-    // Case-insensitive match
     const lower = key.toLowerCase();
     const match = Object.keys(fields).find((k) => k.toLowerCase() === lower);
     if (match) return fields[match];
@@ -117,74 +103,65 @@ function resolveField(
 export function mapRecordToWorker(record: AirtableRecord): Worker {
   const f = record.fields;
 
-  const name = getString(
-    resolveField(f, ["Name", "Full Name", "Worker Name", "Welder Name", "Employee Name"])
-  ) ?? "Unknown";
+  const name =
+    getString(resolveField(f, ["NAME", "Name", "Full Name", "Worker Name", "Welder Name", "Employee Name"])) ??
+    "Unknown";
 
-  const specialization = getString(
-    resolveField(f, ["Specialization", "Type", "Welding Type", "Skill", "Role"])
-  ) ?? "TIG";
+  const specialization =
+    getString(resolveField(f, ["QUALIFICATION", "Qualification", "Specialization", "Type", "Welding Type", "Skill", "Role"])) ??
+    "";
 
-  const trcExpiry = getDate(
-    resolveField(f, ["TRC Expiry", "TRC_Expiry", "TRCExpiry", "TRC Expiration", "TRC"])
-  );
+  const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "Years Experience", "Work Experience"]));
+
+  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "Specialization", "Welding Type"]));
+
+  const trcExpiry = getDate(resolveField(f, ["TRC_EXPIRY", "TRC Expiry", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
+
+  const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));
 
   const workPermitExpiry = getDate(
-    resolveField(f, [
-      "Work Permit Expiry",
-      "Work_Permit_Expiry",
-      "WorkPermitExpiry",
-      "Work Permit",
-      "Permit Expiry",
-      "Permit Expiration",
-    ])
+    resolveField(f, ["Work Permit Expiry", "Work_Permit_Expiry", "WorkPermitExpiry", "Work Permit", "Permit Expiry"])
   );
 
   const bhpStatus = getString(
-    resolveField(f, ["BHP EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP_Status", "BHPStatus", "BHP", "Safety Status"])
+    resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"])
   );
 
   const contractEndDate = getDate(
-    resolveField(f, [
-      "Contract End Date",
-      "Contract_End_Date",
-      "ContractEndDate",
-      "Contract End",
-      "Contract Expiry",
-      "Contract",
-    ])
+    resolveField(f, ["Contract End Date", "Contract_End_Date", "ContractEndDate", "Contract End", "Contract Expiry"])
   );
 
-  const email = getString(
-    resolveField(f, ["Email", "Email Address", "Contact Email", "Work Email"])
-  );
+  const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
 
-  const phone = getString(
-    resolveField(f, ["Phone", "Phone Number", "Mobile", "Contact Number"])
-  );
+  const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
 
   const passportAttachments = getAttachments(
-    resolveField(f, ["Passport", "Passport Attachment", "Passport Document"])
+    resolveField(f, ["PASSPORT", "Passport", "Passport Attachment", "Passport Document"])
+  );
+
+  const trcAttachments = getAttachments(
+    resolveField(f, ["TRC", "TRC Attachment", "TRC Document", "TRC Certificate"])
+  );
+
+  const bhpAttachments = getAttachments(
+    resolveField(f, ["BHP_CERTIFICATE", "BHP Certificate", "BHP Cert", "BHP Attachment"])
   );
 
   const contractAttachments = getAttachments(
-    resolveField(f, ["Contract", "Contract Attachment", "Contract Document", "Contract File"])
+    resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"])
   );
 
-  const partial: Partial<Worker> = {
-    trcExpiry,
-    workPermitExpiry,
-    bhpStatus,
-    contractEndDate,
-  };
-
+  const partial: Partial<Worker> = { trcExpiry, passportExpiry, workPermitExpiry, bhpStatus, contractEndDate };
   const { status: complianceStatus, daysUntilNextExpiry } = computeStatus(partial);
 
   return {
     id: record.id,
     name,
     specialization,
+    experience,
+    qualification,
     trcExpiry,
+    passportExpiry,
     workPermitExpiry,
     bhpStatus,
     contractEndDate,
@@ -193,6 +170,8 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     complianceStatus,
     daysUntilNextExpiry,
     passportAttachments,
+    trcAttachments,
+    bhpAttachments,
     contractAttachments,
   };
 }

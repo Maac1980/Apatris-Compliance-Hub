@@ -240,27 +240,28 @@ export default function Dashboard() {
             <table className="w-full text-left whitespace-nowrap">
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.operator")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.spec")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.trcExpiry")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.workPermit")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.bhp")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.status")}</th>
-                  <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-right">{t("table.actions")}</th>
+                  <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5">{t("table.operator")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.spec")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.trcExpiry")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Passport Exp.</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.bhp")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Docs</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.status")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-right">{t("table.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
                 {isLoadingWorkers ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={7} className="px-6 py-6">
+                      <td colSpan={8} className="px-6 py-6">
                         <div className="h-4 bg-white/5 rounded animate-pulse w-full" />
                       </td>
                     </tr>
                   ))
                 ) : workersData?.workers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground font-sans">
+                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-sans">
                       {t("table.noResults")}
                     </td>
                   </tr>
@@ -271,46 +272,57 @@ export default function Dashboard() {
                       onClick={() => setSelectedWorkerId(worker.id)}
                       className="hover:bg-white/5 transition-colors cursor-pointer group"
                     >
-                      <td className="px-6 py-4">
+                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-6 py-4 border-r border-white/5 transition-colors">
                         <div className="font-sans font-medium text-white">{worker.name}</div>
-                        <div className="text-xs text-muted-foreground">{worker.email}</div>
+                        <div className="text-xs text-muted-foreground">{worker.email || worker.phone || '—'}</div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <span className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs font-bold text-white">
                           {worker.specialization || '—'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-white font-mono text-sm">
-                        {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yyyy') : <span className="text-gray-500">—</span>}
+                      <td className="px-4 py-4 text-white font-mono text-sm">
+                        {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
                       </td>
-                      <td className="px-6 py-4 text-white font-mono text-sm">
-                        {worker.workPermitExpiry ? format(parseISO(worker.workPermitExpiry), 'MMM d, yyyy') : <span className="text-gray-500">—</span>}
+                      <td className="px-4 py-4 text-white font-mono text-sm">
+                        {(worker as any).passportExpiry ? format(parseISO((worker as any).passportExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
                       </td>
-                      <td className="px-6 py-4 font-mono text-sm">
+                      <td className="px-4 py-4 font-mono text-sm">
                         {(() => {
                           const v = worker.bhpStatus;
                           if (!v) return <span className="text-gray-500">—</span>;
                           const d = new Date(v);
                           if (!isNaN(d.getTime()) && v.includes('-')) {
                             const expired = d < new Date();
-                            return (
-                              <span className={expired ? 'text-destructive font-bold' : 'text-success font-bold'}>
-                                {format(parseISO(v), 'MMM d, yyyy')}
-                              </span>
-                            );
+                            return <span className={expired ? 'text-destructive font-bold' : 'text-success font-bold'}>{format(parseISO(v), 'MMM d, yy')}</span>;
                           }
                           const lower = v.toLowerCase();
-                          return (
-                            <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>
-                              {v}
-                            </span>
-                          );
+                          return <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>{v}</span>;
                         })()}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-1">
+                          {(worker as any).passportAttachments?.length > 0 && (
+                            <span title="Passport" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">PP</span>
+                          )}
+                          {(worker as any).trcAttachments?.length > 0 && (
+                            <span title="TRC" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-300 border border-green-500/30">TRC</span>
+                          )}
+                          {(worker as any).bhpAttachments?.length > 0 && (
+                            <span title="BHP Certificate" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30">BHP</span>
+                          )}
+                          {(worker as any).contractAttachments?.length > 0 && (
+                            <span title="Contract" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">CON</span>
+                          )}
+                          {!(worker as any).passportAttachments?.length && !(worker as any).trcAttachments?.length && !(worker as any).bhpAttachments?.length && !(worker as any).contractAttachments?.length && (
+                            <span className="text-gray-600 text-xs">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-4 text-right">
                         <div className="flex justify-end items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(false); setSelectedWorkerId(worker.id); }}

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord } from "../lib/airtable.js";
+import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, initializeFields } from "../lib/airtable.js";
 import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 
 const openai = new OpenAI({
@@ -259,6 +259,8 @@ async function scanBulkDocument(
 {"name":"worker full name or null","trcExpiry":"YYYY-MM-DD or null","specialization":"Scan for welding process keywords: TIG, MIG, MAG, MMA, FCAW, ARC, FABRICATOR, electrode. Return the matched keyword exactly as written (e.g. 'TIG' or 'MIG' or 'MAG' or 'FABRICATOR') or null if none found"}`,
     contract: `Extract from this employment contract. Return ONLY valid JSON:
 {"name":"worker full name or null","contractEndDate":"YYYY-MM-DD or null"}`,
+    cv: `Extract from this CV or resume document. Return ONLY valid JSON:
+{"name":"full name or null","experience":"years of experience as a short string e.g. '5 years' or 'Junior' or null","qualification":"main qualifications or certifications as a short string or null"}`,
   };
 
   try {
@@ -323,37 +325,28 @@ router.post("/workers/bulk-create", bulkUpload.fields([
 
     const name = merged.name;
     if (name) {
-      airtableFields["Name"] = name;
+      airtableFields["NAME"] = name;
       extractedSummary.name = name;
     }
-    if (passportData.dateOfBirth) {
-      airtableFields["Date of Birth"] = passportData.dateOfBirth;
-    }
-    if (passportData.nationality) {
-      airtableFields["Nationality"] = passportData.nationality;
-    }
     if (passportData.passportExpiry) {
-      airtableFields["Passport Expiry"] = passportData.passportExpiry;
+      airtableFields["PASSPORT_EXPIRY"] = passportData.passportExpiry;
+      extractedSummary.passportExpiry = passportData.passportExpiry;
     }
     if (certData.trcExpiry) {
-      airtableFields["TRC Expiry"] = certData.trcExpiry;
+      airtableFields["TRC_EXPIRY"] = certData.trcExpiry;
       extractedSummary.trcExpiry = certData.trcExpiry;
     }
     if (bhpData.bhpExpiry) {
       airtableFields["BHP EXPIRY"] = bhpData.bhpExpiry;
       extractedSummary.bhpExpiry = bhpData.bhpExpiry;
     }
-    if (contractData.contractEndDate) {
-      airtableFields["Contract End Date"] = contractData.contractEndDate;
-      extractedSummary.contractEndDate = contractData.contractEndDate;
-    }
 
-    // Specialization: manual profession from form takes priority, then AI-extracted from certificate
+    // QUALIFICATION: manual profession takes priority, then AI cert specialization
     const manualProfession = typeof req.body?.profession === "string" ? req.body.profession.trim() : "";
     const aiSpecialization = typeof certData.specialization === "string" ? certData.specialization.trim() : "";
     const finalSpecialization = manualProfession || aiSpecialization;
     if (finalSpecialization) {
-      airtableFields["Specialization"] = finalSpecialization;
+      airtableFields["QUALIFICATION"] = finalSpecialization;
       extractedSummary.specialization = finalSpecialization;
     }
 
@@ -364,10 +357,10 @@ router.post("/workers/bulk-create", bulkUpload.fields([
     // Upload all attachments in parallel
     const uploadTasks: Promise<void>[] = [];
     const attachmentMap: Record<string, string> = {
-      passport: "Passport",
-      bhp: "BHP Certificate",
-      certificate: "Certificate",
-      contract: "Contract",
+      passport: "PASSPORT",
+      bhp: "BHP_CERTIFICATE",
+      certificate: "TRC",
+      contract: "CONTRACT",
     };
 
     for (const [category, fieldName] of Object.entries(attachmentMap)) {
@@ -414,15 +407,15 @@ router.patch("/workers/:id", async (req, res) => {
     // Map our schema field names to Airtable field names
     const airtableFields: Record<string, unknown> = {};
 
-    if (body.trcExpiry !== undefined) airtableFields["TRC Expiry"] = body.trcExpiry;
-    if (body.workPermitExpiry !== undefined)
-      airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
-    if (body.bhpStatus !== undefined) airtableFields["BHP Status"] = body.bhpStatus;
-    if (body.contractEndDate !== undefined)
-      airtableFields["Contract End Date"] = body.contractEndDate;
-    if (body.email !== undefined) airtableFields["Email"] = body.email;
-    if (body.phone !== undefined) airtableFields["Phone"] = body.phone;
-    if (body.specialization !== undefined) airtableFields["Specialization"] = body.specialization;
+    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry;
+    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry;
+    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
+    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus;
+    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate;
+    if (body.email !== undefined) airtableFields["EMAIL"] = body.email;
+    if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
+    if (body.specialization !== undefined) airtableFields["QUALIFICATION"] = body.specialization;
+    if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
 
     const updated = await updateRecord(req.params.id, airtableFields);
     res.json(mapRecordToWorker(updated));
@@ -469,20 +462,12 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
       if (scanned.type === "passport") {
         if (scanned.name) {
-          airtableUpdates["Name"] = scanned.name;
+          airtableUpdates["NAME"] = scanned.name;
           autoFilledFields["name"] = scanned.name;
         }
-        if (scanned.dateOfBirth) {
-          airtableUpdates["Date of Birth"] = scanned.dateOfBirth;
-          autoFilledFields["dateOfBirth"] = scanned.dateOfBirth;
-        }
         if (scanned.passportExpiry) {
-          airtableUpdates["Passport Expiry"] = scanned.passportExpiry;
+          airtableUpdates["PASSPORT_EXPIRY"] = scanned.passportExpiry;
           autoFilledFields["passportExpiry"] = scanned.passportExpiry;
-        }
-        if (scanned.passportNumber) {
-          airtableUpdates["Passport Number"] = scanned.passportNumber;
-          autoFilledFields["passportNumber"] = scanned.passportNumber;
         }
         if (scanned.nationality) {
           airtableUpdates["Nationality"] = scanned.nationality;
@@ -494,7 +479,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
           autoFilledFields["contractEndDate"] = scanned.contractEndDate;
         }
         if (scanned.workerName) {
-          airtableUpdates["Name"] = scanned.workerName;
+          airtableUpdates["NAME"] = scanned.workerName;
           autoFilledFields["name"] = scanned.workerName;
         }
       }
@@ -514,6 +499,72 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     res.json({ worker: mapRecordToWorker(record), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// POST /workers/init-fields — create missing Airtable columns via Metadata API
+router.post("/workers/init-fields", async (_req, res) => {
+  try {
+    const result = await initializeFields();
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// POST /workers/apply — public candidate application form
+const applyUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+router.post("/workers/apply", applyUpload.fields([
+  { name: "passport", maxCount: 1 },
+  { name: "trc", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]), async (req, res) => {
+  try {
+    const { name, email, phone } = req.body as { name?: string; email?: string; phone?: string };
+    if (!name?.trim()) { res.status(400).json({ error: "Name is required" }); return; }
+
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+
+    const [passportData, trcData, cvData] = await Promise.all([
+      files?.passport?.[0]
+        ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
+        : Promise.resolve({}),
+      files?.trc?.[0]
+        ? scanBulkDocument(files.trc[0].buffer, files.trc[0].mimetype, "certificate")
+        : Promise.resolve({}),
+      files?.cv?.[0]
+        ? scanBulkDocument(files.cv[0].buffer, files.cv[0].mimetype, "cv")
+        : Promise.resolve({}),
+    ]);
+
+    const airtableFields: Record<string, unknown> = {
+      NAME: (passportData.name || name).trim(),
+    };
+    if (email?.trim()) airtableFields["EMAIL"] = email.trim();
+    if (phone?.trim()) airtableFields["PHONE"] = phone.trim();
+    if (passportData.passportExpiry) airtableFields["PASSPORT_EXPIRY"] = passportData.passportExpiry;
+    if (trcData.trcExpiry) airtableFields["TRC_EXPIRY"] = trcData.trcExpiry;
+    if (trcData.specialization) airtableFields["QUALIFICATION"] = trcData.specialization;
+    if (cvData.experience) airtableFields["EXPERIENCE"] = cvData.experience;
+    if (cvData.qualification && !airtableFields["QUALIFICATION"]) airtableFields["QUALIFICATION"] = cvData.qualification;
+
+    const record = await createRecord(airtableFields);
+
+    const uploadTasks: Promise<void>[] = [];
+    if (files?.passport?.[0]) {
+      uploadTasks.push(uploadAttachmentToRecord(record.id, "PASSPORT", files.passport[0].buffer, files.passport[0].originalname, files.passport[0].mimetype).catch((e) => console.warn("[apply] passport upload:", e)));
+    }
+    if (files?.trc?.[0]) {
+      uploadTasks.push(uploadAttachmentToRecord(record.id, "TRC", files.trc[0].buffer, files.trc[0].originalname, files.trc[0].mimetype).catch((e) => console.warn("[apply] trc upload:", e)));
+    }
+    await Promise.all(uploadTasks);
+
+    res.json({ success: true, message: "Application submitted successfully." });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[apply] Error:", message);
     res.status(500).json({ error: message });
   }
 });

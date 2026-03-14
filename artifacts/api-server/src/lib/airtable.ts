@@ -120,6 +120,56 @@ export async function createRecord(fields: Record<string, unknown>): Promise<Air
   return (await res.json()) as AirtableRecord;
 }
 
+export async function initializeFields(): Promise<{ created: string[]; skipped: string[]; errors: string[] }> {
+  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
+
+  const metaRes = await fetch(`https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables`, {
+    headers: headers(),
+  });
+  if (!metaRes.ok) {
+    const text = await metaRes.text();
+    throw new Error(`Metadata API error ${metaRes.status}: ${text}`);
+  }
+
+  const metaData = (await metaRes.json()) as {
+    tables: Array<{ id: string; name: string; fields: Array<{ name: string }> }>;
+  };
+
+  const table = metaData.tables.find(
+    (t) => t.name.toLowerCase() === AIRTABLE_TABLE_NAME.toLowerCase()
+  );
+  if (!table) {
+    throw new Error(
+      `Table "${AIRTABLE_TABLE_NAME}" not found. Available: ${metaData.tables.map((t) => t.name).join(", ")}`
+    );
+  }
+
+  const existing = new Set(table.fields.map((f) => f.name.toLowerCase()));
+
+  const fieldsToCreate = [
+    { name: "TRC_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "PASSPORT_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "BHP_CERTIFICATE", type: "multipleAttachments" },
+    { name: "CONTRACT", type: "multipleAttachments" },
+  ];
+
+  const created: string[] = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+
+  for (const field of fieldsToCreate) {
+    if (existing.has(field.name.toLowerCase())) { skipped.push(field.name); continue; }
+    const r = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables/${table.id}/fields`,
+      { method: "POST", headers: headers(), body: JSON.stringify(field) }
+    );
+    if (r.ok) created.push(field.name);
+    else { const t = await r.text(); errors.push(`${field.name}: ${t}`); }
+  }
+
+  return { created, skipped, errors };
+}
+
 export async function uploadAttachmentToRecord(
   recordId: string,
   fieldName: string,
