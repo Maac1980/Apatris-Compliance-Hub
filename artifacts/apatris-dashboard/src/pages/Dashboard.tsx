@@ -253,17 +253,17 @@ export default function Dashboard() {
         <div className="glass-panel rounded-xl overflow-hidden tech-border">
           <div className="overflow-x-auto">
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
-            <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "900px" }}>
+            <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1000px" }}>
               <colgroup>
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "11%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "16%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "17%" }} />
               </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
@@ -318,13 +318,13 @@ export default function Dashboard() {
                           <span className="text-gray-600 text-xs font-mono">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-white font-mono text-sm">
+                      <td className="px-4 py-4 overflow-hidden text-white font-mono text-sm">
                         {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
                       </td>
-                      <td className="px-4 py-4 text-white font-mono text-sm">
+                      <td className="px-4 py-4 overflow-hidden text-white font-mono text-sm">
                         {(worker as any).passportExpiry ? format(parseISO((worker as any).passportExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
                       </td>
-                      <td className="px-4 py-4 font-mono text-sm">
+                      <td className="px-4 py-4 overflow-hidden font-mono text-sm">
                         {(() => {
                           const v = worker.bhpStatus;
                           if (!v) return <span className="text-gray-500">—</span>;
@@ -356,10 +356,10 @@ export default function Dashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 overflow-hidden">
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 overflow-hidden">
                         <div className="flex justify-center items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
