@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { useGetWorker } from "@workspace/api-client-react";
+import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetWorkerQueryKey } from "@workspace/api-client-react";
 import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -116,7 +115,10 @@ function UploadButton({
         throw new Error(err.error ?? "Upload failed");
       }
       const data = await res.json();
-      await queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }),
+        queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() }),
+      ]);
       setDone(true);
 
       const filled = data.autoFilled as Record<string, string> | undefined;
@@ -232,8 +234,15 @@ export function WorkerProfilePanel({
         const err = await res.json().catch(() => ({ error: "Save failed" }));
         throw new Error(err.error ?? "Save failed");
       }
-      await queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) });
-      toast({ title: "✓ Profile Updated", description: `Worker record saved successfully.` });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }),
+        queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() }),
+      ]);
+      toast({
+        title: "✓ Welder Records Updated",
+        description: "Changes saved. Compliance status recalculated.",
+        className: "border-red-500/50 bg-slate-900 text-white [&>div]:text-red-400",
+      });
       setIsEditing(false);
     } catch (err) {
       toast({ title: "Save Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
