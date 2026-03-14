@@ -24,7 +24,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-background">
+    <div className="h-screen w-full flex bg-background overflow-hidden">
 
       {/* ── Left: Brand image ───────────────────────────────── */}
       <div className="hidden lg:flex flex-1 relative overflow-hidden">
@@ -43,7 +43,7 @@ export default function Login() {
       </div>
 
       {/* ── Right: Login panel ──────────────────────────────── */}
-      <div className="w-full lg:w-[460px] flex flex-col justify-center items-center min-h-screen relative bg-background border-l border-white/5 px-8">
+      <div className="w-full lg:w-[460px] flex flex-col justify-center items-center h-full overflow-y-auto relative bg-background border-l border-white/5 px-8 py-10">
 
         {/* Subtle dot grid */}
         <div
