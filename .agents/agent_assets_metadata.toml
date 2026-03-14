@@ -6,3 +6,15 @@ id = "iQ9dDXoazbnclm-OPfs0m"
 uri = "file://apatris-dashboard-source.tar.gz"
 type = "unspecified"
 title = "Apatris Dashboard — Full Source Code"
+
+[[outputs]]
+id = "ASnXGB2XXGLFusE3WE9x_"
+uri = "file://apatris-frontend.tar.gz"
+type = "unspecified"
+title = "Apatris Dashboard — Frontend (React + Vite)"
+
+[[outputs]]
+id = "l6qIUsU-qdeG4a1mjJzpJ"
+uri = "file://apatris-api-server.tar.gz"
+type = "unspecified"
+title = "Apatris Dashboard — API Server (Express + Airtable)"
