@@ -1,6 +1,16 @@
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME || "Welders";
+
+// The user may paste a full Airtable URL or just the base ID.
+// Extract only the appXXXXX portion from whatever was provided.
+function extractBaseId(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  // Match appXXXXXXXXXXXXXXX (17+ alphanumeric chars after "app")
+  const match = raw.match(/(app[a-zA-Z0-9]{10,})/);
+  return match ? match[1] : raw.trim();
+}
+
+const AIRTABLE_BASE_ID = extractBaseId(process.env.AIRTABLE_BASE_ID);
 
 const BASE_URL = "https://api.airtable.com/v0";
 
