@@ -126,7 +126,9 @@ router.get("/workers", async (req, res) => {
 router.get("/workers/stats", async (_req, res) => {
   try {
     const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const workers = records.map(mapRecordToWorker).filter(
+      (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
+    );
 
     const stats = {
       total: workers.length,
