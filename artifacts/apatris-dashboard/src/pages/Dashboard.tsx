@@ -105,41 +105,21 @@ export default function Dashboard() {
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
-            style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 12px rgba(196,30,24,0.2)" }}
-            aria-label="Apatris Logo"
+            className="w-11 h-11 rounded-full bg-white flex-shrink-0 flex items-center justify-center overflow-hidden"
+            style={{ boxShadow: "0 0 0 2px rgba(30,64,175,0.5), 0 0 14px rgba(30,64,175,0.3)" }}
+            aria-label="Euro Edu Jobs Logo"
           >
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z"
-                fill="#fef2f2"
-                stroke="#C41E18"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              <text
-                x="19"
-                y="28"
-                textAnchor="middle"
-                fontSize="19"
-                fontWeight="900"
-                fontFamily="Arial Black, Arial, sans-serif"
-                fill="#C41E18"
-                letterSpacing="-0.5"
-              >
-                A
-              </text>
-            </svg>
+            <img src={`${import.meta.env.BASE_URL}eelogo.png`} alt="Euro Edu Jobs" className="w-full h-full object-cover" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
+            <h1 className="text-lg font-bold tracking-[0.12em] uppercase leading-none text-white">
               {t("header.title")}
             </h1>
             <p
-              className="text-[9px] text-red-500 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5"
-              style={{ textShadow: "0 0 8px rgba(239,68,68,0.7)" }}
+              className="text-[9px] text-blue-400 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5"
+              style={{ textShadow: "0 0 8px rgba(96,165,250,0.6)" }}
             >
-              OUTSOURCING · CERTIFIED WELDERS
+              GLOBAL RECRUITMENT · COMPLIANCE
             </p>
           </div>
         </div>
