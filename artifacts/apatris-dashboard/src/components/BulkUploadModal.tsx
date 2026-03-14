@@ -18,7 +18,7 @@ interface DropZoneFile {
 const CATEGORIES: { key: Category; label: string; icon: React.ElementType; color: string; hint: string }[] = [
   { key: "passport", label: "Passport", icon: FileText, color: "blue", hint: "Extracts: Name, DOB, Nationality" },
   { key: "bhp", label: "BHP Certificate", icon: Shield, color: "orange", hint: "Extracts: BHP Expiry Date" },
-  { key: "certificate", label: "TRC Certificate", icon: Award, color: "green", hint: "Extracts: TRC Expiry Date" },
+  { key: "certificate", label: "TRC Certificate", icon: Award, color: "green", hint: "Extracts: TRC Expiry + Specialization (MIG/TIG)" },
   { key: "contract", label: "Contract", icon: Briefcase, color: "purple", hint: "Extracts: Contract End Date" },
 ];
 
@@ -28,6 +28,8 @@ const COLOR_MAP: Record<string, string> = {
   green:  "border-green-500/40 bg-green-500/10 hover:border-green-400/70 text-green-400",
   purple: "border-purple-500/40 bg-purple-500/10 hover:border-purple-400/70 text-purple-400",
 };
+
+const SPEC_OPTIONS = ["", "TIG", "MIG", "ARC / Electrode", "FCAW", "MMA"];
 
 function DropZone({
   category,
@@ -97,8 +99,10 @@ function DropZone({
 
 export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
   const [files, setFiles] = useState<Partial<Record<Category, DropZoneFile>>>({});
+  const [profession, setProfession] = useState("");
+  const [customProfession, setCustomProfession] = useState("");
   const [status, setStatus] = useState<"idle" | "scanning" | "creating" | "done" | "error">("idle");
-  const [result, setResult] = useState<{ name?: string; trcExpiry?: string; bhpExpiry?: string; contractEndDate?: string } | null>(null);
+  const [result, setResult] = useState<{ name?: string; trcExpiry?: string; bhpExpiry?: string; contractEndDate?: string; specialization?: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -116,6 +120,7 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
   };
 
   const totalFiles = Object.keys(files).length;
+  const effectiveProfession = profession === "__custom__" ? customProfession : profession;
 
   const handleSubmit = async () => {
     if (totalFiles === 0) return;
@@ -127,6 +132,9 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
       const form = new FormData();
       for (const [cat, df] of Object.entries(files)) {
         if (df) form.append(cat, df.file);
+      }
+      if (effectiveProfession) {
+        form.append("profession", effectiveProfession);
       }
 
       setStatus("creating");
@@ -159,6 +167,8 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
 
   const handleClose = () => {
     setFiles({});
+    setProfession("");
+    setCustomProfession("");
     setStatus("idle");
     setResult(null);
     setErrorMsg("");
@@ -191,7 +201,7 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
         <div className="p-5">
           {status === "idle" || status === "error" ? (
             <>
-              <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 {CATEGORIES.map((cat) => (
                   <DropZone
                     key={cat.key}
@@ -200,6 +210,34 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
                     onFile={setFile(cat.key)}
                   />
                 ))}
+              </div>
+
+              {/* PROFESSION / SPEC field */}
+              <div className="mb-4 p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Profession / Spec
+                  <span className="ml-1 text-gray-600 normal-case font-normal">(AI auto-detects from certificate)</span>
+                </label>
+                <select
+                  value={profession}
+                  onChange={(e) => setProfession(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
+                >
+                  <option value="">— Select or leave for AI —</option>
+                  {SPEC_OPTIONS.filter(Boolean).map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                  <option value="__custom__">Custom…</option>
+                </select>
+                {profession === "__custom__" && (
+                  <input
+                    type="text"
+                    placeholder="Type specialization…"
+                    value={customProfession}
+                    onChange={(e) => setCustomProfession(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                  />
+                )}
               </div>
 
               {status === "error" && (
@@ -256,6 +294,12 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Name</span>
                       <span className="text-white font-medium">{result.name}</span>
+                    </div>
+                  )}
+                  {result.specialization && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Specialization</span>
+                      <span className="text-red-300 font-bold">{result.specialization}</span>
                     </div>
                   )}
                   {result.trcExpiry && (

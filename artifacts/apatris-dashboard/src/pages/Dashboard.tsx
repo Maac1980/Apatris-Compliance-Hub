@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Eye, Zap
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Eye, Zap, Pencil
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -63,6 +63,7 @@ export default function Dashboard() {
   const [status, setStatus] = useState("");
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [panelEditMode, setPanelEditMode] = useState(false);
   const [actionWorker, setActionWorker] = useState<any | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
@@ -104,10 +105,10 @@ export default function Dashboard() {
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-sm flex-shrink-0"
+            className="w-12 h-12 rounded-full flex-shrink-0"
             style={{
               backgroundImage: `url(${import.meta.env.BASE_URL}images/logo.png)`,
-              backgroundSize: "130%",
+              backgroundSize: "145%",
               backgroundPosition: "top center",
               backgroundRepeat: "no-repeat",
               backgroundColor: "white",
@@ -119,7 +120,7 @@ export default function Dashboard() {
             <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
               {t("header.title")}
             </h1>
-            <p className="text-[9px] text-red-400 font-semibold font-mono tracking-[0.2em] uppercase leading-none mt-0.5">
+            <p className="text-[9px] text-red-300 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5">
               OUTSOURCING · CERTIFIED WELDERS
             </p>
           </div>
@@ -295,11 +296,18 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end items-center gap-2">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedWorkerId(worker.id); }}
+                            onClick={(e) => { e.stopPropagation(); setPanelEditMode(false); setSelectedWorkerId(worker.id); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 hover:border-blue-400/60 text-xs font-bold uppercase tracking-wide transition-all"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>View</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/30 hover:border-amber-400/60 text-xs font-bold uppercase tracking-wide transition-all"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
                           </button>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
@@ -329,10 +337,11 @@ export default function Dashboard() {
       </main>
 
       <WorkerProfilePanel 
-        workerId={selectedWorkerId} 
-        onClose={() => setSelectedWorkerId(null)} 
-        onRenew={(w) => { setSelectedWorkerId(null); setActionWorker(w); setRenewOpen(true); }}
-        onNotify={(w) => { setSelectedWorkerId(null); setActionWorker(w); setNotifyOpen(true); }}
+        workerId={selectedWorkerId}
+        initialEditMode={panelEditMode}
+        onClose={() => { setSelectedWorkerId(null); setPanelEditMode(false); }} 
+        onRenew={(w) => { setSelectedWorkerId(null); setPanelEditMode(false); setActionWorker(w); setRenewOpen(true); }}
+        onNotify={(w) => { setSelectedWorkerId(null); setPanelEditMode(false); setActionWorker(w); setNotifyOpen(true); }}
       />
       
       {actionWorker && (

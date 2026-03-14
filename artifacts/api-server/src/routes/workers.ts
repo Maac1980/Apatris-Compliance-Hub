@@ -254,7 +254,7 @@ async function scanBulkDocument(
     bhp: `Extract from this BHP/safety certificate. Return ONLY valid JSON:
 {"name":"worker full name or null","bhpExpiry":"YYYY-MM-DD or null"}`,
     certificate: `Extract from this TRC/welding certificate. Return ONLY valid JSON:
-{"name":"worker full name or null","trcExpiry":"YYYY-MM-DD or null"}`,
+{"name":"worker full name or null","trcExpiry":"YYYY-MM-DD or null","specialization":"Look for keywords MIG, TIG, ARC, FCAW, MMA, electrode. Return the matched keyword exactly (e.g. 'MIG' or 'TIG') or null if not found"}`,
     contract: `Extract from this employment contract. Return ONLY valid JSON:
 {"name":"worker full name or null","contractEndDate":"YYYY-MM-DD or null"}`,
   };
@@ -346,6 +346,15 @@ router.post("/workers/bulk-create", bulkUpload.fields([
       extractedSummary.contractEndDate = contractData.contractEndDate;
     }
 
+    // Specialization: manual profession from form takes priority, then AI-extracted from certificate
+    const manualProfession = typeof req.body?.profession === "string" ? req.body.profession.trim() : "";
+    const aiSpecialization = typeof certData.specialization === "string" ? certData.specialization.trim() : "";
+    const finalSpecialization = manualProfession || aiSpecialization;
+    if (finalSpecialization) {
+      airtableFields["Specialization"] = finalSpecialization;
+      extractedSummary.specialization = finalSpecialization;
+    }
+
     // Create the new Airtable record
     const newRecord = await createRecord(airtableFields);
     const recordId = newRecord.id;
@@ -411,6 +420,7 @@ router.patch("/workers/:id", async (req, res) => {
       airtableFields["Contract End Date"] = body.contractEndDate;
     if (body.email !== undefined) airtableFields["Email"] = body.email;
     if (body.phone !== undefined) airtableFields["Phone"] = body.phone;
+    if (body.specialization !== undefined) airtableFields["Specialization"] = body.specialization;
 
     const updated = await updateRecord(req.params.id, airtableFields);
     res.json(mapRecordToWorker(updated));

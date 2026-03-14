@@ -43,7 +43,7 @@ export function StatCard({ title, value, icon: Icon, variant = "default" }: Stat
 
       <div className="flex items-start justify-between relative z-10">
         <div className="flex-1">
-          <p className="text-xs font-mono tracking-widest uppercase text-muted-foreground mb-3">
+          <p className="text-xs font-mono font-bold tracking-widest uppercase text-white mb-3">
             {title}
           </p>
           <h3 className={cn("text-4xl font-mono font-bold tracking-tight", valueColor)}>

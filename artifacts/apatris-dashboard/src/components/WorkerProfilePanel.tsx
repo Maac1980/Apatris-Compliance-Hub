@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,8 +8,11 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
+const SPEC_OPTIONS = ["TIG", "MIG", "ARC / Electrode", "FCAW", "MMA"];
+
 interface WorkerProfilePanelProps {
   workerId: string | null;
+  initialEditMode?: boolean;
   onClose: () => void;
   onRenew: (worker: any) => void;
   onNotify: (worker: any) => void;
@@ -144,24 +147,71 @@ function UploadButton({ workerId, docType, label }: { workerId: string; docType:
 
 export function WorkerProfilePanel({
   workerId,
+  initialEditMode = false,
   onClose,
   onRenew,
   onNotify,
 }: WorkerProfilePanelProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: worker, isLoading } = useGetWorker(workerId || "", {
     query: { enabled: !!workerId },
   });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editSpec, setEditSpec] = useState("");
+  const [editProfession, setEditProfession] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (workerId) {
+      setIsEditing(initialEditMode);
+    }
+  }, [workerId, initialEditMode]);
+
+  useEffect(() => {
+    if (worker && isEditing) {
+      setEditSpec(worker.specialization || "");
+      setEditProfession(worker.specialization || "");
+    }
+  }, [worker, isEditing]);
+
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (isEditing) setIsEditing(false);
+        else onClose();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, isEditing]);
+
+  const handleSave = async () => {
+    if (!workerId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialization: editSpec || editProfession }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Save failed" }));
+        throw new Error(err.error ?? "Save failed");
+      }
+      await queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) });
+      toast({ title: "✓ Profile Updated", description: `Specialization set to ${editSpec || editProfession}` });
+      setIsEditing(false);
+    } catch (err) {
+      toast({ title: "Save Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const isOpen = !!workerId;
 
@@ -188,7 +238,20 @@ export function WorkerProfilePanel({
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="p-6 border-b border-white/10 relative overflow-hidden bg-slate-800/50">
-              <div className="absolute top-0 right-0 p-4">
+              <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+                {!isEditing && (
+                  <button
+                    onClick={() => {
+                      setEditSpec(worker.specialization || "");
+                      setEditProfession(worker.specialization || "");
+                      setIsEditing(true);
+                    }}
+                    className="p-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-full transition-colors"
+                    title="Edit worker"
+                  >
+                    <Pencil className="w-4 h-4 text-amber-400" />
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
@@ -213,6 +276,67 @@ export function WorkerProfilePanel({
             </div>
 
             <div className="p-6 space-y-6 flex-1">
+
+              {/* EDIT MODE PANEL */}
+              {isEditing && (
+                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit Worker Details
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                        Specialization / Spec
+                      </label>
+                      <select
+                        value={editSpec}
+                        onChange={(e) => setEditSpec(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-amber-500/60"
+                      >
+                        <option value="">— Select Spec —</option>
+                        {SPEC_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                        Profession (free text)
+                      </label>
+                      <input
+                        type="text"
+                        value={editProfession}
+                        onChange={(e) => setEditProfession(e.target.value)}
+                        placeholder="e.g. Certified Welder, Pipe Fitter…"
+                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-amber-500/60 placeholder:text-gray-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      disabled={saving}
+                      className="flex-1 py-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(217,119,6,0.3)]"
+                    >
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      {saving ? "Saving…" : "Save Changes"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Contact */}
               <div className="grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700">
                 <div className="flex items-center gap-3 text-sm">
