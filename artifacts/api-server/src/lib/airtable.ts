@@ -1,11 +1,8 @@
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME || "Welders";
 
-// The user may paste a full Airtable URL or just the base ID.
-// Extract only the appXXXXX portion from whatever was provided.
 function extractBaseId(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
-  // Match appXXXXXXXXXXXXXXX (17+ alphanumeric chars after "app")
   const match = raw.match(/(app[a-zA-Z0-9]{10,})/);
   return match ? match[1] : raw.trim();
 }
@@ -36,17 +33,13 @@ function headers() {
 }
 
 export async function fetchAllRecords(): Promise<AirtableRecord[]> {
-  if (!AIRTABLE_BASE_ID) {
-    throw new Error("AIRTABLE_BASE_ID environment variable is not set");
-  }
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
 
   const records: AirtableRecord[] = [];
   let offset: string | undefined;
 
   do {
-    const url = new URL(
-      `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`
-    );
+    const url = new URL(`${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`);
     if (offset) url.searchParams.set("offset", offset);
     url.searchParams.set("pageSize", "100");
 
@@ -65,9 +58,7 @@ export async function fetchAllRecords(): Promise<AirtableRecord[]> {
 }
 
 export async function fetchRecord(id: string): Promise<AirtableRecord> {
-  if (!AIRTABLE_BASE_ID) {
-    throw new Error("AIRTABLE_BASE_ID environment variable is not set");
-  }
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
 
   const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}/${id}`;
   const res = await fetch(url, { headers: headers() });
@@ -80,13 +71,8 @@ export async function fetchRecord(id: string): Promise<AirtableRecord> {
   return (await res.json()) as AirtableRecord;
 }
 
-export async function updateRecord(
-  id: string,
-  fields: Record<string, unknown>
-): Promise<AirtableRecord> {
-  if (!AIRTABLE_BASE_ID) {
-    throw new Error("AIRTABLE_BASE_ID environment variable is not set");
-  }
+export async function updateRecord(id: string, fields: Record<string, unknown>): Promise<AirtableRecord> {
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
 
   const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}/${id}`;
   const res = await fetch(url, {
@@ -104,9 +90,8 @@ export async function updateRecord(
 }
 
 export async function createRecord(fields: Record<string, unknown>): Promise<AirtableRecord> {
-  if (!AIRTABLE_BASE_ID) {
-    throw new Error("AIRTABLE_BASE_ID environment variable is not set");
-  }
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
+
   const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
   const res = await fetch(url, {
     method: "POST",
@@ -135,21 +120,34 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
     tables: Array<{ id: string; name: string; fields: Array<{ name: string }> }>;
   };
 
-  const table = metaData.tables.find(
-    (t) => t.name.toLowerCase() === AIRTABLE_TABLE_NAME.toLowerCase()
-  );
+  const table = metaData.tables.find((t) => t.name.toLowerCase() === AIRTABLE_TABLE_NAME.toLowerCase());
   if (!table) {
-    throw new Error(
-      `Table "${AIRTABLE_TABLE_NAME}" not found. Available: ${metaData.tables.map((t) => t.name).join(", ")}`
-    );
+    throw new Error(`Table "${AIRTABLE_TABLE_NAME}" not found. Available: ${metaData.tables.map((t) => t.name).join(", ")}`);
   }
 
   const existing = new Set(table.fields.map((f) => f.name.toLowerCase()));
 
   const fieldsToCreate = [
+    { name: "SPEC", type: "singleLineText" },
+    {
+      name: "ASSIGNED SITE",
+      type: "singleSelect",
+      options: {
+        choices: [
+          { name: "Factory A", color: "blueBright" },
+          { name: "Factory B", color: "greenBright" },
+          { name: "Factory C", color: "yellowBright" },
+          { name: "Project Site 1", color: "orangeBright" },
+          { name: "Project Site 2", color: "redBright" },
+          { name: "Project Site 3", color: "purpleBright" },
+          { name: "Unassigned", color: "grayBright" },
+        ],
+      },
+    },
     { name: "TRC_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "PASSPORT_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "BHP_CERTIFICATE", type: "multipleAttachments" },
+    { name: "TRC Certificate", type: "multipleAttachments" },
+    { name: "BHP Certificate", type: "multipleAttachments" },
     { name: "CONTRACT", type: "multipleAttachments" },
   ];
 
@@ -163,8 +161,12 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
       `https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables/${table.id}/fields`,
       { method: "POST", headers: headers(), body: JSON.stringify(field) }
     );
-    if (r.ok) created.push(field.name);
-    else { const t = await r.text(); errors.push(`${field.name}: ${t}`); }
+    if (r.ok) {
+      created.push(field.name);
+    } else {
+      const t = await r.text();
+      errors.push(`${field.name}: ${t}`);
+    }
   }
 
   return { created, skipped, errors };
@@ -177,9 +179,7 @@ export async function uploadAttachmentToRecord(
   filename: string,
   mimeType: string
 ): Promise<void> {
-  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) {
-    throw new Error("Airtable credentials are not set");
-  }
+  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
 
   const contentUrl = `https://content.airtable.com/v0/${AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(fieldName)}/uploadAttachment`;
 
@@ -190,9 +190,7 @@ export async function uploadAttachmentToRecord(
 
   const res = await fetch(contentUrl, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-    },
+    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
     body: form,
   });
 

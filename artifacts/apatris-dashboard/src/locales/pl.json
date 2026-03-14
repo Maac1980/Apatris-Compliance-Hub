@@ -1,6 +1,6 @@
 {
   "login": {
-    "title": "Euro Edu Jobs",
+    "title": "Apatris",
     "subtitle": "Zgodność",
     "terminal": "BEZPIECZNY TERMINAL ZGODNOŚCI",
     "operatorId": "ID Operatora",
@@ -11,7 +11,7 @@
     "invalidCredentials": "Nieprawidłowe dane uwierzytelniające. Odmowa dostępu."
   },
   "header": {
-    "title": "Euro Edu Jobs",
+    "title": "Apatris",
     "subtitle": "Zgodność",
     "generateReport": "Generuj Raport",
     "logout": "Wyloguj"

@@ -14,8 +14,10 @@ export interface Worker {
   specialization: string;
   experience: string | null;
   qualification: string | null;
+  assignedSite: string | null;
   trcExpiry: string | null;
   passportExpiry: string | null;
+  bhpExpiry: string | null;
   workPermitExpiry: string | null;
   bhpStatus: string | null;
   contractEndDate: string | null;
@@ -72,14 +74,12 @@ function computeStatus(worker: Partial<Worker>): {
   const expiryDays = [
     daysUntil(worker.trcExpiry ?? null),
     daysUntil(worker.passportExpiry ?? null),
+    daysUntil(worker.bhpExpiry ?? null),
     daysUntil(worker.workPermitExpiry ?? null),
     daysUntil(worker.contractEndDate ?? null),
-    daysUntil(worker.bhpStatus ?? null),
   ].filter((d): d is number => d !== null);
 
-  if (expiryDays.length === 0) {
-    return { status: "compliant", daysUntilNextExpiry: null };
-  }
+  if (expiryDays.length === 0) return { status: "compliant", daysUntilNextExpiry: null };
 
   const minDays = Math.min(...expiryDays);
 
@@ -100,6 +100,14 @@ function resolveField(fields: Record<string, unknown>, candidates: string[]): un
   return undefined;
 }
 
+function getSingleSelectName(val: unknown): string | null {
+  if (typeof val === "string" && val.trim()) return val.trim();
+  if (typeof val === "object" && val !== null && "name" in val) {
+    return getString((val as Record<string, unknown>).name);
+  }
+  return null;
+}
+
 export function mapRecordToWorker(record: AirtableRecord): Worker {
   const f = record.fields;
 
@@ -108,50 +116,32 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     "Unknown";
 
   const specialization =
-    getString(resolveField(f, ["QUALIFICATION", "Qualification", "Specialization", "Type", "Welding Type", "Skill", "Role"])) ??
+    getString(resolveField(f, ["SPEC", "QUALIFICATION", "Qualification", "Specialization", "Type", "Welding Type", "Skill", "Role"])) ??
     "";
 
   const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "Years Experience", "Work Experience"]));
+  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "SPEC", "Specialization", "Welding Type"]));
 
-  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "Specialization", "Welding Type"]));
+  const assignedSite = getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Site", "Factory", "Location"]));
 
   const trcExpiry = getDate(resolveField(f, ["TRC_EXPIRY", "TRC Expiry", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
-
   const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));
 
-  const workPermitExpiry = getDate(
-    resolveField(f, ["Work Permit Expiry", "Work_Permit_Expiry", "WorkPermitExpiry", "Work Permit", "Permit Expiry"])
-  );
+  const bhpExpiryRaw = getString(resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"]));
+  const bhpExpiry = getDate(bhpExpiryRaw) ?? null;
 
-  const bhpStatus = getString(
-    resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"])
-  );
-
-  const contractEndDate = getDate(
-    resolveField(f, ["Contract End Date", "Contract_End_Date", "ContractEndDate", "Contract End", "Contract Expiry"])
-  );
+  const workPermitExpiry = getDate(resolveField(f, ["Work Permit Expiry", "Work_Permit_Expiry", "WorkPermitExpiry", "Work Permit", "Permit Expiry"]));
+  const contractEndDate = getDate(resolveField(f, ["Contract End Date", "Contract_End_Date", "ContractEndDate", "Contract End", "Contract Expiry"]));
 
   const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
-
   const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
 
-  const passportAttachments = getAttachments(
-    resolveField(f, ["PASSPORT", "Passport", "Passport Attachment", "Passport Document"])
-  );
+  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
+  const trcAttachments = getAttachments(resolveField(f, ["TRC Certificate", "TRC", "TRC Attachment", "TRC Document"]));
+  const bhpAttachments = getAttachments(resolveField(f, ["BHP Certificate", "BHP_CERTIFICATE", "BHP Cert", "BHP Attachment"]));
+  const contractAttachments = getAttachments(resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"]));
 
-  const trcAttachments = getAttachments(
-    resolveField(f, ["TRC", "TRC Attachment", "TRC Document", "TRC Certificate"])
-  );
-
-  const bhpAttachments = getAttachments(
-    resolveField(f, ["BHP_CERTIFICATE", "BHP Certificate", "BHP Cert", "BHP Attachment"])
-  );
-
-  const contractAttachments = getAttachments(
-    resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"])
-  );
-
-  const partial: Partial<Worker> = { trcExpiry, passportExpiry, workPermitExpiry, bhpStatus, contractEndDate };
+  const partial: Partial<Worker> = { trcExpiry, passportExpiry, bhpExpiry, workPermitExpiry, contractEndDate };
   const { status: complianceStatus, daysUntilNextExpiry } = computeStatus(partial);
 
   return {
@@ -160,10 +150,12 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     specialization,
     experience,
     qualification,
+    assignedSite,
     trcExpiry,
     passportExpiry,
+    bhpExpiry,
+    bhpStatus: bhpExpiryRaw,
     workPermitExpiry,
-    bhpStatus,
     contractEndDate,
     email,
     phone,
@@ -180,12 +172,16 @@ export function filterWorkers(
   workers: Worker[],
   search?: string,
   specialization?: string,
-  status?: string
+  status?: string,
+  site?: string
 ): Worker[] {
   return workers.filter((w) => {
     if (search && !w.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (specialization && specialization !== "all" && w.specialization !== specialization) return false;
     if (status && status !== "all" && w.complianceStatus !== status) return false;
+    if (site && site !== "all") {
+      if (!w.assignedSite || w.assignedSite.toLowerCase() !== site.toLowerCase()) return false;
+    }
     return true;
   });
 }

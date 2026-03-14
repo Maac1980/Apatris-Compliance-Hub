@@ -61,6 +61,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [status, setStatus] = useState("");
+  const [site, setSite] = useState("");
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [panelEditMode, setPanelEditMode] = useState(false);
@@ -73,8 +74,9 @@ export default function Dashboard() {
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
     specialization: specialization || undefined, 
-    status: status || undefined 
-  });
+    status: status || undefined,
+    site: site || undefined,
+  } as any);
   
   const { data: stats } = useGetWorkerStats();
 
@@ -105,21 +107,24 @@ export default function Dashboard() {
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-11 h-11 rounded-full bg-white flex-shrink-0 flex items-center justify-center overflow-hidden"
-            style={{ boxShadow: "0 0 0 2px rgba(30,64,175,0.5), 0 0 14px rgba(30,64,175,0.3)" }}
-            aria-label="Euro Edu Jobs Logo"
+            className="w-12 h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
+            style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 12px rgba(196,30,24,0.2)" }}
+            aria-label="Apatris Logo"
           >
-            <img src={`${import.meta.env.BASE_URL}eelogo.png`} alt="Euro Edu Jobs" className="w-full h-full object-cover" />
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z" fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
+              <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900" fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
+            </svg>
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-[0.12em] uppercase leading-none text-white">
+            <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
               {t("header.title")}
             </h1>
             <p
-              className="text-[9px] text-blue-400 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5"
-              style={{ textShadow: "0 0 8px rgba(96,165,250,0.6)" }}
+              className="text-[9px] text-red-500 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5"
+              style={{ textShadow: "0 0 8px rgba(239,68,68,0.7)" }}
             >
-              GLOBAL RECRUITMENT · COMPLIANCE
+              OUTSOURCING · CERTIFIED WELDERS
             </p>
           </div>
         </div>
@@ -183,8 +188,8 @@ export default function Dashboard() {
             />
           </div>
           
-          <div className="flex gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-48">
+          <div className="flex gap-3 w-full md:w-auto flex-wrap">
+            <div className="relative flex-1 md:w-40">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <select 
                 value={specialization}
@@ -192,12 +197,16 @@ export default function Dashboard() {
                 className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
               >
                 <option value="">{t("table.allSpecs")}</option>
-                <option value="TIG">{t("table.tigWelders")}</option>
-                <option value="MIG">{t("table.migWelders")}</option>
-                <option value="ARC">{t("table.arcWelders")}</option>
+                <option value="TIG">TIG</option>
+                <option value="MIG">MIG</option>
+                <option value="MAG">MAG</option>
+                <option value="MMA">MMA</option>
+                <option value="ARC">ARC</option>
+                <option value="FCAW">FCAW</option>
+                <option value="FABRICATOR">FABRICATOR</option>
               </select>
             </div>
-            <div className="relative flex-1 md:w-48">
+            <div className="relative flex-1 md:w-40">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <select 
                 value={status}
@@ -211,6 +220,23 @@ export default function Dashboard() {
                 <option value="non-compliant">{t("table.nonCompliant")}</option>
               </select>
             </div>
+            <div className="relative flex-1 md:w-44">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <select
+                value={site}
+                onChange={(e) => setSite(e.target.value)}
+                className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
+              >
+                <option value="">All Sites</option>
+                <option value="Factory A">Factory A</option>
+                <option value="Factory B">Factory B</option>
+                <option value="Factory C">Factory C</option>
+                <option value="Project Site 1">Project Site 1</option>
+                <option value="Project Site 2">Project Site 2</option>
+                <option value="Project Site 3">Project Site 3</option>
+                <option value="Unassigned">Unassigned</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -222,6 +248,7 @@ export default function Dashboard() {
                 <tr>
                   <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5">{t("table.operator")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.spec")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Assigned Site</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.trcExpiry")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Passport Exp.</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.bhp")}</th>
@@ -234,14 +261,14 @@ export default function Dashboard() {
                 {isLoadingWorkers ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={8} className="px-6 py-6">
+                      <td colSpan={9} className="px-6 py-6">
                         <div className="h-4 bg-white/5 rounded animate-pulse w-full" />
                       </td>
                     </tr>
                   ))
                 ) : workersData?.workers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-sans">
+                    <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground font-sans">
                       {t("table.noResults")}
                     </td>
                   </tr>
@@ -260,6 +287,15 @@ export default function Dashboard() {
                         <span className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs font-bold text-white">
                           {worker.specialization || '—'}
                         </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {(worker as any).assignedSite ? (
+                          <span className="px-2 py-1 rounded-full bg-red-600/20 border border-red-500/40 text-xs font-bold text-red-300">
+                            {(worker as any).assignedSite}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 text-xs font-mono">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-white font-mono text-sm">
                         {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
@@ -313,7 +349,7 @@ export default function Dashboard() {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/30 hover:border-amber-400/60 text-xs font-bold uppercase tracking-wide transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)]"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             <span>Edit</span>

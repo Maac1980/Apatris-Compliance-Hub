@@ -37,7 +37,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-background/20" />
         <div className="absolute bottom-10 left-10 right-16">
           <p className="text-white/30 font-mono text-xs tracking-widest uppercase">
-            EURO EDU JOBS · GLOBAL RECRUITMENT · EST. WARSAW
+            APATRIS · SPECIALIST WELDING · EST. WARSAW
           </p>
         </div>
       </div>
@@ -59,14 +59,12 @@ export default function Login() {
 
           {/* Brand mark */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white mb-5" style={{ boxShadow: "0 0 0 3px rgba(30,64,175,0.4), 0 0 24px rgba(30,64,175,0.25)" }}>
-              <img src={`${import.meta.env.BASE_URL}eelogo.png`} alt="Euro Edu Jobs Logo" className="w-16 h-16 rounded-full object-cover" />
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-[0.15em] uppercase leading-none">
-              EURO EDU JOBS
+            <div className="w-14 h-1 bg-red-600 mx-auto mb-6 rounded-full" />
+            <h1 className="text-4xl font-bold text-white tracking-[0.2em] uppercase leading-none">
+              APATRIS
             </h1>
             <p className="text-gray-400 text-sm tracking-wider uppercase mt-3 leading-snug">
-              Global Recruitment &amp; Compliance Portal
+              Precision Welding Outsourcing.&nbsp;Your vision, expertly welded.
             </p>
             <div className="flex items-center gap-3 mt-5">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />

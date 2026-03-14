@@ -109,12 +109,12 @@ const router: IRouter = Router();
 // GET /workers
 router.get("/workers", async (req, res) => {
   try {
-    const { search, specialization, status } = req.query as Record<string, string>;
+    const { search, specialization, status, site } = req.query as Record<string, string>;
     const records = await fetchAllRecords();
     const allWorkers = records.map(mapRecordToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
-    const filtered = filterWorkers(allWorkers, search, specialization, status);
+    const filtered = filterWorkers(allWorkers, search, specialization, status, site);
     res.json({ workers: filtered, total: filtered.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -409,13 +409,15 @@ router.patch("/workers/:id", async (req, res) => {
 
     if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry;
     if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry;
-    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
+    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry;
     if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus;
+    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
     if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate;
     if (body.email !== undefined) airtableFields["EMAIL"] = body.email;
     if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
-    if (body.specialization !== undefined) airtableFields["QUALIFICATION"] = body.specialization;
+    if (body.specialization !== undefined) airtableFields["SPEC"] = body.specialization;
     if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
+    if (body.assignedSite !== undefined) airtableFields["ASSIGNED SITE"] = body.assignedSite;
 
     const updated = await updateRecord(req.params.id, airtableFields);
     res.json(mapRecordToWorker(updated));
@@ -434,15 +436,26 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     }
 
     const { docType } = req.body as { docType?: string };
-    if (!docType || !["passport", "contract"].includes(docType)) {
-      res.status(400).json({ error: "docType must be 'passport' or 'contract'" });
+    const validDocTypes = ["passport", "contract", "trc", "bhp"];
+    if (!docType || !validDocTypes.includes(docType)) {
+      res.status(400).json({ error: "docType must be 'passport', 'contract', 'trc', or 'bhp'" });
       return;
     }
 
-    const fieldName = docType === "passport" ? "Passport" : "Contract";
+    const fieldNameMap: Record<string, string> = {
+      passport: "PASSPORT",
+      contract: "CONTRACT",
+      trc: "TRC Certificate",
+      bhp: "BHP Certificate",
+    };
+    const fieldName = fieldNameMap[docType];
 
-    // 1. Scan document with AI (runs in parallel with nothing yet — start it now)
-    const scanPromise = scanDocument(req.file.buffer, req.file.mimetype, docType as "passport" | "contract");
+    // 1. Scan document with AI — map trc/bhp to their bulk scan equivalents
+    const bulkScanType = docType === "trc" ? "certificate" : docType === "bhp" ? "bhp" : null;
+    const scanPromise = bulkScanType
+      ? scanBulkDocument(req.file.buffer, req.file.mimetype, bulkScanType as "certificate" | "bhp")
+          .then((d) => ({ type: docType as "trc" | "bhp", ...d }))
+      : scanDocument(req.file.buffer, req.file.mimetype, docType as "passport" | "contract");
 
     // 2. Upload the attachment to Airtable
     await uploadAttachmentToRecord(
@@ -459,29 +472,22 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
     if (scanned) {
       const airtableUpdates: Record<string, unknown> = {};
+      const s = scanned as Record<string, string | null>;
 
-      if (scanned.type === "passport") {
-        if (scanned.name) {
-          airtableUpdates["NAME"] = scanned.name;
-          autoFilledFields["name"] = scanned.name;
-        }
-        if (scanned.passportExpiry) {
-          airtableUpdates["PASSPORT_EXPIRY"] = scanned.passportExpiry;
-          autoFilledFields["passportExpiry"] = scanned.passportExpiry;
-        }
-        if (scanned.nationality) {
-          airtableUpdates["Nationality"] = scanned.nationality;
-          autoFilledFields["nationality"] = scanned.nationality;
-        }
-      } else if (scanned.type === "contract") {
-        if (scanned.contractEndDate) {
-          airtableUpdates["Contract End Date"] = scanned.contractEndDate;
-          autoFilledFields["contractEndDate"] = scanned.contractEndDate;
-        }
-        if (scanned.workerName) {
-          airtableUpdates["NAME"] = scanned.workerName;
-          autoFilledFields["name"] = scanned.workerName;
-        }
+      if (s.type === "passport") {
+        if (s.name) { airtableUpdates["NAME"] = s.name; autoFilledFields["name"] = s.name; }
+        if (s.passportExpiry) { airtableUpdates["PASSPORT_EXPIRY"] = s.passportExpiry; autoFilledFields["passportExpiry"] = s.passportExpiry; }
+        if (s.nationality) { autoFilledFields["nationality"] = s.nationality; }
+      } else if (s.type === "contract") {
+        if (s.contractEndDate) { airtableUpdates["Contract End Date"] = s.contractEndDate; autoFilledFields["contractEndDate"] = s.contractEndDate; }
+        if (s.workerName) { airtableUpdates["NAME"] = s.workerName; autoFilledFields["name"] = s.workerName; }
+      } else if (s.type === "trc") {
+        if (s.trcExpiry) { airtableUpdates["TRC_EXPIRY"] = s.trcExpiry; autoFilledFields["trcExpiry"] = s.trcExpiry; }
+        if (s.name) { autoFilledFields["name"] = s.name; }
+        if (s.specialization) { airtableUpdates["SPEC"] = s.specialization; autoFilledFields["specialization"] = s.specialization; }
+      } else if (s.type === "bhp") {
+        if (s.bhpExpiry) { airtableUpdates["BHP EXPIRY"] = s.bhpExpiry; autoFilledFields["bhpExpiry"] = s.bhpExpiry; }
+        if (s.name) { autoFilledFields["name"] = s.name; }
       }
 
       if (Object.keys(airtableUpdates).length > 0) {

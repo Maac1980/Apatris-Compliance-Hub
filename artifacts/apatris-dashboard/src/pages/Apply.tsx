@@ -166,13 +166,16 @@ export default function Apply() {
       <div className="relative z-10 max-w-lg mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white mb-5 overflow-hidden" style={{ boxShadow: "0 0 0 3px rgba(30,64,175,0.45), 0 0 24px rgba(30,64,175,0.25)" }}>
-            <img src={`${import.meta.env.BASE_URL}eelogo.png`} alt="Euro Edu Jobs Logo" className="w-full h-full object-cover" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white mb-5" style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.4), 0 0 20px rgba(196,30,24,0.2)" }}>
+            <svg width="42" height="42" viewBox="0 0 38 38" fill="none">
+              <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z" fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
+              <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900" fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
+            </svg>
           </div>
-          <div className="w-12 h-0.5 bg-blue-600 mx-auto mb-4 rounded-full" />
-          <h1 className="text-3xl font-bold tracking-[0.1em] uppercase">EURO EDU JOBS</h1>
-          <p className="text-gray-400 text-sm tracking-wider mt-2">Candidate Application Portal</p>
-          <p className="text-gray-600 text-xs font-mono mt-1 tracking-widest uppercase">Global Recruitment · Warsaw</p>
+          <div className="w-12 h-0.5 bg-red-600 mx-auto mb-4 rounded-full" />
+          <h1 className="text-3xl font-bold tracking-[0.15em] uppercase">APATRIS</h1>
+          <p className="text-gray-400 text-sm tracking-wider mt-2">Welder Application Portal</p>
+          <p className="text-gray-600 text-xs font-mono mt-1 tracking-widest uppercase">Specialist Welding · Warsaw</p>
         </div>
 
         {/* Form card */}
@@ -273,7 +276,7 @@ export default function Apply() {
         </div>
 
         <p className="text-center text-xs font-mono text-gray-600 mt-6 tracking-wider">
-          EURO EDU JOBS · GLOBAL RECRUITMENT · WARSAW · CONFIDENTIAL
+          APATRIS SPECIALIST WELDING · WARSAW · CONFIDENTIAL
         </p>
       </div>
     </div>
