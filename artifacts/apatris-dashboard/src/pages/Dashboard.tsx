@@ -252,18 +252,30 @@ export default function Dashboard() {
         {/* Data Table */}
         <div className="glass-panel rounded-xl overflow-hidden tech-border">
           <div className="overflow-x-auto">
-            <table className="w-full text-left whitespace-nowrap">
+            {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
+            <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "900px" }}>
+              <colgroup>
+                <col style={{ width: "19%" }} /> {/* Operator */}
+                <col style={{ width: "7%" }}  /> {/* Spec */}
+                <col style={{ width: "13%" }} /> {/* Assigned Site */}
+                <col style={{ width: "10%" }} /> {/* TRC Expiry */}
+                <col style={{ width: "10%" }} /> {/* Passport Exp */}
+                <col style={{ width: "10%" }} /> {/* BHP */}
+                <col style={{ width: "9%" }}  /> {/* Docs */}
+                <col style={{ width: "9%" }}  /> {/* Status */}
+                <col style={{ width: "13%" }} /> {/* Actions */}
+              </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
-                  <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5">{t("table.operator")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.spec")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Assigned Site</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.trcExpiry")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Passport Exp.</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.bhp")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">Docs</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white">{t("table.status")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-right">{t("table.actions")}</th>
+                  <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5 text-left">{t("table.operator")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.spec")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Assigned Site</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.trcExpiry")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Passport Exp.</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.bhp")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Docs</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.status")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-center">{t("table.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
@@ -288,18 +300,18 @@ export default function Dashboard() {
                       onClick={() => setSelectedWorkerId(worker.id)}
                       className="hover:bg-white/5 transition-colors cursor-pointer group"
                     >
-                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-6 py-4 border-r border-white/5 transition-colors">
-                        <div className="font-sans font-medium text-white">{worker.name}</div>
-                        <div className="text-xs text-muted-foreground">{worker.email || worker.phone || '—'}</div>
+                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-6 py-4 border-r border-white/5 transition-colors overflow-hidden">
+                        <div className="font-sans font-medium text-white truncate">{worker.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{worker.email || worker.phone || '—'}</div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 overflow-hidden">
                         <span className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs font-bold text-white">
                           {worker.specialization || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 overflow-hidden">
                         {(worker as any).assignedSite ? (
-                          <span className="px-2 py-1 rounded-full bg-red-600/20 border border-red-500/40 text-xs font-bold text-red-300">
+                          <span className="px-2 py-1 rounded-full bg-red-600/20 border border-red-500/40 text-xs font-bold text-red-300 truncate block max-w-full">
                             {(worker as any).assignedSite}
                           </span>
                         ) : (
@@ -325,8 +337,8 @@ export default function Dashboard() {
                           return <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>{v}</span>;
                         })()}
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1">
+                      <td className="px-4 py-4 overflow-hidden">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {(worker as any).passportAttachments?.length > 0 && (
                             <span title="Passport" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">PP</span>
                           )}
@@ -347,8 +359,8 @@ export default function Dashboard() {
                       <td className="px-4 py-4">
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end items-center gap-2">
+                      <td className="px-4 py-4">
+                        <div className="flex justify-center items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)]"
