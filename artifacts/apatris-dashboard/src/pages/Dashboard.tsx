@@ -275,7 +275,7 @@ export default function Dashboard() {
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.bhp")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Docs</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.status")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-center">{t("table.actions")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-right">{t("table.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
@@ -360,7 +360,7 @@ export default function Dashboard() {
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex justify-center items-center gap-2">
+                        <div className="flex justify-end items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)]"
