@@ -325,7 +325,7 @@ router.post("/workers/bulk-create", bulkUpload.fields([
 
     const name = merged.name;
     if (name) {
-      airtableFields["NAME"] = name;
+      airtableFields["Full Name"] = name;
       extractedSummary.name = name;
     }
     if (passportData.passportExpiry) {
@@ -357,9 +357,9 @@ router.post("/workers/bulk-create", bulkUpload.fields([
     // Upload all attachments in parallel
     const uploadTasks: Promise<void>[] = [];
     const attachmentMap: Record<string, string> = {
-      passport: "PASSPORT",
-      bhp: "BHP_CERTIFICATE",
-      certificate: "TRC",
+      passport: "PASSPORT DOCCUMENT",
+      bhp: "BHP Certificate",
+      certificate: "TRC Certificate",
       contract: "CONTRACT",
     };
 
@@ -443,7 +443,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     }
 
     const fieldNameMap: Record<string, string> = {
-      passport: "PASSPORT",
+      passport: "PASSPORT DOCCUMENT",
       contract: "CONTRACT",
       trc: "TRC Certificate",
       bhp: "BHP Certificate",
@@ -475,19 +475,19 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
       const s = scanned as Record<string, string | null>;
 
       if (s.type === "passport") {
-        if (s.name) { airtableUpdates["NAME"] = s.name; autoFilledFields["name"] = s.name; }
+        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
         if (s.passportExpiry) { airtableUpdates["PASSPORT_EXPIRY"] = s.passportExpiry; autoFilledFields["passportExpiry"] = s.passportExpiry; }
         if (s.nationality) { autoFilledFields["nationality"] = s.nationality; }
       } else if (s.type === "contract") {
         if (s.contractEndDate) { airtableUpdates["Contract End Date"] = s.contractEndDate; autoFilledFields["contractEndDate"] = s.contractEndDate; }
-        if (s.workerName) { airtableUpdates["NAME"] = s.workerName; autoFilledFields["name"] = s.workerName; }
+        if (s.workerName) { airtableUpdates["Full Name"] = s.workerName; autoFilledFields["name"] = s.workerName; }
       } else if (s.type === "trc") {
         if (s.trcExpiry) { airtableUpdates["TRC_EXPIRY"] = s.trcExpiry; autoFilledFields["trcExpiry"] = s.trcExpiry; }
-        if (s.name) { autoFilledFields["name"] = s.name; }
+        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
         if (s.specialization) { airtableUpdates["SPEC"] = s.specialization; autoFilledFields["specialization"] = s.specialization; }
       } else if (s.type === "bhp") {
         if (s.bhpExpiry) { airtableUpdates["BHP EXPIRY"] = s.bhpExpiry; autoFilledFields["bhpExpiry"] = s.bhpExpiry; }
-        if (s.name) { autoFilledFields["name"] = s.name; }
+        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
       }
 
       if (Object.keys(airtableUpdates).length > 0) {

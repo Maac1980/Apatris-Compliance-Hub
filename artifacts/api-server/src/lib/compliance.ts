@@ -112,7 +112,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const f = record.fields;
 
   const name =
-    getString(resolveField(f, ["NAME", "Name", "Full Name", "Worker Name", "Welder Name", "Employee Name"])) ??
+    getString(resolveField(f, ["Full Name", "NAME", "Name", "Worker Name", "Welder Name", "Employee Name", "Welder"])) ??
     "Unknown";
 
   const specialization =
@@ -124,7 +124,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
 
   const assignedSite = getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Site", "Factory", "Location"]));
 
-  const trcExpiry = getDate(resolveField(f, ["TRC_EXPIRY", "TRC Expiry", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
+  const trcExpiry = getDate(resolveField(f, ["TRC Expiry", "TRC_EXPIRY", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
   const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));
 
   const bhpExpiryRaw = getString(resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"]));
@@ -136,7 +136,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
   const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
 
-  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
+  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
   const trcAttachments = getAttachments(resolveField(f, ["TRC Certificate", "TRC", "TRC Attachment", "TRC Document"]));
   const bhpAttachments = getAttachments(resolveField(f, ["BHP Certificate", "BHP_CERTIFICATE", "BHP Cert", "BHP Attachment"]));
   const contractAttachments = getAttachments(resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"]));
