@@ -28,7 +28,7 @@ function LanguageToggle() {
         onClick={() => toggle("en")}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
           current === "en"
-            ? "bg-primary text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+            ? "bg-primary text-white shadow-[0_0_12px_rgba(196,30,24,0.5)]"
             : "text-muted-foreground hover:text-white"
         }`}
         title="English"
@@ -40,7 +40,7 @@ function LanguageToggle() {
         onClick={() => toggle("pl")}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
           current === "pl"
-            ? "bg-primary text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+            ? "bg-primary text-white shadow-[0_0_12px_rgba(196,30,24,0.5)]"
             : "text-muted-foreground hover:text-white"
         }`}
         title="Polski"
@@ -89,25 +89,37 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative">
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-destructive/10 blur-[120px] rounded-full mix-blend-screen" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/8 blur-[140px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[30%] bg-destructive/3 blur-[160px] rounded-full" />
       </div>
 
       {/* Header */}
-      <header className="h-16 border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-30 px-6 flex items-center justify-between">
+      <header
+        className="h-16 border-b border-primary/10 bg-background/90 backdrop-blur-xl sticky top-0 z-30 px-6 flex items-center justify-between"
+        style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}
+      >
         <div className="flex items-center gap-3">
-          <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Logo" className="w-8 h-8 object-contain" />
-          <h1 className="text-xl font-display font-bold tracking-widest uppercase">
-            {t("header.title")} <span className="text-primary font-light">{t("header.subtitle")}</span>
-          </h1>
+          <div className="relative">
+            <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Logo" className="w-9 h-9 object-contain relative z-10" />
+            <div className="absolute inset-0 bg-primary/25 blur-lg rounded-full" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
+              {t("header.title")}
+            </h1>
+            <p className="text-[9px] text-primary font-mono tracking-[0.2em] uppercase leading-none mt-0.5 opacity-80">
+              OUTSOURCING · CERTIFIED WELDERS
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setReportOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-display uppercase tracking-wide transition-colors text-white"
+            className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-sm font-mono uppercase tracking-wide transition-all text-primary hover:shadow-[0_0_15px_rgba(196,30,24,0.3)]"
           >
-            <FileText className="w-4 h-4 text-primary" />
+            <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">{t("header.generateReport")}</span>
           </button>
 

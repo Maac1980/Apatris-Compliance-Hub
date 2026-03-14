@@ -45,17 +45,24 @@ export default function Login() {
 
       <div className="w-full max-w-md z-10 p-8 animate-fadeIn">
         <div className="mb-10 text-center">
-          <div className="mx-auto w-20 h-20 bg-black/50 border border-primary/30 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(0,240,255,0.2)]">
+          <div className="mx-auto w-24 h-24 bg-black/60 border border-primary/30 rounded-2xl flex items-center justify-center mb-6 shield-pulse">
             <img
               src={`${import.meta.env.BASE_URL}images/logo.png`}
               alt="Apatris Logo"
-              className="w-12 h-12 object-contain"
+              className="w-16 h-16 object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-widest uppercase">
-            {t("login.title")} <span className="text-primary">{t("login.subtitle")}</span>
+          <h1 className="text-4xl font-bold text-white tracking-widest uppercase">
+            {t("login.title")}
           </h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">{t("login.terminal")}</p>
+          <p className="text-primary font-bold tracking-[0.25em] text-sm uppercase mt-1">
+            OUTSOURCING · CERTIFIED WELDERS
+          </p>
+          <div className="mt-4 flex items-center gap-3 justify-center">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
+            <p className="text-muted-foreground font-mono text-xs tracking-widest">{t("login.terminal")}</p>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
+          </div>
         </div>
 
         <form
