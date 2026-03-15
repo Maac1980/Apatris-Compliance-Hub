@@ -136,6 +136,8 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
     { name: "TRC Certificate", type: "multipleAttachments" },
     { name: "BHP Certificate", type: "multipleAttachments" },
     { name: "CONTRACT", type: "multipleAttachments" },
+    { name: "HOURLY_RATE", type: "number", options: { precision: 2 } },
+    { name: "MONTHLY_HOURS", type: "number", options: { precision: 0 } },
   ];
 
   const created: string[] = [];

@@ -271,6 +271,8 @@ export function WorkerProfilePanel({
   const [editPassportExpiry, setEditPassportExpiry] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editHourlyRate, setEditHourlyRate] = useState("");
+  const [editMonthlyHours, setEditMonthlyHours] = useState("");
   const [saving, setSaving] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -288,6 +290,8 @@ export function WorkerProfilePanel({
       setEditPassportExpiry((worker as any).passportExpiry || "");
       setEditEmail((worker as any).email || "");
       setEditPhone((worker as any).phone || "");
+      setEditHourlyRate((worker as any).hourlyRate != null ? String((worker as any).hourlyRate) : "");
+      setEditMonthlyHours((worker as any).monthlyHours != null ? String((worker as any).monthlyHours) : "");
     }
   }, [worker, isEditing]);
 
@@ -314,6 +318,8 @@ export function WorkerProfilePanel({
       if (editPassportExpiry) body.passportExpiry = editPassportExpiry;
       if (editEmail) body.email = editEmail;
       if (editPhone) body.phone = editPhone;
+      body.hourlyRate = editHourlyRate;
+      body.monthlyHours = editMonthlyHours;
 
       const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}`, {
         method: "PATCH",
@@ -492,7 +498,45 @@ export function WorkerProfilePanel({
                         className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
                       />
                     </div>
+
+                    {/* Hourly Rate */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Hourly Netto Rate (PLN)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editHourlyRate}
+                        onChange={(e) => setEditHourlyRate(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                      />
+                    </div>
+
+                    {/* Monthly Hours */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Total Monthly Hours</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={editMonthlyHours}
+                        onChange={(e) => setEditMonthlyHours(e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                      />
+                    </div>
                   </div>
+
+                  {/* Calculated Payout */}
+                  {editHourlyRate && editMonthlyHours && (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 border border-slate-600">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Estimated Monthly Payout</span>
+                      <span className="text-sm font-mono font-bold text-green-400">
+                        {(parseFloat(editHourlyRate) * parseFloat(editMonthlyHours)).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex gap-2 pt-1">
                     <button
@@ -544,6 +588,23 @@ export function WorkerProfilePanel({
                   <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
                   <DocRow label={t("panel.workPermitExpiry")} date={(worker as any).workPermitExpiry} />
                   <DocRow label={t("panel.contractEndDate")} date={(worker as any).contractEndDate} />
+                  {/* Monthly Hours + Payout summary row */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <span className="text-sm font-medium text-gray-300">Monthly Hours</span>
+                    <span className="text-sm font-mono text-blue-400 font-semibold">
+                      {(worker as any).monthlyHours != null
+                        ? `${(worker as any).monthlyHours} hrs`
+                        : <span className="text-gray-500">N/A</span>}
+                    </span>
+                  </div>
+                  {(worker as any).hourlyRate != null && (worker as any).monthlyHours != null && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                      <span className="text-sm font-medium text-gray-300">Est. Monthly Payout</span>
+                      <span className="text-sm font-mono text-green-400 font-bold">
+                        {((worker as any).hourlyRate * (worker as any).monthlyHours).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

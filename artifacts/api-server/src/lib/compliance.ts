@@ -23,6 +23,8 @@ export interface Worker {
   contractEndDate: string | null;
   email: string | null;
   phone: string | null;
+  hourlyRate: number | null;
+  monthlyHours: number | null;
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
   passportAttachments: Attachment[];
@@ -33,6 +35,15 @@ export interface Worker {
 
 function getString(val: unknown): string | null {
   if (typeof val === "string" && val.trim() !== "") return val.trim();
+  return null;
+}
+
+function getNumber(val: unknown): number | null {
+  if (typeof val === "number" && !isNaN(val)) return val;
+  if (typeof val === "string" && val.trim() !== "") {
+    const n = parseFloat(val);
+    if (!isNaN(n)) return n;
+  }
   return null;
 }
 
@@ -138,6 +149,8 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
 
   const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
   const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
+  const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "Hourly Netto Rate", "Rate"]));
+  const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "Total Monthly Hours", "Hours"]));
 
   const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
   const trcAttachments = getAttachments(resolveField(f, ["TRC Certificate", "TRC", "TRC Attachment", "TRC Document"]));
@@ -162,6 +175,8 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     contractEndDate,
     email,
     phone,
+    hourlyRate,
+    monthlyHours,
     complianceStatus,
     daysUntilNextExpiry,
     passportAttachments,

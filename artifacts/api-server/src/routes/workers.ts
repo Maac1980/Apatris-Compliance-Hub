@@ -439,8 +439,22 @@ router.patch("/workers/:id", async (req, res) => {
       airtableFields["SITE"] = String(body.assignedSite).trim() || null;
     }
 
-    const updated = await updateRecord(req.params.id, airtableFields);
-    res.json(mapRecordToWorker(updated));
+    await updateRecord(req.params.id, airtableFields);
+
+    // Save financial fields separately — graceful fallback if columns don't exist yet in Airtable
+    if (body.hourlyRate !== undefined || body.monthlyHours !== undefined) {
+      const financialFields: Record<string, unknown> = {};
+      if (body.hourlyRate !== undefined) financialFields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
+      if (body.monthlyHours !== undefined) financialFields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
+      try {
+        await updateRecord(req.params.id, financialFields);
+      } catch (financialErr) {
+        console.warn("[workers PATCH] Financial fields not saved (run /api/workers/init-fields to create columns):", financialErr instanceof Error ? financialErr.message : financialErr);
+      }
+    }
+
+    const finalRecord = await fetchRecord(req.params.id);
+    res.json(mapRecordToWorker(finalRecord));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
