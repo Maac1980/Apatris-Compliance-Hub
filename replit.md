@@ -4,6 +4,32 @@
 
 Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspace monorepo with TypeScript.
 
+## Implemented Features
+
+### Core T001–T007 (All Complete)
+- **T001** Session timeout: 30-min auto-logout via activity tracking
+- **T002** Contract expiry in scheduler alerts alongside TRC/Passport/BHP
+- **T003** Per-site dashboard view with compliance score per site
+- **T004** Notification history log (JSON + API + Admin UI)
+- **T005** Activity audit log (JSON + API + Admin UI)
+- **T006** Compliance trend chart (recharts LineChart, daily snapshots)
+- **T007** PDF export via jsPDF + jsPDF-autotable in ComplianceReportModal
+
+### Polish Labour Law Compliance Upgrade (Complete)
+14 new Airtable fields added and mapped:
+- **Polish Compliance Docs**: Medical Exam Expiry, Oświadczenie Expiry, UDT Cert Expiry, RODO Consent Date, PUP Filed Date
+- **Identity & Legal**: PESEL, NIP, Visa Type, ZUS Status (singleSelect: Registered/Unregistered/Unknown)
+- **EN ISO 9606 Welding Cert**: Welding Process, Material Group, Thickness Range, Position
+- **Payroll**: Advance field — deducted from gross for final net salary display
+
+### WorkerProfilePanel Sections
+- Core Details (TRC, BHP, Passport, Contract, Email, Phone, Site)
+- Polish Compliance Documents (Medical/Oświadczenie/UDT/RODO/PUP)
+- Identity & Legal (PESEL, NIP, ZUS Status, Visa Type)
+- EN ISO 9606 Welding Cert (Process, Position, Material Group, Thickness)
+- Payroll with advance deduction (Admin only — gross → advance → final net)
+- PIP Inspection Mode: printable card with all docs + welding cert + signature block
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

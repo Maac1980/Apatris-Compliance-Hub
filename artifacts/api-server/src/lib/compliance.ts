@@ -15,18 +15,39 @@ export interface Worker {
   experience: string | null;
   qualification: string | null;
   assignedSite: string | null;
+  // Core expiry dates
   trcExpiry: string | null;
   passportExpiry: string | null;
   bhpExpiry: string | null;
   workPermitExpiry: string | null;
   bhpStatus: string | null;
   contractEndDate: string | null;
+  // Polish compliance
+  medicalExamExpiry: string | null;
+  oswiadczenieExpiry: string | null;
+  udtCertExpiry: string | null;
+  rodoConsentDate: string | null;
+  pupFiledDate: string | null;
+  // Identity & Legal
+  pesel: string | null;
+  nip: string | null;
+  visaType: string | null;
+  zusStatus: string | null;
+  // EN ISO 9606 Welding certification
+  weldingProcess: string | null;
+  weldingMaterialGroup: string | null;
+  weldingThickness: string | null;
+  weldingPosition: string | null;
+  // Contact & Financial
   email: string | null;
   phone: string | null;
   hourlyRate: number | null;
   monthlyHours: number | null;
+  advance: number | null;
+  // Computed
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
+  // Attachments
   passportAttachments: Attachment[];
   trcAttachments: Attachment[];
   bhpAttachments: Attachment[];
@@ -88,6 +109,9 @@ function computeStatus(worker: Partial<Worker>): {
     daysUntil(worker.bhpExpiry ?? null),
     daysUntil(worker.workPermitExpiry ?? null),
     daysUntil(worker.contractEndDate ?? null),
+    daysUntil(worker.medicalExamExpiry ?? null),
+    daysUntil(worker.oswiadczenieExpiry ?? null),
+    daysUntil(worker.udtCertExpiry ?? null),
   ].filter((d): d is number => d !== null);
 
   if (expiryDays.length === 0) return { status: "compliant", daysUntilNextExpiry: null };
@@ -123,41 +147,62 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const f = record.fields;
 
   const name =
-    getString(resolveField(f, ["Full Name", "NAME", "Name", "Worker Name", "Welder Name", "Employee Name", "Welder"])) ??
-    "Unknown";
+    getString(resolveField(f, ["Full Name", "NAME", "Name", "FULL NAME", "full_name"])) ?? "Unknown";
 
   const specialization =
-    getString(resolveField(f, ["SPEC", "QUALIFICATION", "Qualification", "Specialization", "Type", "Welding Type", "Skill", "Role"])) ??
-    "";
+    getSingleSelectName(resolveField(f, ["SPEC", "Specialization", "SPECIALIZATION", "QUALIFICATION", "Qualification", "spec"])) ??
+    getString(resolveField(f, ["SPEC", "Specialization", "QUALIFICATION", "Qualification"])) ?? "";
 
-  const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "Years Experience", "Work Experience"]));
-  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "SPEC", "Specialization", "Welding Type"]));
+  const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "experience"]));
+  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "qualification"]));
 
-  // SITE is a free-text field; ASSIGNED SITE is a legacy singleSelect (read as fallback)
   const assignedSite =
-    getString(resolveField(f, ["SITE", "Site"])) ??
-    getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Factory", "Location"]));
+    getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "SITE", "Site", "site"])) ??
+    getString(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "SITE", "Site"]));
 
   const trcExpiry = getDate(resolveField(f, ["TRC Expiry", "TRC_EXPIRY", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
   const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));
-
-  const bhpExpiryRaw = getString(resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"]));
-  const bhpExpiry = getDate(bhpExpiryRaw) ?? null;
-
-  const workPermitExpiry = getDate(resolveField(f, ["Work Permit Expiry", "Work_Permit_Expiry", "WorkPermitExpiry", "Work Permit", "Permit Expiry"]));
+  const bhpExpiryRaw = getString(resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHPExpiry", "BHP Status", "BHP_STATUS"]));
+  const bhpExpiry = getDate(bhpExpiryRaw);
+  const workPermitExpiry = getDate(resolveField(f, ["Work Permit Expiry", "WORK_PERMIT_EXPIRY", "WorkPermitExpiry"]));
   const contractEndDate = getDate(resolveField(f, ["Contract End Date", "Contract_End_Date", "ContractEndDate", "Contract End", "Contract Expiry"]));
 
-  const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
-  const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
-  const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "Hourly Netto Rate", "Rate"]));
-  const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "Total Monthly Hours", "Hours"]));
+  // Polish compliance
+  const medicalExamExpiry = getDate(resolveField(f, ["Medical Exam Expiry", "Medical_Exam_Expiry", "MedicalExamExpiry"]));
+  const oswiadczenieExpiry = getDate(resolveField(f, ["Oswiadczenie Expiry", "Oswiadczenie_Expiry", "OswiadczenieExpiry"]));
+  const udtCertExpiry = getDate(resolveField(f, ["UDT Cert Expiry", "UDT_Cert_Expiry", "UDTCertExpiry"]));
+  const rodoConsentDate = getDate(resolveField(f, ["RODO Consent Date", "RODO_Consent_Date", "RODOConsentDate"]));
+  const pupFiledDate = getDate(resolveField(f, ["PUP Filed Date", "PUP_Filed_Date", "PUPFiledDate"]));
 
-  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
+  // Identity
+  const pesel = getString(resolveField(f, ["PESEL", "pesel"]));
+  const nip = getString(resolveField(f, ["NIP", "nip"]));
+  const visaType = getString(resolveField(f, ["Visa Type", "VISA_TYPE", "VisaType"]));
+  const zusStatus = getSingleSelectName(resolveField(f, ["ZUS Status", "ZUS_STATUS", "ZUSStatus"]));
+
+  // EN ISO 9606
+  const weldingProcess = getString(resolveField(f, ["Welding Process", "WELDING_PROCESS", "WeldingProcess"]));
+  const weldingMaterialGroup = getString(resolveField(f, ["Welding Material Group", "WELDING_MATERIAL_GROUP", "WeldingMaterialGroup"]));
+  const weldingThickness = getString(resolveField(f, ["Welding Thickness", "WELDING_THICKNESS", "WeldingThickness"]));
+  const weldingPosition = getString(resolveField(f, ["Welding Position", "WELDING_POSITION", "WeldingPosition"]));
+
+  // Financial
+  const email = getString(resolveField(f, ["EMAIL", "Email", "email"]));
+  const phone = getString(resolveField(f, ["PHONE", "Phone", "phone"]));
+  const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "HourlyRate"]));
+  const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "MonthlyHours"]));
+  const advance = getNumber(resolveField(f, ["Advance", "ADVANCE", "advance"]));
+
+  // Attachments
+  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Document", "PASSPORT_DOCUMENT"]));
   const trcAttachments = getAttachments(resolveField(f, ["TRC Certificate", "TRC", "TRC Attachment", "TRC Document"]));
   const bhpAttachments = getAttachments(resolveField(f, ["BHP Certificate", "BHP_CERTIFICATE", "BHP Cert", "BHP Attachment"]));
   const contractAttachments = getAttachments(resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"]));
 
-  const partial: Partial<Worker> = { trcExpiry, passportExpiry, bhpExpiry, workPermitExpiry, contractEndDate };
+  const partial: Partial<Worker> = {
+    trcExpiry, passportExpiry, bhpExpiry, workPermitExpiry, contractEndDate,
+    medicalExamExpiry, oswiadczenieExpiry, udtCertExpiry,
+  };
   const { status: complianceStatus, daysUntilNextExpiry } = computeStatus(partial);
 
   return {
@@ -173,10 +218,24 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     bhpStatus: bhpExpiryRaw,
     workPermitExpiry,
     contractEndDate,
+    medicalExamExpiry,
+    oswiadczenieExpiry,
+    udtCertExpiry,
+    rodoConsentDate,
+    pupFiledDate,
+    pesel,
+    nip,
+    visaType,
+    zusStatus,
+    weldingProcess,
+    weldingMaterialGroup,
+    weldingThickness,
+    weldingPosition,
     email,
     phone,
     hourlyRate,
     monthlyHours,
+    advance,
     complianceStatus,
     daysUntilNextExpiry,
     passportAttachments,

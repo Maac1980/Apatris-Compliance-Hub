@@ -1,0 +1,12 @@
+[
+  {
+    "id": "a-1773607203241",
+    "timestamp": "2026-03-15T20:40:03.240Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: TRC_EXPIRY, PASSPORT_EXPIRY, BHP EXPIRY, PHONE, SPEC, SITE"
+  }
+]

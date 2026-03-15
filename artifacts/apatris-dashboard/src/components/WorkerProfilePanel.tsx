@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle } from "lucide-react";
+import {
+  X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
+  XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,9 +31,7 @@ function formatWaNum(phone: string): string {
 function buildWaUrl(phone: string, urgentDoc?: string | null): string {
   const num = formatWaNum(phone);
   if (urgentDoc) {
-    const msg = encodeURIComponent(
-      `Dzień dobry, tutaj biuro Apatris. Twoje dokumenty (${urgentDoc}) wygasają. Prosimy o pilny kontakt.`
-    );
+    const msg = encodeURIComponent(`Dzień dobry, tutaj biuro Apatris. Twoje dokumenty (${urgentDoc}) wygasają. Prosimy o pilny kontakt.`);
     return `https://wa.me/${num}?text=${msg}`;
   }
   return `https://wa.me/${num}`;
@@ -39,8 +41,8 @@ function getUrgentDoc(worker: any): string | null {
   const RED_MS = 30 * 24 * 60 * 60 * 1000;
   const now = Date.now();
   const checks: [string, string | undefined | null][] = [
-    ["TRC", worker.trcExpiry],
-    ["Passport", worker.passportExpiry],
+    ["TRC", worker.trcExpiry], ["Passport", worker.passportExpiry],
+    ["Medical Exam", worker.medicalExamExpiry], ["Oświadczenie", worker.oswiadczenieExpiry],
   ];
   for (const [label, expiry] of checks) {
     if (expiry && new Date(expiry).getTime() - now <= RED_MS) return label;
@@ -49,16 +51,16 @@ function getUrgentDoc(worker: any): string | null {
 }
 
 const SPEC_OPTIONS = ["TIG", "MIG", "MAG", "MMA", "ARC / Electrode", "FCAW", "FABRICATOR"];
+const ZUS_OPTIONS = ["Registered", "Unregistered", "Unknown"];
+const WELDING_PROCESSES = ["TIG", "MIG", "MAG", "MMA", "FCAW", "SAW", "Plasma", "Oxy-fuel"];
+const WELDING_POSITIONS = ["PA", "PB", "PC", "PD", "PE", "PF", "PG", "H-L045", "J-L045"];
+const VISA_TYPES = ["Karta Pobytu - Czasowy", "Karta Pobytu - Stały", "Karta Pobytu - UE LT", "Wiza D", "Wiza C", "EU Citizen", "Other"];
 
-// ─── Site Combobox ────────────────────────────────────────────────────────────
-// Searchable free-text input with dropdown suggestions.
-// Any value typed is valid — it will be saved as-is to Airtable.
 function SiteCombobox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Fetch live site list from API
   const { data } = useQuery<{ sites: string[] }>({
     queryKey: ["workers-sites"],
     queryFn: async () => {
@@ -70,10 +72,8 @@ function SiteCombobox({ value, onChange }: { value: string; onChange: (v: string
   });
   const liveSites = data?.sites ?? [];
 
-  // Sync incoming value when parent resets
   useEffect(() => { setQuery(value); }, [value]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
@@ -82,62 +82,35 @@ function SiteCombobox({ value, onChange }: { value: string; onChange: (v: string
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = liveSites.filter((s) =>
-    s.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = liveSites.filter((s) => s.toLowerCase().includes(query.toLowerCase()));
   const isNew = query.trim() !== "" && !liveSites.some((s) => s.toLowerCase() === query.toLowerCase());
 
-  const select = (s: string) => {
-    setQuery(s);
-    onChange(s);
-    setOpen(false);
-  };
+  const select = (s: string) => { setQuery(s); onChange(s); setOpen(false); };
 
   return (
     <div ref={wrapRef} className="relative w-full">
       <div className="relative">
         <input
-          type="text"
-          value={query}
-          placeholder="Type or search site…"
+          type="text" value={query} placeholder="Type or search site…"
           onFocus={() => setOpen(true)}
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-3 pr-9 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 transition-colors"
         />
-        <button
-          type="button"
-          onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-        >
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
           <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
-
       {open && (
         <div className="absolute z-50 mt-1 w-full rounded-lg bg-slate-800 border border-red-500/20 shadow-2xl overflow-hidden">
-          {/* Custom entry hint */}
           {isNew && (
-            <button
-              type="button"
-              onMouseDown={() => select(query.trim())}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-red-400 hover:bg-red-500/10 border-b border-slate-700 transition-colors"
-            >
+            <button type="button" onMouseDown={() => select(query.trim())} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-red-400 hover:bg-red-500/10 border-b border-slate-700 transition-colors">
               <Plus className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Add "<strong>{query.trim()}</strong>" as new site</span>
             </button>
           )}
-          {filtered.length === 0 && !isNew && (
-            <div className="px-3 py-3 text-xs text-gray-500 font-mono">No sites found — type to create one</div>
-          )}
+          {filtered.length === 0 && !isNew && <div className="px-3 py-3 text-xs text-gray-500 font-mono">No sites found — type to create one</div>}
           {filtered.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onMouseDown={() => select(s)}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-left hover:bg-white/5 transition-colors ${
-                s === value ? "text-red-400 bg-red-500/10" : "text-gray-300"
-              }`}
-            >
+            <button key={s} type="button" onMouseDown={() => select(s)} className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-mono text-left hover:bg-white/5 transition-colors ${s === value ? "text-red-400 bg-red-500/10" : "text-gray-300"}`}>
               <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
               {s}
               {s === value && <span className="ml-auto text-[10px] text-red-400 font-bold">CURRENT</span>}
@@ -149,33 +122,43 @@ function SiteCombobox({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
-interface WorkerProfilePanelProps {
-  workerId: string | null;
-  initialEditMode?: boolean;
-  onClose: () => void;
-  onRenew: (worker: any) => void;
-  onNotify: (worker: any) => void;
+function EditSection({ title, icon: Icon, children, defaultOpen = true }: { title: string; icon: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-lg border border-slate-700 overflow-hidden">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-800/80 text-left hover:bg-slate-700/60 transition-colors">
+        <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <Icon className="w-3.5 h-3.5 text-red-500" />{title}
+        </span>
+        <ChevronRight className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && <div className="p-3 space-y-3 bg-slate-900/30">{children}</div>}
+    </div>
+  );
+}
+
+function FRow({ label, value, accent }: { label: string; value?: string | null; accent?: "green" | "red" | "yellow" | "blue" }) {
+  const colors = { green: "text-green-400", red: "text-red-400", yellow: "text-yellow-400", blue: "text-blue-400" };
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[11px] text-gray-500 font-mono">{label}</span>
+      <span className={`text-[11px] font-mono font-semibold ${accent ? colors[accent] : "text-gray-300"}`}>{value || "—"}</span>
+    </div>
+  );
 }
 
 function DocRow({ label, date }: { label: string; date?: string | null }) {
-  if (!date)
-    return (
-      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
-        <span className="text-sm font-medium text-gray-300">{label}</span>
-        <span className="text-sm font-mono text-gray-500">N/A</span>
-      </div>
-    );
-
+  if (!date) return (
+    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+      <span className="text-sm font-medium text-gray-300">{label}</span>
+      <span className="text-sm font-mono text-gray-500">N/A</span>
+    </div>
+  );
   const d = parseISO(date);
   const isExpired = d < new Date();
   const isWarning = !isExpired && d < new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-
   return (
-    <div
-      className={`flex items-center justify-between p-3 rounded-lg bg-slate-800 border ${
-        isExpired ? "border-red-500/40" : isWarning ? "border-yellow-500/40" : "border-slate-700"
-      }`}
-    >
+    <div className={`flex items-center justify-between p-3 rounded-lg bg-slate-800 border ${isExpired ? "border-red-500/40" : isWarning ? "border-yellow-500/40" : "border-slate-700"}`}>
       <span className="text-sm font-medium text-gray-300">{label}</span>
       <span className={`text-sm font-mono font-semibold ${isExpired ? "text-red-400" : isWarning ? "text-yellow-400" : "text-green-400"}`}>
         {format(d, "MMM d, yyyy")}
@@ -186,12 +169,7 @@ function DocRow({ label, date }: { label: string; date?: string | null }) {
 
 function AttachmentCard({ title, filename, url }: { title: string; filename: string; url: string }) {
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative p-4 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:border-red-500/30 transition-all cursor-pointer group flex flex-col items-center justify-center text-center gap-2"
-    >
+    <a href={url} target="_blank" rel="noopener noreferrer" className="relative p-4 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:border-red-500/30 transition-all cursor-pointer group flex flex-col items-center justify-center text-center gap-2">
       <div className="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center group-hover:scale-110 transition-transform">
         <FileText className="w-5 h-5" />
       </div>
@@ -204,29 +182,14 @@ function AttachmentCard({ title, filename, url }: { title: string; filename: str
   );
 }
 
-function UploadButton({
-  workerId,
-  docType,
-  label,
-  accent = "red",
-}: {
-  workerId: string;
-  docType: "passport" | "contract" | "trc" | "bhp";
-  label: string;
-  accent?: "red" | "green" | "orange" | "violet";
-}) {
+function UploadButton({ workerId, docType, label, accent = "red" }: { workerId: string; docType: "passport" | "contract" | "trc" | "bhp"; label: string; accent?: "red" | "green" | "orange" | "violet" }) {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const accentClasses = {
-    red: "border-red-500/70 hover:bg-red-500/10 hover:text-white",
-    green: "border-green-500/70 hover:bg-green-500/10 hover:text-green-300",
-    orange: "border-orange-500/70 hover:bg-orange-500/10 hover:text-orange-300",
-    violet: "border-violet-500/70 hover:bg-violet-500/10 hover:text-violet-300",
-  };
+  const accentClasses = { red: "border-red-500/70 hover:bg-red-500/10 hover:text-white", green: "border-green-500/70 hover:bg-green-500/10 hover:text-green-300", orange: "border-orange-500/70 hover:bg-orange-500/10 hover:text-orange-300", violet: "border-violet-500/70 hover:bg-violet-500/10 hover:text-violet-300" };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -237,21 +200,11 @@ function UploadButton({
       const form = new FormData();
       form.append("file", file);
       form.append("docType", docType);
-      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}/upload`, {
-        method: "POST",
-        body: form,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(err.error ?? "Upload failed");
-      }
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}/upload`, { method: "POST", body: form });
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "Upload failed" })); throw new Error(err.error ?? "Upload failed"); }
       const data = await res.json();
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }),
-        queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() }),
-      ]);
+      await Promise.all([queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }), queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() })]);
       setDone(true);
-
       const filled = data.autoFilled as Record<string, string> | undefined;
       const filledLines: string[] = [];
       if (filled?.name) filledLines.push(`Name: ${filled.name}`);
@@ -260,12 +213,7 @@ function UploadButton({
       if (filled?.bhpExpiry) filledLines.push(`BHP expires: ${filled.bhpExpiry}`);
       if (filled?.specialization) filledLines.push(`Spec: ${filled.specialization}`);
       if (filled?.contractEndDate) filledLines.push(`Contract end: ${filled.contractEndDate}`);
-
-      const description = filledLines.length > 0
-        ? `AI auto-filled: ${filledLines.join(" · ")}`
-        : `${label} saved successfully.`;
-
-      toast({ title: data.scanned ? "✓ Document Scanned & Saved" : "✓ Document Uploaded", description });
+      toast({ title: data.scanned ? "Document Scanned & Saved" : "Document Uploaded", description: filledLines.length > 0 ? `AI auto-filled: ${filledLines.join(" · ")}` : `${label} saved successfully.` });
       setTimeout(() => setDone(false), 4000);
     } catch (err) {
       toast({ title: "Upload Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
@@ -276,13 +224,7 @@ function UploadButton({
   };
 
   return (
-    <label className={`w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition-all select-none font-semibold text-sm ${
-      done
-        ? "bg-green-500/15 border-green-500/60 text-green-400"
-        : uploading
-          ? "bg-slate-700 border-slate-500 text-gray-400 cursor-not-allowed"
-          : `bg-slate-800 ${accentClasses[accent]} text-gray-300`
-    }`}>
+    <label className={`w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition-all select-none font-semibold text-sm ${done ? "bg-green-500/15 border-green-500/60 text-green-400" : uploading ? "bg-slate-700 border-slate-500 text-gray-400 cursor-not-allowed" : `bg-slate-800 ${accentClasses[accent]} text-gray-300`}`}>
       <input ref={inputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFile} disabled={uploading} />
       {uploading ? <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" /> : done ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <Upload className="w-5 h-5 flex-shrink-0" />}
       <span>{uploading ? `Uploading ${label}…` : done ? `${label} Saved!` : `Upload ${label}`}</span>
@@ -290,23 +232,142 @@ function UploadButton({
   );
 }
 
-export function WorkerProfilePanel({
-  workerId,
-  initialEditMode = false,
-  onClose,
-  onRenew,
-  onNotify,
-}: WorkerProfilePanelProps) {
+/* ─── PIP Inspection Modal ─────────────────────────────────────────────────── */
+function PIPModal({ worker, onClose }: { worker: any; onClose: () => void }) {
+  const today = format(new Date(), "dd.MM.yyyy");
+
+  const docRows = [
+    { label: "TRC / Karta Pobytu", date: worker.trcExpiry },
+    { label: "Paszport", date: worker.passportExpiry },
+    { label: "Badania Lekarskie", date: worker.medicalExamExpiry },
+    { label: "Oświadczenie PUP", date: worker.oswiadczenieExpiry },
+    { label: "BHP Certificate", date: worker.bhpExpiry },
+    { label: "Contract End", date: worker.contractEndDate },
+    { label: "UDT Certificate", date: worker.udtCertExpiry },
+    { label: "RODO Consent", date: worker.rodoConsentDate },
+  ];
+
+  function docStatus(date: string | null) {
+    if (!date) return { label: "N/A", cls: "text-gray-500" };
+    const d = parseISO(date);
+    const now = new Date();
+    if (d < now) return { label: "EXPIRED", cls: "text-red-500 font-bold" };
+    const days = Math.ceil((d.getTime() - now.getTime()) / 86400000);
+    if (days < 30) return { label: `${days}d (CRITICAL)`, cls: "text-red-400 font-bold" };
+    if (days < 60) return { label: `${days}d (WARNING)`, cls: "text-yellow-400" };
+    return { label: format(d, "dd.MM.yyyy"), cls: "text-green-400" };
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white text-black rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="bg-[#C41E18] text-white p-5 flex items-start justify-between rounded-t-xl">
+          <div>
+            <p className="text-xs font-mono opacity-70 uppercase tracking-widest">PIP Inspection Card — Apatris Sp. z o.o.</p>
+            <h2 className="text-xl font-bold mt-1">{worker.name}</h2>
+            <p className="text-sm opacity-80 mt-0.5">{worker.specialization || "—"} · {worker.assignedSite || "No Site"}</p>
+          </div>
+          <div className="text-right text-xs font-mono opacity-70">
+            <p>Generated:</p>
+            <p className="font-bold text-white">{today}</p>
+            <StatusBadge status={worker.complianceStatus} />
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Identity */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b border-gray-200 pb-1 mb-3">Identity & Legal Status</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {[
+                ["PESEL", worker.pesel], ["NIP", worker.nip],
+                ["Visa / Permit Type", worker.visaType],
+                ["ZUS Status", worker.zusStatus],
+                ["Email", worker.email], ["Phone", worker.phone],
+              ].map(([label, val]) => (
+                <div key={label} className="flex flex-col">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">{label}</span>
+                  <span className="font-mono">{val || "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Documents */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b border-gray-200 pb-1 mb-3">Document Compliance Status</h3>
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-[10px] text-gray-400 uppercase"><th className="pb-1">Document</th><th className="pb-1">Expiry / Status</th></tr></thead>
+              <tbody className="divide-y divide-gray-100">
+                {docRows.map(({ label, date }) => {
+                  const s = docStatus(date);
+                  return (
+                    <tr key={label} className="py-1">
+                      <td className="py-1.5 font-medium text-gray-700">{label}</td>
+                      <td className={`py-1.5 font-mono text-xs ${s.cls}`}>{s.label}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* EN ISO 9606 */}
+          {(worker.weldingProcess || worker.weldingMaterialGroup || worker.weldingThickness || worker.weldingPosition) && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b border-gray-200 pb-1 mb-3">EN ISO 9606 Welding Certification</h3>
+              <div className="grid grid-cols-4 gap-2 text-sm">
+                {[["Process", worker.weldingProcess], ["Material Group", worker.weldingMaterialGroup], ["Thickness", worker.weldingThickness], ["Position", worker.weldingPosition]].map(([label, val]) => (
+                  <div key={label}>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block">{label}</span>
+                    <span className="font-mono font-bold">{val || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Signature block */}
+          <div className="border-t border-gray-200 pt-4 grid grid-cols-2 gap-8 text-xs text-gray-400">
+            <div><p className="mb-8">Inspector Signature:</p><div className="border-b border-gray-400" /></div>
+            <div><p className="mb-8">Date of Inspection:</p><div className="border-b border-gray-400" /></div>
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 flex gap-3">
+          <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#C41E18] text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">
+            <Printer className="w-4 h-4" /> Print / Save as PDF
+          </button>
+          <button onClick={onClose} className="py-2 px-4 border border-gray-300 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Panel ────────────────────────────────────────────────────────────── */
+interface WorkerProfilePanelProps {
+  workerId: string | null;
+  initialEditMode?: boolean;
+  onClose: () => void;
+  onRenew: (worker: any) => void;
+  onNotify: (worker: any) => void;
+}
+
+export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose, onRenew, onNotify }: WorkerProfilePanelProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
-  const { data: worker, isLoading } = useGetWorker(workerId || "", {
-    query: { enabled: !!workerId },
-  });
+  const { data: worker, isLoading } = useGetWorker(workerId || "", { query: { enabled: !!workerId } });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showPIP, setShowPIP] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Core fields
   const [editSpec, setEditSpec] = useState("");
   const [editSite, setEditSite] = useState("");
   const [editTrcExpiry, setEditTrcExpiry] = useState("");
@@ -314,116 +375,151 @@ export function WorkerProfilePanel({
   const [editPassportExpiry, setEditPassportExpiry] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editContractEndDate, setEditContractEndDate] = useState("");
+  // Polish compliance
+  const [editMedicalExamExpiry, setEditMedicalExamExpiry] = useState("");
+  const [editOswiadczenieExpiry, setEditOswiadczenieExpiry] = useState("");
+  const [editUdtCertExpiry, setEditUdtCertExpiry] = useState("");
+  const [editRodoConsentDate, setEditRodoConsentDate] = useState("");
+  const [editPupFiledDate, setEditPupFiledDate] = useState("");
+  // Identity
+  const [editPesel, setEditPesel] = useState("");
+  const [editNip, setEditNip] = useState("");
+  const [editVisaType, setEditVisaType] = useState("");
+  const [editZusStatus, setEditZusStatus] = useState("");
+  // EN ISO 9606
+  const [editWeldingProcess, setEditWeldingProcess] = useState("");
+  const [editWeldingMaterialGroup, setEditWeldingMaterialGroup] = useState("");
+  const [editWeldingThickness, setEditWeldingThickness] = useState("");
+  const [editWeldingPosition, setEditWeldingPosition] = useState("");
+  // Financial
   const [editHourlyRate, setEditHourlyRate] = useState("");
   const [editMonthlyHours, setEditMonthlyHours] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [editAdvance, setEditAdvance] = useState("");
 
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (workerId) setIsEditing(initialEditMode);
-  }, [workerId, initialEditMode]);
+  useEffect(() => { if (workerId) setIsEditing(initialEditMode); }, [workerId, initialEditMode]);
 
   useEffect(() => {
     if (worker && isEditing) {
-      setEditSpec((worker as any).specialization || "");
-      setEditSite((worker as any).assignedSite || "");
-      setEditTrcExpiry((worker as any).trcExpiry || "");
-      setEditBhpExpiry((worker as any).bhpExpiry || (worker as any).bhpStatus || "");
-      setEditPassportExpiry((worker as any).passportExpiry || "");
-      setEditEmail((worker as any).email || "");
-      setEditPhone((worker as any).phone || "");
-      setEditHourlyRate((worker as any).hourlyRate != null ? String((worker as any).hourlyRate) : "");
-      setEditMonthlyHours((worker as any).monthlyHours != null ? String((worker as any).monthlyHours) : "");
+      const w = worker as any;
+      setEditSpec(w.specialization || "");
+      setEditSite(w.assignedSite || "");
+      setEditTrcExpiry(w.trcExpiry || "");
+      setEditBhpExpiry(w.bhpExpiry || w.bhpStatus || "");
+      setEditPassportExpiry(w.passportExpiry || "");
+      setEditEmail(w.email || "");
+      setEditPhone(w.phone || "");
+      setEditContractEndDate(w.contractEndDate || "");
+      setEditMedicalExamExpiry(w.medicalExamExpiry || "");
+      setEditOswiadczenieExpiry(w.oswiadczenieExpiry || "");
+      setEditUdtCertExpiry(w.udtCertExpiry || "");
+      setEditRodoConsentDate(w.rodoConsentDate || "");
+      setEditPupFiledDate(w.pupFiledDate || "");
+      setEditPesel(w.pesel || "");
+      setEditNip(w.nip || "");
+      setEditVisaType(w.visaType || "");
+      setEditZusStatus(w.zusStatus || "");
+      setEditWeldingProcess(w.weldingProcess || "");
+      setEditWeldingMaterialGroup(w.weldingMaterialGroup || "");
+      setEditWeldingThickness(w.weldingThickness || "");
+      setEditWeldingPosition(w.weldingPosition || "");
+      setEditHourlyRate(w.hourlyRate != null ? String(w.hourlyRate) : "");
+      setEditMonthlyHours(w.monthlyHours != null ? String(w.monthlyHours) : "");
+      setEditAdvance(w.advance != null ? String(w.advance) : "");
     }
   }, [worker, isEditing]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (isEditing) setIsEditing(false);
-        else onClose();
-      }
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") { if (isEditing) setIsEditing(false); else onClose(); } };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose, isEditing]);
+
+  const inputCls = "w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600";
+  const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5";
 
   const handleSave = async () => {
     if (!workerId) return;
     setSaving(true);
     try {
-      const body: Record<string, string> = {};
-      if (editSpec) body.specialization = editSpec;
-      if (editSite) body.assignedSite = editSite;
-      if (editTrcExpiry) body.trcExpiry = editTrcExpiry;
-      if (editBhpExpiry) body.bhpExpiry = editBhpExpiry;
-      if (editPassportExpiry) body.passportExpiry = editPassportExpiry;
-      if (editEmail) body.email = editEmail;
-      if (editPhone) body.phone = editPhone;
-      body.hourlyRate = editHourlyRate;
-      body.monthlyHours = editMonthlyHours;
-
+      const body: Record<string, string> = {
+        specialization: editSpec,
+        assignedSite: editSite,
+        trcExpiry: editTrcExpiry,
+        bhpExpiry: editBhpExpiry,
+        passportExpiry: editPassportExpiry,
+        email: editEmail,
+        phone: editPhone,
+        contractEndDate: editContractEndDate,
+        medicalExamExpiry: editMedicalExamExpiry,
+        oswiadczenieExpiry: editOswiadczenieExpiry,
+        udtCertExpiry: editUdtCertExpiry,
+        rodoConsentDate: editRodoConsentDate,
+        pupFiledDate: editPupFiledDate,
+        pesel: editPesel,
+        nip: editNip,
+        visaType: editVisaType,
+        zusStatus: editZusStatus,
+        weldingProcess: editWeldingProcess,
+        weldingMaterialGroup: editWeldingMaterialGroup,
+        weldingThickness: editWeldingThickness,
+        weldingPosition: editWeldingPosition,
+        hourlyRate: editHourlyRate,
+        monthlyHours: editMonthlyHours,
+        advance: editAdvance,
+      };
       const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Save failed" }));
-        throw new Error(err.error ?? "Save failed");
-      }
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "Save failed" })); throw new Error(err.error ?? "Save failed"); }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetWorkerQueryKey(workerId) }),
         queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() }),
         queryClient.invalidateQueries({ queryKey: ["workers-sites"] }),
+        queryClient.invalidateQueries({ queryKey: ["compliance-trend"] }),
       ]);
-      toast({
-        title: "✓ Welder Records Updated",
-        description: "Changes saved. Compliance status recalculated.",
-        className: "border-red-500/50 bg-slate-900 text-white [&>div]:text-red-400",
-      });
+      toast({ title: "Welder Records Updated", description: "All fields saved. Compliance status recalculated.", className: "border-red-500/50 bg-slate-900 text-white [&>div]:text-red-400" });
       setIsEditing(false);
     } catch (err) {
       toast({ title: "Save Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const isOpen = !!workerId;
 
+  // Salary calculations
+  const gross = editHourlyRate && editMonthlyHours
+    ? parseFloat(editHourlyRate) * parseFloat(editMonthlyHours)
+    : null;
+  const advanceNum = editAdvance ? parseFloat(editAdvance) : 0;
+  const finalSalary = gross !== null ? gross - advanceNum : null;
+
+  const wGross = (worker as any)?.hourlyRate != null && (worker as any)?.monthlyHours != null
+    ? (worker as any).hourlyRate * (worker as any).monthlyHours
+    : null;
+  const wFinal = wGross !== null ? wGross - ((worker as any)?.advance ?? 0) : null;
+
   return (
     <>
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      />
-      <div
-        ref={panelRef}
-        className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+      <div onClick={onClose} className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
+      <div ref={panelRef} className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
         {isLoading || !worker ? (
           <div className="flex h-full items-center justify-center">
             <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="flex flex-col h-full min-h-0">
-            {/* Header - always visible, never scrolls */}
+            {/* Header */}
             <div className="flex-shrink-0 p-6 border-b border-white/10 relative overflow-hidden bg-slate-900">
               <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+                <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
+                  <ClipboardCheck className="w-3.5 h-3.5" /> PIP
+                </button>
                 {!isEditing && (
-                  <button
-                    onClick={() => { setIsEditing(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg transition-colors text-xs font-bold text-white uppercase tracking-wider"
-                    title="Edit worker"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Edit
+                  <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg transition-colors text-xs font-bold text-white uppercase tracking-wider">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
                   </button>
                 )}
                 <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
@@ -437,13 +533,10 @@ export function WorkerProfilePanel({
                 <div>
                   <h2 className="text-2xl font-bold text-white">{(worker as any).name}</h2>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-xs font-mono bg-white/10 text-gray-300 border border-white/10">
-                      {(worker as any).specialization || 'No Spec'}
-                    </span>
+                    <span className="px-2 py-0.5 rounded text-xs font-mono bg-white/10 text-gray-300 border border-white/10">{(worker as any).specialization || "No Spec"}</span>
                     {(worker as any).assignedSite && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600/20 border border-red-500/30 text-red-300 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {(worker as any).assignedSite}
+                        <MapPin className="w-3 h-3" />{(worker as any).assignedSite}
                       </span>
                     )}
                     <StatusBadge status={(worker as any).complianceStatus} />
@@ -452,158 +545,181 @@ export function WorkerProfilePanel({
               </div>
             </div>
 
-            <div className="p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
+            <div className="p-4 space-y-4 flex-1 overflow-y-auto min-h-0">
 
-              {/* EDIT MODE PANEL */}
+              {/* ── EDIT MODE ── */}
               {isEditing && (
-                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/30 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-widest text-red-400 flex items-center gap-2">
-                      <Pencil className="w-3.5 h-3.5" />
-                      Edit Welder Details
-                    </p>
-                    <span className="text-sm font-bold text-white truncate max-w-[55%] text-right">
-                      {(worker as any).name}
-                    </span>
-                  </div>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 flex items-center gap-2">
+                    <Pencil className="w-3.5 h-3.5" /> Editing: {(worker as any).name}
+                  </p>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Spec */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Welding Spec</label>
-                      <select
-                        value={editSpec}
-                        onChange={(e) => setEditSpec(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
-                      >
-                        <option value="">— Select Spec —</option>
-                        {SPEC_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
-
-                    {/* Assigned Site — free-text combobox */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
-                        Client / Project Site
-                      </label>
-                      <SiteCombobox value={editSite} onChange={setEditSite} />
-                      <p className="text-[10px] text-gray-600 mt-1 font-mono">Type any name to add a new client or project</p>
-                    </div>
-
-                    {/* TRC Expiry */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">TRC Expiry</label>
-                      <input
-                        type="date"
-                        value={editTrcExpiry}
-                        onChange={(e) => setEditTrcExpiry(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
-                      />
-                    </div>
-
-                    {/* BHP Expiry */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">BHP Expiry</label>
-                      <input
-                        type="date"
-                        value={editBhpExpiry}
-                        onChange={(e) => setEditBhpExpiry(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
-                      />
-                    </div>
-
-                    {/* Passport Expiry */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Passport Expiry</label>
-                      <input
-                        type="date"
-                        value={editPassportExpiry}
-                        onChange={(e) => setEditPassportExpiry(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60"
-                      />
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email</label>
-                      <input
-                        type="email"
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        placeholder="email@example.com"
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="col-span-2">
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Phone</label>
-                      <input
-                        type="tel"
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        placeholder="+48 000 000 000"
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                      />
-                    </div>
-
-                    {/* Hourly Rate — Admin only */}
-                    {isAdmin && (
+                  {/* Core */}
+                  <EditSection title="Core Details" icon={Pencil}>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">{t("panel.hourlyRate")}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={editHourlyRate}
-                          onChange={(e) => setEditHourlyRate(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                        />
+                        <label className={labelCls}>Welding Spec</label>
+                        <select value={editSpec} onChange={(e) => setEditSpec(e.target.value)} className={inputCls}>
+                          <option value="">— Select —</option>
+                          {SPEC_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
                       </div>
-                    )}
-
-                    {/* Monthly Hours — Admin only */}
-                    {isAdmin && (
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">{t("panel.monthlyHours")}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={editMonthlyHours}
-                          onChange={(e) => setEditMonthlyHours(e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                        />
+                        <label className={labelCls}>Client / Site</label>
+                        <SiteCombobox value={editSite} onChange={setEditSite} />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Calculated Payout — Admin only */}
-                  {isAdmin && editHourlyRate && editMonthlyHours && (
-                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 border border-slate-600">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{t("panel.estPayout")}</span>
-                      <span className="text-sm font-mono font-bold text-green-400">
-                        {(parseFloat(editHourlyRate) * parseFloat(editMonthlyHours)).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
-                      </span>
+                      <div>
+                        <label className={labelCls}>TRC Expiry</label>
+                        <input type="date" value={editTrcExpiry} onChange={(e) => setEditTrcExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>BHP Expiry</label>
+                        <input type="date" value={editBhpExpiry} onChange={(e) => setEditBhpExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Passport Expiry</label>
+                        <input type="date" value={editPassportExpiry} onChange={(e) => setEditPassportExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Contract End Date</label>
+                        <input type="date" value={editContractEndDate} onChange={(e) => setEditContractEndDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Email</label>
+                        <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="email@example.com" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Phone</label>
+                        <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+48 000 000 000" className={inputCls} />
+                      </div>
                     </div>
+                  </EditSection>
+
+                  {/* Polish Compliance */}
+                  <EditSection title="Polish Compliance Documents" icon={Shield} defaultOpen={false}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Badania Lekarskie Expiry</label>
+                        <input type="date" value={editMedicalExamExpiry} onChange={(e) => setEditMedicalExamExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Oświadczenie Expiry</label>
+                        <input type="date" value={editOswiadczenieExpiry} onChange={(e) => setEditOswiadczenieExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>UDT Cert Expiry</label>
+                        <input type="date" value={editUdtCertExpiry} onChange={(e) => setEditUdtCertExpiry(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>PUP Filed Date</label>
+                        <input type="date" value={editPupFiledDate} onChange={(e) => setEditPupFiledDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div className="col-span-2">
+                        <label className={labelCls}>RODO Consent Date</label>
+                        <input type="date" value={editRodoConsentDate} onChange={(e) => setEditRodoConsentDate(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                  </EditSection>
+
+                  {/* Identity & Legal */}
+                  <EditSection title="Identity & Legal" icon={CreditCard} defaultOpen={false}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>PESEL</label>
+                        <input type="text" value={editPesel} onChange={(e) => setEditPesel(e.target.value)} placeholder="00000000000" className={inputCls} maxLength={11} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>NIP</label>
+                        <input type="text" value={editNip} onChange={(e) => setEditNip(e.target.value)} placeholder="000-000-00-00" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>ZUS Status</label>
+                        <select value={editZusStatus} onChange={(e) => setEditZusStatus(e.target.value)} className={inputCls}>
+                          <option value="">— Select —</option>
+                          {ZUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Visa / Permit Type</label>
+                        <select value={editVisaType} onChange={(e) => setEditVisaType(e.target.value)} className={inputCls}>
+                          <option value="">— Select —</option>
+                          {VISA_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </EditSection>
+
+                  {/* EN ISO 9606 */}
+                  <EditSection title="EN ISO 9606 Welding Cert" icon={Flame} defaultOpen={false}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Welding Process</label>
+                        <select value={editWeldingProcess} onChange={(e) => setEditWeldingProcess(e.target.value)} className={inputCls}>
+                          <option value="">— Select —</option>
+                          {WELDING_PROCESSES.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Position</label>
+                        <select value={editWeldingPosition} onChange={(e) => setEditWeldingPosition(e.target.value)} className={inputCls}>
+                          <option value="">— Select —</option>
+                          {WELDING_POSITIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Material Group</label>
+                        <input type="text" value={editWeldingMaterialGroup} onChange={(e) => setEditWeldingMaterialGroup(e.target.value)} placeholder="e.g. 1, 2, 8" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Thickness Range</label>
+                        <input type="text" value={editWeldingThickness} onChange={(e) => setEditWeldingThickness(e.target.value)} placeholder="e.g. 3–40mm" className={inputCls} />
+                      </div>
+                    </div>
+                  </EditSection>
+
+                  {/* Payroll — Admin only */}
+                  {isAdmin && (
+                    <EditSection title="Payroll & Advance" icon={CreditCard} defaultOpen={true}>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Hourly Rate (PLN)</label>
+                          <input type="number" min="0" step="0.01" value={editHourlyRate} onChange={(e) => setEditHourlyRate(e.target.value)} placeholder="0.00" className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Monthly Hours</label>
+                          <input type="number" min="0" step="1" value={editMonthlyHours} onChange={(e) => setEditMonthlyHours(e.target.value)} placeholder="0" className={inputCls} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className={labelCls}>Advance Taken (PLN)</label>
+                          <input type="number" min="0" step="0.01" value={editAdvance} onChange={(e) => setEditAdvance(e.target.value)} placeholder="0.00" className={inputCls} />
+                        </div>
+                      </div>
+                      {gross !== null && (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 border border-slate-600">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Gross Salary</span>
+                            <span className="text-sm font-mono font-bold text-blue-400">{gross.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                          </div>
+                          {advanceNum > 0 && (
+                            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                              <span className="text-[11px] font-bold uppercase tracking-widest text-orange-400">Advance Deduction</span>
+                              <span className="text-sm font-mono font-bold text-orange-400">- {advanceNum.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-green-400">Final Net Salary</span>
+                            <span className="text-lg font-mono font-bold text-green-400">{finalSalary!.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                          </div>
+                        </div>
+                      )}
+                    </EditSection>
                   )}
 
                   <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      disabled={saving}
-                      className="flex-1 py-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      Cancel
+                    <button onClick={() => setIsEditing(false)} disabled={saving} className="flex-1 py-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                      <XCircle className="w-3.5 h-3.5" /> Cancel
                     </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(196,30,24,0.35)]"
-                    >
+                    <button onClick={handleSave} disabled={saving} className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(196,30,24,0.35)]">
                       {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                       {saving ? "Saving…" : "Save Changes"}
                     </button>
@@ -611,151 +727,154 @@ export function WorkerProfilePanel({
                 </div>
               )}
 
-              {/* Contact */}
-              <div className="grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-mono">{(worker as any).email || t("panel.noEmail")}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm flex-wrap">
-                  <Phone className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-mono flex-1">{(worker as any).phone || t("panel.noPhone")}</span>
-                  {(worker as any).phone && (
-                    <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap mt-1">
-                      <a
-                        href={`tel:${(worker as any).phone}`}
-                        title={t("comm.call")}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-400 text-xs font-bold transition-colors"
-                      ><Phone className="w-3.5 h-3.5" />{t("comm.call")}</a>
-                      <a
-                        href={`sms:${(worker as any).phone}`}
-                        title={t("comm.sms")}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 text-xs font-bold transition-colors"
-                      ><MessageSquare className="w-3.5 h-3.5" />{t("comm.sms")}</a>
-                      {(() => {
-                        const urgentDoc = getUrgentDoc(worker);
-                        const waUrl = buildWaUrl((worker as any).phone, urgentDoc);
-                        if (urgentDoc) {
-                          return (
-                            <a
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title={t("comm.urgentTitle")}
-                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 border border-red-400 text-white text-xs font-bold transition-colors animate-pulse"
-                            ><AlertTriangle className="w-3.5 h-3.5" />{t("comm.urgentAlert")}</a>
-                          );
-                        }
-                        return (
-                          <a
-                            href={waUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={t("comm.whatsapp")}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"
-                          ><WhatsAppIcon className="w-3.5 h-3.5" />{t("comm.whatsapp")}</a>
-                        );
-                      })()}
+              {/* ── VIEW MODE ── */}
+              {!isEditing && (
+                <>
+                  {/* Contact */}
+                  <div className="grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700">
+                    <div className="flex items-center gap-3 text-sm">
+                      <Mail className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <span className="text-gray-300 font-mono">{(worker as any).email || t("panel.noEmail")}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm flex-wrap">
+                      <Phone className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <span className="text-gray-300 font-mono flex-1">{(worker as any).phone || t("panel.noPhone")}</span>
+                      {(worker as any).phone && (
+                        <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap mt-1">
+                          <a href={`tel:${(worker as any).phone}`} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-400 text-xs font-bold transition-colors"><Phone className="w-3.5 h-3.5" />{t("comm.call")}</a>
+                          <a href={`sms:${(worker as any).phone}`} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 text-xs font-bold transition-colors"><MessageSquare className="w-3.5 h-3.5" />{t("comm.sms")}</a>
+                          {(() => {
+                            const urgentDoc = getUrgentDoc(worker);
+                            const waUrl = buildWaUrl((worker as any).phone, urgentDoc);
+                            return urgentDoc ? (
+                              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 border border-red-400 text-white text-xs font-bold transition-colors animate-pulse"><AlertTriangle className="w-3.5 h-3.5" />{t("comm.urgentAlert")}</a>
+                            ) : (
+                              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"><WhatsAppIcon className="w-3.5 h-3.5" />{t("comm.whatsapp")}</a>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                    {(worker as any).assignedSite && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <MapPin className="w-4 h-4 text-red-400 flex-shrink-0" />
+                        <span className="text-gray-300 font-mono">{(worker as any).assignedSite}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Compliance Timeline */}
+                  <div>
+                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.complianceTimeline")}</h3>
+                    <div className="space-y-2">
+                      <DocRow label="TRC Certificate Expiry" date={(worker as any).trcExpiry} />
+                      <DocRow label="BHP Certificate Expiry" date={(worker as any).bhpExpiry} />
+                      <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
+                      <DocRow label="Contract End Date" date={(worker as any).contractEndDate} />
+                      <DocRow label="Badania Lekarskie (Medical)" date={(worker as any).medicalExamExpiry} />
+                      <DocRow label="Oświadczenie (Work Decl.)" date={(worker as any).oswiadczenieExpiry} />
+                      <DocRow label="UDT Certificate" date={(worker as any).udtCertExpiry} />
+                      {(worker as any).workPermitExpiry && <DocRow label="Work Permit" date={(worker as any).workPermitExpiry} />}
+                    </div>
+                  </div>
+
+                  {/* Identity & Legal */}
+                  {((worker as any).pesel || (worker as any).nip || (worker as any).zusStatus || (worker as any).visaType || (worker as any).rodoConsentDate || (worker as any).pupFiledDate) && (
+                    <div>
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Identity & Legal</h3>
+                      <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                        <FRow label="PESEL" value={(worker as any).pesel} />
+                        <FRow label="NIP" value={(worker as any).nip} />
+                        <FRow label="Visa / Permit Type" value={(worker as any).visaType} />
+                        <FRow label="ZUS Status" value={(worker as any).zusStatus} accent={(worker as any).zusStatus === "Registered" ? "green" : (worker as any).zusStatus === "Unregistered" ? "red" : undefined} />
+                        <FRow label="RODO Consent" value={(worker as any).rodoConsentDate ? format(parseISO((worker as any).rodoConsentDate), "MMM d, yyyy") : null} accent="green" />
+                        <FRow label="PUP Filed" value={(worker as any).pupFiledDate ? format(parseISO((worker as any).pupFiledDate), "MMM d, yyyy") : null} />
+                      </div>
                     </div>
                   )}
-                </div>
-                {(worker as any).assignedSite && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <MapPin className="w-4 h-4 text-red-400 flex-shrink-0" />
-                    <span className="text-gray-300 font-mono">{(worker as any).assignedSite}</span>
-                  </div>
-                )}
-              </div>
 
-              {/* Compliance Timeline */}
-              <div>
-                <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">
-                  {t("panel.complianceTimeline")}
-                </h3>
-                <div className="space-y-2">
-                  <DocRow label="TRC Certificate Expiry" date={(worker as any).trcExpiry} />
-                  <DocRow label="BHP Certificate Expiry" date={(worker as any).bhpExpiry} />
-                  <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
-                  <DocRow label={t("panel.workPermitExpiry")} date={(worker as any).workPermitExpiry} />
-                  <DocRow label={t("panel.contractEndDate")} date={(worker as any).contractEndDate} />
-                  {/* Monthly Hours + Payout — Admin only */}
+                  {/* EN ISO 9606 */}
+                  {((worker as any).weldingProcess || (worker as any).weldingMaterialGroup || (worker as any).weldingThickness || (worker as any).weldingPosition) && (
+                    <div>
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">EN ISO 9606 Cert</h3>
+                      <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 grid grid-cols-2 gap-2">
+                        <FRow label="Process" value={(worker as any).weldingProcess} accent="blue" />
+                        <FRow label="Position" value={(worker as any).weldingPosition} accent="blue" />
+                        <FRow label="Material Group" value={(worker as any).weldingMaterialGroup} />
+                        <FRow label="Thickness" value={(worker as any).weldingThickness} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payroll — Admin only */}
                   {isAdmin && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
-                      <span className="text-sm font-medium text-gray-300">{t("panel.monthlyHoursLabel")}</span>
-                      <span className="text-sm font-mono text-blue-400 font-semibold">
-                        {(worker as any).monthlyHours != null
-                          ? `${(worker as any).monthlyHours} hrs`
-                          : <span className="text-gray-500">N/A</span>}
-                      </span>
+                    <div>
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Payroll</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                          <span className="text-sm font-medium text-gray-300">{t("panel.monthlyHoursLabel")}</span>
+                          <span className="text-sm font-mono text-blue-400 font-semibold">{(worker as any).monthlyHours != null ? `${(worker as any).monthlyHours} hrs` : <span className="text-gray-500">N/A</span>}</span>
+                        </div>
+                        {wGross !== null && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                            <span className="text-sm font-medium text-gray-300">Gross Salary</span>
+                            <span className="text-sm font-mono font-bold text-blue-400">{wGross.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                          </div>
+                        )}
+                        {(worker as any).advance != null && (worker as any).advance > 0 && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                            <span className="text-sm font-medium text-orange-400">Advance Taken</span>
+                            <span className="text-sm font-mono font-bold text-orange-400">- {((worker as any).advance).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                          </div>
+                        )}
+                        {wFinal !== null && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                            <span className="text-sm font-medium text-green-300">Final Net Salary</span>
+                            <span className="text-lg font-mono font-bold text-green-400">{wFinal.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                  {isAdmin && (worker as any).hourlyRate != null && (worker as any).monthlyHours != null && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                      <span className="text-sm font-medium text-gray-300">{t("panel.estPayoutLabel")}</span>
-                      <span className="text-sm font-mono text-green-400 font-bold">
-                        {((worker as any).hourlyRate * (worker as any).monthlyHours).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
-                      </span>
+
+                  {/* Document Vault */}
+                  <div>
+                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.documentVault")}</h3>
+                    {((worker as any).passportAttachments?.length > 0 || (worker as any).trcAttachments?.length > 0 || (worker as any).bhpAttachments?.length > 0 || (worker as any).contractAttachments?.length > 0) && (
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {(worker as any).passportAttachments?.map((att: any) => <AttachmentCard key={att.id} title="Passport" filename={att.filename} url={att.url} />)}
+                        {(worker as any).trcAttachments?.map((att: any) => <AttachmentCard key={att.id} title="TRC Certificate" filename={att.filename} url={att.url} />)}
+                        {(worker as any).bhpAttachments?.map((att: any) => <AttachmentCard key={att.id} title="BHP Certificate" filename={att.filename} url={att.url} />)}
+                        {(worker as any).contractAttachments?.map((att: any) => <AttachmentCard key={att.id} title={t("panel.contract")} filename={att.filename} url={att.url} />)}
+                      </div>
+                    )}
+                    <div className="space-y-2.5">
+                      <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">Upload Document</p>
+                      <UploadButton workerId={(worker as any).id} docType="passport" label="Passport" accent="red" />
+                      <UploadButton workerId={(worker as any).id} docType="trc" label="TRC Certificate" accent="green" />
+                      <UploadButton workerId={(worker as any).id} docType="bhp" label="BHP Certificate" accent="orange" />
+                      <UploadButton workerId={(worker as any).id} docType="contract" label="Contract" accent="violet" />
+                      <p className="text-xs text-gray-600 text-center">PDF, JPG, PNG or WebP · AI scans docs automatically</p>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Document Vault */}
-              <div>
-                <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">
-                  {t("panel.documentVault")}
-                </h3>
-
-                {/* Existing docs */}
-                {((worker as any).passportAttachments?.length > 0 || (worker as any).trcAttachments?.length > 0 || (worker as any).bhpAttachments?.length > 0 || (worker as any).contractAttachments?.length > 0) && (
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {(worker as any).passportAttachments?.map((att: any) => (
-                      <AttachmentCard key={att.id} title="Passport" filename={att.filename} url={att.url} />
-                    ))}
-                    {(worker as any).trcAttachments?.map((att: any) => (
-                      <AttachmentCard key={att.id} title="TRC Certificate" filename={att.filename} url={att.url} />
-                    ))}
-                    {(worker as any).bhpAttachments?.map((att: any) => (
-                      <AttachmentCard key={att.id} title="BHP Certificate" filename={att.filename} url={att.url} />
-                    ))}
-                    {(worker as any).contractAttachments?.map((att: any) => (
-                      <AttachmentCard key={att.id} title={t("panel.contract")} filename={att.filename} url={att.url} />
-                    ))}
                   </div>
-                )}
-
-                {/* Upload buttons */}
-                <div className="space-y-2.5">
-                  <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">Upload Document</p>
-                  <UploadButton workerId={(worker as any).id} docType="passport" label="Passport" accent="red" />
-                  <UploadButton workerId={(worker as any).id} docType="trc" label="TRC Certificate" accent="green" />
-                  <UploadButton workerId={(worker as any).id} docType="bhp" label="BHP Certificate" accent="orange" />
-                  <UploadButton workerId={(worker as any).id} docType="contract" label="Contract" accent="violet" />
-                  <p className="text-xs text-gray-600 text-center">
-                    PDF, JPG, PNG or WebP · AI scans welding docs automatically
-                  </p>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
-            {/* Footer actions */}
+            {/* Footer */}
             <div className="p-5 border-t border-white/10 bg-slate-800/50 flex gap-3">
-              <button
-                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 rounded-xl font-bold uppercase tracking-wider text-sm transition-all"
-                onClick={() => onNotify(worker)}
-              >
+              <button className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 rounded-xl font-bold uppercase tracking-wider text-sm transition-all" onClick={() => onNotify(worker)}>
                 {t("panel.notify")}
               </button>
-              <button
-                className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold uppercase tracking-wider text-sm transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-                onClick={() => onRenew(worker)}
-              >
+              <button className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold uppercase tracking-wider text-sm transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]" onClick={() => onRenew(worker)}>
                 {t("panel.renewDoc")}
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {showPIP && worker && <PIPModal worker={worker} onClose={() => setShowPIP(false)} />}
     </>
   );
 }

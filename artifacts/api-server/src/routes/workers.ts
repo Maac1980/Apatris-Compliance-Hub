@@ -425,32 +425,46 @@ router.patch("/workers/:id", async (req, res) => {
     // Map our schema field names to Airtable field names
     const airtableFields: Record<string, unknown> = {};
 
-    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry;
-    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry;
-    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry;
-    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus;
-    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
-    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate;
+    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry || null;
+    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry || null;
+    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry || null;
+    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus || null;
+    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry || null;
+    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate || null;
     if (body.email !== undefined) airtableFields["EMAIL"] = body.email;
     if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
     if (body.specialization !== undefined) airtableFields["SPEC"] = body.specialization;
     if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
-    if (body.assignedSite !== undefined) {
-      // Write to SITE (singleLineText) — accepts any company/project name freely
-      airtableFields["SITE"] = String(body.assignedSite).trim() || null;
-    }
+    if (body.assignedSite !== undefined) airtableFields["SITE"] = String(body.assignedSite).trim() || null;
+    // Polish compliance
+    if (body.medicalExamExpiry !== undefined) airtableFields["Medical Exam Expiry"] = body.medicalExamExpiry || null;
+    if (body.oswiadczenieExpiry !== undefined) airtableFields["Oswiadczenie Expiry"] = body.oswiadczenieExpiry || null;
+    if (body.udtCertExpiry !== undefined) airtableFields["UDT Cert Expiry"] = body.udtCertExpiry || null;
+    if (body.rodoConsentDate !== undefined) airtableFields["RODO Consent Date"] = body.rodoConsentDate || null;
+    if (body.pupFiledDate !== undefined) airtableFields["PUP Filed Date"] = body.pupFiledDate || null;
+    // Identity
+    if (body.pesel !== undefined) airtableFields["PESEL"] = body.pesel || null;
+    if (body.nip !== undefined) airtableFields["NIP"] = body.nip || null;
+    if (body.visaType !== undefined) airtableFields["Visa Type"] = body.visaType || null;
+    if (body.zusStatus !== undefined) airtableFields["ZUS Status"] = body.zusStatus || null;
+    // EN ISO 9606
+    if (body.weldingProcess !== undefined) airtableFields["Welding Process"] = body.weldingProcess || null;
+    if (body.weldingMaterialGroup !== undefined) airtableFields["Welding Material Group"] = body.weldingMaterialGroup || null;
+    if (body.weldingThickness !== undefined) airtableFields["Welding Thickness"] = body.weldingThickness || null;
+    if (body.weldingPosition !== undefined) airtableFields["Welding Position"] = body.weldingPosition || null;
 
     await updateRecord(req.params.id, airtableFields);
 
     // Save financial fields separately — graceful fallback if columns don't exist yet in Airtable
-    if (body.hourlyRate !== undefined || body.monthlyHours !== undefined) {
-      const financialFields: Record<string, unknown> = {};
-      if (body.hourlyRate !== undefined) financialFields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
-      if (body.monthlyHours !== undefined) financialFields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
+    const financialFields: Record<string, unknown> = {};
+    if (body.hourlyRate !== undefined) financialFields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
+    if (body.monthlyHours !== undefined) financialFields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
+    if (body.advance !== undefined) financialFields["Advance"] = body.advance === "" ? null : Number(body.advance);
+    if (Object.keys(financialFields).length > 0) {
       try {
         await updateRecord(req.params.id, financialFields);
       } catch (financialErr) {
-        console.warn("[workers PATCH] Financial fields not saved (run /api/workers/init-fields to create columns):", financialErr instanceof Error ? financialErr.message : financialErr);
+        console.warn("[workers PATCH] Financial fields not saved:", financialErr instanceof Error ? financialErr.message : financialErr);
       }
     }
 

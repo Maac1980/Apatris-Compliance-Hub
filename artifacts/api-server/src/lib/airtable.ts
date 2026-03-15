@@ -138,6 +138,21 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
     { name: "CONTRACT", type: "multipleAttachments" },
     { name: "HOURLY_RATE", type: "number", options: { precision: 2 } },
     { name: "MONTHLY_HOURS", type: "number", options: { precision: 0 } },
+    // Polish compliance fields
+    { name: "Medical Exam Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "Oswiadczenie Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "UDT Cert Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "RODO Consent Date", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "PUP Filed Date", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "PESEL", type: "singleLineText" },
+    { name: "NIP", type: "singleLineText" },
+    { name: "Visa Type", type: "singleLineText" },
+    { name: "Welding Process", type: "singleLineText" },
+    { name: "Welding Material Group", type: "singleLineText" },
+    { name: "Welding Thickness", type: "singleLineText" },
+    { name: "Welding Position", type: "singleLineText" },
+    { name: "ZUS Status", type: "singleSelect", options: { choices: [{ name: "Registered", color: "greenBright" }, { name: "Unregistered", color: "redBright" }, { name: "Unknown", color: "grayBright" }] } },
+    { name: "Advance", type: "number", options: { precision: 2 } },
   ];
 
   const created: string[] = [];
