@@ -404,10 +404,10 @@ export default function Dashboard() {
           <button
             onClick={handleDownloadCSV}
             className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
-            title="Download full worker list as CSV"
+            title="Export worker list — saves to your Downloads folder"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">CSV</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
 
           {/* Notification Bell */}
