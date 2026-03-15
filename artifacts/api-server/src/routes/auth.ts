@@ -2,31 +2,24 @@ import { Router } from "express";
 
 const router = Router();
 
-// ── Static 3-user list ─────────────────────────────────────────────────────
-// Emails are set here; passwords come from Replit Secrets (APATRIS_PASS_1/2/3)
-// Update emails below when provided, then restart the API server.
-const USERS = [
+// Exactly two authorised accounts.
+// Emails are hardcoded; passwords live in Replit Secrets (never in source code).
+const ALLOWED_USERS = [
   {
-    email: (process.env.APATRIS_EMAIL_1 || "user1@apatris.com").toLowerCase(),
-    name:  process.env.APATRIS_NAME_1  || "User 1",
-    role:  process.env.APATRIS_ROLE_1  || "Admin",
-    passEnvKey: "APATRIS_PASS_1",
+    email: "manish@apatris.pl",
+    name: "Manish",
+    role: "Admin",
+    passEnvKey: "APATRIS_PASS_MANISH",
   },
   {
-    email: (process.env.APATRIS_EMAIL_2 || "user2@apatris.com").toLowerCase(),
-    name:  process.env.APATRIS_NAME_2  || "User 2",
-    role:  process.env.APATRIS_ROLE_2  || "Manager",
-    passEnvKey: "APATRIS_PASS_2",
-  },
-  {
-    email: (process.env.APATRIS_EMAIL_3 || "user3@apatris.com").toLowerCase(),
-    name:  process.env.APATRIS_NAME_3  || "User 3",
-    role:  process.env.APATRIS_ROLE_3  || "Viewer",
-    passEnvKey: "APATRIS_PASS_3",
+    email: "akshay@apatris.pl",
+    name: "Akshay",
+    role: "Admin",
+    passEnvKey: "APATRIS_PASS_AKSHAY",
   },
 ];
 
-// POST /auth/login
+// POST /api/auth/login
 router.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body as { email?: string; password?: string };
@@ -36,12 +29,16 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = USERS.find((u) => u.email === normalizedEmail);
+    const user = ALLOWED_USERS.find((u) => u.email === normalizedEmail);
 
+    // Email not in the allowed list
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res
+        .status(403)
+        .json({ error: "Access Denied: Contact Administrator." });
     }
 
+    // Email found — check password against secret
     const storedPassword = process.env[user.passEnvKey];
     if (!storedPassword || storedPassword !== password) {
       return res.status(401).json({ error: "Invalid credentials" });
