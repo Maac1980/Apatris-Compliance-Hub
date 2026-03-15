@@ -277,8 +277,8 @@ export default function Dashboard() {
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
             <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1000px" }}>
               <colgroup>
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "6%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "10%" }} />
                 <col style={{ width: "11%" }} />
                 <col style={{ width: "9%" }} />
                 <col style={{ width: "9%" }} />
