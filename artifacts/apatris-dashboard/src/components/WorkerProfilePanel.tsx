@@ -449,10 +449,15 @@ export function WorkerProfilePanel({
               {/* EDIT MODE PANEL */}
               {isEditing && (
                 <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/30 space-y-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-red-400 flex items-center gap-2">
-                    <Pencil className="w-3.5 h-3.5" />
-                    Edit Welder Details
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-widest text-red-400 flex items-center gap-2">
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit Welder Details
+                    </p>
+                    <span className="text-sm font-bold text-white truncate max-w-[55%] text-right">
+                      {(worker as any).name}
+                    </span>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     {/* Spec */}
