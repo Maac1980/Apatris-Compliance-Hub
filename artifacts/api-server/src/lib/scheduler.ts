@@ -173,21 +173,17 @@ function msUntilNextScan(): number {
 }
 
 export function startScheduler(): void {
-  // Run immediately on startup (after a short delay for server to initialise)
-  setTimeout(async () => {
-    await runDailyScan();
-
-    // Then schedule daily at 08:00
-    const msToFirst = msUntilNextScan();
-    console.log(
-      `[Scheduler] Next daily scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
-    );
-    setTimeout(function daily() {
-      runDailyScan().finally(() => {
-        setTimeout(daily, SCAN_INTERVAL_MS);
-      });
-    }, msToFirst);
-  }, 5000);
+  // Schedule daily scan at 08:00 server time only — does NOT fire on startup
+  // to avoid repeated alert emails each time the server restarts.
+  const msToFirst = msUntilNextScan();
+  console.log(
+    `[Scheduler] Daily compliance scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
+  );
+  setTimeout(function daily() {
+    runDailyScan().finally(() => {
+      setTimeout(daily, SCAN_INTERVAL_MS);
+    });
+  }, msToFirst);
 }
 
 // Manual trigger for API route
