@@ -262,7 +262,7 @@ export default function Dashboard() {
                 onChange={(e) => setSite(e.target.value)}
                 className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
               >
-                <option value="">All Clients / Projects</option>
+                <option value="">{t("table.allClientsProjects")}</option>
                 {availableSites.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -291,11 +291,11 @@ export default function Dashboard() {
                 <tr>
                   <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5 text-left">{t("table.operator")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.spec")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Assigned Site</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.assignedSite")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.trcExpiry")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Passport Exp.</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.passportExp")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.bhp")}</th>
-                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Docs</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.docs")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.status")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-center">{t("table.actions")}</th>
                 </tr>
@@ -388,7 +388,7 @@ export default function Dashboard() {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)] whitespace-nowrap"
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                            <span>View / Edit</span>
+                            <span>{t("table.viewEdit")}</span>
                           </button>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
