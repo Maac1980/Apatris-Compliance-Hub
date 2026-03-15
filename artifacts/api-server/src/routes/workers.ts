@@ -37,7 +37,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
 
     if (docType === "passport") {
       const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         max_completion_tokens: 512,
         messages: [
           {
@@ -69,7 +69,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
       return { type: "passport", ...parsed };
     } else {
       const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         max_completion_tokens: 256,
         messages: [
           {
