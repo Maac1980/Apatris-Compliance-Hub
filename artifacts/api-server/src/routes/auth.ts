@@ -22,7 +22,7 @@ const USERS = [
     email: (process.env.APATRIS_EMAIL_3 || "user3@apatris.com").toLowerCase(),
     name:  process.env.APATRIS_NAME_3  || "User 3",
     role:  process.env.APATRIS_ROLE_3  || "Viewer",
-    passEnvKey: "APATRIS_PASS_4",
+    passEnvKey: "APATRIS_PASS_3",
   },
 ];
 
