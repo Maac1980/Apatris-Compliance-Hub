@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save, XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle } from "lucide-react";
-
 import { format, parseISO } from "date-fns";
+import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { StatusBadge } from "./ui/StatusBadge";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -10,12 +15,6 @@ function WhatsAppIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { StatusBadge } from "./ui/StatusBadge";
-import { useTranslation } from "react-i18next";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
 
 function formatWaNum(phone: string): string {
   const d = phone.replace(/\D/g, "");
