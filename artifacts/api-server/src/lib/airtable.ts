@@ -140,12 +140,18 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
   const fieldsToCreate = [
     { name: "SPEC", type: "singleLineText" },
     { name: "SITE", type: "singleLineText" },
+    { name: "EMAIL", type: "email" },
+    { name: "PHONE", type: "phoneNumber" },
+    { name: "EXPERIENCE", type: "singleLineText" },
     { name: "TRC_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "PASSPORT_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "BHP_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "Work Permit Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
+    { name: "Contract End Date", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "TRC Certificate", type: "multipleAttachments" },
     { name: "BHP Certificate", type: "multipleAttachments" },
     { name: "CONTRACT", type: "multipleAttachments" },
+    { name: "PASSPORT DOCCUMENT", type: "multipleAttachments" },
     { name: "HOURLY_RATE", type: "number", options: { precision: 2 } },
     { name: "MONTHLY_HOURS", type: "number", options: { precision: 0 } },
     // Polish compliance fields

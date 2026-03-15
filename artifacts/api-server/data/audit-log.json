@@ -1,5 +1,85 @@
 [
   {
+    "id": "a-1773611211398",
+    "timestamp": "2026-03-15T21:46:51.398Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: TRC_EXPIRY, Work Permit Expiry, Contract End Date, EMAIL, PHONE, EXPERIENCE"
+  },
+  {
+    "id": "a-1773611202417",
+    "timestamp": "2026-03-15T21:46:42.417Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: TRC_EXPIRY, Work Permit Expiry, Contract End Date, EMAIL, PHONE, EXPERIENCE"
+  },
+  {
+    "id": "a-1773611165718",
+    "timestamp": "2026-03-15T21:46:05.718Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: Work Permit Expiry, Contract End Date, EMAIL, PHONE"
+  },
+  {
+    "id": "a-1773611157513",
+    "timestamp": "2026-03-15T21:45:57.513Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: EMAIL, PHONE"
+  },
+  {
+    "id": "a-1773611157058",
+    "timestamp": "2026-03-15T21:45:57.058Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: Contract End Date"
+  },
+  {
+    "id": "a-1773611156609",
+    "timestamp": "2026-03-15T21:45:56.609Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: Work Permit Expiry"
+  },
+  {
+    "id": "a-1773610733110",
+    "timestamp": "2026-03-15T21:38:53.110Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec2wCN61UJtvffKf",
+    "workerName": "Unknown",
+    "note": "Fields updated: "
+  },
+  {
+    "id": "a-1773610732556",
+    "timestamp": "2026-03-15T21:38:52.556Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec2wCN61UJtvffKf",
+    "workerName": "Unknown",
+    "note": "Fields updated: "
+  },
+  {
     "id": "a-1773609752553",
     "timestamp": "2026-03-15T21:22:32.553Z",
     "actor": "Test Admin",
