@@ -1,5 +1,15 @@
 [
   {
+    "id": "a-1773609752553",
+    "timestamp": "2026-03-15T21:22:32.553Z",
+    "actor": "Test Admin",
+    "actorEmail": "unknown",
+    "action": "PAYROLL_COMMIT",
+    "workerId": "—",
+    "workerName": "ALL",
+    "note": "Month 2026-02 closed. 1 workers snapshotted."
+  },
+  {
     "id": "a-1773609095467",
     "timestamp": "2026-03-15T21:11:35.467Z",
     "actor": "Unknown",

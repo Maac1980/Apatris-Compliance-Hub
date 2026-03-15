@@ -44,6 +44,7 @@ export interface Worker {
   hourlyRate: number | null;
   monthlyHours: number | null;
   advance: number | null;
+  penalties: number | null;
   // Computed
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
@@ -192,6 +193,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "HourlyRate"]));
   const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "MonthlyHours"]));
   const advance = getNumber(resolveField(f, ["Advance", "ADVANCE", "advance"]));
+  const penalties = getNumber(resolveField(f, ["Penalties", "PENALTIES", "penalties"]));
 
   // Attachments
   const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Document", "PASSPORT_DOCUMENT"]));
@@ -236,6 +238,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     hourlyRate,
     monthlyHours,
     advance,
+    penalties,
     complianceStatus,
     daysUntilNextExpiry,
     passportAttachments,

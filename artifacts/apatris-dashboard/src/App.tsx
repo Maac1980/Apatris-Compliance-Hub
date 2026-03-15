@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Apply from "@/pages/Apply";
 import AdminSettings from "@/pages/AdminSettings";
 import ComplianceAlerts from "@/pages/ComplianceAlerts";
+import PayrollPage from "@/pages/PayrollPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -47,6 +48,9 @@ function Router() {
       </Route>
       <Route path="/compliance-alerts">
         {() => <ProtectedRoute component={ComplianceAlerts} />}
+      </Route>
+      <Route path="/payroll">
+        {() => <ProtectedRoute component={PayrollPage} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}

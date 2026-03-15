@@ -163,6 +163,7 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
     { name: "Welding Position", type: "singleLineText" },
     { name: "ZUS Status", type: "singleSelect", options: { choices: [{ name: "Registered", color: "greenBright" }, { name: "Unregistered", color: "redBright" }, { name: "Unknown", color: "grayBright" }] } },
     { name: "Advance", type: "number", options: { precision: 2 } },
+    { name: "Penalties", type: "number", options: { precision: 2 } },
   ];
 
   const created: string[] = [];

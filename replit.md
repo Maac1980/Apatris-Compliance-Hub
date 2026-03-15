@@ -29,6 +29,24 @@ Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspac
 - EN ISO 9606 Welding Cert (Process, Position, Material Group, Thickness)
 - Payroll with advance deduction (Admin only — gross → advance → final net)
 - PIP Inspection Mode: printable card with all docs + welding cert + signature block
+- **Payroll History Tab** (Admin only): table of all past payroll records, lifetime totals, "Print Final Settlement PDF" button (A4 PDF with worker info, full payroll table, signature lines)
+
+### Monthly Payroll Engine (Complete)
+- **New Airtable field**: `Penalties` (number, precision 2) added to Workers table
+- **Payroll Records Store**: `artifacts/api-server/data/payroll-records.json` (UUID-keyed records)
+- **Global Payroll Run page** (`/payroll`): 
+  - Summary cards: Workers, Total Hours, Gross Payroll, Deductions, Total Netto
+  - Inline-editable data grid: click any Hours/Rate/Advances/Penalties cell to edit in place
+  - Live "Calculated Netto" column updates instantly on edit
+  - Totals footer row
+  - Month picker, PDF export of the full grid
+- **Close Month & Save to Ledger** ("Zamknij Miesiąc"):
+  - Confirmation modal with full summary before committing
+  - Snapshots every worker's payroll into `payroll-records.json`
+  - Resets MONTHLY_HOURS, Advance, Penalties to 0 in Airtable for all workers
+  - Writes audit log entry
+- **Worker Payroll History tab** in WorkerProfilePanel (Admin only)
+- **Dashboard nav button**: green "Payroll" button (Admin only) → `/payroll`
 
 ## Stack
 
@@ -102,3 +120,10 @@ All at `/api`:
 - `GET /workers/:id` — worker detail
 - `PATCH /workers/:id` — update worker (renew document)
 - `POST /workers/:id/notify` — send notification
+- `POST /workers` — create new worker (Admin only)
+- `DELETE /workers/:id` — delete worker (Admin only)
+- `GET /payroll/current` — all workers with payroll fields + live calculations
+- `PATCH /payroll/workers/:id` — update hourlyRate / monthlyHours / advance / penalties
+- `POST /payroll/commit` — close month: snapshot all workers, reset fields to 0
+- `GET /payroll/history/:workerId` — payroll records for a worker
+- `GET /payroll/history` — all payroll records

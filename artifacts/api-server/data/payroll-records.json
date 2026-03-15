@@ -1,0 +1,17 @@
+[
+  {
+    "id": "2af09b1a-6e68-475f-aba7-01161a964be9",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "monthYear": "2026-02",
+    "totalHours": 160,
+    "hourlyRate": 30,
+    "grossPayout": 4800,
+    "advancesDeducted": 300,
+    "penaltiesDeducted": 50,
+    "finalNettoPayout": 4450,
+    "zusBaseSalary": 4800,
+    "committedAt": "2026-03-15T21:22:29.980Z",
+    "committedBy": "Test Admin"
+  }
+]

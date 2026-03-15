@@ -538,6 +538,7 @@ router.patch("/workers/:id", async (req, res) => {
     if (body.hourlyRate !== undefined) financialFields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
     if (body.monthlyHours !== undefined) financialFields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
     if (body.advance !== undefined) financialFields["Advance"] = body.advance === "" ? null : Number(body.advance);
+    if (body.penalties !== undefined) financialFields["Penalties"] = body.penalties === "" ? null : Number(body.penalties);
     if (Object.keys(financialFields).length > 0) {
       try {
         await updateRecord(req.params.id, financialFields);

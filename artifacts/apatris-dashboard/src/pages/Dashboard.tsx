@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
-  Phone, MessageSquare, TrendingUp
+  Phone, MessageSquare, TrendingUp, Calculator
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -242,6 +242,18 @@ export default function Dashboard() {
             <ClipboardList className="w-4 h-4" />
             <span className="hidden sm:inline">{t("header.compliance")}</span>
           </button>
+
+          {/* Monthly Payroll Run — Admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => setLocation("/payroll")}
+              className="flex items-center gap-2 px-4 py-2 border border-green-600/60 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+              title="Monthly Payroll Run"
+            >
+              <Calculator className="w-4 h-4" />
+              <span className="hidden sm:inline">Payroll</span>
+            </button>
+          )}
 
           {/* Admin Settings — Admin only */}
           {isAdmin && (

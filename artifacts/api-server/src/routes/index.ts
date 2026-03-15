@@ -5,6 +5,7 @@ import authRouter from "./auth.js";
 import adminsRouter from "./admins.js";
 import documentsRouter from "./documents.js";
 import logsRouter from "./logs.js";
+import payrollRouter from "./payroll.js";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.use(authRouter);
 router.use(adminsRouter);
 router.use(documentsRouter);
 router.use(logsRouter);
+router.use(payrollRouter);
 router.use(workersRouter);
 
 export default router;

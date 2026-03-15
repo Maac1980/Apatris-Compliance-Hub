@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
   XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
-  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -402,9 +404,117 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Panel tabs
+  const [activeTab, setActiveTab] = useState<"profile" | "payroll-history">("profile");
+
+  // Payroll history
+  const { data: payrollHistoryData } = useQuery<{ records: any[] }>({
+    queryKey: ["payroll-history", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/history/${workerId}`);
+      if (!res.ok) throw new Error("Failed to load payroll history");
+      return res.json();
+    },
+    enabled: !!workerId && isAdmin && activeTab === "payroll-history",
+    staleTime: 30_000,
+  });
+  const payrollRecords: any[] = payrollHistoryData?.records ?? [];
+
+  const handlePrintFinalSettlement = () => {
+    if (!worker) return;
+    const w = worker as any;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(196, 30, 24);
+    doc.text("APATRIS SP. Z O.O.", 105, 20, { align: "center" });
+    doc.setFontSize(13);
+    doc.setTextColor(30, 41, 59);
+    doc.text("FINAL SETTLEMENT / ROZLICZENIE KOŃCOWE", 105, 28, { align: "center" });
+
+    // Worker info box
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    const infoY = 36;
+    doc.text(`Worker / Pracownik: ${w.name}`, 14, infoY);
+    doc.text(`Specialization: ${w.specialization || "—"}`, 14, infoY + 6);
+    doc.text(`Site: ${w.assignedSite || "—"}`, 14, infoY + 12);
+    doc.text(`PESEL: ${w.pesel || "—"}`, 120, infoY);
+    doc.text(`NIP: ${w.nip || "—"}`, 120, infoY + 6);
+    doc.text(`ZUS Status: ${w.zusStatus || "—"}`, 120, infoY + 12);
+    doc.text(`Generated: ${format(new Date(), "dd.MM.yyyy HH:mm")}`, 120, infoY + 18);
+
+    const fmtPln = (n: number) => n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Payroll records table
+    autoTable(doc, {
+      startY: infoY + 26,
+      head: [["Month", "Hours", "Rate (PLN/h)", "Gross (PLN)", "Advances", "Penalties", "Final Netto (PLN)"]],
+      body: payrollRecords.map((r) => [
+        r.monthYear,
+        String(r.totalHours),
+        fmtPln(r.hourlyRate),
+        fmtPln(r.grossPayout ?? r.hourlyRate * r.totalHours),
+        fmtPln(r.advancesDeducted),
+        fmtPln(r.penaltiesDeducted),
+        fmtPln(r.finalNettoPayout),
+      ]),
+      headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold", fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      styles: { cellPadding: 2.5 },
+      columnStyles: {
+        1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" },
+        4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" },
+      },
+    });
+
+    // Totals
+    const totalHours = payrollRecords.reduce((s, r) => s + r.totalHours, 0);
+    const totalNetto = payrollRecords.reduce((s, r) => s + r.finalNettoPayout, 0);
+    const totalAdvances = payrollRecords.reduce((s, r) => s + r.advancesDeducted, 0);
+    const totalPenalties = payrollRecords.reduce((s, r) => s + r.penaltiesDeducted, 0);
+    const finalY: number = (doc as any).lastAutoTable?.finalY ?? 150;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Lifetime Total Hours: ${fmtPln(totalHours)} h`, 14, finalY + 10);
+    doc.text(`Total Advances Taken: ${fmtPln(totalAdvances)} PLN`, 14, finalY + 17);
+    doc.text(`Total Penalties: ${fmtPln(totalPenalties)} PLN`, 14, finalY + 24);
+    doc.setTextColor(22, 163, 74);
+    doc.setFontSize(13);
+    doc.text(`TOTAL LIFETIME NETTO PAYOUT: ${fmtPln(totalNetto)} PLN`, 14, finalY + 35);
+
+    // Signature lines
+    const sigY = finalY + 55;
+    doc.setDrawColor(100, 100, 100);
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.line(14, sigY, 90, sigY);
+    doc.text("Worker / Pracownik (Signature & Date)", 14, sigY + 5);
+    doc.line(110, sigY, 196, sigY);
+    doc.text("Employer / Pracodawca (Signature & Date)", 110, sigY + 5);
+
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Apatris Sp. z o.o. · ul. Przykładowa 1, 00-001 Warszawa · NIP: 0000000000", 105, 287, { align: "center" });
+
+    doc.save(`apatris-final-settlement-${w.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  };
+
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (workerId) setIsEditing(initialEditMode); }, [workerId, initialEditMode]);
+  useEffect(() => {
+    if (workerId) {
+      setIsEditing(initialEditMode);
+      setActiveTab("profile");
+    }
+  }, [workerId, initialEditMode]);
 
   useEffect(() => {
     if (worker && isEditing) {
@@ -753,8 +863,96 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                 </div>
               )}
 
+              {/* ── PANEL TABS (view mode only) ── */}
+              {!isEditing && isAdmin && (
+                <div className="flex gap-1 p-1 bg-slate-800/60 rounded-xl border border-slate-700">
+                  <button
+                    onClick={() => setActiveTab("profile")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "profile" ? "bg-slate-700 text-white shadow" : "text-gray-500 hover:text-gray-300"}`}
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Profile
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("payroll-history")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "payroll-history" ? "bg-slate-700 text-white shadow" : "text-gray-500 hover:text-gray-300"}`}
+                  >
+                    <History className="w-3.5 h-3.5" /> Payroll History
+                  </button>
+                </div>
+              )}
+
+              {/* ── PAYROLL HISTORY TAB ── */}
+              {!isEditing && isAdmin && activeTab === "payroll-history" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Payroll Records</p>
+                    <button
+                      onClick={handlePrintFinalSettlement}
+                      disabled={payrollRecords.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(196,30,24,0.3)]"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Final Settlement PDF
+                    </button>
+                  </div>
+
+                  {payrollRecords.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500">
+                      <Calculator className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-mono">No payroll records yet.</p>
+                      <p className="text-xs mt-1">Records appear after the first month is closed.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Summary totals */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: "Lifetime Hours", value: `${payrollRecords.reduce((s, r) => s + r.totalHours, 0).toLocaleString("pl-PL")} h`, color: "text-blue-400" },
+                          { label: "Total Advances", value: `${payrollRecords.reduce((s, r) => s + r.advancesDeducted, 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-orange-400" },
+                          { label: "Total Netto Paid", value: `${payrollRecords.reduce((s, r) => s + r.finalNettoPayout, 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-green-400" },
+                        ].map((c) => (
+                          <div key={c.label} className="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-center">
+                            <p className={`text-sm font-mono font-bold ${c.color}`}>{c.value}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">{c.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Records table */}
+                      <div className="rounded-xl border border-slate-700 overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-800 border-b border-slate-700">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase tracking-wider">Month</th>
+                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Hrs</th>
+                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Rate</th>
+                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Deductions</th>
+                              <th className="px-3 py-2 text-right font-bold text-green-400 uppercase tracking-wider">Netto</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-700/50">
+                            {payrollRecords.map((r) => (
+                              <tr key={r.id} className="hover:bg-slate-700/20 transition-colors">
+                                <td className="px-3 py-2 font-mono text-white">{r.monthYear}</td>
+                                <td className="px-3 py-2 text-right font-mono text-blue-400">{r.totalHours}</td>
+                                <td className="px-3 py-2 text-right font-mono text-gray-300">{r.hourlyRate.toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-mono text-orange-400">
+                                  {(r.advancesDeducted + r.penaltiesDeducted) > 0 ? `- ${(r.advancesDeducted + r.penaltiesDeducted).toLocaleString("pl-PL", { minimumFractionDigits: 2 })}` : "—"}
+                                </td>
+                                <td className="px-3 py-2 text-right font-mono font-bold text-green-400">
+                                  {r.finalNettoPayout.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* ── VIEW MODE ── */}
-              {!isEditing && (
+              {!isEditing && (!isAdmin || activeTab === "profile") && (
                 <>
                   {/* Contact */}
                   <div className="grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700">
