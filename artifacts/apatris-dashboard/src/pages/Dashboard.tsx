@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -145,6 +145,16 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Compliance Alerts */}
+          <button
+            onClick={() => setLocation("/compliance-alerts")}
+            className="flex items-center gap-2 px-4 py-2 border border-orange-600/60 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]"
+            title="Compliance Alerts"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span className="hidden sm:inline">Compliance</span>
+          </button>
+
           {/* Admin Settings */}
           <button
             onClick={() => setLocation("/admin-settings")}
