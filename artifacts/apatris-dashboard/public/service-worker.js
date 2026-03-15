@@ -1,14 +1,11 @@
-const CACHE_NAME = "apatris-v1";
+const CACHE_NAME = "apatris-v2";
 
-// Core shell assets to cache on install
 const PRECACHE_URLS = [
-  "./",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png"
 ];
 
-// Install: pre-cache the app shell
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -18,7 +15,6 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Activate: remove old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -34,46 +30,39 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch: network-first for API calls, cache-first for static assets
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Always go to network for API requests
   if (url.pathname.includes("/api/")) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Cache-first for static assets (JS, CSS, images, fonts)
+  // Network-first for all app assets so updates are always picked up
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          // Only cache successful GET responses
-          if (
-            event.request.method !== "GET" ||
-            !response ||
-            response.status !== 200 ||
-            response.type === "opaque"
-          ) {
-            return response;
-          }
-
-          const toCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, toCache);
-          });
-
+    fetch(event.request)
+      .then((response) => {
+        if (
+          event.request.method !== "GET" ||
+          !response ||
+          response.status !== 200 ||
+          response.type === "opaque"
+        ) {
           return response;
-        })
-        .catch(() => {
-          // Offline fallback: return the cached root page
+        }
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, toCache);
+        });
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cached) => {
+          if (cached) return cached;
           if (event.request.mode === "navigate") {
             return caches.match("./");
           }
         });
-    })
+      })
   );
 });
