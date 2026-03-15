@@ -114,11 +114,11 @@ Expected Airtable field names (flexible mapping):
 ## API Endpoints
 
 All at `/api`:
-- `GET /workers` — list all workers (with search/specialization/status filters)
+- `GET /workers` — list all workers (search/spec/status/site/showArchived filters)
 - `GET /workers/stats` — dashboard stats
 - `GET /workers/report` — compliance report
 - `GET /workers/:id` — worker detail
-- `PATCH /workers/:id` — update worker (renew document)
+- `PATCH /workers/:id` — update worker (renew document, workerStatus, etc.)
 - `POST /workers/:id/notify` — send notification
 - `POST /workers` — create new worker (Admin only)
 - `DELETE /workers/:id` — delete worker (Admin only)
@@ -127,3 +127,8 @@ All at `/api`:
 - `POST /payroll/commit` — close month: snapshot all workers, reset fields to 0
 - `GET /payroll/history/:workerId` — payroll records for a worker
 - `GET /payroll/history` — all payroll records
+- `GET /site-coordinators` — list coordinators (no password hashes)
+- `POST /site-coordinators` — add coordinator (name, email, password, assignedSite)
+- `PATCH /site-coordinators/:id` — update coordinator (name, password, assignedSite)
+- `DELETE /site-coordinators/:id` — remove coordinator
+- `GET /settings/status` — SMTP config status + admin password env-var status

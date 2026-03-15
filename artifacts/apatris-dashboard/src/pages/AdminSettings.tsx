@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Shield, Save, ArrowLeft, User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Bell, ClipboardList, Clock, Users, Trash2, Plus, Building2, Lock } from "lucide-react";
+import { Shield, Save, ArrowLeft, User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Bell, ClipboardList, Clock, Users, Trash2, Plus, Building2, Lock, Wifi, WifiOff, KeyRound, Eye, EyeOff, RefreshCcw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Admin {
@@ -78,8 +78,16 @@ export default function AdminSettings() {
   const [addCoordError, setAddCoordError] = useState("");
   const [addCoordSuccess, setAddCoordSuccess] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Per-coordinator password change: { [id]: { open, newPass, showPass, saving, saved, error } }
+  const [coordPassState, setCoordPassState] = useState<Record<string, { open: boolean; newPass: string; showPass: boolean; saving: boolean; saved: boolean; error: string }>>({});
 
-  useEffect(() => { loadAdmins(); }, []);
+  // System status (SMTP + admin passwords)
+  const [sysStatus, setSysStatus] = useState<{
+    smtp: { configured: boolean; fields: Record<string, string> };
+    adminPasswords: { manish: boolean; akshay: boolean; allSet: boolean };
+  } | null>(null);
+
+  useEffect(() => { loadAdmins(); loadSysStatus(); }, []);
 
   useEffect(() => {
     if (activeTab === "notifications" && notifLog.length === 0) loadNotifLog();
@@ -127,6 +135,13 @@ export default function AdminSettings() {
     finally { setAuditLoading(false); }
   }
 
+  async function loadSysStatus() {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/settings/status`);
+      if (res.ok) setSysStatus(await res.json());
+    } catch { /* non-fatal */ }
+  }
+
   async function loadCoordinators() {
     setCoordLoading(true);
     setCoordError("");
@@ -139,6 +154,39 @@ export default function AdminSettings() {
       setCoordError(err instanceof Error ? err.message : "Failed to load coordinators");
     } finally {
       setCoordLoading(false);
+    }
+  }
+
+  function toggleCoordPass(id: string) {
+    setCoordPassState((prev) => ({
+      ...prev,
+      [id]: prev[id]?.open
+        ? { open: false, newPass: "", showPass: false, saving: false, saved: false, error: "" }
+        : { open: true, newPass: "", showPass: false, saving: false, saved: false, error: "" },
+    }));
+  }
+
+  async function saveCoordPassword(id: string) {
+    const s = coordPassState[id];
+    if (!s?.newPass?.trim()) {
+      setCoordPassState((prev) => ({ ...prev, [id]: { ...prev[id], error: "Password cannot be empty." } }));
+      return;
+    }
+    setCoordPassState((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: "" } }));
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: s.newPass }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error || "Save failed");
+      }
+      setCoordPassState((prev) => ({ ...prev, [id]: { open: true, newPass: "", showPass: false, saving: false, saved: true, error: "" } }));
+      setTimeout(() => setCoordPassState((prev) => ({ ...prev, [id]: { ...prev[id], saved: false, open: false } })), 2500);
+    } catch (err) {
+      setCoordPassState((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: err instanceof Error ? err.message : "Save failed" } }));
     }
   }
 
@@ -279,6 +327,55 @@ export default function AdminSettings() {
               <h2 className="text-2xl font-bold text-white tracking-tight">Administrator Profiles</h2>
               <p className="text-gray-400 text-sm mt-1">Update contact details for each administrator. Changes are saved permanently to the database.</p>
             </div>
+
+            {/* System Status Panel */}
+            {sysStatus && (
+              <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* SMTP Status */}
+                <div className={`rounded-xl border p-5 flex items-start gap-4 ${sysStatus.smtp.configured ? "border-green-500/30 bg-green-900/10" : "border-red-500/30 bg-red-900/10"}`}>
+                  <div className={`mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${sysStatus.smtp.configured ? "bg-green-600/20 text-green-400" : "bg-red-600/20 text-red-400"}`}>
+                    {sysStatus.smtp.configured ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${sysStatus.smtp.configured ? "text-green-400" : "text-red-400"}`}>
+                      Email (SMTP) — {sysStatus.smtp.configured ? "Configured" : "Not Configured"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5 mb-2">Alert emails require SMTP credentials.</p>
+                    <div className="space-y-1">
+                      {Object.entries(sysStatus.smtp.fields).map(([key, val]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${val === "set" ? "bg-green-500" : "bg-red-500"}`} />
+                          <span className="text-[10px] font-mono text-gray-400">{key}</span>
+                          <span className={`text-[10px] font-bold ml-auto ${val === "set" ? "text-green-400" : "text-red-400"}`}>{val === "set" ? "✓ set" : "missing"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Password Status */}
+                <div className={`rounded-xl border p-5 flex items-start gap-4 ${sysStatus.adminPasswords.allSet ? "border-green-500/30 bg-green-900/10" : "border-yellow-500/30 bg-yellow-900/10"}`}>
+                  <div className={`mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${sysStatus.adminPasswords.allSet ? "bg-green-600/20 text-green-400" : "bg-yellow-600/20 text-yellow-400"}`}>
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${sysStatus.adminPasswords.allSet ? "text-green-400" : "text-yellow-400"}`}>
+                      Admin Passwords — {sysStatus.adminPasswords.allSet ? "All Set" : "Incomplete"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5 mb-2">Passwords are stored as environment secrets.</p>
+                    <div className="space-y-1">
+                      {[["APATRIS_PASS_MANISH", sysStatus.adminPasswords.manish], ["APATRIS_PASS_AKSHAY", sysStatus.adminPasswords.akshay]].map(([key, set]) => (
+                        <div key={String(key)} className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${set ? "bg-green-500" : "bg-yellow-500"}`} />
+                          <span className="text-[10px] font-mono text-gray-400">{String(key)}</span>
+                          <span className={`text-[10px] font-bold ml-auto ${set ? "text-green-400" : "text-yellow-400"}`}>{set ? "✓ set" : "not set"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {loading && (
               <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
@@ -570,32 +667,80 @@ export default function AdminSettings() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700">
-                    {coordinators.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-800/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 text-xs font-bold">
-                              {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
-                            </div>
-                            <span className="text-white font-medium">{c.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-300 font-mono text-xs">{c.email}</td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600/20 border border-red-500/30 text-red-300">{c.assignedSite}</span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => deleteCoordinator(c.id)}
-                            disabled={deletingId === c.id}
-                            className="flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
-                          >
-                            {deletingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {coordinators.map((c) => {
+                      const ps = coordPassState[c.id];
+                      return (
+                        <React.Fragment key={c.id}>
+                          <tr className="hover:bg-slate-800/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 text-xs font-bold">
+                                  {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <span className="text-white font-medium">{c.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-gray-300 font-mono text-xs">{c.email}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600/20 border border-red-500/30 text-red-300">{c.assignedSite}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => toggleCoordPass(c.id)}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wide transition-colors ${ps?.open ? "bg-slate-600 border-slate-400 text-white" : "bg-slate-700/50 border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+                                >
+                                  <Lock className="w-3.5 h-3.5" />
+                                  Password
+                                </button>
+                                <button
+                                  onClick={() => deleteCoordinator(c.id)}
+                                  disabled={deletingId === c.id}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
+                                >
+                                  {deletingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                  Remove
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {ps?.open && (
+                            <tr className="bg-slate-800/80 border-t border-slate-600">
+                              <td colSpan={4} className="px-4 py-4">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">New Password for {c.name}</span>
+                                  <div className="relative flex-1 min-w-[180px]">
+                                    <input
+                                      type={ps.showPass ? "text" : "password"}
+                                      placeholder="Enter new password"
+                                      value={ps.newPass}
+                                      onChange={(e) => setCoordPassState((prev) => ({ ...prev, [c.id]: { ...prev[c.id], newPass: e.target.value, error: "" } }))}
+                                      className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 pr-9 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoordPassState((prev) => ({ ...prev, [c.id]: { ...prev[c.id], showPass: !prev[c.id].showPass } }))}
+                                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    >
+                                      {ps.showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                    </button>
+                                  </div>
+                                  <button
+                                    onClick={() => saveCoordPassword(c.id)}
+                                    disabled={ps.saving || ps.saved}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wide transition-colors border border-red-400 shrink-0"
+                                  >
+                                    {ps.saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : ps.saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                                    {ps.saved ? "Saved!" : "Save"}
+                                  </button>
+                                  {ps.error && <span className="text-red-400 text-xs flex items-center gap-1"><AlertCircle className="w-3 h-3" />{ps.error}</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
