@@ -1,5 +1,15 @@
 [
   {
+    "id": "a-1773611430404",
+    "timestamp": "2026-03-15T21:50:30.403Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "UPDATE_WORKER",
+    "workerId": "rec82mAQCopRRZSMY",
+    "workerName": "Marek Kowalski",
+    "note": "Fields updated: TRC_EXPIRY, PASSPORT_EXPIRY, BHP EXPIRY, Work Permit Expiry, Contract End Date, EMAIL, PHONE, SPEC, SITE, Medical Exam Expiry, Oswiadczenie Expiry, UDT Cert Expiry, RODO Consent Date, PUP Filed Date, PESEL, NIP, Visa Type, ZUS Status, Welding Process, Welding Material Group, Welding Thickness, Welding Position"
+  },
+  {
     "id": "a-1773611211398",
     "timestamp": "2026-03-15T21:46:51.398Z",
     "actor": "Unknown",
