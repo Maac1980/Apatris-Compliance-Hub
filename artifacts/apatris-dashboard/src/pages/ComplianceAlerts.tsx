@@ -65,7 +65,13 @@ const STATUS_CONFIG: Record<ComplianceStatus, { label: string; bg: string; borde
 
 const DOC_TYPES = ["TRC", "Passport", "BHP", "Visa", "Umowa", "Zezwolenie", "Contract", "Medical"];
 
-function AddDocumentModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function AddDocumentModal({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (alertFired: boolean, doc: DocumentRecord) => void;
+}) {
   const [form, setForm] = useState({
     workerName: "",
     documentType: "TRC",
@@ -92,7 +98,8 @@ function AddDocumentModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         const d = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(d.error || "Failed to save");
       }
-      onSaved();
+      const data = await res.json() as { document: DocumentRecord; alertFired: boolean };
+      onSaved(data.alertFired, data.document);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -177,6 +184,13 @@ function AddDocumentModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
   );
 }
 
+interface InstantAlert {
+  level: "YELLOW" | "RED" | "EXPIRED";
+  workerName: string;
+  documentType: string;
+  daysUntilExpiry: number;
+}
+
 export default function ComplianceAlerts() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
@@ -185,6 +199,7 @@ export default function ComplianceAlerts() {
   const [addOpen, setAddOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
+  const [instantAlert, setInstantAlert] = useState<InstantAlert | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<{ documents: DocumentRecord[]; summary: Summary }>({
     queryKey: ["documents"],
@@ -282,6 +297,40 @@ export default function ComplianceAlerts() {
       </header>
 
       <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+        {/* Instant alert banner — fires when a document is manually added in warning/critical zone */}
+        {instantAlert && (
+          <div className={`flex items-start gap-4 p-4 rounded-xl border ${
+            instantAlert.level === "YELLOW"
+              ? "bg-yellow-900/30 border-yellow-500/50 text-yellow-300"
+              : "bg-red-900/30 border-red-500/50 text-red-300"
+          }`}>
+            <div className="mt-0.5">
+              {instantAlert.level === "YELLOW"
+                ? <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                : <ShieldAlert className="w-5 h-5 text-red-400" />}
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-sm uppercase tracking-wider">
+                {instantAlert.level === "EXPIRED"
+                  ? "⛔ Document Expired — Alert Sent"
+                  : instantAlert.level === "RED"
+                  ? "🔴 Critical Zone — Alert Sent to Administrators"
+                  : "🟡 Warning Zone — Alert Logged"}
+              </p>
+              <p className="text-xs mt-1 opacity-80">
+                <strong>{instantAlert.workerName}</strong> · {instantAlert.documentType} ·{" "}
+                {instantAlert.level === "EXPIRED"
+                  ? "Document has expired"
+                  : `${instantAlert.daysUntilExpiry} days remaining`}
+                {" "}— Manish & Akshay have been notified.
+              </p>
+            </div>
+            <button onClick={() => setInstantAlert(null)} className="opacity-60 hover:opacity-100 transition-opacity">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Scan message */}
         {scanMsg && (
@@ -420,7 +469,17 @@ export default function ComplianceAlerts() {
       {addOpen && (
         <AddDocumentModal
           onClose={() => setAddOpen(false)}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["documents"] })}
+          onSaved={(alertFired, doc) => {
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            if (alertFired) {
+              setInstantAlert({
+                level: doc.status as "YELLOW" | "RED" | "EXPIRED",
+                workerName: doc.workerName,
+                documentType: doc.documentType,
+                daysUntilExpiry: doc.daysUntilExpiry,
+              });
+            }
+          }}
         />
       )}
     </div>

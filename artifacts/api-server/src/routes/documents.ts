@@ -6,7 +6,7 @@ import {
   updateDocument,
   deleteDocument,
 } from "../lib/airtable-documents.js";
-import { triggerScanNow, alertLog } from "../lib/scheduler.js";
+import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler.js";
 
 const router = Router();
 
@@ -63,7 +63,7 @@ router.get("/documents/log", (_req, res) => {
 });
 
 // POST /api/documents
-// Creates a new document record.
+// Creates a new document record and immediately fires an alert if it is in warning/critical zone.
 router.post("/documents", async (req, res) => {
   try {
     const { workerName, workerId, documentType, issueDate, expiryDate } = req.body as {
@@ -79,7 +79,16 @@ router.post("/documents", async (req, res) => {
     }
 
     const doc = await createDocument({ workerName, workerId, documentType, issueDate, expiryDate });
-    return res.status(201).json({ document: doc });
+
+    // Fire alert immediately — don't wait for the daily scan
+    const needsAlert = doc.status === "RED" || doc.status === "YELLOW" || doc.status === "EXPIRED";
+    if (needsAlert) {
+      fireAlertForDocument(doc).catch((e) =>
+        console.error("[Alert] Immediate alert failed:", e)
+      );
+    }
+
+    return res.status(201).json({ document: doc, alertFired: needsAlert });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create document";
     return res.status(500).json({ error: message });
@@ -98,7 +107,16 @@ router.patch("/documents/:id", async (req, res) => {
       expiryDate?: string;
     };
     const doc = await updateDocument(id, fields);
-    return res.json({ document: doc });
+
+    // Fire alert immediately if updated document is now in warning/critical zone
+    const needsAlert = doc.status === "RED" || doc.status === "YELLOW" || doc.status === "EXPIRED";
+    if (needsAlert) {
+      fireAlertForDocument(doc).catch((e) =>
+        console.error("[Alert] Immediate alert failed:", e)
+      );
+    }
+
+    return res.json({ document: doc, alertFired: needsAlert });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update document";
     return res.status(500).json({ error: message });
