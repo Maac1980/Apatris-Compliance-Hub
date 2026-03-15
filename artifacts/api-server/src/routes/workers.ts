@@ -480,6 +480,22 @@ router.delete("/workers/:id", async (req, res) => {
   }
 });
 
+// GET /workers/:id/public — unauthenticated, returns only name (for public upload link)
+router.get("/workers/:id/public", async (req, res) => {
+  try {
+    const record = await fetchRecord(req.params.id);
+    const worker = mapRecordToWorker(record);
+    res.json({ id: worker.id, name: worker.name });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    if (message.includes("404") || message.includes("NOT_FOUND")) {
+      res.status(404).json({ error: "Worker not found" });
+    } else {
+      res.status(500).json({ error: message });
+    }
+  }
+});
+
 // GET /workers/:id
 router.get("/workers/:id", async (req, res) => {
   try {

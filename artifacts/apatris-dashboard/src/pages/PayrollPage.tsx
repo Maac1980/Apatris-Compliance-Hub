@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, Calculator, CheckCircle2, Loader2, AlertTriangle,
-  ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck
+  ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck, Search, Building2
 } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
@@ -104,6 +104,7 @@ export default function PayrollPage() {
 
   // Local state for dirty edits before they're flushed to the API
   const [pending, setPending] = useState<Record<string, Record<string, number>>>({});
+  const [payrollSearch, setPayrollSearch] = useState("");
 
   const { data, isLoading, refetch } = useQuery<{ workers: PayrollWorker[] }>({
     queryKey: ["payroll-current"],
@@ -171,6 +172,12 @@ export default function PayrollPage() {
       return { ...w, hourlyRate, monthlyHours, advance, penalties, grossPayout, finalNetto };
     });
   }, [data, pending]);
+
+  const filteredWorkers = useMemo(() => {
+    if (!payrollSearch.trim()) return workers;
+    const q = payrollSearch.toLowerCase();
+    return workers.filter((w) => w.name.toLowerCase().includes(q) || (w.assignedSite || "").toLowerCase().includes(q) || (w.specialization || "").toLowerCase().includes(q));
+  }, [workers, payrollSearch]);
 
   const totals = useMemo(() => ({
     hours: workers.reduce((s, w) => s + w.monthlyHours, 0),
@@ -282,15 +289,30 @@ export default function PayrollPage() {
 
         {/* Payroll Grid */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+          <div className="px-4 py-3 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
               {isAdmin ? "Payroll Grid — Click any value cell to edit inline" : "Hours Grid — Click the Hours cell to update"}
             </p>
-            {saveMutation.isPending && (
-              <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-mono">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
-              </span>
-            )}
+            <div className="flex items-center gap-2 ml-auto">
+              {saveMutation.isPending && (
+                <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-mono">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+                </span>
+              )}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search workers…"
+                  value={payrollSearch}
+                  onChange={(e) => setPayrollSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-600 text-white rounded-lg text-xs font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 w-44"
+                />
+              </div>
+              {payrollSearch && (
+                <span className="text-[10px] font-mono text-gray-400">{filteredWorkers.length} / {workers.length}</span>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full" style={{ minWidth: "900px" }}>
@@ -327,12 +349,12 @@ export default function PayrollPage() {
                       </td>
                     </tr>
                   ))
-                ) : workers.length === 0 ? (
+                ) : filteredWorkers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500 font-mono text-sm">No workers found</td>
+                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500 font-mono text-sm">{payrollSearch ? "No workers match your search" : "No workers found"}</td>
                   </tr>
                 ) : (
-                  workers.map((w) => (
+                  filteredWorkers.map((w) => (
                     <tr key={w.id} className="hover:bg-slate-700/30 transition-colors group">
                       <td className={tdCls}>
                         <p className="text-sm font-semibold text-white">{w.name}</p>
@@ -372,11 +394,11 @@ export default function PayrollPage() {
                 )}
               </tbody>
               {/* Totals row */}
-              {workers.length > 0 && (
+              {filteredWorkers.length > 0 && (
                 <tfoot className="bg-slate-900/80 border-t border-slate-600">
                   <tr>
                     <td className={`${tdCls} text-xs font-bold text-gray-400 uppercase tracking-widest`} colSpan={3}>
-                      TOTALS — {workers.length} workers
+                      TOTALS — {filteredWorkers.length}{payrollSearch && workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
                     </td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-yellow-400`}>{fmt(totals.hours)}</td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-blue-400`}>{fmt(totals.gross)} PLN</td>

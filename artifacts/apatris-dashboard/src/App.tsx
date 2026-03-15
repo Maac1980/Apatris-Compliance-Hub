@@ -12,6 +12,7 @@ import Apply from "@/pages/Apply";
 import AdminSettings from "@/pages/AdminSettings";
 import ComplianceAlerts from "@/pages/ComplianceAlerts";
 import PayrollPage from "@/pages/PayrollPage";
+import WorkerUpload from "@/pages/WorkerUpload";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -43,6 +44,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/apply" component={Apply} />
+      <Route path="/worker-upload/:id" component={WorkerUpload} />
       <Route path="/admin-settings">
         {() => <ProtectedRoute component={AdminSettings} />}
       </Route>

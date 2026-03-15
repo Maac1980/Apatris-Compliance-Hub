@@ -6,11 +6,11 @@ import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
-  Phone, MessageSquare, TrendingUp, Calculator
+  Phone, MessageSquare, TrendingUp, Calculator, Download, CalendarDays, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth } from "date-fns";
 import { useTranslation } from "react-i18next";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -130,6 +130,8 @@ export default function Dashboard() {
   const [reportOpen, setReportOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addWorkerOpen, setAddWorkerOpen] = useState(false);
+  const [calendarView, setCalendarView] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => format(new Date(), "yyyy-MM"));
 
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
@@ -182,6 +184,66 @@ export default function Dashboard() {
     }
     return Array.from(map.entries()).map(([name, stats]) => ({ name, ...stats })).sort((a, b) => b.total - a.total);
   }, [allWorkersData]);
+
+  // Workers with any document expiring within the next 7 days
+  const expiringThisWeek = React.useMemo(() => {
+    const ws = allWorkersData?.workers ?? [];
+    const now = Date.now();
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const items: Array<{ worker: any; docType: string; expiry: string }> = [];
+    for (const w of ws as any[]) {
+      const checks: [string, string | null | undefined][] = [
+        ["TRC", w.trcExpiry], ["Passport", w.passportExpiry],
+        ["Work Permit", w.workPermitExpiry], ["Contract", w.contractEndDate],
+        ["Medical", w.medicalExamExpiry], ["BHP", w.bhpStatus?.includes("-") ? w.bhpStatus : null],
+      ];
+      for (const [docType, d] of checks) {
+        if (d && d.includes("-")) {
+          const ms = new Date(d).getTime();
+          if (ms >= now && ms <= now + week) items.push({ worker: w, docType, expiry: d });
+        }
+      }
+    }
+    return items.sort((a, b) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime());
+  }, [allWorkersData]);
+
+  // Calendar events: expiry dates → list of workers
+  const calendarEvents = React.useMemo(() => {
+    const ws = allWorkersData?.workers ?? [];
+    const map: Record<string, Array<{ name: string; docType: string; critical: boolean }>> = {};
+    for (const w of ws as any[]) {
+      const fields: [string, string | null | undefined][] = [
+        ["TRC", w.trcExpiry], ["Passport", w.passportExpiry],
+        ["Work Permit", w.workPermitExpiry], ["Contract", w.contractEndDate],
+        ["Medical", w.medicalExamExpiry], ["BHP", w.bhpStatus?.includes("-") ? w.bhpStatus : null],
+      ];
+      for (const [docType, expiry] of fields) {
+        if (expiry && expiry.includes("-")) {
+          const key = expiry.slice(0, 10);
+          if (!map[key]) map[key] = [];
+          map[key].push({ name: w.name, docType, critical: w.complianceStatus === "critical" || w.complianceStatus === "non-compliant" });
+        }
+      }
+    }
+    return map;
+  }, [allWorkersData]);
+
+  const handleDownloadCSV = () => {
+    const ws = allWorkersData?.workers ?? [];
+    const headers = ["Name","Specialization","Site","TRC Expiry","Passport Expiry","BHP Expiry","Work Permit Expiry","Contract End","Compliance Status","Email","Phone"];
+    const rows = (ws as any[]).map((w) => [
+      w.name, w.specialization||"", w.assignedSite||"",
+      w.trcExpiry||"", w.passportExpiry||"", w.bhpStatus||"",
+      w.workPermitExpiry||"", w.contractEndDate||"",
+      w.complianceStatus||"", w.email||"", w.phone||"",
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `apatris-workers-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
 
   const handleNotify = (e: React.MouseEvent, worker: any) => {
     e.stopPropagation();
@@ -293,6 +355,14 @@ export default function Dashboard() {
           >
             <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">{t("header.generateReport")}</span>
+          </button>
+          <button
+            onClick={handleDownloadCSV}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
+            title="Download full worker list as CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">CSV</span>
           </button>
 
           {/* Notification Bell */}
@@ -428,8 +498,107 @@ export default function Dashboard() {
                 ))}
               </select>
             </div>
+            <button
+              onClick={() => setCalendarView(!calendarView)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-mono font-bold uppercase tracking-wide border transition-all whitespace-nowrap ${calendarView ? "bg-red-600 border-red-500 text-white shadow-[0_0_12px_rgba(196,30,24,0.35)]" : "border-slate-500 text-gray-400 hover:bg-slate-700 hover:text-white"}`}
+            >
+              <CalendarDays className="w-4 h-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </button>
           </div>
         </div>
+
+        {/* Expiring This Week */}
+        {expiringThisWeek.length > 0 && (
+          <div className="rounded-xl border border-orange-500/30 bg-orange-950/20 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-4 h-4 text-orange-400" />
+              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">
+                Expiring This Week — {expiringThisWeek.length} document{expiringThisWeek.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {expiringThisWeek.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedWorkerId(item.worker.id)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-900/30 border border-orange-500/40 hover:border-orange-400 hover:bg-orange-800/40 transition-colors text-left"
+                >
+                  <span className="text-xs font-bold text-white">{item.worker.name}</span>
+                  <span className="text-[10px] font-mono text-orange-300 bg-orange-500/20 px-1.5 py-0.5 rounded uppercase">{item.docType}</span>
+                  <span className="text-[10px] text-gray-400 font-mono">{format(parseISO(item.expiry), "MMM d")}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Calendar View */}
+        {calendarView && (() => {
+          const monthDate = new Date(calendarMonth + "-01");
+          const calStart = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+          const calEnd = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+          const days = eachDayOfInterval({ start: calStart, end: calEnd });
+          const todayKey = format(new Date(), "yyyy-MM-dd");
+          return (
+            <div className="glass-panel rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-red-400" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    Expiry Calendar — {format(monthDate, "MMMM yyyy")}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCalendarMonth(format(addMonths(monthDate, -1), "yyyy-MM"))}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-mono text-gray-300 w-24 text-center">{format(monthDate, "MMM yyyy")}</span>
+                  <button
+                    onClick={() => setCalendarMonth(format(addMonths(monthDate, 1), "yyyy-MM"))}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => (
+                  <div key={d} className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 pb-2">{d}</div>
+                ))}
+                {days.map((day) => {
+                  const key = format(day, "yyyy-MM-dd");
+                  const events = calendarEvents[key] ?? [];
+                  const isToday = key === todayKey;
+                  const inMonth = isSameMonth(day, monthDate);
+                  return (
+                    <div
+                      key={key}
+                      className={`min-h-[80px] p-1.5 rounded-lg border text-left ${isToday ? "border-red-500/60 bg-red-600/10" : inMonth ? "border-white/5 bg-white/[0.02]" : "border-transparent opacity-30"}`}
+                    >
+                      <p className={`text-[11px] font-mono font-bold mb-1 ${isToday ? "text-red-400" : inMonth ? "text-gray-400" : "text-gray-600"}`}>
+                        {format(day, "d")}
+                      </p>
+                      <div className="space-y-0.5">
+                        {events.slice(0, 3).map((ev, i) => (
+                          <div key={i} className={`text-[9px] font-bold truncate px-1 py-0.5 rounded leading-tight ${ev.critical ? "bg-red-600/30 text-red-300" : "bg-yellow-600/30 text-yellow-300"}`}>
+                            {ev.name.split(" ")[0]} · {ev.docType}
+                          </div>
+                        ))}
+                        {events.length > 3 && (
+                          <div className="text-[9px] text-gray-500 px-1">+{events.length - 3} more</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Data Table */}
         <div className="glass-panel rounded-xl overflow-hidden tech-border">
@@ -437,14 +606,15 @@ export default function Dashboard() {
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
             <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1000px" }}>
               <colgroup>
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "9%" }} />
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "9%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "15%" }} />
+                <col style={{ width: "13%" }} />
                 <col style={{ width: "17%" }} />
               </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
@@ -455,6 +625,7 @@ export default function Dashboard() {
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.trcExpiry")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.passportExp")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.bhp")}</th>
+                  <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">Work Permit</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.docs")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.status")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-center">{t("table.actions")}</th>
@@ -464,14 +635,14 @@ export default function Dashboard() {
                 {isLoadingWorkers ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={9} className="px-6 py-6">
+                      <td colSpan={10} className="px-6 py-6">
                         <div className="h-4 bg-white/5 rounded animate-pulse w-full" />
                       </td>
                     </tr>
                   ))
                 ) : workersData?.workers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground font-sans">
+                    <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground font-sans">
                       {t("table.noResults")}
                     </td>
                   </tr>
@@ -565,6 +736,14 @@ export default function Dashboard() {
                           const lower = v.toLowerCase();
                           return <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>{v}</span>;
                         })()}
+                      </td>
+                      <td className="px-4 py-4 overflow-hidden font-mono text-sm">
+                        {(worker as any).workPermitExpiry ? (() => {
+                          const d = parseISO((worker as any).workPermitExpiry);
+                          const expired = d < new Date();
+                          const warn = !expired && d < new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+                          return <span className={expired ? "text-destructive font-bold" : warn ? "text-yellow-400 font-bold" : "text-success font-bold"}>{format(d, "MMM d, yy")}</span>;
+                        })() : <span className="text-gray-500">—</span>}
                       </td>
                       <td className="px-4 py-4 overflow-hidden">
                         <div className="flex items-center gap-1 flex-wrap">

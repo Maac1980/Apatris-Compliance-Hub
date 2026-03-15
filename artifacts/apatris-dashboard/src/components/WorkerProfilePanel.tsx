@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
   XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
-  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator, Link, CheckSquare, Square
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
@@ -621,6 +621,17 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   };
 
   const isOpen = !!workerId;
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyUploadLink = () => {
+    if (!workerId) return;
+    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "");
+    const url = `${base}/worker-upload/${workerId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
+  };
 
   // Salary calculations
   const gross = editHourlyRate && editMonthlyHours
@@ -647,6 +658,13 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
             {/* Header */}
             <div className="flex-shrink-0 p-6 border-b border-white/10 relative overflow-hidden bg-slate-900">
               <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+                <button
+                  onClick={handleCopyUploadLink}
+                  title="Copy shareable document upload link for this worker"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider border ${copiedLink ? "bg-green-600 border-green-500 text-white" : "bg-slate-700 hover:bg-slate-600 border-slate-500 text-gray-300"}`}
+                >
+                  <Link className="w-3.5 h-3.5" /> {copiedLink ? "Copied!" : "Upload Link"}
+                </button>
                 <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
                   <ClipboardCheck className="w-3.5 h-3.5" /> PIP
                 </button>
@@ -993,6 +1011,49 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       </div>
                     )}
                   </div>
+
+                  {/* Onboarding Checklist */}
+                  {(() => {
+                    const w = worker as any;
+                    const checks = [
+                      { label: "TRC / Karta Pobytu", ok: !!(w.trcExpiry || w.trcAttachments?.length) },
+                      { label: "Passport", ok: !!(w.passportExpiry || w.passportAttachments?.length) },
+                      { label: "BHP Certificate", ok: !!(w.bhpExpiry || w.bhpStatus || w.bhpAttachments?.length) },
+                      { label: "Work Permit", ok: !!w.workPermitExpiry },
+                      { label: "Contract / End Date", ok: !!(w.contractEndDate || w.contractAttachments?.length) },
+                      { label: "Medical Exam (Badania)", ok: !!w.medicalExamExpiry },
+                      { label: "Oświadczenie PUP", ok: !!w.oswiadczenieExpiry },
+                      { label: "PESEL / NIP", ok: !!(w.pesel || w.nip) },
+                      { label: "ZUS Registered", ok: w.zusStatus === "Registered" },
+                      { label: "RODO Consent", ok: !!w.rodoConsentDate },
+                    ];
+                    const done = checks.filter((c) => c.ok).length;
+                    const pct = Math.round((done / checks.length) * 100);
+                    return (
+                      <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckSquare className="w-3.5 h-3.5 text-red-400" />
+                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Onboarding Checklist</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? "#22c55e" : pct >= 70 ? "#eab308" : "#C41E18" }} />
+                            </div>
+                            <span className={`text-xs font-mono font-bold ${pct === 100 ? "text-green-400" : pct >= 70 ? "text-yellow-400" : "text-red-400"}`}>{done}/{checks.length}</span>
+                          </div>
+                        </div>
+                        <div className="p-3 grid grid-cols-2 gap-1.5">
+                          {checks.map((c) => (
+                            <div key={c.label} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs ${c.ok ? "bg-green-500/10 border border-green-500/20 text-green-300" : "bg-slate-800 border border-slate-700 text-gray-500"}`}>
+                              {c.ok ? <CheckSquare className="w-3 h-3 flex-shrink-0 text-green-400" /> : <Square className="w-3 h-3 flex-shrink-0 text-gray-600" />}
+                              <span className="truncate">{c.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Compliance Timeline */}
                   <div>
