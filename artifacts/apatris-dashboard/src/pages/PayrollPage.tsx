@@ -215,7 +215,13 @@ export default function PayrollPage() {
       columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right", fontStyle: "bold" } },
     });
 
-    doc.save(`apatris-payroll-${selectedMonth}.pdf`);
+    const filename = `apatris-payroll-${selectedMonth}.pdf`;
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const thCls = "px-3 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-left whitespace-nowrap";

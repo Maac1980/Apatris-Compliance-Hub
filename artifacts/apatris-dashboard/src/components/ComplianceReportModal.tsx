@@ -55,7 +55,13 @@ function exportPDF(report: any) {
     },
   });
 
-  doc.save(`apatris-compliance-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  const filename = `apatris-compliance-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+  const blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.target = "_blank"; a.rel = "noopener noreferrer";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 export function ComplianceReportModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {

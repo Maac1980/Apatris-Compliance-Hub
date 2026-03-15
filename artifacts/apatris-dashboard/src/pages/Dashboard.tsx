@@ -280,8 +280,14 @@ export default function Dashboard() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `apatris-workers-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    a.href = url;
+    a.download = `apatris-workers-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const handleNotify = (e: React.MouseEvent, worker: any) => {

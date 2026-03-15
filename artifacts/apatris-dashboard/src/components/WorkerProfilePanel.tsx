@@ -506,7 +506,13 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
     doc.setTextColor(150, 150, 150);
     doc.text("Apatris Sp. z o.o. · ul. Przykładowa 1, 00-001 Warszawa · NIP: 0000000000", 105, 287, { align: "center" });
 
-    doc.save(`apatris-final-settlement-${w.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+    const filename = `apatris-final-settlement-${w.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const panelRef = useRef<HTMLDivElement>(null);
