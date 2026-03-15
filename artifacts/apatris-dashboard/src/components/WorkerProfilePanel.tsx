@@ -403,7 +403,7 @@ export function WorkerProfilePanel({
       />
       <div
         ref={panelRef}
-        className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -412,9 +412,9 @@ export function WorkerProfilePanel({
             <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="p-6 border-b border-white/10 relative overflow-hidden bg-slate-800/50">
+          <div className="flex flex-col h-full min-h-0">
+            {/* Header - always visible, never scrolls */}
+            <div className="flex-shrink-0 p-6 border-b border-white/10 relative overflow-hidden bg-slate-900">
               <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
                 {!isEditing && (
                   <button
@@ -452,7 +452,7 @@ export function WorkerProfilePanel({
               </div>
             </div>
 
-            <div className="p-6 space-y-6 flex-1">
+            <div className="p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
 
               {/* EDIT MODE PANEL */}
               {isEditing && (
