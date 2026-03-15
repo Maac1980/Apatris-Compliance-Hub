@@ -1,5 +1,6 @@
 import { fetchDocuments, ensureDocumentsTable, type DocumentRecord } from "./airtable-documents.js";
 import { fetchAdmins } from "./airtable-admins.js";
+import { sendAlertEmail, isMailConfigured } from "./mailer.js";
 
 const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -14,15 +15,27 @@ export const alertLog: Array<{
   notified: string[];
 }> = [];
 
-async function getNotifyTargets(): Promise<string[]> {
+interface AdminContact {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+async function getAdminContacts(): Promise<AdminContact[]> {
   try {
     const admins = await fetchAdmins();
     return admins
       .filter((a) => a.email || a.phone)
-      .map((a) => `${a.fullName}${a.email ? ` <${a.email}>` : ""}${a.phone ? ` / ${a.phone}` : ""}`);
+      .map((a) => ({ name: a.fullName, email: a.email, phone: a.phone }));
   } catch {
     return [];
   }
+}
+
+function formatNotifyTargets(contacts: AdminContact[]): string[] {
+  return contacts.map(
+    (a) => `${a.name}${a.email ? ` <${a.email}>` : ""}${a.phone ? ` / ${a.phone}` : ""}`
+  );
 }
 
 function pushAlertLog(
@@ -49,7 +62,8 @@ function pushAlertLog(
 export async function fireAlertForDocument(doc: DocumentRecord): Promise<void> {
   if (doc.status !== "RED" && doc.status !== "YELLOW" && doc.status !== "EXPIRED") return;
 
-  const notifyTargets = await getNotifyTargets();
+  const contacts = await getAdminContacts();
+  const notifyTargets = formatNotifyTargets(contacts);
   pushAlertLog(doc, notifyTargets);
 
   const urgency =
@@ -58,16 +72,31 @@ export async function fireAlertForDocument(doc: DocumentRecord): Promise<void> {
                                "🟡 WARNING (≤60 days)";
 
   console.log(`[Alert] ${urgency} — ${doc.workerName} · ${doc.documentType} · expires ${doc.expiryDate} (${doc.daysUntilExpiry} days)`);
+  console.log(`  Worker:    ${doc.workerName}`);
+  console.log(`  Document:  ${doc.documentType}`);
+  console.log(`  Expires:   ${doc.expiryDate} (${doc.daysUntilExpiry} days remaining)`);
+  if (notifyTargets.length > 0) {
+    console.log(`  Notify:    ${notifyTargets.join(" | ")}`);
+  } else {
+    console.log(`  Notify:    No admin contacts configured — add emails/phones in Admin Settings`);
+  }
 
+  // Send real email for RED / EXPIRED documents
   if (doc.status === "RED" || doc.status === "EXPIRED") {
-    console.log(`[ALERT] Document in critical zone (manually added/updated).`);
-    console.log(`  Worker:    ${doc.workerName}`);
-    console.log(`  Document:  ${doc.documentType}`);
-    console.log(`  Expires:   ${doc.expiryDate} (${doc.daysUntilExpiry} days remaining)`);
-    if (notifyTargets.length > 0) {
-      console.log(`  Notify:    ${notifyTargets.join(" | ")}`);
-    } else {
-      console.log(`  Notify:    No admin contacts configured — add emails/phones in Admin Settings`);
+    const emailRecipients = contacts.filter((c) => c.email);
+    if (emailRecipients.length > 0) {
+      if (isMailConfigured()) {
+        sendAlertEmail({
+          workerName: doc.workerName,
+          documentType: doc.documentType,
+          expiryDate: doc.expiryDate,
+          daysUntilExpiry: doc.daysUntilExpiry,
+          status: doc.status as "RED" | "EXPIRED",
+          recipients: emailRecipients.map((c) => ({ name: c.name, email: c.email })),
+        }).catch((e) => console.error("[Mailer] Email send error:", e));
+      } else {
+        console.warn("[Mailer] Email not configured — set SMTP_USER and SMTP_PASS secrets to enable.");
+      }
     }
   }
 }
@@ -88,7 +117,10 @@ async function runDailyScan(): Promise<void> {
       return;
     }
 
-    const notifyTargets = await getNotifyTargets();
+    const contacts = await getAdminContacts();
+    const notifyTargets = formatNotifyTargets(contacts);
+    const emailRecipients = contacts.filter((c) => c.email).map((c) => ({ name: c.name, email: c.email }));
+
     console.log(
       `[Scheduler] ${alertDocs.length} document(s) require attention. ` +
         `Administrators to notify: ${notifyTargets.length > 0 ? notifyTargets.join(", ") : "none configured"}`
@@ -106,15 +138,19 @@ async function runDailyScan(): Promise<void> {
         `[Scheduler] ${urgency} — ${doc.workerName} · ${doc.documentType} · expires ${doc.expiryDate} (${doc.daysUntilExpiry} days)`
       );
 
-      if (doc.status === "RED" || doc.status === "EXPIRED") {
-        console.log(`[ALERT] Document entering critical zone.`);
-        console.log(`  Worker:    ${doc.workerName}`);
-        console.log(`  Document:  ${doc.documentType}`);
-        console.log(`  Expires:   ${doc.expiryDate} (${doc.daysUntilExpiry} days remaining)`);
-        if (notifyTargets.length > 0) {
-          console.log(`  Notify:    ${notifyTargets.join(" | ")}`);
+      // Send email for each RED / EXPIRED document
+      if ((doc.status === "RED" || doc.status === "EXPIRED") && emailRecipients.length > 0) {
+        if (isMailConfigured()) {
+          sendAlertEmail({
+            workerName: doc.workerName,
+            documentType: doc.documentType,
+            expiryDate: doc.expiryDate,
+            daysUntilExpiry: doc.daysUntilExpiry,
+            status: doc.status as "RED" | "EXPIRED",
+            recipients: emailRecipients,
+          }).catch((e) => console.error("[Mailer] Email send error:", e));
         } else {
-          console.log(`  Notify:    No admin contacts configured — add emails/phones in Admin Settings`);
+          console.warn("[Mailer] Email not configured — set SMTP_USER and SMTP_PASS secrets to enable.");
         }
       }
     }
