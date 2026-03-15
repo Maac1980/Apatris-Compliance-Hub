@@ -371,6 +371,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [saving, setSaving] = useState(false);
 
   // Core fields
+  const [editWorkerStatus, setEditWorkerStatus] = useState("");
   const [editSpec, setEditSpec] = useState("");
   const [editSite, setEditSite] = useState("");
   const [editTrcExpiry, setEditTrcExpiry] = useState("");
@@ -520,6 +521,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   useEffect(() => {
     if (worker && isEditing) {
       const w = worker as any;
+      setEditWorkerStatus(w.workerStatus || "Active");
       setEditSpec(w.specialization || "");
       setEditSite(w.assignedSite || "");
       setEditTrcExpiry(w.trcExpiry || "");
@@ -562,6 +564,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
     setSaving(true);
     try {
       const body: Record<string, string> = {
+        workerStatus: editWorkerStatus,
         specialization: editSpec,
         assignedSite: editSite,
         trcExpiry: editTrcExpiry,
@@ -691,6 +694,13 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       </span>
                     )}
                     <StatusBadge status={(worker as any).complianceStatus} />
+                    {(worker as any).workerStatus && (worker as any).workerStatus !== "Active" && (() => {
+                      const s = (worker as any).workerStatus as string;
+                      const cls = s === "On Leave" ? "bg-yellow-600/20 border-yellow-500/40 text-yellow-300"
+                                : s === "Departed" ? "bg-orange-600/20 border-orange-500/40 text-orange-300"
+                                : "bg-slate-600/30 border-slate-500/40 text-slate-300";
+                      return <span className={`px-2 py-0.5 rounded text-xs font-bold border ${cls}`}>{s}</span>;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -708,6 +718,15 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                   {/* Core */}
                   <EditSection title="Core Details" icon={Pencil}>
                     <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Worker Status</label>
+                        <select value={editWorkerStatus} onChange={(e) => setEditWorkerStatus(e.target.value)} className={inputCls}>
+                          <option value="Active">Active</option>
+                          <option value="On Leave">On Leave</option>
+                          <option value="Departed">Departed</option>
+                          <option value="Archived">Archived</option>
+                        </select>
+                      </div>
                       <div>
                         <label className={labelCls}>Welding Spec</label>
                         <select value={editSpec} onChange={(e) => setEditSpec(e.target.value)} className={inputCls}>

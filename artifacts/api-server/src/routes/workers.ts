@@ -110,12 +110,12 @@ const router: IRouter = Router();
 // GET /workers
 router.get("/workers", async (req, res) => {
   try {
-    const { search, specialization, status, site } = req.query as Record<string, string>;
+    const { search, specialization, status, site, showArchived } = req.query as Record<string, string>;
     const records = await fetchAllRecords();
     const allWorkers = records.map(mapRecordToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
-    const filtered = filterWorkers(allWorkers, search, specialization, status, site);
+    const filtered = filterWorkers(allWorkers, search, specialization, status, site, showArchived === "true");
     res.json({ workers: filtered, total: filtered.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -546,6 +546,7 @@ router.patch("/workers/:id", async (req, res) => {
     if (body.weldingMaterialGroup !== undefined) airtableFields["Welding Material Group"] = body.weldingMaterialGroup || null;
     if (body.weldingThickness !== undefined) airtableFields["Welding Thickness"] = body.weldingThickness || null;
     if (body.weldingPosition !== undefined) airtableFields["Welding Position"] = body.weldingPosition || null;
+    if (body.workerStatus !== undefined) airtableFields["WORKER_STATUS"] = body.workerStatus || null;
 
     await updateRecord(req.params.id, airtableFields);
 

@@ -8,6 +8,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  assignedSite?: string;
 }
 
 interface AuthContextType {

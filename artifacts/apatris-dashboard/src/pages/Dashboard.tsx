@@ -6,7 +6,8 @@ import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
-  Phone, MessageSquare, TrendingUp, Calculator, Download, CalendarDays, ChevronLeft, ChevronRight
+  Phone, MessageSquare, TrendingUp, Calculator, Download, CalendarDays, ChevronLeft, ChevronRight,
+  CheckSquare, Square, Archive, X, Send
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -132,12 +133,22 @@ export default function Dashboard() {
   const [addWorkerOpen, setAddWorkerOpen] = useState(false);
   const [calendarView, setCalendarView] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [showArchived, setShowArchived] = useState(false);
+  const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(new Set());
+
+  const isCoordinator = user?.role === "Coordinator";
+
+  // Site-scoped coordinator: auto-lock to assigned site
+  useEffect(() => {
+    if (user?.assignedSite) setSite(user.assignedSite);
+  }, [user?.assignedSite]);
 
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
     specialization: specialization || undefined, 
     status: status || undefined,
     site: site || undefined,
+    showArchived: showArchived ? "true" : undefined,
   } as any);
   
   const { data: stats } = useGetWorkerStats();
@@ -228,11 +239,39 @@ export default function Dashboard() {
     return map;
   }, [allWorkersData]);
 
-  const handleDownloadCSV = () => {
+  // Days forecast — expiry counts for next 30, 60, 90 days across all workers
+  const forecastCounts = React.useMemo(() => {
     const ws = allWorkersData?.workers ?? [];
-    const headers = ["Name","Specialization","Site","TRC Expiry","Passport Expiry","BHP Expiry","Work Permit Expiry","Contract End","Compliance Status","Email","Phone"];
+    const now = Date.now();
+    const DAY = 86400000;
+    let d30 = 0, d60 = 0, d90 = 0;
+    for (const w of ws as any[]) {
+      const dates = [w.trcExpiry, w.passportExpiry, w.workPermitExpiry, w.contractEndDate, w.medicalExamExpiry, w.bhpStatus?.includes("-") ? w.bhpStatus : null];
+      for (const d of dates) {
+        if (!d) continue;
+        const diff = new Date(d).getTime() - now;
+        if (diff > 0 && diff <= 30 * DAY) d30++;
+        else if (diff > 0 && diff <= 60 * DAY) d60++;
+        else if (diff > 0 && diff <= 90 * DAY) d90++;
+      }
+    }
+    return { d30, d60, d90 };
+  }, [allWorkersData]);
+
+  function daysLeftBadge(dateStr: string | null | undefined): React.ReactNode {
+    if (!dateStr) return null;
+    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+    if (diff < 0) return <span className="ml-1 px-1 py-0.5 rounded text-[9px] font-bold bg-red-600/40 text-red-300 border border-red-500/30">EXP</span>;
+    if (diff <= 30) return <span className="ml-1 px-1 py-0.5 rounded text-[9px] font-bold bg-red-600/30 text-red-300 border border-red-500/30">{diff}d</span>;
+    if (diff <= 60) return <span className="ml-1 px-1 py-0.5 rounded text-[9px] font-bold bg-yellow-600/30 text-yellow-300 border border-yellow-500/30">{diff}d</span>;
+    return null;
+  }
+
+  const handleDownloadCSV = () => {
+    const ws = (workersData?.workers ?? allWorkersData?.workers ?? []) as any[];
+    const headers = ["Name","Specialization","Site","Status","TRC Expiry","Passport Expiry","BHP Expiry","Work Permit Expiry","Contract End","Compliance Status","Email","Phone"];
     const rows = (ws as any[]).map((w) => [
-      w.name, w.specialization||"", w.assignedSite||"",
+      w.name, w.specialization||"", w.assignedSite||"", w.workerStatus||"Active",
       w.trcExpiry||"", w.passportExpiry||"", w.bhpStatus||"",
       w.workPermitExpiry||"", w.contractEndDate||"",
       w.complianceStatus||"", w.email||"", w.phone||"",
@@ -440,6 +479,23 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Forecast Panel — upcoming expirations */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: "Expiring in 30 days", count: forecastCounts.d30, color: forecastCounts.d30 > 0 ? "border-red-500/40 bg-red-600/5 text-red-400" : "border-white/10 text-gray-400" },
+            { label: "Expiring in 60 days", count: forecastCounts.d60, color: forecastCounts.d60 > 0 ? "border-yellow-500/40 bg-yellow-600/5 text-yellow-400" : "border-white/10 text-gray-400" },
+            { label: "Expiring in 90 days", count: forecastCounts.d90, color: forecastCounts.d90 > 0 ? "border-blue-500/40 bg-blue-600/5 text-blue-400" : "border-white/10 text-gray-400" },
+          ].map(({ label, count, color }) => (
+            <div key={label} className={`rounded-xl border p-4 flex items-center gap-4 ${color}`}>
+              <Clock className="w-6 h-6 flex-shrink-0 opacity-70" />
+              <div>
+                <p className="text-2xl font-mono font-bold">{count}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mt-0.5">{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Command Bar */}
         <div className="glass-panel p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center justify-between mt-8">
           <div className="flex-1 w-full relative">
@@ -489,8 +545,9 @@ export default function Dashboard() {
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
               <select
                 value={site}
-                onChange={(e) => setSite(e.target.value)}
-                className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
+                onChange={(e) => !isCoordinator && setSite(e.target.value)}
+                disabled={isCoordinator}
+                className={`w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors ${isCoordinator ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <option value="">{t("table.allClientsProjects")}</option>
                 {availableSites.map((s) => (
@@ -498,6 +555,14 @@ export default function Dashboard() {
                 ))}
               </select>
             </div>
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-mono font-bold uppercase tracking-wide border transition-all whitespace-nowrap ${showArchived ? "bg-slate-600 border-slate-400 text-white" : "border-slate-500 text-gray-400 hover:bg-slate-700 hover:text-white"}`}
+              title="Show archived/departed workers"
+            >
+              <Archive className="w-4 h-4" />
+              <span className="hidden sm:inline">Archived</span>
+            </button>
             <button
               onClick={() => setCalendarView(!calendarView)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-mono font-bold uppercase tracking-wide border transition-all whitespace-nowrap ${calendarView ? "bg-red-600 border-red-500 text-white shadow-[0_0_12px_rgba(196,30,24,0.35)]" : "border-slate-500 text-gray-400 hover:bg-slate-700 hover:text-white"}`}
@@ -604,22 +669,40 @@ export default function Dashboard() {
         <div className="glass-panel rounded-xl overflow-hidden tech-border">
           <div className="overflow-x-auto">
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
-            <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1000px" }}>
+            <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1060px" }}>
               <colgroup>
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "3%" }} />
+                <col style={{ width: "11%" }} />
                 <col style={{ width: "8%" }} />
+                <col style={{ width: "9%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "13%" }} />
-                <col style={{ width: "17%" }} />
+                <col style={{ width: "18%" }} />
               </colgroup>
               <thead className="bg-slate-700/60 border-b border-slate-600">
                 <tr>
-                  <th className="sticky left-0 z-20 bg-slate-700/95 px-6 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5 text-left">{t("table.operator")}</th>
+                  <th className="sticky left-0 z-20 bg-slate-700/95 px-3 py-4 border-r border-white/5 text-center w-10">
+                    <button
+                      onClick={() => {
+                        const ids = workersData?.workers.map((w: any) => w.id) ?? [];
+                        if (ids.every((id: string) => selectedWorkers.has(id))) {
+                          setSelectedWorkers(new Set());
+                        } else {
+                          setSelectedWorkers(new Set(ids));
+                        }
+                      }}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      {(workersData?.workers ?? []).every((w: any) => selectedWorkers.has(w.id)) && (workersData?.workers ?? []).length > 0
+                        ? <CheckSquare className="w-4 h-4 text-red-400" />
+                        : <Square className="w-4 h-4" />}
+                    </button>
+                  </th>
+                  <th className="sticky left-10 z-20 bg-slate-700/95 px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white border-r border-white/5 text-left">{t("table.operator")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.spec")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.assignedSite")}</th>
                   <th className="px-4 py-4 text-xs font-display font-bold uppercase tracking-widest text-white text-left">{t("table.trcExpiry")}</th>
@@ -635,25 +718,35 @@ export default function Dashboard() {
                 {isLoadingWorkers ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={10} className="px-6 py-6">
+                      <td colSpan={11} className="px-6 py-6">
                         <div className="h-4 bg-white/5 rounded animate-pulse w-full" />
                       </td>
                     </tr>
                   ))
                 ) : workersData?.workers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground font-sans">
+                    <td colSpan={11} className="px-6 py-12 text-center text-muted-foreground font-sans">
                       {t("table.noResults")}
                     </td>
                   </tr>
                 ) : (
-                  workersData?.workers.map((worker: any) => (
+                  workersData?.workers.map((worker: any) => {
+                    const isSelected = selectedWorkers.has(worker.id);
+                    return (
                     <tr 
                       key={worker.id} 
                       onClick={() => setSelectedWorkerId(worker.id)}
-                      className="hover:bg-white/5 transition-colors cursor-pointer group"
+                      className={`hover:bg-white/5 transition-colors cursor-pointer group ${isSelected ? "bg-red-900/10 border-l-2 border-red-500" : ""}`}
                     >
-                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-4 py-3 border-r border-white/5 transition-colors overflow-hidden">
+                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-3 py-3 border-r border-white/5 transition-colors text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedWorkers((prev) => { const n = new Set(prev); isSelected ? n.delete(worker.id) : n.add(worker.id); return n; }); }}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          {isSelected ? <CheckSquare className="w-4 h-4 text-red-400" /> : <Square className="w-4 h-4" />}
+                        </button>
+                      </td>
+                      <td className="sticky left-10 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-4 py-3 border-r border-white/5 transition-colors overflow-hidden">
                         <div className="font-sans font-medium text-white truncate text-sm">{worker.name}</div>
                         {(worker as any).phone ? (
                           <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -719,10 +812,16 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td className="px-4 py-4 overflow-hidden text-white font-mono text-sm">
-                        {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
+                        <span className="inline-flex items-center flex-wrap">
+                          {worker.trcExpiry ? format(parseISO(worker.trcExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
+                          {daysLeftBadge(worker.trcExpiry)}
+                        </span>
                       </td>
                       <td className="px-4 py-4 overflow-hidden text-white font-mono text-sm">
-                        {(worker as any).passportExpiry ? format(parseISO((worker as any).passportExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
+                        <span className="inline-flex items-center flex-wrap">
+                          {(worker as any).passportExpiry ? format(parseISO((worker as any).passportExpiry), 'MMM d, yy') : <span className="text-gray-500">—</span>}
+                          {daysLeftBadge((worker as any).passportExpiry)}
+                        </span>
                       </td>
                       <td className="px-4 py-4 overflow-hidden font-mono text-sm">
                         {(() => {
@@ -731,7 +830,7 @@ export default function Dashboard() {
                           const d = new Date(v);
                           if (!isNaN(d.getTime()) && v.includes('-')) {
                             const expired = d < new Date();
-                            return <span className={expired ? 'text-destructive font-bold' : 'text-success font-bold'}>{format(parseISO(v), 'MMM d, yy')}</span>;
+                            return <span className="inline-flex items-center gap-1 flex-wrap"><span className={expired ? 'text-destructive font-bold' : 'text-success font-bold'}>{format(parseISO(v), 'MMM d, yy')}</span>{daysLeftBadge(v)}</span>;
                           }
                           const lower = v.toLowerCase();
                           return <span className={lower === 'active' ? 'text-success font-bold' : 'text-destructive font-bold'}>{v}</span>;
@@ -742,7 +841,7 @@ export default function Dashboard() {
                           const d = parseISO((worker as any).workPermitExpiry);
                           const expired = d < new Date();
                           const warn = !expired && d < new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-                          return <span className={expired ? "text-destructive font-bold" : warn ? "text-yellow-400 font-bold" : "text-success font-bold"}>{format(d, "MMM d, yy")}</span>;
+                          return <span className="inline-flex items-center gap-1 flex-wrap"><span className={expired ? "text-destructive font-bold" : warn ? "text-yellow-400 font-bold" : "text-success font-bold"}>{format(d, "MMM d, yy")}</span>{daysLeftBadge((worker as any).workPermitExpiry)}</span>;
                         })() : <span className="text-gray-500">—</span>}
                       </td>
                       <td className="px-4 py-4 overflow-hidden">
@@ -814,13 +913,47 @@ export default function Dashboard() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </div>
       </main>
+
+      {/* Bulk WhatsApp floating action bar */}
+      {selectedWorkers.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-800 border border-slate-600 shadow-2xl shadow-black/50">
+          <span className="text-sm font-bold text-white font-mono">{selectedWorkers.size} selected</span>
+          <div className="w-px h-5 bg-white/20" />
+          <button
+            onClick={() => {
+              const workers = workersData?.workers ?? [];
+              const targets = workers.filter((w: any) => selectedWorkers.has(w.id) && w.phone);
+              if (targets.length === 0) { alert("No phone numbers available for selected workers."); return; }
+              const msg = encodeURIComponent("Dzień dobry, tutaj biuro Apatris. Prosimy o sprawdzenie ważności dokumentów. Dziękujemy.");
+              for (const w of targets) {
+                const num = w.phone.replace(/\D/g, "");
+                const n48 = num.startsWith("48") ? num : num.length === 9 ? "48" + num : "48" + num;
+                window.open(`https://wa.me/${n48}?text=${msg}`, "_blank");
+              }
+              setSelectedWorkers(new Set());
+            }}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-bold uppercase tracking-wide transition-colors border border-green-400"
+          >
+            <Send className="w-4 h-4" />
+            Send WhatsApp
+          </button>
+          <button
+            onClick={() => setSelectedWorkers(new Set())}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+            title="Clear selection"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <WorkerProfilePanel 
         workerId={selectedWorkerId}

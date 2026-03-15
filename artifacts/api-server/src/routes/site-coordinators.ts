@@ -1,0 +1,55 @@
+import { Router } from "express";
+import {
+  listCoordinators, addCoordinator, updateCoordinator, removeCoordinator
+} from "../lib/site-coordinators.js";
+
+const router = Router();
+
+// GET /api/site-coordinators
+router.get("/site-coordinators", (_req, res) => {
+  try {
+    const list = listCoordinators().map(({ passwordHash: _, ...c }) => c);
+    res.json({ coordinators: list });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+// POST /api/site-coordinators
+router.post("/site-coordinators", (req, res) => {
+  try {
+    const { name, email, password, assignedSite, alertEmail } = req.body as Record<string, string>;
+    if (!name || !email || !password || !assignedSite) {
+      return res.status(400).json({ error: "name, email, password, assignedSite are required" });
+    }
+    const coord = addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email });
+    const { passwordHash: _, ...safe } = coord;
+    return res.status(201).json(safe);
+  } catch (err) {
+    return res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+// PATCH /api/site-coordinators/:id
+router.patch("/site-coordinators/:id", (req, res) => {
+  try {
+    const updates = req.body as Record<string, string>;
+    const coord = updateCoordinator(req.params.id, updates);
+    const { passwordHash: _, ...safe } = coord;
+    res.json(safe);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+// DELETE /api/site-coordinators/:id
+router.delete("/site-coordinators/:id", (req, res) => {
+  try {
+    removeCoordinator(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+export default router;

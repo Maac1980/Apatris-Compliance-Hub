@@ -1,9 +1,8 @@
 import { Router } from "express";
+import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/site-coordinators.js";
 
 const router = Router();
 
-// Exactly two authorised accounts.
-// Emails are hardcoded; passwords live in Replit Secrets (never in source code).
 const ALLOWED_USERS = [
   {
     email: "manish@apatris.pl",
@@ -31,24 +30,29 @@ router.post("/auth/login", async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
     const user = ALLOWED_USERS.find((u) => u.email === normalizedEmail);
 
-    // Email not in the allowed list
-    if (!user) {
-      return res
-        .status(403)
-        .json({ error: "Access Denied: Contact Administrator." });
+    if (user) {
+      const storedPassword = process.env[user.passEnvKey];
+      if (!storedPassword || storedPassword !== password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      return res.json({ email: user.email, name: user.name, role: user.role });
     }
 
-    // Email found — check password against secret
-    const storedPassword = process.env[user.passEnvKey];
-    if (!storedPassword || storedPassword !== password) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Check site coordinator accounts
+    const coordinator = findCoordinatorByEmail(normalizedEmail);
+    if (coordinator) {
+      if (!verifyCoordinatorPassword(coordinator, password)) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      return res.json({
+        email: coordinator.email,
+        name: coordinator.name,
+        role: "Coordinator",
+        assignedSite: coordinator.assignedSite,
+      });
     }
 
-    return res.json({
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
+    return res.status(403).json({ error: "Access Denied: Contact Administrator." });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";
     return res.status(500).json({ error: message });

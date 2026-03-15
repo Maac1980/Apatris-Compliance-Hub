@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Shield, Save, ArrowLeft, User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Bell, ClipboardList, Clock } from "lucide-react";
+import { Shield, Save, ArrowLeft, User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Bell, ClipboardList, Clock, Users, Trash2, Plus, Building2, Lock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Admin {
@@ -44,7 +44,14 @@ interface AuditEntry {
   note?: string;
 }
 
-type Tab = "profiles" | "notifications" | "audit";
+interface SiteCoordinator {
+  id: string;
+  name: string;
+  email: string;
+  assignedSite: string;
+}
+
+type Tab = "profiles" | "notifications" | "audit" | "site-coordinators";
 
 export default function AdminSettings() {
   const { user, logout } = useAuth();
@@ -62,11 +69,22 @@ export default function AdminSettings() {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
+  // Site Coordinators
+  const [coordinators, setCoordinators] = useState<SiteCoordinator[]>([]);
+  const [coordLoading, setCoordLoading] = useState(false);
+  const [coordError, setCoordError] = useState("");
+  const [addCoordForm, setAddCoordForm] = useState({ name: "", email: "", assignedSite: "", password: "" });
+  const [addCoordSaving, setAddCoordSaving] = useState(false);
+  const [addCoordError, setAddCoordError] = useState("");
+  const [addCoordSuccess, setAddCoordSuccess] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   useEffect(() => { loadAdmins(); }, []);
 
   useEffect(() => {
     if (activeTab === "notifications" && notifLog.length === 0) loadNotifLog();
     if (activeTab === "audit" && auditLog.length === 0) loadAuditLog();
+    if (activeTab === "site-coordinators" && coordinators.length === 0) loadCoordinators();
   }, [activeTab]);
 
   async function loadAdmins() {
@@ -109,6 +127,61 @@ export default function AdminSettings() {
     finally { setAuditLoading(false); }
   }
 
+  async function loadCoordinators() {
+    setCoordLoading(true);
+    setCoordError("");
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json() as { coordinators: SiteCoordinator[] };
+      setCoordinators(data.coordinators);
+    } catch (err) {
+      setCoordError(err instanceof Error ? err.message : "Failed to load coordinators");
+    } finally {
+      setCoordLoading(false);
+    }
+  }
+
+  async function addCoordinator() {
+    if (!addCoordForm.name.trim() || !addCoordForm.email.trim() || !addCoordForm.assignedSite.trim() || !addCoordForm.password.trim()) {
+      setAddCoordError("All fields are required.");
+      return;
+    }
+    setAddCoordSaving(true);
+    setAddCoordError("");
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addCoordForm),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error || "Failed to add coordinator");
+      }
+      setAddCoordForm({ name: "", email: "", assignedSite: "", password: "" });
+      setAddCoordSuccess(true);
+      setTimeout(() => setAddCoordSuccess(false), 3000);
+      await loadCoordinators();
+    } catch (err) {
+      setAddCoordError(err instanceof Error ? err.message : "Failed to add coordinator");
+    } finally {
+      setAddCoordSaving(false);
+    }
+  }
+
+  async function deleteCoordinator(id: string) {
+    if (!confirm("Remove this site coordinator? They will no longer be able to log in.")) return;
+    setDeletingId(id);
+    try {
+      await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, { method: "DELETE" });
+      await loadCoordinators();
+    } catch {
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   function updateField(id: string, field: "email" | "phone", value: string) {
     setFormStates((prev) => ({
       ...prev,
@@ -146,6 +219,7 @@ export default function AdminSettings() {
     { id: "profiles", label: "Admin Profiles", icon: User },
     { id: "notifications", label: "Notification History", icon: Bell },
     { id: "audit", label: "Audit Log", icon: ClipboardList },
+    { id: "site-coordinators", label: "Site Coordinators", icon: Users },
   ];
 
   return (
@@ -387,6 +461,139 @@ export default function AdminSettings() {
                         </td>
                         <td className="px-4 py-3 text-white">{e.workerName}</td>
                         <td className="px-4 py-3 text-gray-400 text-xs truncate max-w-[200px]">{e.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+        {/* Site Coordinators Tab */}
+        {activeTab === "site-coordinators" && (
+          <>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-white tracking-tight">Site Coordinators</h2>
+              <p className="text-gray-400 text-sm mt-1">Manage site-level coordinator accounts. Each coordinator can log in and view workers assigned to their site only.</p>
+            </div>
+
+            {/* Add coordinator form */}
+            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 mb-8">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-gray-300 mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-red-400" /> Add New Coordinator</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="Jan Kowalski"
+                    value={addCoordForm.name}
+                    onChange={(e) => setAddCoordForm((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    <input
+                      type="email"
+                      placeholder="coordinator@example.com"
+                      value={addCoordForm.email}
+                      onChange={(e) => setAddCoordForm((p) => ({ ...p, email: e.target.value }))}
+                      className="w-full pl-9 bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Assigned Site</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="e.g. Site A / Client Name"
+                      value={addCoordForm.assignedSite}
+                      onChange={(e) => setAddCoordForm((p) => ({ ...p, assignedSite: e.target.value }))}
+                      className="w-full pl-9 bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    <input
+                      type="password"
+                      placeholder="Set login password"
+                      value={addCoordForm.password}
+                      onChange={(e) => setAddCoordForm((p) => ({ ...p, password: e.target.value }))}
+                      className="w-full pl-9 bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                    />
+                  </div>
+                </div>
+              </div>
+              {addCoordError && (
+                <p className="text-red-400 text-xs mt-3 flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5" />{addCoordError}</p>
+              )}
+              {addCoordSuccess && (
+                <p className="text-green-400 text-xs mt-3 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Coordinator added successfully.</p>
+              )}
+              <button
+                onClick={addCoordinator}
+                disabled={addCoordSaving}
+                className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold uppercase tracking-wide transition-colors border border-red-400"
+              >
+                {addCoordSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Add Coordinator
+              </button>
+            </div>
+
+            {/* Coordinator list */}
+            {coordLoading ? (
+              <div className="flex items-center gap-3 text-gray-400 py-8">
+                <Loader2 className="w-5 h-5 animate-spin" /><span className="font-mono text-sm">Loading coordinators...</span>
+              </div>
+            ) : coordError ? (
+              <div className="p-4 rounded-xl bg-red-900/30 border border-red-500/40 text-red-400 text-sm flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />{coordError}
+              </div>
+            ) : coordinators.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 font-mono text-sm">No site coordinators configured yet.</div>
+            ) : (
+              <div className="rounded-xl border border-slate-700 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-800 border-b border-slate-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-gray-400">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-gray-400">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-gray-400">Assigned Site</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-widest text-gray-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700">
+                    {coordinators.map((c) => (
+                      <tr key={c.id} className="hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 text-xs font-bold">
+                              {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-white font-medium">{c.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-300 font-mono text-xs">{c.email}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600/20 border border-red-500/30 text-red-300">{c.assignedSite}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => deleteCoordinator(c.id)}
+                            disabled={deletingId === c.id}
+                            className="flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg bg-red-900/30 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            Remove
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -15,6 +15,7 @@ export interface Worker {
   experience: string | null;
   qualification: string | null;
   assignedSite: string | null;
+  workerStatus: "Active" | "On Leave" | "Departed" | "Archived" | null;
   // Core expiry dates
   trcExpiry: string | null;
   passportExpiry: string | null;
@@ -187,6 +188,9 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const weldingThickness = getString(resolveField(f, ["Welding Thickness", "WELDING_THICKNESS", "WeldingThickness"]));
   const weldingPosition = getString(resolveField(f, ["Welding Position", "WELDING_POSITION", "WeldingPosition"]));
 
+  // Worker status
+  const workerStatus = getSingleSelectName(resolveField(f, ["WORKER_STATUS", "Worker Status", "WorkerStatus"])) as Worker["workerStatus"] ?? null;
+
   // Financial
   const email = getString(resolveField(f, ["EMAIL", "Email", "email"]));
   const phone = getString(resolveField(f, ["PHONE", "Phone", "phone"]));
@@ -214,6 +218,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     experience,
     qualification,
     assignedSite,
+    workerStatus,
     trcExpiry,
     passportExpiry,
     bhpExpiry,
@@ -253,9 +258,11 @@ export function filterWorkers(
   search?: string,
   specialization?: string,
   status?: string,
-  site?: string
+  site?: string,
+  showArchived?: boolean
 ): Worker[] {
   return workers.filter((w) => {
+    if (!showArchived && (w.workerStatus === "Archived" || w.workerStatus === "Departed")) return false;
     if (search && !w.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (specialization && specialization !== "all" && w.specialization !== specialization) return false;
     if (status && status !== "all" && w.complianceStatus !== status) return false;

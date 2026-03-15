@@ -4,6 +4,7 @@ import { sendAlertEmail, isMailConfigured } from "./mailer.js";
 import { fetchAllRecords } from "./airtable.js";
 import { mapRecordToWorker } from "./compliance.js";
 import { saveSnapshot } from "./snapshot.js";
+import { getCoordinatorForSite } from "./site-coordinators.js";
 
 const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -62,11 +63,29 @@ function pushAlertLog(
 }
 
 // Immediately fire an alert for a single document (used when docs are added/updated manually)
-export async function fireAlertForDocument(doc: DocumentRecord): Promise<void> {
+export async function fireAlertForDocument(doc: DocumentRecord, workerSite?: string | null): Promise<void> {
   if (doc.status !== "RED" && doc.status !== "YELLOW" && doc.status !== "EXPIRED") return;
 
   const contacts = await getAdminContacts();
-  const notifyTargets = formatNotifyTargets(contacts);
+
+  // CC site coordinator if known
+  const coordRecipients: Array<{ name: string; email: string }> = [];
+  if (workerSite) {
+    try {
+      const coord = getCoordinatorForSite(workerSite);
+      if (coord?.alertEmail) coordRecipients.push({ name: coord.name, email: coord.alertEmail });
+    } catch { /* non-blocking */ }
+  }
+
+  const allRecipients = [
+    ...contacts.filter((c) => c.email).map((c) => ({ name: c.name, email: c.email })),
+    ...coordRecipients,
+  ];
+
+  const notifyTargets = [
+    ...formatNotifyTargets(contacts),
+    ...coordRecipients.map((r) => `${r.name} <${r.email}> (Site Coordinator)`),
+  ];
   pushAlertLog(doc, notifyTargets);
 
   const urgency =
@@ -75,31 +94,24 @@ export async function fireAlertForDocument(doc: DocumentRecord): Promise<void> {
                                "🟡 WARNING (≤60 days)";
 
   console.log(`[Alert] ${urgency} — ${doc.workerName} · ${doc.documentType} · expires ${doc.expiryDate} (${doc.daysUntilExpiry} days)`);
-  console.log(`  Worker:    ${doc.workerName}`);
-  console.log(`  Document:  ${doc.documentType}`);
-  console.log(`  Expires:   ${doc.expiryDate} (${doc.daysUntilExpiry} days remaining)`);
   if (notifyTargets.length > 0) {
     console.log(`  Notify:    ${notifyTargets.join(" | ")}`);
   } else {
     console.log(`  Notify:    No admin contacts configured — add emails/phones in Admin Settings`);
   }
 
-  // Send real email for RED / EXPIRED documents
   if (doc.status === "RED" || doc.status === "EXPIRED") {
-    const emailRecipients = contacts.filter((c) => c.email);
-    if (emailRecipients.length > 0) {
-      if (isMailConfigured()) {
-        sendAlertEmail({
-          workerName: doc.workerName,
-          documentType: doc.documentType,
-          expiryDate: doc.expiryDate,
-          daysUntilExpiry: doc.daysUntilExpiry,
-          status: doc.status as "RED" | "EXPIRED",
-          recipients: emailRecipients.map((c) => ({ name: c.name, email: c.email })),
-        }).catch((e) => console.error("[Mailer] Email send error:", e));
-      } else {
-        console.warn("[Mailer] Email not configured — set SMTP_USER and SMTP_PASS secrets to enable.");
-      }
+    if (allRecipients.length > 0 && isMailConfigured()) {
+      sendAlertEmail({
+        workerName: doc.workerName,
+        documentType: doc.documentType,
+        expiryDate: doc.expiryDate,
+        daysUntilExpiry: doc.daysUntilExpiry,
+        status: doc.status as "RED" | "EXPIRED",
+        recipients: allRecipients,
+      }).catch((e) => console.error("[Mailer] Email send error:", e));
+    } else if (!isMailConfigured()) {
+      console.warn("[Mailer] Email not configured — set SMTP_USER and SMTP_PASS secrets to enable.");
     }
   }
 }
@@ -179,8 +191,33 @@ async function runDailyScan(): Promise<void> {
         `Administrators to notify: ${notifyTargets.length > 0 ? notifyTargets.join(", ") : "none configured"}`
     );
 
+    // Build workerId → assignedSite map for coordinator lookup
+    const workerSiteMap = new Map<string, string>();
+    try {
+      const allRecs = await fetchAllRecords();
+      for (const r of allRecs) {
+        const w = mapRecordToWorker(r);
+        if (w.assignedSite) workerSiteMap.set(w.id, w.assignedSite);
+      }
+    } catch { /* non-blocking */ }
+
     for (const doc of alertDocs) {
-      pushAlertLog(doc, notifyTargets);
+      // Resolve site coordinator recipients for this document's worker
+      const workerSite = workerSiteMap.get(doc.workerId) ?? null;
+      const coordRecips: Array<{ name: string; email: string }> = [];
+      if (workerSite) {
+        try {
+          const coord = getCoordinatorForSite(workerSite);
+          if (coord?.alertEmail) coordRecips.push({ name: coord.name, email: coord.alertEmail });
+        } catch { /* non-blocking */ }
+      }
+      const docRecipients = [...emailRecipients, ...coordRecips];
+      const docTargets = [
+        ...notifyTargets,
+        ...coordRecips.map((r) => `${r.name} <${r.email}> (Site Coordinator)`),
+      ];
+
+      pushAlertLog(doc, docTargets);
 
       const urgency =
         doc.status === "EXPIRED" ? "⛔ EXPIRED" :
@@ -191,8 +228,7 @@ async function runDailyScan(): Promise<void> {
         `[Scheduler] ${urgency} — ${doc.workerName} · ${doc.documentType} · expires ${doc.expiryDate} (${doc.daysUntilExpiry} days)`
       );
 
-      // Send email for each RED / EXPIRED document
-      if ((doc.status === "RED" || doc.status === "EXPIRED") && emailRecipients.length > 0) {
+      if ((doc.status === "RED" || doc.status === "EXPIRED") && docRecipients.length > 0) {
         if (isMailConfigured()) {
           sendAlertEmail({
             workerName: doc.workerName,
@@ -200,7 +236,7 @@ async function runDailyScan(): Promise<void> {
             expiryDate: doc.expiryDate,
             daysUntilExpiry: doc.daysUntilExpiry,
             status: doc.status as "RED" | "EXPIRED",
-            recipients: emailRecipients,
+            recipients: docRecipients,
           }).catch((e) => console.error("[Mailer] Email send error:", e));
         } else {
           console.warn("[Mailer] Email not configured — set SMTP_USER and SMTP_PASS secrets to enable.");
