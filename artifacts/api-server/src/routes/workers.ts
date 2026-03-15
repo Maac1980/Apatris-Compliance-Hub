@@ -3,6 +3,7 @@ import multer from "multer";
 import OpenAI from "openai";
 import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, initializeFields } from "../lib/airtable.js";
 import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -454,7 +455,23 @@ router.patch("/workers/:id", async (req, res) => {
     }
 
     const finalRecord = await fetchRecord(req.params.id);
-    res.json(mapRecordToWorker(finalRecord));
+    const updatedWorker = mapRecordToWorker(finalRecord);
+
+    // Audit log
+    try {
+      const actor = (req as any).user;
+      appendAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: actor?.name || "Unknown",
+        actorEmail: actor?.email || "unknown",
+        action: "UPDATE_WORKER",
+        workerId: req.params.id,
+        workerName: updatedWorker.name,
+        note: `Fields updated: ${Object.keys(airtableFields).join(", ")}`,
+      });
+    } catch { /* non-blocking */ }
+
+    res.json(updatedWorker);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });

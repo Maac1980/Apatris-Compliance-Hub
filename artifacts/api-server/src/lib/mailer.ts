@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { appendNotifLog } from "./notif-log.js";
 
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
@@ -155,7 +156,28 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
       html,
     });
     console.log(`[Mailer] Alert email sent → ${toAddresses} (messageId: ${info.messageId})`);
+    appendNotifLog({
+      timestamp: new Date().toISOString(),
+      workerName,
+      documentType,
+      expiryDate,
+      daysUntilExpiry,
+      status,
+      recipients: recipients.map((r) => `${r.name} <${r.email}>`),
+      sent: true,
+    });
   } catch (err) {
+    appendNotifLog({
+      timestamp: new Date().toISOString(),
+      workerName,
+      documentType,
+      expiryDate,
+      daysUntilExpiry,
+      status,
+      recipients: recipients.map((r) => `${r.name} <${r.email}>`),
+      sent: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
     console.error("[Mailer] Failed to send alert email:", err);
     throw err;
   }

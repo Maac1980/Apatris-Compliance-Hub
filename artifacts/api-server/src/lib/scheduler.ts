@@ -1,6 +1,9 @@
 import { fetchDocuments, ensureDocumentsTable, type DocumentRecord } from "./airtable-documents.js";
 import { fetchAdmins } from "./airtable-admins.js";
 import { sendAlertEmail, isMailConfigured } from "./mailer.js";
+import { fetchAllRecords } from "./airtable.js";
+import { mapRecordToWorker } from "./compliance.js";
+import { saveSnapshot } from "./snapshot.js";
 
 const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -108,9 +111,59 @@ async function runDailyScan(): Promise<void> {
   try {
     await ensureDocumentsTable();
     const documents = await fetchDocuments();
+
+    // ── Contract expiry checks from WELDERS table ──────────────────────────
+    try {
+      const workerRecords = await fetchAllRecords();
+      const workers = workerRecords.map(mapRecordToWorker);
+      const today = Date.now();
+      for (const w of workers) {
+        if (!w.contractEndDate) continue;
+        const expMs = new Date(w.contractEndDate).getTime();
+        const daysLeft = Math.ceil((expMs - today) / 86400000);
+        if (daysLeft <= 30) {
+          const status = daysLeft <= 0 ? "EXPIRED" : "RED";
+          const contractDoc: DocumentRecord = {
+            id: `contract-${w.id}`,
+            workerName: w.name,
+            workerId: w.id,
+            documentType: "Contract",
+            expiryDate: w.contractEndDate,
+            daysUntilExpiry: daysLeft,
+            status,
+          };
+          documents.push(contractDoc);
+        }
+      }
+    } catch (e) {
+      console.warn("[Scheduler] Contract expiry check failed:", e);
+    }
+
     const alertDocs = documents.filter(
       (d) => d.status === "RED" || d.status === "YELLOW" || d.status === "EXPIRED"
     );
+
+    // ── Save daily compliance snapshot ────────────────────────────────────
+    try {
+      const allWorkerRecords = await fetchAllRecords();
+      const allWorkers = allWorkerRecords.map(mapRecordToWorker);
+      const total = allWorkers.length;
+      const critical = allWorkers.filter((w) => w.complianceStatus === "critical").length;
+      const warning = allWorkers.filter((w) => w.complianceStatus === "warning").length;
+      const expired = allWorkers.filter((w) => w.complianceStatus === "non-compliant").length;
+      const compliant = total - critical - warning - expired;
+      saveSnapshot({
+        date: new Date().toISOString().slice(0, 10),
+        total,
+        compliant: compliant < 0 ? 0 : compliant,
+        warning,
+        critical,
+        expired,
+      });
+      console.log(`[Scheduler] Snapshot saved: ${total} workers (${compliant} OK, ${warning} warn, ${critical} critical, ${expired} expired).`);
+    } catch (e) {
+      console.warn("[Scheduler] Snapshot save failed:", e);
+    }
 
     if (alertDocs.length === 0) {
       console.log("[Scheduler] All documents are compliant. No alerts.");
@@ -155,9 +208,9 @@ async function runDailyScan(): Promise<void> {
       }
     }
 
-    const critical = alertDocs.filter((d) => d.status === "RED" || d.status === "EXPIRED").length;
+    const critical2 = alertDocs.filter((d) => d.status === "RED" || d.status === "EXPIRED").length;
     const warnings = alertDocs.filter((d) => d.status === "YELLOW").length;
-    console.log(`[Scheduler] Scan complete. ${critical} critical, ${warnings} warnings.`);
+    console.log(`[Scheduler] Scan complete. ${critical2} critical, ${warnings} warnings.`);
   } catch (err) {
     console.error("[Scheduler] Scan failed:", err);
   }

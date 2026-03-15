@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
@@ -6,8 +6,9 @@ import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
-  Phone, MessageSquare
+  Phone, MessageSquare, TrendingUp
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -102,6 +103,8 @@ function LanguageToggle() {
   );
 }
 
+interface TrendSnapshot { date: string; total: number; compliant: number; warning: number; critical: number; expired: number; }
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
@@ -112,6 +115,11 @@ export default function Dashboard() {
   const [specialization, setSpecialization] = useState("");
   const [status, setStatus] = useState("");
   const [site, setSite] = useState("");
+
+  // Seed today's snapshot once on mount so trend chart has data from day 1
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/compliance/snapshot`, { method: "POST" }).catch(() => {});
+  }, []);
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [panelEditMode, setPanelEditMode] = useState(false);
@@ -141,6 +149,37 @@ export default function Dashboard() {
     staleTime: 30_000,
   });
   const availableSites = sitesData?.sites ?? [];
+
+  // All workers (unfiltered) for per-site stats
+  const { data: allWorkersData } = useGetWorkers({} as any);
+
+  // Compliance trend snapshots
+  const { data: trendData } = useQuery<{ snapshots: TrendSnapshot[] }>({
+    queryKey: ["compliance-trend"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/compliance/trend`);
+      if (!res.ok) throw new Error("Failed to fetch trend");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+  const trendSnapshots = trendData?.snapshots ?? [];
+
+  // Per-site stats computed from all workers
+  const siteStats = React.useMemo(() => {
+    const workers = allWorkersData?.workers ?? [];
+    const map = new Map<string, { total: number; critical: number; warning: number; compliant: number }>();
+    for (const w of workers) {
+      const s = (w as any).assignedSite || "Unassigned";
+      if (!map.has(s)) map.set(s, { total: 0, critical: 0, warning: 0, compliant: 0 });
+      const entry = map.get(s)!;
+      entry.total++;
+      if (w.complianceStatus === "critical" || w.complianceStatus === "non-compliant") entry.critical++;
+      else if (w.complianceStatus === "warning") entry.warning++;
+      else entry.compliant++;
+    }
+    return Array.from(map.entries()).map(([name, stats]) => ({ name, ...stats })).sort((a, b) => b.total - a.total);
+  }, [allWorkersData]);
 
   const handleNotify = (e: React.MouseEvent, worker: any) => {
     e.stopPropagation();
@@ -261,6 +300,53 @@ export default function Dashboard() {
           <StatCard title={t("stats.nonCompliant")} value={stats?.nonCompliant || "0"} icon={AlertTriangle} variant="critical" />
         </div>
 
+        {/* Per-Site Compliance Cards */}
+        {siteStats.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+              <Building2 className="w-4 h-4" /> Site Overview
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {siteStats.map((s) => {
+                const pct = s.total > 0 ? Math.round((s.compliant / s.total) * 100) : 100;
+                const color = s.critical > 0 ? "border-red-500/40 bg-red-600/5" : s.warning > 0 ? "border-yellow-500/40 bg-yellow-600/5" : "border-green-500/40 bg-green-600/5";
+                const textColor = s.critical > 0 ? "text-red-400" : s.warning > 0 ? "text-yellow-400" : "text-green-400";
+                return (
+                  <button
+                    key={s.name}
+                    onClick={() => setSite(site === s.name ? "" : s.name)}
+                    className={`p-3 rounded-xl border text-left transition-all hover:scale-[1.02] ${color} ${site === s.name ? "ring-2 ring-red-500" : ""}`}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 truncate">{s.name}</p>
+                    <p className={`text-2xl font-mono font-bold mt-1 ${textColor}`}>{pct}%</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{s.total} worker{s.total !== 1 ? "s" : ""}{s.critical > 0 ? ` · ${s.critical} critical` : s.warning > 0 ? ` · ${s.warning} warning` : " · all clear"}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Compliance Trend Chart */}
+        {trendSnapshots.length > 0 && (
+          <div className="glass-panel p-5 rounded-xl">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2 mb-4">
+              <TrendingUp className="w-4 h-4" /> Compliance Trend (Last {trendSnapshots.length} day{trendSnapshots.length !== 1 ? "s" : ""})
+            </h2>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={trendSnapshots} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={(d) => d.slice(5)} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#94a3b8" }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                <Line type="monotone" dataKey="compliant" stroke="#22c55e" strokeWidth={2} dot={false} name="Compliant" />
+                <Line type="monotone" dataKey="warning" stroke="#eab308" strokeWidth={2} dot={false} name="Warning" />
+                <Line type="monotone" dataKey="critical" stroke="#C41E18" strokeWidth={2} dot={false} name="Critical" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
         {/* Command Bar */}
         <div className="glass-panel p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center justify-between mt-8">
           <div className="flex-1 w-full relative">
@@ -367,7 +453,7 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 ) : (
-                  workersData?.workers.map((worker) => (
+                  workersData?.workers.map((worker: any) => (
                     <tr 
                       key={worker.id} 
                       onClick={() => setSelectedWorkerId(worker.id)}
