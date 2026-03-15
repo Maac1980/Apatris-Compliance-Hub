@@ -14,7 +14,7 @@ const ALLOWED_USERS = [
   {
     email: "akshay@apatris.pl",
     name: "Akshay",
-    role: "Admin",
+    role: "Coordinator",
     passEnvKey: "APATRIS_PASS_AKSHAY",
   },
 ];

@@ -14,7 +14,10 @@
     "title": "Apatris",
     "subtitle": "Compliance",
     "generateReport": "Generate Report",
-    "logout": "Logout"
+    "logout": "Logout",
+    "compliance": "Compliance",
+    "admin": "Admin",
+    "aiUpload": "AI Smart Upload"
   },
   "stats": {
     "totalWorkforce": "Total Workforce",
@@ -52,6 +55,13 @@
     "uploadDocuments": "Upload Documents",
     "viewProfile": "View Profile"
   },
+  "comm": {
+    "call": "Call",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "urgentAlert": "URGENT",
+    "urgentTitle": "Document expiring — send WhatsApp alert"
+  },
   "status": {
     "critical": "CRITICAL",
     "warning": "WARNING",
@@ -72,7 +82,14 @@
     "notify": "Notify",
     "renewDoc": "Renew Doc",
     "passport": "Passport",
-    "contract": "Contract"
+    "contract": "Contract",
+    "contact": "Contact",
+    "payroll": "Payroll",
+    "hourlyRate": "Hourly Netto Rate (PLN)",
+    "monthlyHours": "Total Monthly Hours",
+    "estPayout": "Estimated Monthly Payout",
+    "monthlyHoursLabel": "Monthly Hours",
+    "estPayoutLabel": "Est. Monthly Payout"
   },
   "notify": {
     "title": "Notify Worker",

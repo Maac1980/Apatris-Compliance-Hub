@@ -10,6 +10,42 @@ import {
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
 
+// ─── Communication helpers ────────────────────────────────────────────────────
+function formatWaNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("48") && digits.length >= 10) return digits;
+  if (digits.startsWith("0") && digits.length >= 9) return "48" + digits.slice(1);
+  if (digits.length === 9) return "48" + digits;
+  return "48" + digits;
+}
+
+function getUrgentDocType(worker: any): string | null {
+  const RED_MS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const checks: [string, string | undefined | null][] = [
+    ["TRC", worker.trcExpiry],
+    ["Passport", worker.passportExpiry],
+  ];
+  for (const [label, expiry] of checks) {
+    if (expiry) {
+      const diff = new Date(expiry).getTime() - now;
+      if (diff <= RED_MS) return label;
+    }
+  }
+  return null;
+}
+
+function buildWhatsAppUrl(phone: string, urgentDoc: string | null): string {
+  const num = formatWaNumber(phone);
+  if (urgentDoc) {
+    const msg = encodeURIComponent(
+      `Dzień dobry, tutaj biuro Apatris. Twoje dokumenty (${urgentDoc}) wygasają. Prosimy o pilny kontakt.`
+    );
+    return `https://wa.me/${num}?text=${msg}`;
+  }
+  return `https://wa.me/${num}`;
+}
+
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkerProfilePanel } from "@/components/WorkerProfilePanel";
@@ -59,6 +95,7 @@ function LanguageToggle() {
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const isAdmin = user?.role === "Admin";
   const [, setLocation] = useLocation();
   
   const [search, setSearch] = useState("");
@@ -152,27 +189,31 @@ export default function Dashboard() {
             title="Compliance Alerts"
           >
             <ClipboardList className="w-4 h-4" />
-            <span className="hidden sm:inline">Compliance</span>
+            <span className="hidden sm:inline">{t("header.compliance")}</span>
           </button>
 
-          {/* Admin Settings */}
-          <button
-            onClick={() => setLocation("/admin-settings")}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
-            title="Admin Settings"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Admin</span>
-          </button>
+          {/* Admin Settings — Admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => setLocation("/admin-settings")}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
+              title="Admin Settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("header.admin")}</span>
+            </button>
+          )}
 
-          {/* ⚡ AI Smart Upload */}
-          <button
-            onClick={() => setBulkUploadOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-red-600/70 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(196,30,24,0.4)]"
-          >
-            <Zap className="w-4 h-4" />
-            <span className="hidden sm:inline">AI Smart Upload</span>
-          </button>
+          {/* ⚡ AI Smart Upload — Admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => setBulkUploadOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-red-600/70 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(196,30,24,0.4)]"
+            >
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("header.aiUpload")}</span>
+            </button>
+          )}
 
           <button
             onClick={() => setReportOpen(true)}
@@ -322,9 +363,53 @@ export default function Dashboard() {
                       onClick={() => setSelectedWorkerId(worker.id)}
                       className="hover:bg-white/5 transition-colors cursor-pointer group"
                     >
-                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-6 py-4 border-r border-white/5 transition-colors overflow-hidden">
-                        <div className="font-sans font-medium text-white truncate">{worker.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{worker.email || worker.phone || '—'}</div>
+                      <td className="sticky left-0 z-10 bg-slate-900/95 group-hover:bg-slate-800/95 px-4 py-3 border-r border-white/5 transition-colors overflow-hidden">
+                        <div className="font-sans font-medium text-white truncate text-sm">{worker.name}</div>
+                        {(worker as any).phone ? (
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            <span className="text-[10px] text-gray-500 font-mono mr-0.5 truncate max-w-[70px]">{(worker as any).phone}</span>
+                            <a
+                              href={`tel:${(worker as any).phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title={t("comm.call")}
+                              className="w-5 h-5 flex items-center justify-center rounded text-green-400 hover:bg-green-500/20 transition-colors flex-shrink-0 text-xs leading-none"
+                            >📞</a>
+                            <a
+                              href={`sms:${(worker as any).phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title={t("comm.sms")}
+                              className="w-5 h-5 flex items-center justify-center rounded text-blue-400 hover:bg-blue-500/20 transition-colors flex-shrink-0 text-xs leading-none"
+                            >✉️</a>
+                            {(() => {
+                              const urgentDoc = getUrgentDocType(worker);
+                              const waUrl = buildWhatsAppUrl((worker as any).phone, urgentDoc);
+                              if (urgentDoc) {
+                                return (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title={t("comm.urgentTitle")}
+                                    className="px-1.5 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-[8px] font-bold uppercase tracking-wide transition-colors flex-shrink-0 animate-pulse"
+                                  >⚠️ {t("comm.urgentAlert")}</a>
+                                );
+                              }
+                              return (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={t("comm.whatsapp")}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-emerald-400 hover:bg-emerald-500/20 transition-colors flex-shrink-0 text-xs leading-none"
+                                >💬</a>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground truncate">{worker.email || '—'}</div>
+                        )}
                       </td>
                       <td className="px-4 py-4 overflow-hidden">
                         <span className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs font-bold text-white">

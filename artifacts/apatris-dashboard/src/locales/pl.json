@@ -14,7 +14,10 @@
     "title": "Apatris",
     "subtitle": "Zgodność",
     "generateReport": "Generuj Raport",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "compliance": "Alerty",
+    "admin": "Admin",
+    "aiUpload": "Szybki Upload AI"
   },
   "stats": {
     "totalWorkforce": "Całkowita liczba pracowników",
@@ -52,6 +55,13 @@
     "uploadDocuments": "Prześlij dokumenty",
     "viewProfile": "Zobacz profil"
   },
+  "comm": {
+    "call": "Zadzwoń",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "urgentAlert": "PILNY",
+    "urgentTitle": "Dokument wygasa — wyślij alert WhatsApp"
+  },
   "status": {
     "critical": "KRYTYCZNY",
     "warning": "OSTRZEŻENIE",
@@ -72,7 +82,14 @@
     "notify": "Powiadom",
     "renewDoc": "Odnów dok.",
     "passport": "Paszport",
-    "contract": "Umowa"
+    "contract": "Umowa",
+    "contact": "Kontakt",
+    "payroll": "Wynagrodzenie",
+    "hourlyRate": "Stawka netto za godzinę (PLN)",
+    "monthlyHours": "Łączna liczba godzin miesięcznie",
+    "estPayout": "Szacunkowa wypłata miesięczna",
+    "monthlyHoursLabel": "Godziny miesięcznie",
+    "estPayoutLabel": "Szac. wypłata miesięczna"
   },
   "notify": {
     "title": "Powiadom pracownika",

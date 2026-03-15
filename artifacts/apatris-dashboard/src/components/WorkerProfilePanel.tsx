@@ -6,6 +6,39 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+
+function formatWaNum(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.startsWith("48") && d.length >= 10) return d;
+  if (d.startsWith("0") && d.length >= 9) return "48" + d.slice(1);
+  if (d.length === 9) return "48" + d;
+  return "48" + d;
+}
+
+function buildWaUrl(phone: string, urgentDoc?: string | null): string {
+  const num = formatWaNum(phone);
+  if (urgentDoc) {
+    const msg = encodeURIComponent(
+      `Dzień dobry, tutaj biuro Apatris. Twoje dokumenty (${urgentDoc}) wygasają. Prosimy o pilny kontakt.`
+    );
+    return `https://wa.me/${num}?text=${msg}`;
+  }
+  return `https://wa.me/${num}`;
+}
+
+function getUrgentDoc(worker: any): string | null {
+  const RED_MS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const checks: [string, string | undefined | null][] = [
+    ["TRC", worker.trcExpiry],
+    ["Passport", worker.passportExpiry],
+  ];
+  for (const [label, expiry] of checks) {
+    if (expiry && new Date(expiry).getTime() - now <= RED_MS) return label;
+  }
+  return null;
+}
 
 const SPEC_OPTIONS = ["TIG", "MIG", "MAG", "MMA", "ARC / Electrode", "FCAW", "FABRICATOR"];
 
@@ -259,6 +292,8 @@ export function WorkerProfilePanel({
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
   const { data: worker, isLoading } = useGetWorker(workerId || "", {
     query: { enabled: !!workerId },
   });
@@ -499,39 +534,43 @@ export function WorkerProfilePanel({
                       />
                     </div>
 
-                    {/* Hourly Rate */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Hourly Netto Rate (PLN)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editHourlyRate}
-                        onChange={(e) => setEditHourlyRate(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                      />
-                    </div>
+                    {/* Hourly Rate — Admin only */}
+                    {isAdmin && (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">{t("panel.hourlyRate")}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editHourlyRate}
+                          onChange={(e) => setEditHourlyRate(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                        />
+                      </div>
+                    )}
 
-                    {/* Monthly Hours */}
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Total Monthly Hours</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={editMonthlyHours}
-                        onChange={(e) => setEditMonthlyHours(e.target.value)}
-                        placeholder="0"
-                        className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
-                      />
-                    </div>
+                    {/* Monthly Hours — Admin only */}
+                    {isAdmin && (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">{t("panel.monthlyHours")}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={editMonthlyHours}
+                          onChange={(e) => setEditMonthlyHours(e.target.value)}
+                          placeholder="0"
+                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  {/* Calculated Payout */}
-                  {editHourlyRate && editMonthlyHours && (
+                  {/* Calculated Payout — Admin only */}
+                  {isAdmin && editHourlyRate && editMonthlyHours && (
                     <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 border border-slate-600">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Estimated Monthly Payout</span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{t("panel.estPayout")}</span>
                       <span className="text-sm font-mono font-bold text-green-400">
                         {(parseFloat(editHourlyRate) * parseFloat(editMonthlyHours)).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
                       </span>
@@ -565,9 +604,47 @@ export function WorkerProfilePanel({
                   <Mail className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <span className="text-gray-300 font-mono">{(worker as any).email || t("panel.noEmail")}</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2 text-sm flex-wrap">
                   <Phone className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-mono">{(worker as any).phone || t("panel.noPhone")}</span>
+                  <span className="text-gray-300 font-mono flex-1">{(worker as any).phone || t("panel.noPhone")}</span>
+                  {(worker as any).phone && (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <a
+                        href={`tel:${(worker as any).phone}`}
+                        title={t("comm.call")}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-400 text-xs font-bold transition-colors"
+                      >📞 {t("comm.call")}</a>
+                      <a
+                        href={`sms:${(worker as any).phone}`}
+                        title={t("comm.sms")}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 text-xs font-bold transition-colors"
+                      >✉️ {t("comm.sms")}</a>
+                      {(() => {
+                        const urgentDoc = getUrgentDoc(worker);
+                        const waUrl = buildWaUrl((worker as any).phone, urgentDoc);
+                        if (urgentDoc) {
+                          return (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={t("comm.urgentTitle")}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 border border-red-400 text-white text-xs font-bold transition-colors animate-pulse"
+                            >⚠️ {t("comm.urgentAlert")}</a>
+                          );
+                        }
+                        return (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={t("comm.whatsapp")}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"
+                          >💬 {t("comm.whatsapp")}</a>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
                 {(worker as any).assignedSite && (
                   <div className="flex items-center gap-3 text-sm">
@@ -588,18 +665,20 @@ export function WorkerProfilePanel({
                   <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
                   <DocRow label={t("panel.workPermitExpiry")} date={(worker as any).workPermitExpiry} />
                   <DocRow label={t("panel.contractEndDate")} date={(worker as any).contractEndDate} />
-                  {/* Monthly Hours + Payout summary row */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
-                    <span className="text-sm font-medium text-gray-300">Monthly Hours</span>
-                    <span className="text-sm font-mono text-blue-400 font-semibold">
-                      {(worker as any).monthlyHours != null
-                        ? `${(worker as any).monthlyHours} hrs`
-                        : <span className="text-gray-500">N/A</span>}
-                    </span>
-                  </div>
-                  {(worker as any).hourlyRate != null && (worker as any).monthlyHours != null && (
+                  {/* Monthly Hours + Payout — Admin only */}
+                  {isAdmin && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                      <span className="text-sm font-medium text-gray-300">{t("panel.monthlyHoursLabel")}</span>
+                      <span className="text-sm font-mono text-blue-400 font-semibold">
+                        {(worker as any).monthlyHours != null
+                          ? `${(worker as any).monthlyHours} hrs`
+                          : <span className="text-gray-500">N/A</span>}
+                      </span>
+                    </div>
+                  )}
+                  {isAdmin && (worker as any).hourlyRate != null && (worker as any).monthlyHours != null && (
                     <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                      <span className="text-sm font-medium text-gray-300">Est. Monthly Payout</span>
+                      <span className="text-sm font-medium text-gray-300">{t("panel.estPayoutLabel")}</span>
                       <span className="text-sm font-mono text-green-400 font-bold">
                         {((worker as any).hourlyRate * (worker as any).monthlyHours).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN
                       </span>
