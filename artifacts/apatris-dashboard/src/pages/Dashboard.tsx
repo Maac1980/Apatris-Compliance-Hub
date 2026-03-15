@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -58,6 +59,7 @@ function LanguageToggle() {
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState("");
@@ -143,6 +145,16 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Admin Settings */}
+          <button
+            onClick={() => setLocation("/admin-settings")}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
+            title="Admin Settings"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Admin</span>
+          </button>
+
           {/* ⚡ AI Smart Upload */}
           <button
             onClick={() => setBulkUploadOpen(true)}
