@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useLocation } from "wouter";
 
 interface User {
+  id?: string;
   email: string;
   name: string;
   role: string;
@@ -9,7 +10,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => boolean;
+  login: (email: string, pass: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -23,18 +24,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("apatris_auth");
     if (stored) {
-      setUser(JSON.parse(stored));
+      try { setUser(JSON.parse(stored)); } catch { /* ignore */ }
     }
   }, []);
 
-  const login = (email: string, pass: string) => {
-    if (email === "admin@apatris.com" && pass === "apatris2024") {
-      const mockUser = { email, name: "Admin", role: "Superadmin" };
-      setUser(mockUser);
-      localStorage.setItem("apatris_auth", JSON.stringify(mockUser));
-      return true;
+  const login = async (email: string, pass: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pass }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { ok: false, error: data.error || "Invalid credentials" };
+      }
+
+      const data: User = await res.json();
+      setUser(data);
+      localStorage.setItem("apatris_auth", JSON.stringify(data));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Connection error — please try again" };
     }
-    return false;
   };
 
   const logout = () => {

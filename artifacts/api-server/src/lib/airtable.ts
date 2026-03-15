@@ -160,6 +160,25 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
 }
 
 /**
+ * Finds a user in the USERS table by email address (case-insensitive).
+ */
+export async function fetchUserByEmail(email: string): Promise<AirtableRecord | null> {
+  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
+
+  const url = new URL(`${BASE_URL}/${AIRTABLE_BASE_ID}/USERS`);
+  url.searchParams.set("filterByFormula", `LOWER({Email})="${email.toLowerCase()}"`);
+  url.searchParams.set("maxRecords", "1");
+
+  const res = await fetch(url.toString(), { headers: headers() });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Airtable error ${res.status}: ${text}`);
+  }
+  const data = (await res.json()) as AirtableResponse;
+  return data.records[0] ?? null;
+}
+
+/**
  * Ensures the given site name exists as a choice in the ASSIGNED SITE singleSelect field.
  * If it doesn't exist yet, adds it via the Airtable Meta API so free-text saves succeed.
  */

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useTranslation } from "react-i18next";
-import { Shield } from "lucide-react";
+import { Shield, Loader2 } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -11,15 +11,18 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const success = login(email, password);
-    if (success) {
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
+    if (result.ok) {
       setLocation("/");
     } else {
-      setError(t("login.invalidCredentials"));
+      setError(result.error || t("login.invalidCredentials"));
     }
   };
 
@@ -93,8 +96,9 @@ export default function Login() {
                 <input
                   type="email"
                   required
-                  className="w-full bg-gray-800 border border-gray-500 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-gray-500"
-                  placeholder="admin@apatris.com"
+                  disabled={loading}
+                  className="w-full bg-gray-800 border border-gray-500 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-gray-500 disabled:opacity-50"
+                  placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -108,7 +112,8 @@ export default function Login() {
                 <input
                   type="password"
                   required
-                  className="w-full bg-gray-800 border border-gray-500 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-gray-500"
+                  disabled={loading}
+                  className="w-full bg-gray-800 border border-gray-500 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-gray-500 disabled:opacity-50"
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -118,21 +123,25 @@ export default function Login() {
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 transition-colors rounded-lg px-4 py-3 text-white font-bold uppercase tracking-widest text-sm mt-2 shadow-lg shadow-red-900/30"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900/60 disabled:cursor-not-allowed transition-colors rounded-lg px-4 py-3 text-white font-bold uppercase tracking-widest text-sm mt-2 shadow-lg shadow-red-900/30"
               >
-                <Shield className="w-4 h-4" />
-                <span>{t("login.submit")}</span>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    <span>{t("login.submit")}</span>
+                  </>
+                )}
               </button>
             </form>
           </div>
 
-          {/* Default credentials hint */}
-          <div className="mt-5 p-3 rounded-lg border border-white/5 bg-white/3 text-center space-y-1">
-            <p className="text-xs font-mono text-gray-500">{t("login.defaultCredentials")}</p>
-            <p className="text-xs font-mono text-red-400/80">admin@apatris.com &nbsp;/&nbsp; apatris2024</p>
-          </div>
-
-          <p className="text-center text-xs font-mono text-gray-600 mt-4">
+          <p className="text-center text-xs font-mono text-gray-600 mt-5">
             {t("login.unauthorized")}
           </p>
         </div>
