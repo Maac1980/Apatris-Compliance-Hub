@@ -363,6 +363,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
+  const isCoordinator = user?.role === "Coordinator";
   const { data: worker, isLoading } = useGetWorker(workerId || "", { query: { enabled: !!workerId } });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -813,17 +814,23 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                     </div>
                   </EditSection>
 
-                  {/* Payroll — Admin only */}
+                  {/* Working Hours — visible to Admin + Coordinator */}
+                  {(isAdmin || isCoordinator) && (
+                    <EditSection title="Working Hours" icon={CreditCard} defaultOpen={true}>
+                      <div>
+                        <label className={labelCls}>Current Month Hours</label>
+                        <input type="number" min="0" step="1" value={editMonthlyHours} onChange={(e) => setEditMonthlyHours(e.target.value)} placeholder="0" className={inputCls} />
+                      </div>
+                    </EditSection>
+                  )}
+
+                  {/* Payroll & Advance — Admin only */}
                   {isAdmin && (
-                    <EditSection title="Payroll & Advance" icon={CreditCard} defaultOpen={true}>
+                    <EditSection title="Payroll & Advance" icon={CreditCard} defaultOpen={false}>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className={labelCls}>Hourly Rate (PLN)</label>
                           <input type="number" min="0" step="0.01" value={editHourlyRate} onChange={(e) => setEditHourlyRate(e.target.value)} placeholder="0.00" className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>Monthly Hours</label>
-                          <input type="number" min="0" step="1" value={editMonthlyHours} onChange={(e) => setEditMonthlyHours(e.target.value)} placeholder="0" className={inputCls} />
                         </div>
                         <div className="col-span-2">
                           <label className={labelCls}>Advance Taken (PLN)</label>

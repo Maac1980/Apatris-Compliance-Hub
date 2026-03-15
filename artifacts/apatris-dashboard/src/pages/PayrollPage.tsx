@@ -271,11 +271,20 @@ export default function PayrollPage() {
           ))}
         </div>
 
+        {/* Coordinator notice */}
+        {!isAdmin && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-sm text-blue-300 font-mono">
+            <span className="text-blue-400 font-bold uppercase tracking-widest text-[10px]">Coordinator View</span>
+            <span className="text-white/20">|</span>
+            You can update worker hours by clicking the yellow Hours cell. Rate, advances, penalties and payroll close are Admin-only.
+          </div>
+        )}
+
         {/* Payroll Grid */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              Payroll Grid — Click any value cell to edit inline
+              {isAdmin ? "Payroll Grid — Click any value cell to edit inline" : "Hours Grid — Click the Hours cell to update"}
             </p>
             {saveMutation.isPending && (
               <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-mono">
@@ -289,16 +298,20 @@ export default function PayrollPage() {
                 <tr>
                   <th className={thCls}>Worker</th>
                   <th className={thCls}>Spec / Site</th>
-                  <th className={`${thCls} text-right`}>Rate (PLN/h)</th>
+                  <th className={`${thCls} text-right`}>
+                    {isAdmin ? "Rate (PLN/h)" : <span className="text-gray-600">Rate</span>}
+                  </th>
                   <th className={`${thCls} text-right`}>
                     <span className="text-yellow-400">Hours ✎</span>
                   </th>
-                  <th className={`${thCls} text-right`}>Gross (PLN)</th>
                   <th className={`${thCls} text-right`}>
-                    <span className="text-orange-400">Advances ✎</span>
+                    {isAdmin ? "Gross (PLN)" : <span className="text-gray-600">Gross</span>}
                   </th>
                   <th className={`${thCls} text-right`}>
-                    <span className="text-red-400">Penalties ✎</span>
+                    {isAdmin ? <span className="text-orange-400">Advances ✎</span> : <span className="text-gray-600">Advances</span>}
+                  </th>
+                  <th className={`${thCls} text-right`}>
+                    {isAdmin ? <span className="text-red-400">Penalties ✎</span> : <span className="text-gray-600">Penalties</span>}
                   </th>
                   <th className={`${thCls} text-right`}>
                     <span className="text-green-400">Final Netto</span>
@@ -329,19 +342,25 @@ export default function PayrollPage() {
                         {w.assignedSite && <span className="ml-1.5 text-xs text-red-400">{w.assignedSite}</span>}
                       </td>
                       <td className={`${tdCls} text-right`}>
-                        <NumCell value={w.hourlyRate} workerId={w.id} field="hourlyRate" onSave={handleSave} accent="text-blue-400" />
+                        {isAdmin
+                          ? <NumCell value={w.hourlyRate} workerId={w.id} field="hourlyRate" onSave={handleSave} accent="text-blue-400" />
+                          : <span className="text-sm font-mono text-gray-600">{fmt(w.hourlyRate)}</span>}
                       </td>
                       <td className={`${tdCls} text-right`}>
                         <NumCell value={w.monthlyHours} workerId={w.id} field="monthlyHours" onSave={handleSave} accent="text-yellow-400" />
                       </td>
                       <td className={`${tdCls} text-right`}>
-                        <span className="text-sm font-mono text-blue-400">{fmt(w.grossPayout)}</span>
+                        <span className={`text-sm font-mono ${isAdmin ? "text-blue-400" : "text-gray-600"}`}>{fmt(w.grossPayout)}</span>
                       </td>
                       <td className={`${tdCls} text-right`}>
-                        <NumCell value={w.advance} workerId={w.id} field="advance" onSave={handleSave} accent="text-orange-400" />
+                        {isAdmin
+                          ? <NumCell value={w.advance} workerId={w.id} field="advance" onSave={handleSave} accent="text-orange-400" />
+                          : <span className="text-sm font-mono text-gray-600">{fmt(w.advance)}</span>}
                       </td>
                       <td className={`${tdCls} text-right`}>
-                        <NumCell value={w.penalties} workerId={w.id} field="penalties" onSave={handleSave} accent="text-red-400" />
+                        {isAdmin
+                          ? <NumCell value={w.penalties} workerId={w.id} field="penalties" onSave={handleSave} accent="text-red-400" />
+                          : <span className="text-sm font-mono text-gray-600">{fmt(w.penalties)}</span>}
                       </td>
                       <td className={`${tdCls} text-right`}>
                         <span className={`text-sm font-mono font-bold ${w.finalNetto < 0 ? "text-red-400" : "text-green-400"}`}>
