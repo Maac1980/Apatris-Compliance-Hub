@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
   XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
-  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
@@ -388,6 +388,8 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [editVisaType, setEditVisaType] = useState("");
   const [editZusStatus, setEditZusStatus] = useState("");
   // EN ISO 9606
+  const [editWorkPermitExpiry, setEditWorkPermitExpiry] = useState("");
+  // Welding cert
   const [editWeldingProcess, setEditWeldingProcess] = useState("");
   const [editWeldingMaterialGroup, setEditWeldingMaterialGroup] = useState("");
   const [editWeldingThickness, setEditWeldingThickness] = useState("");
@@ -396,6 +398,9 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [editHourlyRate, setEditHourlyRate] = useState("");
   const [editMonthlyHours, setEditMonthlyHours] = useState("");
   const [editAdvance, setEditAdvance] = useState("");
+  // Delete state
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -421,6 +426,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
       setEditNip(w.nip || "");
       setEditVisaType(w.visaType || "");
       setEditZusStatus(w.zusStatus || "");
+      setEditWorkPermitExpiry(w.workPermitExpiry || "");
       setEditWeldingProcess(w.weldingProcess || "");
       setEditWeldingMaterialGroup(w.weldingMaterialGroup || "");
       setEditWeldingThickness(w.weldingThickness || "");
@@ -453,6 +459,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
         email: editEmail,
         phone: editPhone,
         contractEndDate: editContractEndDate,
+        workPermitExpiry: editWorkPermitExpiry,
         medicalExamExpiry: editMedicalExamExpiry,
         oswiadczenieExpiry: editOswiadczenieExpiry,
         udtCertExpiry: editUdtCertExpiry,
@@ -485,6 +492,21 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
     } catch (err) {
       toast({ title: "Save Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     } finally { setSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!workerId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${workerId}`, { method: "DELETE" });
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "Delete failed" })); throw new Error(err.error ?? "Delete failed"); }
+      await queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() });
+      toast({ title: "Worker Deleted", description: `${(worker as any)?.name} has been permanently removed.`, variant: "destructive" });
+      setDeleteConfirm(false);
+      onClose();
+    } catch (err) {
+      toast({ title: "Delete Failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally { setDeleting(false); }
   };
 
   const isOpen = !!workerId;
@@ -583,6 +605,10 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       <div>
                         <label className={labelCls}>Contract End Date</label>
                         <input type="date" value={editContractEndDate} onChange={(e) => setEditContractEndDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Work Permit Expiry</label>
+                        <input type="date" value={editWorkPermitExpiry} onChange={(e) => setEditWorkPermitExpiry(e.target.value)} className={inputCls} />
                       </div>
                       <div>
                         <label className={labelCls}>Email</label>
@@ -861,8 +887,34 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
               )}
             </div>
 
+            {/* Delete confirmation inline */}
+            {deleteConfirm && isAdmin && (
+              <div className="mx-5 mb-3 p-4 rounded-xl bg-red-950/60 border border-red-500/50">
+                <p className="text-sm font-bold text-red-300 mb-1">Permanently delete this worker?</p>
+                <p className="text-xs text-red-400 font-mono mb-3">This cannot be undone. The record will be removed from Airtable.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setDeleteConfirm(false)} className="flex-1 py-1.5 text-xs font-bold border border-white/20 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleDelete} disabled={deleting} className="flex-1 py-1.5 text-xs font-bold bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                    {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    {deleting ? "Deleting…" : "Yes, Delete"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="p-5 border-t border-white/10 bg-slate-800/50 flex gap-3">
+              {isAdmin && !isEditing && (
+                <button
+                  onClick={() => setDeleteConfirm((d) => !d)}
+                  className="p-2.5 bg-white/5 hover:bg-red-900/40 text-gray-500 hover:text-red-400 border border-white/10 hover:border-red-500/40 rounded-xl transition-all"
+                  title="Delete Worker"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               <button className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 rounded-xl font-bold uppercase tracking-wider text-sm transition-all" onClick={() => onNotify(worker)}>
                 {t("panel.notify")}
               </button>

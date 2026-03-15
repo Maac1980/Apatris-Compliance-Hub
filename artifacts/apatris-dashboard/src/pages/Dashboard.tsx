@@ -64,6 +64,7 @@ import { NotifyDialog, RenewDialog } from "@/components/ActionDialogs";
 import { ComplianceReportModal } from "@/components/ComplianceReportModal";
 import { BulkUploadModal } from "@/components/BulkUploadModal";
 import { NotificationBell } from "@/components/NotificationBell";
+import { AddWorkerModal } from "@/components/AddWorkerModal";
 
 function LanguageToggle() {
   const { i18n } = useTranslation();
@@ -128,6 +129,7 @@ export default function Dashboard() {
   const [renewOpen, setRenewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [addWorkerOpen, setAddWorkerOpen] = useState(false);
 
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
@@ -261,6 +263,17 @@ export default function Dashboard() {
             >
               <Zap className="w-4 h-4" />
               <span className="hidden sm:inline">{t("header.aiUpload")}</span>
+            </button>
+          )}
+
+          {/* + Add Worker — Admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => setAddWorkerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(196,30,24,0.35)] hover:shadow-[0_0_18px_rgba(196,30,24,0.5)]"
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Worker</span>
             </button>
           )}
 
@@ -557,7 +570,26 @@ export default function Dashboard() {
                           {(worker as any).contractAttachments?.length > 0 && (
                             <span title="Contract" className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">CON</span>
                           )}
-                          {!(worker as any).passportAttachments?.length && !(worker as any).trcAttachments?.length && !(worker as any).bhpAttachments?.length && !(worker as any).contractAttachments?.length && (
+                          {/* Polish compliance indicators */}
+                          {(worker as any).medicalExamExpiry && (() => {
+                            const d = new Date((worker as any).medicalExamExpiry);
+                            const expired = d < new Date();
+                            const warn = !expired && d < new Date(Date.now() + 60*24*60*60*1000);
+                            return <span title={`Medical Exam: ${(worker as any).medicalExamExpiry}`} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${expired ? "bg-red-500/20 text-red-300 border-red-500/40" : warn ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" : "bg-teal-500/20 text-teal-300 border-teal-500/40"}`}>MED</span>;
+                          })()}
+                          {(worker as any).oswiadczenieExpiry && (() => {
+                            const d = new Date((worker as any).oswiadczenieExpiry);
+                            const expired = d < new Date();
+                            const warn = !expired && d < new Date(Date.now() + 60*24*60*60*1000);
+                            return <span title={`Oświadczenie: ${(worker as any).oswiadczenieExpiry}`} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${expired ? "bg-red-500/20 text-red-300 border-red-500/40" : warn ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" : "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"}`}>OŚW</span>;
+                          })()}
+                          {(worker as any).udtCertExpiry && (() => {
+                            const d = new Date((worker as any).udtCertExpiry);
+                            const expired = d < new Date();
+                            const warn = !expired && d < new Date(Date.now() + 60*24*60*60*1000);
+                            return <span title={`UDT Cert: ${(worker as any).udtCertExpiry}`} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${expired ? "bg-red-500/20 text-red-300 border-red-500/40" : warn ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" : "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"}`}>UDT</span>;
+                          })()}
+                          {!(worker as any).passportAttachments?.length && !(worker as any).trcAttachments?.length && !(worker as any).bhpAttachments?.length && !(worker as any).contractAttachments?.length && !(worker as any).medicalExamExpiry && !(worker as any).oswiadczenieExpiry && !(worker as any).udtCertExpiry && (
                             <span className="text-gray-600 text-xs">—</span>
                           )}
                         </div>
@@ -618,6 +650,11 @@ export default function Dashboard() {
 
       <ComplianceReportModal isOpen={reportOpen} onClose={() => setReportOpen(false)} />
       <BulkUploadModal isOpen={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} />
+      <AddWorkerModal
+        isOpen={addWorkerOpen}
+        onClose={() => setAddWorkerOpen(false)}
+        onCreated={(id) => setSelectedWorkerId(id)}
+      />
     </div>
   );
 }

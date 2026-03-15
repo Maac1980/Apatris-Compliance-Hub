@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, initializeFields } from "../lib/airtable.js";
+import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, deleteRecord, initializeFields } from "../lib/airtable.js";
 import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 
@@ -398,6 +398,84 @@ router.post("/workers/bulk-create", bulkUpload.fields([
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[bulk-create] Error:", message);
+    res.status(500).json({ error: message });
+  }
+});
+
+// POST /workers — manual worker creation by admin
+router.post("/workers", async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+    const fields: Record<string, unknown> = {
+      "Full Name": String(body.name).trim(),
+    };
+    if (body.specialization) fields["SPEC"] = body.specialization;
+    if (body.assignedSite) fields["SITE"] = String(body.assignedSite).trim();
+    if (body.email) fields["EMAIL"] = body.email;
+    if (body.phone) fields["PHONE"] = body.phone;
+    if (body.trcExpiry) fields["TRC_EXPIRY"] = body.trcExpiry;
+    if (body.passportExpiry) fields["PASSPORT_EXPIRY"] = body.passportExpiry;
+    if (body.bhpExpiry) fields["BHP EXPIRY"] = body.bhpExpiry;
+    if (body.contractEndDate) fields["Contract End Date"] = body.contractEndDate;
+    if (body.workPermitExpiry) fields["Work Permit Expiry"] = body.workPermitExpiry;
+    if (body.medicalExamExpiry) fields["Medical Exam Expiry"] = body.medicalExamExpiry;
+    if (body.oswiadczenieExpiry) fields["Oswiadczenie Expiry"] = body.oswiadczenieExpiry;
+    if (body.udtCertExpiry) fields["UDT Cert Expiry"] = body.udtCertExpiry;
+    if (body.pesel) fields["PESEL"] = body.pesel;
+    if (body.nip) fields["NIP"] = body.nip;
+    if (body.visaType) fields["Visa Type"] = body.visaType;
+    if (body.zusStatus) fields["ZUS Status"] = body.zusStatus;
+
+    const record = await createRecord(fields);
+    const worker = mapRecordToWorker(record);
+
+    try {
+      const actor = (req as any).user;
+      appendAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: actor?.name || "Unknown",
+        actorEmail: actor?.email || "unknown",
+        action: "CREATE_WORKER",
+        workerId: record.id,
+        workerName: worker.name,
+        note: `Worker manually created with ${Object.keys(fields).length} fields`,
+      });
+    } catch { /* non-blocking */ }
+
+    res.status(201).json(worker);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// DELETE /workers/:id
+router.delete("/workers/:id", async (req, res) => {
+  try {
+    const record = await fetchRecord(req.params.id);
+    const worker = mapRecordToWorker(record);
+    await deleteRecord(req.params.id);
+
+    try {
+      const actor = (req as any).user;
+      appendAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: actor?.name || "Unknown",
+        actorEmail: actor?.email || "unknown",
+        action: "DELETE_WORKER",
+        workerId: req.params.id,
+        workerName: worker.name,
+        note: "Worker record permanently deleted",
+      });
+    } catch { /* non-blocking */ }
+
+    res.json({ success: true, deleted: req.params.id });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
   }
 });

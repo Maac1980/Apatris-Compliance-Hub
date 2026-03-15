@@ -1,5 +1,35 @@
 [
   {
+    "id": "a-1773609095467",
+    "timestamp": "2026-03-15T21:11:35.467Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "DELETE_WORKER",
+    "workerId": "rec89dZFESDIpDdPe",
+    "workerName": "Test Worker DELETE",
+    "note": "Worker record permanently deleted"
+  },
+  {
+    "id": "a-1773609095024",
+    "timestamp": "2026-03-15T21:11:35.024Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "CREATE_WORKER",
+    "workerId": "rec89dZFESDIpDdPe",
+    "workerName": "Test Worker DELETE",
+    "note": "Worker manually created with 2 fields"
+  },
+  {
+    "id": "a-1773609049093",
+    "timestamp": "2026-03-15T21:10:49.093Z",
+    "actor": "Unknown",
+    "actorEmail": "unknown",
+    "action": "CREATE_WORKER",
+    "workerId": "recUezw0QSlZ2VHAJ",
+    "workerName": "Test Worker DELETE",
+    "note": "Worker manually created with 2 fields"
+  },
+  {
     "id": "a-1773607203241",
     "timestamp": "2026-03-15T20:40:03.240Z",
     "actor": "Unknown",

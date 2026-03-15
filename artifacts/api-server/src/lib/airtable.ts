@@ -89,6 +89,16 @@ export async function updateRecord(id: string, fields: Record<string, unknown>):
   return (await res.json()) as AirtableRecord;
 }
 
+export async function deleteRecord(id: string): Promise<void> {
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
+  const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}/${id}`;
+  const res = await fetch(url, { method: "DELETE", headers: headers() });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Airtable error ${res.status}: ${text}`);
+  }
+}
+
 export async function createRecord(fields: Record<string, unknown>): Promise<AirtableRecord> {
   if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
 
