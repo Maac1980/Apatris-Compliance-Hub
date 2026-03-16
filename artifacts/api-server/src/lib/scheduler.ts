@@ -2,7 +2,7 @@ import { fetchDocuments, ensureDocumentsTable, type DocumentRecord } from "./air
 import { fetchAdmins } from "./airtable-admins.js";
 import { sendAlertEmail, isMailConfigured } from "./mailer.js";
 import { fetchAllRecords } from "./airtable.js";
-import { mapRecordToWorker } from "./compliance.js";
+import { mapRecordToWorker, type Worker } from "./compliance.js";
 import { saveSnapshot } from "./snapshot.js";
 import { getCoordinatorForSite } from "./site-coordinators.js";
 
@@ -100,14 +100,14 @@ export async function fireAlertForDocument(doc: DocumentRecord, workerSite?: str
     console.log(`  Notify:    No admin contacts configured — add emails/phones in Admin Settings`);
   }
 
-  if (doc.status === "RED" || doc.status === "EXPIRED") {
+  if (doc.status === "RED" || doc.status === "EXPIRED" || doc.status === "YELLOW") {
     if (allRecipients.length > 0 && isMailConfigured()) {
       sendAlertEmail({
         workerName: doc.workerName,
         documentType: doc.documentType,
         expiryDate: doc.expiryDate,
         daysUntilExpiry: doc.daysUntilExpiry,
-        status: doc.status as "RED" | "EXPIRED",
+        status: (doc.status === "YELLOW" ? "RED" : doc.status) as "RED" | "EXPIRED",
         recipients: allRecipients,
       }).catch((e) => console.error("[Mailer] Email send error:", e));
     } else if (!isMailConfigured()) {
@@ -124,31 +124,49 @@ async function runDailyScan(): Promise<void> {
     await ensureDocumentsTable();
     const documents = await fetchDocuments();
 
-    // ── Contract expiry checks from WELDERS table ──────────────────────────
+    // ── Worker document expiry checks from WELDERS table ──────────────────
     try {
       const workerRecords = await fetchAllRecords();
       const workers = workerRecords.map(mapRecordToWorker);
       const today = Date.now();
+
+      const workerDocFields: Array<{ key: keyof Worker; label: string }> = [
+        { key: "contractEndDate",    label: "Contract" },
+        { key: "trcExpiry",          label: "TRC" },
+        { key: "passportExpiry",     label: "Passport" },
+        { key: "bhpExpiry",          label: "BHP Certificate" },
+        { key: "workPermitExpiry",   label: "Work Permit" },
+        { key: "medicalExamExpiry",  label: "Medical Exam" },
+        { key: "oswiadczenieExpiry", label: "Oświadczenie" },
+        { key: "udtCertExpiry",      label: "UDT Certificate" },
+      ];
+
       for (const w of workers) {
-        if (!w.contractEndDate) continue;
-        const expMs = new Date(w.contractEndDate).getTime();
-        const daysLeft = Math.ceil((expMs - today) / 86400000);
-        if (daysLeft <= 30) {
-          const status = daysLeft <= 0 ? "EXPIRED" : "RED";
-          const contractDoc: DocumentRecord = {
-            id: `contract-${w.id}`,
+        for (const { key, label } of workerDocFields) {
+          const expDate = w[key] as string | null;
+          if (!expDate) continue;
+          const expMs = new Date(expDate).getTime();
+          const daysLeft = Math.ceil((expMs - today) / 86400000);
+          if (daysLeft > 60) continue; // Compliant — no alert needed
+          const status: DocumentRecord["status"] =
+            daysLeft <= 0  ? "EXPIRED" :
+            daysLeft <= 30 ? "RED" : "YELLOW";
+          const existingId = `${key}-${w.id}`;
+          // Avoid duplicates if the document table already has an entry
+          if (documents.some((d) => d.id === existingId)) continue;
+          documents.push({
+            id: existingId,
             workerName: w.name,
             workerId: w.id,
-            documentType: "Contract",
-            expiryDate: w.contractEndDate,
+            documentType: label,
+            expiryDate: expDate,
             daysUntilExpiry: daysLeft,
             status,
-          };
-          documents.push(contractDoc);
+          });
         }
       }
     } catch (e) {
-      console.warn("[Scheduler] Contract expiry check failed:", e);
+      console.warn("[Scheduler] Worker expiry check failed:", e);
     }
 
     const alertDocs = documents.filter(
@@ -228,14 +246,14 @@ async function runDailyScan(): Promise<void> {
         `[Scheduler] ${urgency} — ${doc.workerName} · ${doc.documentType} · expires ${doc.expiryDate} (${doc.daysUntilExpiry} days)`
       );
 
-      if ((doc.status === "RED" || doc.status === "EXPIRED") && docRecipients.length > 0) {
+      if (docRecipients.length > 0) {
         if (isMailConfigured()) {
           sendAlertEmail({
             workerName: doc.workerName,
             documentType: doc.documentType,
             expiryDate: doc.expiryDate,
             daysUntilExpiry: doc.daysUntilExpiry,
-            status: doc.status as "RED" | "EXPIRED",
+            status: (doc.status === "YELLOW" || doc.status === "RED") ? "RED" : "EXPIRED",
             recipients: docRecipients,
           }).catch((e) => console.error("[Mailer] Email send error:", e));
         } else {

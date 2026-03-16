@@ -69,6 +69,13 @@ Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspac
 - **Worker Payroll History tab** in WorkerProfilePanel (Admin only)
 - **Dashboard nav button**: green "Payroll" button (Admin only) → `/payroll`
 
+### Additional Features (All Complete)
+- **Employer ZUS cost display**: New "Total Empl. Cost" column in ZUS view — shows Apatris's total employer burden per worker (gross + employer ZUS: emerytalne 9.76% + rentowe 6.5% + wypadkowe 1.67% + FP 2.45% + FGŚP 0.10% = 20.48%). Employer rates configurable in ZUS Rates modal. Footer totals and ZUS banner both show employer summary.
+- **Automated expiry email alerts (YELLOW)**: Daily compliance scan now sends email alerts for YELLOW (30–60 day) warnings, not just RED/EXPIRED. Previously only critical/expired docs triggered emails.
+- **Full worker expiry field scanning**: Scheduler now scans all 8 expiry fields from the WELDERS table (TRC, Passport, BHP, Work Permit, Contract, Medical Exam, Oświadczenie, UDT Certificate) — not just the Documents table and contract dates. Any field within 60 days triggers a log entry; within 30 days or expired triggers an email.
+- **Bulk payroll hours**: "Bulk Hours" button in the payroll grid toolbar. Click to enter hours value, then "Apply to X" saves that value for all currently visible (filtered) workers at once. Respects search and site filter. Press Enter or Escape to confirm/cancel.
+- **Accounting CSV export**: New "Accounting" button in payroll header. Exports a comprehensive CSV with 19 columns per worker: Name, PESEL, NIP, Site, Hours, Rate, Gross, Employee ZUS, Health Insurance, KUP, Tax Base, PIT-2 status, Est. PIT, Net After Tax, Advance, Penalties, Net Pay, Employer ZUS, Total Employer Cost. Uses BOM for Excel compatibility.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

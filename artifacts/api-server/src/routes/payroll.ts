@@ -292,6 +292,90 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
   }
 });
 
+// ─── GET /payroll/export/accounting-csv ──────────────────────────────────────
+router.get("/payroll/export/accounting-csv", async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+
+    // Default ZUS/PIT rates (2026 Poland Umowa Zlecenie)
+    const EMP_ZUS_RATE   = 0.1371; // 9.76 + 1.5 + 2.45
+    const HEALTH_RATE    = 0.09;   // applied on (gross - empZUS)
+    const KUP_RATE       = 0.20;   // cost of obtaining income
+    const PIT_RATE       = 0.12;
+    const PIT2_REDUCTION = 300;    // PLN if PIT-2 filed
+    // Employer ZUS
+    const EMPL_ZUS_RATE  = 0.2048; // 9.76+6.5+1.67+2.45+0.10
+
+    const records = await fetchAllRecords();
+    const workers = records.map(mapRecordToWorker);
+
+    const headers = [
+      "Worker Name", "PESEL", "NIP", "Site",
+      "Hours", "Rate (PLN/h)", "Gross (PLN)",
+      "Employee ZUS (PLN)", "Health Ins. (PLN)", "KUP (PLN)", "Tax Base (PLN)",
+      "PIT-2", "Est. PIT (PLN)", "Net After Tax (PLN)",
+      "Advance (PLN)", "Penalties (PLN)", "Net Pay (PLN)",
+      "Employer ZUS (PLN)", "Total Employer Cost (PLN)"
+    ];
+
+    const rows = workers.map((w) => {
+      const rate     = w.hourlyRate ?? 0;
+      const hours    = w.monthlyHours ?? 0;
+      const advance  = w.advance ?? 0;
+      const penalties = w.penalties ?? 0;
+      const gross    = rate * hours;
+
+      const empZUS     = gross * EMP_ZUS_RATE;
+      const health     = (gross - empZUS) * HEALTH_RATE;
+      const kup        = gross * KUP_RATE;
+      const taxBase    = Math.max(0, gross - empZUS - kup);
+      const grossTax   = taxBase * PIT_RATE;
+      const pit        = Math.max(0, grossTax - (w.pit2 ? PIT2_REDUCTION : 0));
+      const netAfterTax = Math.max(0, gross - empZUS - health - pit);
+      const netPay     = netAfterTax - advance - penalties;
+
+      const emplZUS    = gross * EMPL_ZUS_RATE;
+      const totalCost  = gross + emplZUS;
+
+      const n2 = (v: number) => v.toFixed(2).replace(".", ",");
+      return [
+        w.name,
+        w.pesel ?? "",
+        w.nip ?? "",
+        w.assignedSite ?? "",
+        hours.toString(),
+        n2(rate),
+        n2(gross),
+        n2(empZUS),
+        n2(health),
+        n2(kup),
+        n2(taxBase),
+        w.pit2 ? "TAK" : "NIE",
+        n2(pit),
+        n2(netAfterTax),
+        n2(advance),
+        n2(penalties),
+        n2(netPay),
+        n2(emplZUS),
+        n2(totalCost),
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+
+    const filename = `apatris-accounting-${month}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    res.send("\uFEFF" + csvContent);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
 // ─── GET /payroll/export/pdf ──────────────────────────────────────────────────
 router.get("/payroll/export/pdf", async (req, res) => {
   try {

@@ -6,7 +6,7 @@ import {
   ArrowLeft, Calculator, CheckCircle2, Loader2, AlertTriangle,
   ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck,
   Search, Building2, Mail, Landmark, ToggleLeft, ToggleRight,
-  Settings, RefreshCw, Info, Edit2, X
+  Settings, RefreshCw, Info, Edit2, X, BookOpen, Save
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,6 +42,8 @@ interface ZUSBreakdown {
   estimatedTax: number;
   netAfterTax: number;
   takeHome: number;
+  employerZUS: number;       // what Apatris pays on top of gross
+  totalEmployerCost: number; // gross + employerZUS
 }
 
 interface SplitBreakdown {
@@ -107,13 +109,19 @@ function IBANCell({ value, workerId, onSave }: {
 // ─── ZUS Rates Config ─────────────────────────────────────────────────────────
 interface ZUSRates {
   year: number;
-  emerytalneEmployee: number;  // % pension
-  rentoweEmployee: number;     // % disability
+  emerytalneEmployee: number;  // % pension (employee)
+  rentoweEmployee: number;     // % disability (employee)
   chorobowe: number;           // % sickness (employee)
   zdrowotne: number;           // % of (gross - ZUS)
   kup: number;                 // % cost-of-obtaining
   pit: number;                 // % flat PIT rate
   pit2Reduction: number;       // PLN monthly tax-free reduction (PIT-2 filers)
+  // Employer ZUS (paid on top of gross — does not affect worker's net)
+  emerytalneEmployer: number;  // % employer pension (9.76%)
+  rentoweEmployer: number;     // % employer disability (6.5%)
+  wypadkowe: number;           // % accident insurance (~1.67% construction)
+  fp: number;                  // % Fundusz Pracy (2.45%)
+  fgsp: number;                // % FGŚP (0.10%)
   updatedAt: string;
 }
 
@@ -126,6 +134,11 @@ const DEFAULT_RATES_2026: ZUSRates = {
   kup: 20.0,
   pit: 12.0,
   pit2Reduction: 300,
+  emerytalneEmployer: 9.76,
+  rentoweEmployer: 6.5,
+  wypadkowe: 1.67,
+  fp: 2.45,
+  fgsp: 0.10,
   updatedAt: "2026-01-01",
 };
 
@@ -157,7 +170,11 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const estimatedTax = Math.max(0, grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
-  return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome };
+  // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net
+  const employerRate = ((rates.emerytalneEmployer ?? 9.76) + (rates.rentoweEmployer ?? 6.5) + (rates.wypadkowe ?? 1.67) + (rates.fp ?? 2.45) + (rates.fgsp ?? 0.10)) / 100;
+  const employerZUS = gross * employerRate;
+  const totalEmployerCost = gross + employerZUS;
+  return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome, employerZUS, totalEmployerCost };
 }
 
 // ─── Split-Employer Calculator ────────────────────────────────────────────────
@@ -314,13 +331,26 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
               <span className="text-xs text-gray-400">PLN</span>
             </div>
           </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mt-4 mb-3">Employer ZUS (On Top of Gross)</p>
+          {field("Emerytalne — Employer", "emerytalneEmployer", "Employer pension contribution — same rate as employee (9.76%)")}
+          {field("Rentowe — Employer", "rentoweEmployer", "Employer disability contribution — higher than employee (6.5%)")}
+          {field("Wypadkowe (Accident)", "wypadkowe", "Accident insurance — varies by industry, ~1.67% for construction/welding")}
+          {field("FP (Labour Fund)", "fp", "Fundusz Pracy — applies when worker earns above minimum wage (2.45%)")}
+          {field("FGŚP (Guarantee Fund)", "fgsp", "Fundusz Gwarantowanych Świadczeń Pracowniczych (0.10%)")}
         </div>
 
-        <div className="bg-slate-800/60 rounded-xl px-4 py-3 mb-5 border border-slate-700 text-xs font-mono">
+        <div className="bg-slate-800/60 rounded-xl px-4 py-3 mb-2 border border-slate-700 text-xs font-mono">
           <p className="text-gray-400 mb-1">Effective employee ZUS (all 3 contributions):</p>
           <p className="text-purple-300 font-bold text-sm">
             {(draft.emerytalneEmployee + draft.rentoweEmployee + (draft.chorobowe ?? 2.45)).toFixed(2)}%
             <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe + chorobowe)</span>
+          </p>
+        </div>
+        <div className="bg-orange-950/30 rounded-xl px-4 py-3 mb-5 border border-orange-500/20 text-xs font-mono">
+          <p className="text-gray-400 mb-1">Total employer burden on top of gross:</p>
+          <p className="text-orange-300 font-bold text-sm">
+            {((draft.emerytalneEmployer ?? 9.76) + (draft.rentoweEmployer ?? 6.5) + (draft.wypadkowe ?? 1.67) + (draft.fp ?? 2.45) + (draft.fgsp ?? 0.10)).toFixed(2)}%
+            <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe + wypadkowe + FP + FGŚP)</span>
           </p>
         </div>
 
@@ -361,6 +391,8 @@ export default function PayrollPage() {
   const [pit2Overrides, setPit2Overrides] = useState<Record<string, boolean>>({});
   const [zusRates, setZUSRates] = useState<ZUSRates>(loadZUSRates);
   const [showRatesModal, setShowRatesModal] = useState(false);
+  const [showBulkHours, setShowBulkHours] = useState(false);
+  const [bulkHoursVal, setBulkHoursVal] = useState("160");
 
   // Auto-prompt when new year and rates not updated
   const ratesOutdated = zusRates.year < currentYear;
@@ -492,8 +524,10 @@ export default function PayrollPage() {
         tax: acc.tax + z.estimatedTax,
         net: acc.net + z.netAfterTax,
         take: acc.take + z.takeHome,
+        employerZUS: acc.employerZUS + z.employerZUS,
+        totalEmployerCost: acc.totalEmployerCost + z.totalEmployerCost,
       };
-    }, { zus: 0, health: 0, tax: 0, net: 0, take: 0 });
+    }, { zus: 0, health: 0, tax: 0, net: 0, take: 0, employerZUS: 0, totalEmployerCost: 0 });
   }, [filteredWorkers, showZUS, isAdmin, zusRates]);
 
   const triggerDownload = (url: string, filename: string) => {
@@ -514,6 +548,11 @@ export default function PayrollPage() {
   const handleBankExport = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     triggerDownload(`${window.location.origin}${base}/api/payroll/export/bank-csv?month=${selectedMonth}`, `Apatris-Bank-${selectedMonth}.csv`);
+  };
+
+  const handleAccountingExport = () => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    triggerDownload(`${window.location.origin}${base}/api/payroll/export/accounting-csv?month=${selectedMonth}`, `Apatris-Accounting-${selectedMonth}.csv`);
   };
 
   // Column classes
@@ -559,6 +598,13 @@ export default function PayrollPage() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
               <Landmark className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Bank CSV</span>
+            </button>
+          )}
+          {isAdmin && (
+            <button onClick={handleAccountingExport} title="Export accounting CSV with full ZUS breakdown"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Accounting</span>
             </button>
           )}
           <button onClick={handleExportPDF}
@@ -633,9 +679,11 @@ export default function PayrollPage() {
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-500 font-mono mt-2">
-                Effective ZUS: {(zusRates.emerytalneEmployee + zusRates.rentoweEmployee).toFixed(2)}% · Chorobowe excluded (voluntary) · ZUS base = Gross Salary (Rate × Hours)
-              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-gray-500 font-mono mt-2">
+                <span>Employee ZUS: <span className="text-purple-300 font-bold">{(zusRates.emerytalneEmployee + zusRates.rentoweEmployee + (zusRates.chorobowe ?? 2.45)).toFixed(2)}%</span></span>
+                <span>Employer burden: <span className="text-orange-400 font-bold">{((zusRates.emerytalneEmployer ?? 9.76) + (zusRates.rentoweEmployer ?? 6.5) + (zusRates.wypadkowe ?? 1.67) + (zusRates.fp ?? 2.45) + (zusRates.fgsp ?? 0.10)).toFixed(2)}%</span> on top of gross</span>
+                <span className="text-gray-600">· ZUS base = Rate × Hours</span>
+              </div>
             </div>
             <div className="flex flex-col gap-2 flex-shrink-0">
               <button onClick={() => setShowRatesModal(true)}
@@ -691,6 +739,43 @@ export default function PayrollPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
                 </span>
               )}
+              {isAdmin && (showBulkHours ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-yellow-400 font-mono font-bold uppercase tracking-wider">Set all hrs:</span>
+                  <input
+                    type="number" min="0" step="1" value={bulkHoursVal}
+                    onChange={(e) => setBulkHoursVal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const hrs = parseFloat(bulkHoursVal);
+                        if (!isNaN(hrs) && hrs >= 0) filteredWorkers.forEach((w) => handleSave(w.id, "monthlyHours", hrs));
+                        setShowBulkHours(false);
+                      }
+                      if (e.key === "Escape") setShowBulkHours(false);
+                    }}
+                    autoFocus
+                    className="w-20 bg-slate-900 border border-yellow-500/60 text-yellow-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none text-right"
+                    placeholder="hrs"
+                  />
+                  <button
+                    onClick={() => {
+                      const hrs = parseFloat(bulkHoursVal);
+                      if (!isNaN(hrs) && hrs >= 0) filteredWorkers.forEach((w) => handleSave(w.id, "monthlyHours", hrs));
+                      setShowBulkHours(false);
+                    }}
+                    className="px-3 py-1.5 bg-yellow-700 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
+                    Apply to {filteredWorkers.length}
+                  </button>
+                  <button onClick={() => setShowBulkHours(false)} className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setShowBulkHours(true)} title="Set hours for all visible workers at once"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-gray-300 rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
+                  <Users className="w-3.5 h-3.5" /> Bulk Hours
+                </button>
+              ))}
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
                 <input type="text" placeholder="Search workers…" value={payrollSearch} onChange={(e) => setPayrollSearch(e.target.value)}
@@ -739,7 +824,7 @@ export default function PayrollPage() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "1900px" : showZUS && isAdmin ? "1500px" : "1060px" }}>
+            <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "2050px" : showZUS && isAdmin ? "1650px" : "1060px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>
                   <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>Worker</th>
@@ -761,6 +846,7 @@ export default function PayrollPage() {
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
                     <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Net After Tax</th>
+                    <th className={`${thCls} text-right text-orange-400`} style={{ minWidth: "140px" }}>Total Empl. Cost</th>
                   </>}
                   {showZUS && showSplit && isAdmin && <>
                     <th className={`${thCls} text-right text-teal-400`} style={{ minWidth: "110px" }}>2nd Co. Hrs ✎</th>
@@ -874,6 +960,12 @@ export default function PayrollPage() {
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
+                          <td className={`${tdCls} text-right`}>
+                            <div>
+                              <span className="text-sm font-mono font-semibold text-orange-400">{fmt(zus.totalEmployerCost)}</span>
+                              <span className="text-[10px] text-gray-600 block font-mono">+{fmt(zus.employerZUS)} ZUS</span>
+                            </div>
+                          </td>
                         </>}
                         {/* Split columns */}
                         {showZUS && showSplit && isAdmin && <>
@@ -946,6 +1038,12 @@ export default function PayrollPage() {
                       <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.health)}</td>
                       <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.tax)}</td>
                       <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-300`}>{fmt(zusTotal.net)}</td>
+                      <td className={`${tdCls} text-right`}>
+                        <div>
+                          <span className="text-sm font-mono font-bold text-orange-400">{fmt(zusTotal.totalEmployerCost)}</span>
+                          <span className="text-[10px] text-gray-500 block font-mono">+{fmt(zusTotal.employerZUS)} ZUS</span>
+                        </div>
+                      </td>
                     </>}
                     {showZUS && showSplit && isAdmin && (() => {
                       const splitTotals = filteredWorkers.reduce((acc, w) => {
