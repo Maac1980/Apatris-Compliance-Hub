@@ -44,11 +44,16 @@ interface ZUSBreakdown {
 }
 
 function calcZUS(gross: number, advance: number, penalties: number): ZUSBreakdown {
-  const employeeZUS = gross * 0.1371;
+  // Employee ZUS: emerytalne 9.76% + rentowe 1.5% = 11.26%
+  // Chorobowe (sick leave 2.45%) excluded — voluntary on umowa zlecenie
+  const employeeZUS = gross * 0.1126;
   const healthInsurance = (gross - employeeZUS) * 0.09;
+  // KUP: 20% of gross (umowa zlecenie standard)
   const kup = gross * 0.20;
+  // Tax base after ZUS and KUP
   const taxBase = Math.max(0, gross - employeeZUS - kup);
-  const estimatedTax = Math.max(0, taxBase * 0.12 - 300);
+  // PIT-2 reduction excluded — no declaration assumed for foreign/multi-job workers
+  const estimatedTax = taxBase * 0.12;
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome };
@@ -319,7 +324,7 @@ export default function PayrollPage() {
             <Calculator className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
             <div>
               <span className="text-purple-300 font-bold uppercase tracking-widest text-[10px] block mb-0.5">ZUS / PIT Breakdown — Umowa Zlecenie</span>
-              Employee ZUS 13.71% (emerytalne 9.76% + rentowe 1.5% + chorobowe 2.45%) · Health Insurance 9% · Estimated PIT 12% with standard KUP deduction. Values are estimates — exact amounts depend on individual circumstances.
+              Employee ZUS 11.26% (emerytalne 9.76% + rentowe 1.5%) · Chorobowe excluded (voluntary) · Health Insurance 9% · Estimated PIT 12% — no PIT-2 reduction applied. Values are estimates; exact amounts depend on individual declarations.
             </div>
           </div>
         )}
