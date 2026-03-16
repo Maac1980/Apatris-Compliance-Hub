@@ -1,0 +1,15 @@
+[
+  {
+    "id": "n-1773685883556",
+    "timestamp": "2026-03-16T18:31:23.556Z",
+    "workerName": "MAREK KOWALSKI",
+    "documentType": "TRC",
+    "expiryDate": "2026-03-27",
+    "daysUntilExpiry": 11,
+    "status": "RED",
+    "recipients": [
+      "Manish Suresh Shetty <manish@apatris.pl>"
+    ],
+    "sent": true
+  }
+]
