@@ -592,7 +592,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
 
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text("Apatris Sp. z o.o. · ul. Przykładowa 1, 00-001 Warszawa · NIP: 0000000000", 105, 287, { align: "center" });
+    doc.text("APATRIS SP. Z O.O. · ul. Chłodna 51, 00-867 Warszawa · NIP: 5252828706 · KRS: 0000849614 · REGON: 386546470", 105, 287, { align: "center" });
 
     const filename = `apatris-final-settlement-${w.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
     const blob = doc.output("blob");

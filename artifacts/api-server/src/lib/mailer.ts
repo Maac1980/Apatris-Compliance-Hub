@@ -225,7 +225,7 @@ export async function sendPayslipEmail(payload: PayslipEmailPayload): Promise<vo
       <table width="560" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
         <tr><td style="background:#C41E18;padding:24px 32px;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;color:#fff;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">Apatris Sp. z o.o.</p>
+            <td><p style="margin:0;color:#fff;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">APATRIS SP. Z O.O. · NIP: 5252828706</p>
             <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:800;">Pay Slip — ${periodLabel}</h1></td>
             <td align="right"><span style="display:inline-block;background:rgba(0,0,0,0.25);color:#fff;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;border-radius:20px;">ROZLICZENIE</span></td>
           </tr></table>
@@ -249,7 +249,7 @@ export async function sendPayslipEmail(payload: PayslipEmailPayload): Promise<vo
           <p style="margin:20px 0 0;color:#475569;font-size:11px;line-height:1.6;">This is your official pay slip for the period above. Please retain it for your records. For any queries, contact your site coordinator or Apatris administration.</p>
         </td></tr>
         <tr><td style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;">
-          <p style="margin:0;color:#475569;font-size:11px;text-align:center;">Apatris Sp. z o.o. · Automated payroll system · Do not reply to this email.</p>
+          <p style="margin:0;color:#475569;font-size:11px;text-align:center;">APATRIS SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ · ul. Chłodna 51, 00-867 Warszawa · NIP: 5252828706 · KRS: 0000849614 · REGON: 386546470</p>
         </td></tr>
       </table>
     </td></tr>
