@@ -239,13 +239,6 @@ function AnalyticsTab() {
   const actions = data?.actionBreakdown ?? [];
   const maxAction = Math.max(...actions.map((a: any) => Number(a.count)), 1);
 
-  if (!monthly.length) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <BarChart3 className="w-12 h-12 text-gray-600" />
-      <p className="text-gray-500 font-mono text-sm">Analytics appear after the first payroll commit.</p>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       {/* Summary cards */}
@@ -266,77 +259,100 @@ function AnalyticsTab() {
       {/* Monthly trend */}
       <div className="glass-panel rounded-xl p-5 tech-border">
         <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 font-mono mb-4">Monthly Payout Trend</p>
-        <div className="space-y-3">
-          {monthly.map((m: any) => {
-            const g = Number(m.total_gross);
-            const n = Number(m.total_netto);
-            return (
-              <div key={m.month} className="flex items-center gap-3">
-                <span className="text-xs font-mono text-gray-400 w-16 flex-shrink-0">{m.month}</span>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-white/10 rounded-full flex-1 h-2 overflow-hidden">
-                      <div className="h-full bg-white/40 rounded-full" style={{ width: `${(g / maxGross) * 100}%` }} />
+        {monthly.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-24 gap-2">
+            <BarChart3 className="w-8 h-8 text-gray-700" />
+            <p className="text-xs font-mono text-gray-600">Payroll trend appears after first month is committed.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {monthly.map((m: any) => {
+                const g = Number(m.total_gross);
+                const n = Number(m.total_netto);
+                return (
+                  <div key={m.month} className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-gray-400 w-16 flex-shrink-0">{m.month}</span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-white/10 rounded-full flex-1 h-2 overflow-hidden">
+                          <div className="h-full bg-white/40 rounded-full" style={{ width: `${(g / maxGross) * 100}%` }} />
+                        </div>
+                        <span className="text-[10px] font-mono text-gray-400 w-28 text-right">{fmt(g)} PLN</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="bg-green-950/40 rounded-full flex-1 h-2 overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${(n / maxGross) * 100}%` }} />
+                        </div>
+                        <span className="text-[10px] font-mono text-green-400 w-28 text-right">{fmt(n)} PLN</span>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-mono text-gray-400 w-28 text-right">{fmt(g)} PLN</span>
+                    <span className="text-[10px] font-mono text-gray-500 w-16 text-right flex-shrink-0">{m.worker_count} workers</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="bg-green-950/40 rounded-full flex-1 h-2 overflow-hidden">
-                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${(n / maxGross) * 100}%` }} />
-                    </div>
-                    <span className="text-[10px] font-mono text-green-400 w-28 text-right">{fmt(n)} PLN</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono text-gray-500 w-16 text-right flex-shrink-0">{m.worker_count} workers</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5">
-          <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400"><span className="w-3 h-2 rounded bg-white/40" /> Gross</span>
-          <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400"><span className="w-3 h-2 rounded bg-green-500" /> Netto</span>
-        </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400"><span className="w-3 h-2 rounded bg-white/40" /> Gross</span>
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400"><span className="w-3 h-2 rounded bg-green-500" /> Netto</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* Top earners */}
         <div className="glass-panel rounded-xl p-5 tech-border">
           <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 font-mono mb-4">Top 10 Earners (all time)</p>
-          <div className="space-y-2">
-            {topWorkers.map((w: any, i: number) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-gray-600 w-4">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-white truncate">{w.worker_name}</p>
-                  <p className="text-[10px] font-mono text-red-400">{w.site || "—"} · {w.months}mo</p>
-                </div>
-                <div className="text-right">
-                  <div className="bg-white/5 rounded-full w-24 h-1.5 mb-1 overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${(Number(w.total_gross) / maxEarned) * 100}%` }} />
+          {topWorkers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-24 gap-2">
+              <Users className="w-8 h-8 text-gray-700" />
+              <p className="text-xs font-mono text-gray-600">Appears after first payroll commit.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {topWorkers.map((w: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-gray-600 w-4">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{w.worker_name}</p>
+                    <p className="text-[10px] font-mono text-red-400">{w.site || "—"} · {w.months}mo</p>
                   </div>
-                  <span className="text-[10px] font-mono text-green-400">{fmt(w.total_gross)}</span>
+                  <div className="text-right">
+                    <div className="bg-white/5 rounded-full w-24 h-1.5 mb-1 overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${(Number(w.total_gross) / maxEarned) * 100}%` }} />
+                    </div>
+                    <span className="text-[10px] font-mono text-green-400">{fmt(w.total_gross)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Action breakdown */}
+        {/* Action breakdown — always visible */}
         <div className="glass-panel rounded-xl p-5 tech-border">
           <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 font-mono mb-4">Activity Breakdown</p>
-          <div className="space-y-2">
-            {actions.map((a: any) => (
-              <div key={a.action} className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <ActionBadge action={a.action} />
+          {actions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-24 gap-2">
+              <Activity className="w-8 h-8 text-gray-700" />
+              <p className="text-xs font-mono text-gray-600">No activity recorded yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {actions.map((a: any) => (
+                <div key={a.action} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <ActionBadge action={a.action} />
+                  </div>
+                  <div className="w-24 bg-white/5 rounded-full h-1.5 overflow-hidden">
+                    <div className="h-full bg-red-500 rounded-full" style={{ width: `${(Number(a.count) / maxAction) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-bold font-mono text-white w-8 text-right">{a.count}</span>
                 </div>
-                <div className="w-24 bg-white/5 rounded-full h-1.5 overflow-hidden">
-                  <div className="h-full bg-red-500 rounded-full" style={{ width: `${(Number(a.count) / maxAction) * 100}%` }} />
-                </div>
-                <span className="text-xs font-bold font-mono text-white w-8 text-right">{a.count}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

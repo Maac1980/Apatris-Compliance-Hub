@@ -441,14 +441,24 @@ export default function PayrollPage() {
     }, { zus: 0, health: 0, tax: 0, net: 0, take: 0 });
   }, [workers, showZUS, isAdmin, zusRates]);
 
+  const triggerDownload = (url: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); }, 200);
+  };
+
   const handleExportPDF = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    window.open(`${window.location.origin}${base}/api/payroll/export/pdf?month=${selectedMonth}`, "_blank");
+    triggerDownload(`${window.location.origin}${base}/api/payroll/export/pdf?month=${selectedMonth}`, `Apatris-Payroll-${selectedMonth}.pdf`);
   };
 
   const handleBankExport = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    window.open(`${window.location.origin}${base}/api/payroll/export/bank-csv?month=${selectedMonth}`, "_blank");
+    triggerDownload(`${window.location.origin}${base}/api/payroll/export/bank-csv?month=${selectedMonth}`, `Apatris-Bank-${selectedMonth}.csv`);
   };
 
   // Column classes
