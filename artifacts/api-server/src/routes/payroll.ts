@@ -21,6 +21,7 @@ router.get("/payroll/current", async (_req, res) => {
       id: w.id,
       name: w.name,
       email: w.email ?? null,
+      iban: w.iban ?? null,
       specialization: w.specialization,
       assignedSite: w.assignedSite,
       hourlyRate: w.hourlyRate ?? 0,
@@ -52,6 +53,8 @@ router.patch("/payroll/workers/:id", async (req, res) => {
       fields["Advance"] = body.advance === "" ? null : Number(body.advance);
     if (body.penalties !== undefined)
       fields["Penalties"] = body.penalties === "" ? null : Number(body.penalties);
+    if (body.iban !== undefined)
+      fields["IBAN"] = body.iban === "" ? null : String(body.iban);
 
     if (Object.keys(fields).length === 0) {
       res.status(400).json({ error: "No valid fields to update" });
@@ -269,7 +272,7 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
           w.assignedSite || "—",
           netto.toFixed(2).replace(".", ","),
           `Wynagrodzenie za ${periodPL}`,
-          "",
+          w.iban ?? "",
         ];
       });
 

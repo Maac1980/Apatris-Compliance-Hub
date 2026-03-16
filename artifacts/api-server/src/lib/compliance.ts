@@ -42,6 +42,7 @@ export interface Worker {
   // Contact & Financial
   email: string | null;
   phone: string | null;
+  iban: string | null;
   hourlyRate: number | null;
   monthlyHours: number | null;
   advance: number | null;
@@ -194,6 +195,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   // Financial
   const email = getString(resolveField(f, ["EMAIL", "Email", "email"]));
   const phone = getString(resolveField(f, ["PHONE", "Phone", "phone"]));
+  const iban = getString(resolveField(f, ["IBAN", "iban", "Bank Account", "BANK_ACCOUNT", "Account Number", "ACCOUNT_NUMBER", "Numer Konta", "numer_konta"]));
   const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "HourlyRate"]));
   const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "MonthlyHours"]));
   const advance = getNumber(resolveField(f, ["Advance", "ADVANCE", "advance"]));
@@ -240,6 +242,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     weldingPosition,
     email,
     phone,
+    iban,
     hourlyRate,
     monthlyHours,
     advance,

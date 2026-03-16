@@ -14,6 +14,7 @@ interface PayrollWorker {
   id: string;
   name: string;
   email: string | null;
+  iban: string | null;
   specialization: string;
   assignedSite: string | null;
   hourlyRate: number;
@@ -48,6 +49,58 @@ interface SplitBreakdown {
   otherNet: number;
   zusSaved: number;      // ZUS + health not paid at 2nd employer
   totalNet: number;      // main take-home + other net
+}
+
+// ─── IBAN Cell ────────────────────────────────────────────────────────────────
+function IBANCell({ value, workerId, onSave }: {
+  value: string | null; workerId: string;
+  onSave: (id: string, iban: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value ?? ""); }, [value]);
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = draft.trim().replace(/\s+/g, "");
+    if (trimmed !== (value ?? "").replace(/\s+/g, "")) onSave(workerId, trimmed);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef} type="text" value={draft} placeholder="PL00 0000 0000..."
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") { setEditing(false); setDraft(value ?? ""); }
+        }}
+        className="bg-slate-700 border border-cyan-500/60 text-cyan-200 rounded px-2 py-1 text-xs font-mono focus:outline-none w-44"
+      />
+    );
+  }
+
+  if (!value) {
+    return (
+      <button onClick={() => setEditing(true)} title="Click to add IBAN"
+        className="text-xs font-mono text-gray-600 hover:text-cyan-400 transition-colors px-2 py-1 rounded hover:bg-white/5 flex items-center gap-1 whitespace-nowrap">
+        <Edit2 className="w-3 h-3" /> Add IBAN
+      </button>
+    );
+  }
+
+  // Format IBAN in groups of 4 for readability
+  const formatted = value.replace(/(.{4})/g, "$1 ").trim();
+  return (
+    <button onClick={() => setEditing(true)} title="Click to edit IBAN"
+      className="text-xs font-mono text-cyan-300 hover:text-cyan-200 transition-colors px-2 py-1 rounded hover:bg-white/5 text-left whitespace-nowrap">
+      {formatted}
+    </button>
+  );
 }
 
 // ─── ZUS Rates Config ─────────────────────────────────────────────────────────
@@ -318,6 +371,13 @@ export default function PayrollPage() {
 
   const handleSave = (id: string, field: string, val: number) => saveMutation.mutate({ id, field, val });
 
+  const handleSaveIBAN = (id: string, iban: string) => {
+    fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ iban }),
+    }).then(() => queryClient.invalidateQueries({ queryKey: ["payroll-current"] }));
+  };
+
   const commitMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/commit`, {
@@ -577,11 +637,14 @@ export default function PayrollPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "1700px" : showZUS && isAdmin ? "1300px" : "860px" }}>
+            <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "1900px" : showZUS && isAdmin ? "1500px" : "1060px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>
                   <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>Worker</th>
                   <th className={`${thCls} text-left`} style={{ minWidth: "140px" }}>Spec / Site</th>
+                  <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>
+                    <span className="text-cyan-400">Bank IBAN ✎</span>
+                  </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
                     {isAdmin ? "Rate (PLN/h)" : <span className="text-gray-600">Rate</span>}
                   </th>
@@ -655,6 +718,15 @@ export default function PayrollPage() {
                               <span className="text-[10px] text-red-400 whitespace-nowrap">{w.assignedSite}</span>
                             )}
                           </div>
+                        </td>
+                        {/* IBAN */}
+                        <td className={tdCls}>
+                          {isAdmin
+                            ? <IBANCell value={w.iban} workerId={w.id} onSave={handleSaveIBAN} />
+                            : w.iban
+                              ? <span className="text-xs font-mono text-cyan-300/60">{w.iban.slice(0, 8)}…</span>
+                              : <span className="text-xs font-mono text-gray-700">—</span>
+                          }
                         </td>
                         {/* Rate */}
                         <td className={`${tdCls} text-right`}>
@@ -746,7 +818,7 @@ export default function PayrollPage() {
               {filteredWorkers.length > 0 && (
                 <tfoot className="bg-slate-900/80 border-t-2 border-slate-600">
                   <tr>
-                    <td className={`${tdCls} text-xs font-bold text-gray-300 uppercase tracking-widest`} colSpan={2}>
+                    <td className={`${tdCls} text-xs font-bold text-gray-300 uppercase tracking-widest`} colSpan={3}>
                       TOTALS — {filteredWorkers.length}
                       {payrollSearch && workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
                     </td>
