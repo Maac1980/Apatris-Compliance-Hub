@@ -13,7 +13,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, pass: string) => Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }>;
+  verifyOtp: (session: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   sessionExpired: boolean;
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, resetTimer]);
 
-  const login = async (email: string, pass: string): Promise<{ ok: boolean; error?: string }> => {
+  const login = async (email: string, pass: string): Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }> => {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/auth/login`, {
         method: "POST",
@@ -71,6 +72,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         return { ok: false, error: (data as any).error || "Invalid credentials" };
+      }
+
+      const data = await res.json();
+
+      // 2FA challenge: backend sent OTP to admin's email
+      if (data.otpRequired) {
+        return { ok: true, otpRequired: true, session: data.session };
+      }
+
+      setUser(data as User);
+      setSessionExpired(false);
+      localStorage.setItem("apatris_auth", JSON.stringify(data));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Connection error — please try again" };
+    }
+  };
+
+  const verifyOtp = async (session: string, otp: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session, otp }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { ok: false, error: (data as any).error || "Invalid code" };
       }
 
       const data: User = await res.json();
@@ -86,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logoutPublic = useCallback(() => logout(false), [logout]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout: logoutPublic, isAuthenticated: !!user, sessionExpired }}>
+    <AuthContext.Provider value={{ user, login, verifyOtp, logout: logoutPublic, isAuthenticated: !!user, sessionExpired }}>
       {sessionExpired && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-red-500/40 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">

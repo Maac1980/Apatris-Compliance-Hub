@@ -673,6 +673,52 @@ export default function Dashboard() {
 
         {/* Data Table */}
         <div className="glass-panel rounded-xl overflow-hidden tech-border">
+
+          {/* ── Mobile Card List (phones / small tablets) ──────────────────── */}
+          <div className="md:hidden">
+            {isLoadingWorkers ? (
+              <div className="p-4 space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : (workersData?.workers ?? []).length === 0 ? (
+              <div className="p-8 text-center text-gray-500 font-mono text-sm">{t("table.noResults")}</div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {(workersData?.workers ?? []).map((worker: any) => {
+                  const cs = worker.complianceStatus as string;
+                  const borderColor = cs === "critical" || cs === "non-compliant" ? "border-l-red-500" : cs === "warning" ? "border-l-yellow-500" : "border-l-green-500";
+                  return (
+                    <button
+                      key={worker.id}
+                      onClick={() => setSelectedWorkerId(worker.id)}
+                      className={`w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-l-2 ${borderColor} flex items-start gap-3`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="font-semibold text-white text-sm truncate">{worker.name}</p>
+                          <StatusBadge status={worker.complianceStatus} />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {worker.assignedSite && <span className="text-[10px] font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded">{worker.assignedSite}</span>}
+                          {worker.specialization && <span className="text-[10px] font-mono text-gray-400">{worker.specialization}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                          {worker.trcExpiry && <span className="text-[10px] font-mono text-gray-500">TRC: {daysLeftBadge(worker.trcExpiry)}</span>}
+                          {worker.passportExpiry && <span className="text-[10px] font-mono text-gray-500">PP: {daysLeftBadge(worker.passportExpiry)}</span>}
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-600 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Desktop Table ───────────────────────────────────────────────── */}
+          <div className="hidden md:block">
           <div className="overflow-x-auto">
             {/* table-layout:fixed + colgroup locks every header/cell to identical widths — no drift */}
             <table className="w-full text-left" style={{ tableLayout: "fixed", minWidth: "1060px" }}>
@@ -925,6 +971,7 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          </div>{/* end hidden md:block */}
         </div>
       </main>
 

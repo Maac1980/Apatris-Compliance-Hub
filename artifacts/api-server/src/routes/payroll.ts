@@ -7,17 +7,18 @@ import {
   appendPayrollRecord,
 } from "../lib/payroll-records.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
 
 const router = Router();
 
 // ─── GET /payroll/current ─────────────────────────────────────────────────────
-// Returns all workers with their current payroll fields
 router.get("/payroll/current", async (_req, res) => {
   try {
     const records = await fetchAllRecords();
     const workers = records.map(mapRecordToWorker).map((w) => ({
       id: w.id,
       name: w.name,
+      email: w.email ?? null,
       specialization: w.specialization,
       assignedSite: w.assignedSite,
       hourlyRate: w.hourlyRate ?? 0,
@@ -36,7 +37,6 @@ router.get("/payroll/current", async (_req, res) => {
 });
 
 // ─── PATCH /payroll/workers/:id ───────────────────────────────────────────────
-// Update payroll fields for a single worker (inline grid edits)
 router.patch("/payroll/workers/:id", async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
@@ -65,11 +65,10 @@ router.patch("/payroll/workers/:id", async (req, res) => {
 });
 
 // ─── POST /payroll/commit ─────────────────────────────────────────────────────
-// Close month: snapshot all workers → payroll-records.json, then reset fields
 router.post("/payroll/commit", async (req, res) => {
   try {
     const body = req.body as { monthYear?: string; committedBy?: string };
-    const monthYear = body.monthYear || new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const monthYear = body.monthYear || new Date().toISOString().slice(0, 7);
     const committedBy = body.committedBy || "Unknown";
 
     const records = await fetchAllRecords();
@@ -86,7 +85,6 @@ router.post("/payroll/commit", async (req, res) => {
       const grossPayout = hourlyRate * totalHours;
       const finalNettoPayout = grossPayout - advancesDeducted - penaltiesDeducted;
 
-      // Only snapshot workers who had hours this month
       if (totalHours > 0 || advancesDeducted > 0) {
         const snap = appendPayrollRecord({
           workerId: w.id,
@@ -105,7 +103,6 @@ router.post("/payroll/commit", async (req, res) => {
         snapshots.push(snap);
       }
 
-      // Reset hours, advances, penalties to 0 for next month
       resetPromises.push(
         updateRecord(w.id, {
           "MONTHLY_HOURS": 0,
@@ -119,16 +116,46 @@ router.post("/payroll/commit", async (req, res) => {
 
     await Promise.all(resetPromises);
 
+    // ── Send payslip emails to workers who have email + hours ─────────────────
+    let payslipsSent = 0;
+    if (isMailConfigured() && snapshots.length > 0) {
+      const workerEmailMap = new Map(workers.map((w) => [w.id, w.email ?? null]));
+      const workerSiteMap = new Map(workers.map((w) => [w.id, w.assignedSite ?? ""]));
+      const workerRateMap = new Map(workers.map((w) => [w.id, w.hourlyRate ?? 0]));
+
+      const emailPromises = snapshots.map(async (snap) => {
+        const email = workerEmailMap.get(snap.workerId);
+        if (!email) return;
+        try {
+          await sendPayslipEmail({
+            workerName: snap.workerName,
+            workerEmail: email,
+            monthYear: snap.monthYear,
+            site: workerSiteMap.get(snap.workerId) ?? "",
+            totalHours: snap.totalHours,
+            hourlyRate: workerRateMap.get(snap.workerId) ?? snap.hourlyRate,
+            grossPayout: snap.grossPayout,
+            advancesDeducted: snap.advancesDeducted,
+            penaltiesDeducted: snap.penaltiesDeducted,
+            finalNettoPayout: snap.finalNettoPayout,
+          });
+          payslipsSent++;
+        } catch (e) {
+          console.error(`[payroll/commit] Payslip email failed for ${snap.workerName}:`, e instanceof Error ? e.message : e);
+        }
+      });
+      await Promise.allSettled(emailPromises);
+    }
+
     try {
-      const actor = (req as any).user;
       appendAuditLog({
         timestamp: new Date().toISOString(),
-        actor: actor?.name || committedBy,
-        actorEmail: actor?.email || "unknown",
+        actor: committedBy,
+        actorEmail: "system",
         action: "PAYROLL_COMMIT",
         workerId: "—",
         workerName: "ALL",
-        note: `Month ${monthYear} closed. ${snapshots.length} workers snapshotted.`,
+        note: `Month ${monthYear} closed. ${snapshots.length} workers snapshotted. ${payslipsSent} payslip emails sent.`,
       });
     } catch { /* non-blocking */ }
 
@@ -138,6 +165,7 @@ router.post("/payroll/commit", async (req, res) => {
       workersProcessed: workers.length,
       snapshotsSaved: snapshots.length,
       totalNettoPayout: snapshots.reduce((s, r) => s + r.finalNettoPayout, 0),
+      payslipsSent,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -146,7 +174,6 @@ router.post("/payroll/commit", async (req, res) => {
 });
 
 // ─── GET /payroll/history/:workerId ──────────────────────────────────────────
-// All payroll records for a specific worker
 router.get("/payroll/history/:workerId", async (req, res) => {
   try {
     const records = getPayrollRecordsByWorker(req.params.workerId);
@@ -159,7 +186,6 @@ router.get("/payroll/history/:workerId", async (req, res) => {
 });
 
 // ─── GET /payroll/history ─────────────────────────────────────────────────────
-// All payroll records (for admin overview)
 router.get("/payroll/history", async (_req, res) => {
   try {
     const records = getAllPayrollRecords();

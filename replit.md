@@ -6,6 +6,14 @@ Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspac
 
 ## Implemented Features
 
+### Final Version Upgrade (All Complete)
+- **Email OTP 2FA**: Admin logins (manish/akshay) now require a 6-digit one-time code sent to their email after password verification. Falls back to direct login if SMTP is not configured so no lockout risk. Coordinators are not affected.
+- **ZUS/PIT breakdown toggle in Payroll**: "ZUS View" button shows Employee ZUS (13.71%), Health Insurance (9%), estimated PIT (12% with KUP) columns per worker — Polish umowa zlecenie law. Values are additive over existing gross/advance/penalties.
+- **Bank CSV export**: "Bank CSV" button in PayrollPage generates a transfer list (Name, Site, Netto, "Wynagrodzenie za [month]" title, IBAN placeholder) ready to import into any Polish online banking batch payment portal.
+- **Payslip email delivery**: At month commit (`POST /payroll/commit`), an HTML payslip email is automatically sent to every worker who has an email address in Airtable. CommitResult now includes `payslipsSent` count.
+- **Mobile card view**: Dashboard now shows a touch-friendly card list on phones/small tablets (md:hidden) with Name, Status badge, Site, TRC/Passport day badges, and tap-to-open. Desktop table is unchanged (hidden md:block).
+- **Audit log expanded**: Action types now include `PAYROLL_COMMIT` and `ADMIN_LOGIN` for full audit coverage.
+
 ### Core T001–T007 (All Complete)
 - **T001** Session timeout: 30-min auto-logout via activity tracking
 - **T002** Contract expiry in scheduler alerts alongside TRC/Passport/BHP

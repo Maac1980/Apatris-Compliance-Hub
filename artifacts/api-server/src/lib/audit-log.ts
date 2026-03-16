@@ -11,7 +11,7 @@ export interface AuditEntry {
   timestamp: string;
   actor: string;
   actorEmail: string;
-  action: "UPDATE_WORKER" | "CREATE_WORKER" | "UPLOAD_DOCUMENT" | "DELETE_WORKER";
+  action: "UPDATE_WORKER" | "CREATE_WORKER" | "UPLOAD_DOCUMENT" | "DELETE_WORKER" | "PAYROLL_COMMIT" | "ADMIN_LOGIN";
   workerId: string;
   workerName: string;
   changes?: Record<string, { from: unknown; to: unknown }>;

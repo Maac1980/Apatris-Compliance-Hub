@@ -10,8 +10,8 @@ export function isMailConfigured(): boolean {
 
 function createTransport() {
   return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
+    host: process.env.SMTP_HOST ?? "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT ?? 465),
     secure: true,
     auth: {
       user: SMTP_USER,
@@ -59,8 +59,6 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
-
-          <!-- Header -->
           <tr>
             <td style="background:${statusColor};padding:24px 32px;">
               <table width="100%" cellpadding="0" cellspacing="0">
@@ -78,66 +76,31 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
               </table>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:32px;">
               <p style="margin:0 0 24px;color:#94a3b8;font-size:14px;line-height:1.6;">
                 The following worker document requires immediate attention:
               </p>
-
-              <!-- Document Detail Card -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;border:1px solid #334155;margin-bottom:24px;">
                 <tr>
                   <td style="padding:20px 24px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #1e293b;">
-                          <span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Worker Name</span><br/>
-                          <span style="color:#f1f5f9;font-size:16px;font-weight:700;margin-top:4px;display:block;">${workerName}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #1e293b;">
-                          <span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Document Type</span><br/>
-                          <span style="color:#f1f5f9;font-size:16px;font-weight:700;margin-top:4px;display:block;">${documentType}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #1e293b;">
-                          <span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Expiry Date</span><br/>
-                          <span style="color:${statusColor};font-size:16px;font-weight:700;margin-top:4px;display:block;">${expiryDate}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;">
-                          <span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Status</span><br/>
-                          <span style="color:${statusColor};font-size:16px;font-weight:700;margin-top:4px;display:block;">
-                            ${isExpired ? "EXPIRED — Immediate renewal required" : `${daysUntilExpiry} day(s) until expiry — Action required`}
-                          </span>
-                        </td>
-                      </tr>
+                      <tr><td style="padding:8px 0;border-bottom:1px solid #1e293b;"><span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Worker Name</span><br/><span style="color:#f1f5f9;font-size:16px;font-weight:700;margin-top:4px;display:block;">${workerName}</span></td></tr>
+                      <tr><td style="padding:8px 0;border-bottom:1px solid #1e293b;"><span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Document Type</span><br/><span style="color:#f1f5f9;font-size:16px;font-weight:700;margin-top:4px;display:block;">${documentType}</span></td></tr>
+                      <tr><td style="padding:8px 0;border-bottom:1px solid #1e293b;"><span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Expiry Date</span><br/><span style="color:${statusColor};font-size:16px;font-weight:700;margin-top:4px;display:block;">${expiryDate}</span></td></tr>
+                      <tr><td style="padding:8px 0;"><span style="color:#64748b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Status</span><br/><span style="color:${statusColor};font-size:16px;font-weight:700;margin-top:4px;display:block;">${isExpired ? "EXPIRED — Immediate renewal required" : `${daysUntilExpiry} day(s) until expiry — Action required`}</span></td></tr>
                     </table>
                   </td>
                 </tr>
               </table>
-
-              <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;line-height:1.6;">
-                Please take immediate action to renew this document and update the Apatris Portal accordingly.
-              </p>
+              <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;line-height:1.6;">Please take immediate action to renew this document and update the Apatris Portal accordingly.</p>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;">
-              <p style="margin:0;color:#475569;font-size:11px;text-align:center;">
-                This is an automated alert from the <strong style="color:#64748b;">Apatris Compliance Portal</strong>.
-                Do not reply to this email.
-              </p>
+              <p style="margin:0;color:#475569;font-size:11px;text-align:center;">This is an automated alert from the <strong style="color:#64748b;">Apatris Compliance Portal</strong>. Do not reply to this email.</p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -181,4 +144,124 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
     console.error("[Mailer] Failed to send alert email:", err);
     throw err;
   }
+}
+
+// ─── OTP Email ────────────────────────────────────────────────────────────────
+export async function sendOtpEmail(to: string, name: string, otp: string): Promise<void> {
+  if (!isMailConfigured()) return;
+  const transport = createTransport();
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
+        <tr><td style="background:#C41E18;padding:24px 32px;">
+          <p style="margin:0;color:#fff;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">Apatris Portal</p>
+          <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:800;">Two-Factor Login Code</h1>
+        </td></tr>
+        <tr><td style="padding:36px 32px;text-align:center;">
+          <p style="color:#94a3b8;font-size:14px;margin:0 0 28px;">Hi ${name}, use the code below to complete your login. It expires in <strong style="color:#f1f5f9;">5 minutes</strong>.</p>
+          <div style="display:inline-block;background:#0f172a;border:2px solid #C41E18;border-radius:12px;padding:20px 40px;margin-bottom:28px;">
+            <span style="font-size:40px;font-weight:900;letter-spacing:14px;color:#ffffff;font-family:monospace;">${otp}</span>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0;">If you did not attempt to log in, ignore this email and your account remains secure.</p>
+        </td></tr>
+        <tr><td style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;">
+          <p style="margin:0;color:#475569;font-size:11px;text-align:center;">Apatris Compliance Portal — Do not reply to this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+  await transport.sendMail({
+    from: `"Apatris Portal" <${SMTP_USER}>`,
+    to,
+    subject: `Your Apatris Login Code: ${otp}`,
+    html,
+  });
+  console.log(`[Mailer] OTP sent → ${to}`);
+}
+
+// ─── Payslip Email ────────────────────────────────────────────────────────────
+export interface PayslipEmailPayload {
+  workerName: string;
+  workerEmail: string;
+  monthYear: string;
+  site: string;
+  totalHours: number;
+  hourlyRate: number;
+  grossPayout: number;
+  advancesDeducted: number;
+  penaltiesDeducted: number;
+  finalNettoPayout: number;
+}
+
+function fmtPLN(n: number) {
+  return n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PLN";
+}
+
+export async function sendPayslipEmail(payload: PayslipEmailPayload): Promise<void> {
+  if (!isMailConfigured()) return;
+  const { workerName, workerEmail, monthYear, site, totalHours, hourlyRate, grossPayout, advancesDeducted, penaltiesDeducted, finalNettoPayout } = payload;
+  const transport = createTransport();
+  const [year, month] = monthYear.split("-");
+  const monthNames: Record<string, string> = { "01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December" };
+  const periodLabel = `${monthNames[month] ?? month} ${year}`;
+
+  const row = (label: string, value: string, color = "#f1f5f9", bold = false) =>
+    `<tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#94a3b8;font-size:13px;">${label}</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;text-align:right;color:${color};font-size:13px;font-weight:${bold ? "700" : "400"};font-family:monospace;">${value}</td></tr>`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
+        <tr><td style="background:#C41E18;padding:24px 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;color:#fff;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">Apatris Sp. z o.o.</p>
+            <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:800;">Pay Slip — ${periodLabel}</h1></td>
+            <td align="right"><span style="display:inline-block;background:rgba(0,0,0,0.25);color:#fff;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;border-radius:20px;">ROZLICZENIE</span></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Worker</p>
+          <p style="margin:0 0 6px;color:#f1f5f9;font-size:18px;font-weight:700;">${workerName}</p>
+          <p style="margin:0 0 24px;color:#64748b;font-size:13px;">${site ? `Site: ${site}` : ""}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${row("Period", periodLabel)}
+            ${row("Hours Worked", `${totalHours} h`)}
+            ${row("Hourly Rate", fmtPLN(hourlyRate))}
+            ${row("Gross Pay", fmtPLN(grossPayout), "#93c5fd")}
+            ${advancesDeducted > 0 ? row("Advances Deducted", `− ${fmtPLN(advancesDeducted)}`, "#fb923c") : ""}
+            ${penaltiesDeducted > 0 ? row("Penalties Deducted", `− ${fmtPLN(penaltiesDeducted)}`, "#f87171") : ""}
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;margin-top:16px;border:1px solid #C41E18;">
+            <tr><td style="padding:16px 20px;"><span style="color:#94a3b8;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Net Pay (Netto)</span></td>
+            <td style="padding:16px 20px;text-align:right;"><span style="color:#4ade80;font-size:22px;font-weight:900;font-family:monospace;">${fmtPLN(finalNettoPayout)}</span></td></tr>
+          </table>
+          <p style="margin:20px 0 0;color:#475569;font-size:11px;line-height:1.6;">This is your official pay slip for the period above. Please retain it for your records. For any queries, contact your site coordinator or Apatris administration.</p>
+        </td></tr>
+        <tr><td style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;">
+          <p style="margin:0;color:#475569;font-size:11px;text-align:center;">Apatris Sp. z o.o. · Automated payroll system · Do not reply to this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+
+  await transport.sendMail({
+    from: `"Apatris Payroll" <${SMTP_USER}>`,
+    to: `"${workerName}" <${workerEmail}>`,
+    subject: `Pay Slip — ${periodLabel} | Apatris`,
+    html,
+  });
+  console.log(`[Mailer] Payslip sent → ${workerEmail}`);
 }
