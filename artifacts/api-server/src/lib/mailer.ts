@@ -9,10 +9,12 @@ export function isMailConfigured(): boolean {
 }
 
 function createTransport() {
+  const port = Number(process.env.SMTP_PORT ?? 587);
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST ?? "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT ?? 465),
-    secure: true,
+    host: process.env.SMTP_HOST ?? "smtp-relay.brevo.com",
+    port,
+    secure: port === 465,   // true only for port 465 (SSL), false for 587 (STARTTLS)
+    requireTLS: port !== 465,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
