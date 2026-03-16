@@ -44,6 +44,14 @@ interface ZUSBreakdown {
   takeHome: number;
 }
 
+interface SplitBreakdown {
+  otherGross: number;
+  otherPIT: number;
+  otherNet: number;
+  zusSaved: number;      // ZUS + health not paid at 2nd employer
+  totalNet: number;      // main take-home + other net
+}
+
 // ─── ZUS Rates Config ─────────────────────────────────────────────────────────
 interface ZUSRates {
   year: number;
@@ -88,6 +96,30 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome };
+}
+
+// ─── Split-Employer Calculator ────────────────────────────────────────────────
+// In Poland: if Contract 1 (Apatris) covers minimum wage, Contract 2 (other
+// company) is ZUS-exempt. Worker pays only PIT on the 2nd employer's income.
+function calcSplit(
+  mainTakeHome: number,
+  splitHours: number,
+  hourlyRate: number,
+  rates: ZUSRates
+): SplitBreakdown {
+  const otherGross = splitHours * hourlyRate;
+  // 2nd employer: no ZUS, no health insurance — only PIT on (gross - KUP)
+  const otherKUP = otherGross * (rates.kup / 100);
+  const otherTaxBase = Math.max(0, otherGross - otherKUP);
+  const otherPIT = otherTaxBase * (rates.pit / 100);
+  const otherNet = otherGross - otherPIT;
+  // ZUS saved = what WOULD have been deducted if these hours were at Apatris
+  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee) / 100;
+  const wouldBeZUS = otherGross * zusRate;
+  const wouldBeHealth = (otherGross - wouldBeZUS) * (rates.zdrowotne / 100);
+  const zusSaved = wouldBeZUS + wouldBeHealth;
+  const totalNet = mainTakeHome + otherNet;
+  return { otherGross, otherPIT, otherNet, zusSaved, totalNet };
 }
 
 function fmt(n: number) {
@@ -244,6 +276,8 @@ export default function PayrollPage() {
   const [pending, setPending] = useState<Record<string, Record<string, number>>>({});
   const [payrollSearch, setPayrollSearch] = useState("");
   const [showZUS, setShowZUS] = useState(false);
+  const [showSplit, setShowSplit] = useState(false);
+  const [splitHours, setSplitHours] = useState<Record<string, number>>({});
   const [zusRates, setZUSRates] = useState<ZUSRates>(loadZUSRates);
   const [showRatesModal, setShowRatesModal] = useState(false);
 
@@ -528,10 +562,32 @@ export default function PayrollPage() {
                 Effective ZUS: {(zusRates.emerytalneEmployee + zusRates.rentoweEmployee).toFixed(2)}% · Chorobowe excluded (voluntary) · ZUS base = Gross Salary (Rate × Hours)
               </p>
             </div>
-            <button onClick={() => setShowRatesModal(true)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purple-800/60 hover:bg-purple-700/60 border border-purple-500/40 text-purple-200 rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
-              <Edit2 className="w-3 h-3" /> Edit Rates
-            </button>
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              <button onClick={() => setShowRatesModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-800/60 hover:bg-purple-700/60 border border-purple-500/40 text-purple-200 rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
+                <Edit2 className="w-3 h-3" /> Edit Rates
+              </button>
+              <button onClick={() => setShowSplit((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${showSplit ? "border-teal-500/60 bg-teal-900/40 text-teal-200" : "border-slate-600 bg-slate-800/60 text-gray-400 hover:bg-slate-700/60"}`}>
+                {showSplit ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
+                2nd Employer Split
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Split Employer Explanation ───────────────────────────────── */}
+        {showZUS && showSplit && isAdmin && (
+          <div className="flex items-start gap-3 px-4 py-3 bg-teal-950/40 border border-teal-500/30 rounded-xl text-xs font-mono">
+            <Info className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-teal-300 font-bold uppercase tracking-widest text-[10px] mb-1">2nd Employer ZUS Split — Dwie Umowy Zlecenie</p>
+              <p className="text-teal-200/70">
+                When Contract 1 (Apatris) covers minimum wage, Contract 2 at another company is <span className="text-teal-300 font-semibold">ZUS-exempt</span> — worker pays PIT only.
+                Enter the hours worked at the other company in the <span className="text-teal-300 font-semibold">"2nd Co. Hrs"</span> column.
+                The <span className="text-green-400 font-semibold">"ZUS Saved"</span> column shows how much the worker saves vs. having all hours at one employer.
+              </p>
+            </div>
           </div>
         )}
 
@@ -571,7 +627,7 @@ export default function PayrollPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ minWidth: showZUS && isAdmin ? "1300px" : "860px" }}>
+            <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "1700px" : showZUS && isAdmin ? "1300px" : "860px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>
                   <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>Worker</th>
@@ -590,6 +646,12 @@ export default function PayrollPage() {
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
                     <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Net After Tax</th>
+                  </>}
+                  {showZUS && showSplit && isAdmin && <>
+                    <th className={`${thCls} text-right text-teal-400`} style={{ minWidth: "110px" }}>2nd Co. Hrs ✎</th>
+                    <th className={`${thCls} text-right text-teal-400`} style={{ minWidth: "110px" }}>2nd Gross</th>
+                    <th className={`${thCls} text-right text-green-400`} style={{ minWidth: "110px" }}>ZUS Saved</th>
+                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "130px" }}>Total Net (Split)</th>
                   </>}
                   <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
                     {isAdmin ? <span className="text-orange-400">Advances ✎</span> : <span className="text-gray-600">Advances</span>}
@@ -621,6 +683,8 @@ export default function PayrollPage() {
                 ) : (
                   filteredWorkers.map((w) => {
                     const zus = (showZUS && isAdmin) ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates) : null;
+                    const wSplitHrs = splitHours[w.id] ?? 0;
+                    const split = (showZUS && showSplit && isAdmin && zus) ? calcSplit(zus.takeHome, wSplitHrs, w.hourlyRate, zusRates) : null;
                     return (
                       <tr key={w.id} className="hover:bg-slate-700/25 transition-colors group">
                         {/* Worker */}
@@ -673,6 +737,34 @@ export default function PayrollPage() {
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
                         </>}
+                        {/* Split columns */}
+                        {showZUS && showSplit && isAdmin && <>
+                          <td className={`${tdCls} text-right`}>
+                            <input
+                              type="number" min="0" step="1"
+                              value={wSplitHrs || ""}
+                              placeholder="0"
+                              onChange={(e) => setSplitHours((prev) => ({ ...prev, [w.id]: parseFloat(e.target.value) || 0 }))}
+                              className="w-20 bg-slate-700 border border-teal-500/40 text-teal-300 rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-teal-400 text-right placeholder:text-gray-600"
+                            />
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono text-teal-400">{split ? fmt(split.otherGross) : "—"}</span>
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            {split && split.zusSaved > 0 ? (
+                              <span className="text-sm font-mono font-bold text-green-400">+ {fmt(split.zusSaved)}</span>
+                            ) : <span className="text-sm font-mono text-gray-600">—</span>}
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            {split && split.otherGross > 0 ? (
+                              <div>
+                                <span className="text-sm font-mono font-bold text-green-300">{fmt(split.totalNet)}</span>
+                                <span className="text-[10px] text-gray-500 ml-1 font-mono">PLN</span>
+                              </div>
+                            ) : <span className="text-sm font-mono text-gray-600">—</span>}
+                          </td>
+                        </>}
                         {/* Advances */}
                         <td className={`${tdCls} text-right`}>
                           {isAdmin
@@ -717,6 +809,20 @@ export default function PayrollPage() {
                       <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.tax)}</td>
                       <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-300`}>{fmt(zusTotal.net)}</td>
                     </>}
+                    {showZUS && showSplit && isAdmin && (() => {
+                      const splitTotals = filteredWorkers.reduce((acc, w) => {
+                        const zus = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates);
+                        const hrs = splitHours[w.id] ?? 0;
+                        const s = calcSplit(zus.takeHome, hrs, w.hourlyRate, zusRates);
+                        return { gross: acc.gross + s.otherGross, saved: acc.saved + s.zusSaved, net: acc.net + s.totalNet };
+                      }, { gross: 0, saved: 0, net: 0 });
+                      return <>
+                        <td className={`${tdCls} text-right text-sm font-mono text-gray-500`}>—</td>
+                        <td className={`${tdCls} text-right text-sm font-mono font-bold text-teal-400`}>{fmt(splitTotals.gross)}</td>
+                        <td className={`${tdCls} text-right text-sm font-mono font-bold text-green-400`}>+ {fmt(splitTotals.saved)}</td>
+                        <td className={`${tdCls} text-right text-sm font-mono font-bold text-green-300`}>{fmt(splitTotals.net)}</td>
+                      </>;
+                    })()}
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-orange-400`}>{fmt(totals.advances)}</td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-red-400`}>{fmt(totals.penalties)}</td>
                     <td className={`${tdCls} text-right`}>
