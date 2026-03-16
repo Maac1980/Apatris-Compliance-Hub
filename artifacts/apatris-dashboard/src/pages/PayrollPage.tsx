@@ -326,6 +326,7 @@ export default function PayrollPage() {
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
   const [pending, setPending] = useState<Record<string, Record<string, number>>>({});
   const [payrollSearch, setPayrollSearch] = useState("");
+  const [siteFilter, setSiteFilter] = useState("");
   const [showZUS, setShowZUS] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [splitHours, setSplitHours] = useState<Record<string, number>>({});
@@ -409,27 +410,44 @@ export default function PayrollPage() {
     });
   }, [data, pending]);
 
+  // Derive unique sites directly from the loaded workers (no extra API call needed)
+  const availableSites = useMemo(() => {
+    const sites = new Set<string>();
+    workers.forEach((w) => { if (w.assignedSite) sites.add(w.assignedSite); });
+    return Array.from(sites).sort();
+  }, [workers]);
+
+  // Count workers per site for tab badges
+  const siteWorkerCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    workers.forEach((w) => { const s = w.assignedSite || ""; if (s) counts[s] = (counts[s] ?? 0) + 1; });
+    return counts;
+  }, [workers]);
+
   const filteredWorkers = useMemo(() => {
-    if (!payrollSearch.trim()) return workers;
-    const q = payrollSearch.toLowerCase();
-    return workers.filter((w) =>
-      w.name.toLowerCase().includes(q) ||
-      (w.assignedSite || "").toLowerCase().includes(q) ||
-      (w.specialization || "").toLowerCase().includes(q)
-    );
-  }, [workers, payrollSearch]);
+    let result = workers;
+    if (siteFilter) result = result.filter((w) => w.assignedSite === siteFilter);
+    if (payrollSearch.trim()) {
+      const q = payrollSearch.toLowerCase();
+      result = result.filter((w) =>
+        w.name.toLowerCase().includes(q) ||
+        (w.specialization || "").toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [workers, payrollSearch, siteFilter]);
 
   const totals = useMemo(() => ({
-    hours: workers.reduce((s, w) => s + w.monthlyHours, 0),
-    gross: workers.reduce((s, w) => s + w.grossPayout, 0),
-    advances: workers.reduce((s, w) => s + w.advance, 0),
-    penalties: workers.reduce((s, w) => s + w.penalties, 0),
-    netto: workers.reduce((s, w) => s + w.finalNetto, 0),
-  }), [workers]);
+    hours: filteredWorkers.reduce((s, w) => s + w.monthlyHours, 0),
+    gross: filteredWorkers.reduce((s, w) => s + w.grossPayout, 0),
+    advances: filteredWorkers.reduce((s, w) => s + w.advance, 0),
+    penalties: filteredWorkers.reduce((s, w) => s + w.penalties, 0),
+    netto: filteredWorkers.reduce((s, w) => s + w.finalNetto, 0),
+  }), [filteredWorkers]);
 
   const zusTotal = useMemo(() => {
     if (!showZUS || !isAdmin) return null;
-    return workers.reduce((acc, w) => {
+    return filteredWorkers.reduce((acc, w) => {
       const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates);
       return {
         zus: acc.zus + z.employeeZUS,
@@ -439,7 +457,7 @@ export default function PayrollPage() {
         take: acc.take + z.takeHome,
       };
     }, { zus: 0, health: 0, tax: 0, net: 0, take: 0 });
-  }, [workers, showZUS, isAdmin, zusRates]);
+  }, [filteredWorkers, showZUS, isAdmin, zusRates]);
 
   const triggerDownload = (url: string, filename: string) => {
     const a = document.createElement("a");
@@ -625,6 +643,7 @@ export default function PayrollPage() {
 
         {/* ── Payroll Grid ─────────────────────────────────────────────── */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+          {/* ── Top bar: title + search ── */}
           <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
               {isAdmin ? (showZUS ? "Payroll Grid — ZUS Breakdown" : "Payroll Grid — Click any value to edit") : "Hours Grid — Click Hours to update"}
@@ -640,11 +659,47 @@ export default function PayrollPage() {
                 <input type="text" placeholder="Search workers…" value={payrollSearch} onChange={(e) => setPayrollSearch(e.target.value)}
                   className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-600 text-white rounded-lg text-xs font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 w-44 sm:w-52" />
               </div>
-              {payrollSearch && (
+              {(payrollSearch || siteFilter) && (
                 <span className="text-[10px] font-mono text-gray-400">{filteredWorkers.length} / {workers.length}</span>
               )}
             </div>
           </div>
+
+          {/* ── Site filter tabs ── */}
+          {availableSites.length > 0 && (
+            <div className="px-4 py-2.5 border-b border-slate-700 flex items-center gap-2 flex-wrap bg-slate-900/30">
+              <Building2 className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+              <button
+                onClick={() => setSiteFilter("")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold font-mono transition-all whitespace-nowrap ${
+                  !siteFilter
+                    ? "bg-red-600 text-white shadow-[0_0_10px_rgba(196,30,24,0.4)]"
+                    : "bg-slate-700 text-gray-400 hover:bg-slate-600 hover:text-white"
+                }`}
+              >
+                All Sites
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${!siteFilter ? "bg-red-800/60" : "bg-slate-600"}`}>
+                  {workers.length}
+                </span>
+              </button>
+              {availableSites.map((site) => (
+                <button
+                  key={site}
+                  onClick={() => setSiteFilter(siteFilter === site ? "" : site)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold font-mono transition-all whitespace-nowrap ${
+                    siteFilter === site
+                      ? "bg-red-600 text-white shadow-[0_0_10px_rgba(196,30,24,0.4)]"
+                      : "bg-slate-700 text-gray-400 hover:bg-slate-600 hover:text-white"
+                  }`}
+                >
+                  {site}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${siteFilter === site ? "bg-red-800/60" : "bg-slate-600"}`}>
+                    {siteWorkerCount[site] ?? 0}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "1900px" : showZUS && isAdmin ? "1500px" : "1060px" }}>
@@ -829,8 +884,8 @@ export default function PayrollPage() {
                 <tfoot className="bg-slate-900/80 border-t-2 border-slate-600">
                   <tr>
                     <td className={`${tdCls} text-xs font-bold text-gray-300 uppercase tracking-widest`} colSpan={3}>
-                      TOTALS — {filteredWorkers.length}
-                      {payrollSearch && workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
+                      {siteFilter ? `${siteFilter.toUpperCase()} — ` : "TOTALS — "}{filteredWorkers.length}
+                      {workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
                     </td>
                     <td className={`${tdCls} text-right text-sm font-mono text-gray-500`}>—</td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-yellow-400`}>{fmt(totals.hours)}</td>
