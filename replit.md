@@ -6,6 +6,19 @@ Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspac
 
 ## Implemented Features
 
+### Persistent Storage & History Layer (Complete)
+- **PostgreSQL database provisioned** with 5 tables: `audit_logs`, `payroll_commits`, `payroll_snapshots`, `notification_log`, `document_changes` — all with performance indexes.
+- **Audit log** migrated from JSON file to PostgreSQL — unlimited permanent history, filterable by action type and actor.
+- **Payroll commits** permanently recorded: each month commit saves to `payroll_commits` + per-worker snapshot to `payroll_snapshots` with full ZUS/PIT/netto breakdown.
+- **Notification log**: payslip emails auto-logged at commit; WhatsApp messages logged via `POST /api/history/notifications`.
+- **History page** (`/history`) with 4 tabs:
+  - **Payroll** — every commit expandable to show full worker breakdown table + CSV export per commit
+  - **Analytics** — monthly gross/netto trend bars, top 10 earners all-time, action type breakdown chart
+  - **Activity** — filterable audit log table (action type + actor filters)
+  - **Messages** — notification log with channel badges (payslip/email/WhatsApp)
+- **History nav button** added to Dashboard header (purple, between Payroll and Admin Settings).
+- New API routes: `GET /api/history/commits`, `GET /api/history/commits/:id`, `GET /api/history/analytics`, `GET /api/history/audit`, `GET/POST /api/history/notifications`.
+
 ### Final Version Upgrade (All Complete)
 - **Email OTP 2FA**: Admin logins (manish/akshay) now require a 6-digit one-time code sent to their email after password verification. Falls back to direct login if SMTP is not configured so no lockout risk. Coordinators are not affected.
 - **ZUS/PIT breakdown toggle in Payroll**: "ZUS View" button shows Employee ZUS (13.71%), Health Insurance (9%), estimated PIT (12% with KUP) columns per worker — Polish umowa zlecenie law. Values are additive over existing gross/advance/penalties.

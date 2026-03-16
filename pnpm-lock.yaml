@@ -384,6 +384,9 @@ importers:
       '@types/multer':
         specifier: ^2.1.0
         version: 2.1.0
+      '@types/pg':
+        specifier: ^8.18.0
+        version: 8.18.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -411,6 +414,9 @@ importers:
       openai:
         specifier: ^6.27.0
         version: 6.27.0(zod@4.3.6)
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10

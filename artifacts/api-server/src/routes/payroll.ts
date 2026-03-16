@@ -8,6 +8,7 @@ import {
 } from "../lib/payroll-records.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
+import { queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
@@ -116,13 +117,17 @@ router.post("/payroll/commit", async (req, res) => {
 
     await Promise.all(resetPromises);
 
+    // ── Calculate totals ──────────────────────────────────────────────────────
+    const totalGross = snapshots.reduce((s, r) => s + r.grossPayout, 0);
+    const totalNetto = snapshots.reduce((s, r) => s + r.finalNettoPayout, 0);
+
     // ── Send payslip emails to workers who have email + hours ─────────────────
     let payslipsSent = 0;
-    if (isMailConfigured() && snapshots.length > 0) {
-      const workerEmailMap = new Map(workers.map((w) => [w.id, w.email ?? null]));
-      const workerSiteMap = new Map(workers.map((w) => [w.id, w.assignedSite ?? ""]));
-      const workerRateMap = new Map(workers.map((w) => [w.id, w.hourlyRate ?? 0]));
+    const workerEmailMap = new Map(workers.map((w) => [w.id, w.email ?? null]));
+    const workerSiteMap  = new Map(workers.map((w) => [w.id, w.assignedSite ?? ""]));
+    const workerRateMap  = new Map(workers.map((w) => [w.id, w.hourlyRate ?? 0]));
 
+    if (isMailConfigured() && snapshots.length > 0) {
       const emailPromises = snapshots.map(async (snap) => {
         const email = workerEmailMap.get(snap.workerId);
         if (!email) return;
@@ -140,6 +145,13 @@ router.post("/payroll/commit", async (req, res) => {
             finalNettoPayout: snap.finalNettoPayout,
           });
           payslipsSent++;
+          // Log payslip send to notification_log
+          execute(
+            `INSERT INTO notification_log (channel, worker_id, worker_name, sent_by, recipient, message_preview, status)
+             VALUES ('payslip',$1,$2,$3,$4,$5,'sent')`,
+            [snap.workerId, snap.workerName, committedBy, email,
+             `Payslip for ${snap.monthYear} — gross ${snap.grossPayout.toFixed(2)} PLN`]
+          ).catch(() => {});
         } catch (e) {
           console.error(`[payroll/commit] Payslip email failed for ${snap.workerName}:`, e instanceof Error ? e.message : e);
         }
@@ -147,24 +159,57 @@ router.post("/payroll/commit", async (req, res) => {
       await Promise.allSettled(emailPromises);
     }
 
+    // ── Persist commit to PostgreSQL ──────────────────────────────────────────
     try {
-      appendAuditLog({
-        timestamp: new Date().toISOString(),
-        actor: committedBy,
-        actorEmail: "system",
-        action: "PAYROLL_COMMIT",
-        workerId: "—",
-        workerName: "ALL",
-        note: `Month ${monthYear} closed. ${snapshots.length} workers snapshotted. ${payslipsSent} payslip emails sent.`,
-      });
-    } catch { /* non-blocking */ }
+      const commitRow = await queryOne<{ id: number }>(
+        `INSERT INTO payroll_commits (committed_at, committed_by, month, worker_count, total_gross, total_netto, payslips_sent)
+         VALUES (NOW(),$1,$2,$3,$4,$5,$6) RETURNING id`,
+        [committedBy, monthYear, snapshots.length, totalGross, totalNetto, payslipsSent]
+      );
+      const commitId = commitRow?.id;
+
+      if (commitId) {
+        const snapshotValues = snapshots.map((snap) => {
+          const zus  = snap.grossPayout * 0.1126;
+          const hlth = (snap.grossPayout - zus) * 0.09;
+          const kup  = snap.grossPayout * 0.20;
+          const pit  = Math.max(0, (snap.grossPayout - zus - kup)) * 0.12;
+          return [
+            commitId, monthYear, snap.workerId, snap.workerName,
+            workerSiteMap.get(snap.workerId) ?? "",
+            snap.totalHours, snap.hourlyRate, snap.grossPayout,
+            zus, hlth, pit, snap.advancesDeducted, snap.penaltiesDeducted, snap.finalNettoPayout
+          ];
+        });
+        for (const sv of snapshotValues) {
+          await execute(
+            `INSERT INTO payroll_snapshots
+             (commit_id,month,worker_id,worker_name,site,hours,hourly_rate,gross,employee_zus,health_ins,est_pit,advance,penalties,netto)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+            sv
+          );
+        }
+      }
+    } catch (dbErr) {
+      console.error("[payroll/commit] DB persist failed:", (dbErr as Error).message);
+    }
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: committedBy,
+      actorEmail: "system",
+      action: "PAYROLL_COMMIT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `Month ${monthYear} closed. ${snapshots.length} workers. Gross ${totalGross.toFixed(2)} PLN. ${payslipsSent} payslips sent.`,
+    });
 
     res.json({
       success: true,
       monthYear,
       workersProcessed: workers.length,
       snapshotsSaved: snapshots.length,
-      totalNettoPayout: snapshots.reduce((s, r) => s + r.finalNettoPayout, 0),
+      totalNettoPayout: totalNetto,
       payslipsSent,
     });
   } catch (err) {

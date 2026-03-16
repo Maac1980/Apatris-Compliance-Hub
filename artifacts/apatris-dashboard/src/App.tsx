@@ -12,6 +12,7 @@ import Apply from "@/pages/Apply";
 import AdminSettings from "@/pages/AdminSettings";
 import ComplianceAlerts from "@/pages/ComplianceAlerts";
 import PayrollPage from "@/pages/PayrollPage";
+import HistoryPage from "@/pages/HistoryPage";
 import WorkerUpload from "@/pages/WorkerUpload";
 import NotFound from "@/pages/not-found";
 
@@ -53,6 +54,9 @@ function Router() {
       </Route>
       <Route path="/payroll">
         {() => <ProtectedRoute component={PayrollPage} />}
+      </Route>
+      <Route path="/history">
+        {() => <ProtectedRoute component={HistoryPage} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}

@@ -8,6 +8,7 @@ import logsRouter from "./logs.js";
 import payrollRouter from "./payroll.js";
 import siteCoordinatorsRouter from "./site-coordinators.js";
 import settingsRouter from "./settings.js";
+import historyRouter from "./history.js";
 
 const router: IRouter = Router();
 
@@ -17,6 +18,7 @@ router.use(adminsRouter);
 router.use(documentsRouter);
 router.use(logsRouter);
 router.use(payrollRouter);
+router.use(historyRouter);
 router.use(siteCoordinatorsRouter);
 router.use(settingsRouter);
 router.use(workersRouter);

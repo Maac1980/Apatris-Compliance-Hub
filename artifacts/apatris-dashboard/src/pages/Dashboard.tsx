@@ -7,7 +7,7 @@ import {
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
   Phone, MessageSquare, TrendingUp, Calculator, Download, CalendarDays, ChevronLeft, ChevronRight,
-  CheckSquare, Square, Archive, X, Send
+  CheckSquare, Square, Archive, X, Send, History
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -370,6 +370,16 @@ export default function Dashboard() {
           >
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">Payroll</span>
+          </button>
+
+          {/* History & Analytics */}
+          <button
+            onClick={() => setLocation("/history")}
+            className="flex items-center gap-2 px-4 py-2 border border-purple-600/60 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+            title="History & Analytics"
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">History</span>
           </button>
 
           {/* Admin Settings — Admin only */}
