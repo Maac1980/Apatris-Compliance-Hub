@@ -43,6 +43,7 @@ export interface Worker {
   email: string | null;
   phone: string | null;
   iban: string | null;
+  pit2: boolean;
   hourlyRate: number | null;
   monthlyHours: number | null;
   advance: number | null;
@@ -196,6 +197,8 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
   const email = getString(resolveField(f, ["EMAIL", "Email", "email"]));
   const phone = getString(resolveField(f, ["PHONE", "Phone", "phone"]));
   const iban = getString(resolveField(f, ["IBAN", "iban", "Bank Account", "BANK_ACCOUNT", "Account Number", "ACCOUNT_NUMBER", "Numer Konta", "numer_konta"]));
+  const pit2Raw = resolveField(f, ["PIT2", "PIT-2", "pit2", "Pit2"]);
+  const pit2 = pit2Raw === true || pit2Raw === "true" || pit2Raw === 1;
   const hourlyRate = getNumber(resolveField(f, ["HOURLY_RATE", "Hourly Rate", "HourlyRate"]));
   const monthlyHours = getNumber(resolveField(f, ["MONTHLY_HOURS", "Monthly Hours", "MonthlyHours"]));
   const advance = getNumber(resolveField(f, ["Advance", "ADVANCE", "advance"]));
@@ -243,6 +246,7 @@ export function mapRecordToWorker(record: AirtableRecord): Worker {
     email,
     phone,
     iban,
+    pit2,
     hourlyRate,
     monthlyHours,
     advance,

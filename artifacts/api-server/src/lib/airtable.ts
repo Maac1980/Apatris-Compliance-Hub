@@ -171,6 +171,7 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
     { name: "Advance", type: "number", options: { precision: 2 } },
     { name: "Penalties", type: "number", options: { precision: 2 } },
     { name: "IBAN", type: "singleLineText" },
+    { name: "PIT2", type: "checkbox" },
   ];
 
   const created: string[] = [];

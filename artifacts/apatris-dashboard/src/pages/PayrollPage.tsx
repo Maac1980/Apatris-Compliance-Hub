@@ -15,6 +15,7 @@ interface PayrollWorker {
   name: string;
   email: string | null;
   iban: string | null;
+  pit2: boolean;
   specialization: string;
   assignedSite: string | null;
   hourlyRate: number;
@@ -106,11 +107,13 @@ function IBANCell({ value, workerId, onSave }: {
 // ─── ZUS Rates Config ─────────────────────────────────────────────────────────
 interface ZUSRates {
   year: number;
-  emerytalneEmployee: number;  // %
-  rentoweEmployee: number;     // %
+  emerytalneEmployee: number;  // % pension
+  rentoweEmployee: number;     // % disability
+  chorobowe: number;           // % sickness (employee)
   zdrowotne: number;           // % of (gross - ZUS)
   kup: number;                 // % cost-of-obtaining
   pit: number;                 // % flat PIT rate
+  pit2Reduction: number;       // PLN monthly tax-free reduction (PIT-2 filers)
   updatedAt: string;
 }
 
@@ -118,16 +121,22 @@ const DEFAULT_RATES_2026: ZUSRates = {
   year: 2026,
   emerytalneEmployee: 9.76,
   rentoweEmployee: 1.5,
+  chorobowe: 2.45,
   zdrowotne: 9.0,
   kup: 20.0,
   pit: 12.0,
+  pit2Reduction: 300,
   updatedAt: "2026-01-01",
 };
 
 function loadZUSRates(): ZUSRates {
   try {
     const stored = localStorage.getItem("apatris_zus_rates");
-    if (stored) return JSON.parse(stored) as ZUSRates;
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<ZUSRates>;
+      // Merge with defaults so missing fields (e.g. chorobowe, pit2Reduction) are filled in
+      return { ...DEFAULT_RATES_2026, ...parsed };
+    }
   } catch {}
   return DEFAULT_RATES_2026;
 }
@@ -137,13 +146,15 @@ function saveZUSRates(rates: ZUSRates) {
 }
 
 // ─── Calculation ──────────────────────────────────────────────────────────────
-function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates): ZUSBreakdown {
-  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee) / 100;
+// pit2: worker has filed PIT-2 → monthly tax advance reduced by rates.pit2Reduction PLN
+function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates, pit2 = false): ZUSBreakdown {
+  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
   const employeeZUS = gross * zusRate;
   const healthInsurance = (gross - employeeZUS) * (rates.zdrowotne / 100);
   const kup = gross * (rates.kup / 100);
   const taxBase = Math.max(0, gross - employeeZUS - kup);
-  const estimatedTax = taxBase * (rates.pit / 100);
+  const grossTax = taxBase * (rates.pit / 100);
+  const estimatedTax = Math.max(0, grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome };
@@ -165,7 +176,7 @@ function calcSplit(
   const otherPIT = otherTaxBase * (rates.pit / 100);
   const otherNet = otherGross - otherPIT;
   // ZUS saved = what WOULD have been deducted if these hours were at Apatris
-  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee) / 100;
+  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
   const wouldBeZUS = otherGross * zusRate;
   const wouldBeHealth = (otherGross - wouldBeZUS) * (rates.zdrowotne / 100);
   const zusSaved = wouldBeZUS + wouldBeHealth;
@@ -278,21 +289,38 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
           )}
         </div>
 
-        <div className="bg-slate-800 rounded-xl p-4 mb-5 border border-slate-700">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-3">Employee Contributions</p>
+        <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-3">Employee ZUS Contributions</p>
           {field("Emerytalne (Pension)", "emerytalneEmployee", "Employee pension contribution")}
           {field("Rentowe (Disability)", "rentoweEmployee", "Employee disability contribution")}
-          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Deductions</p>
+          {field("Chorobowe (Sickness)", "chorobowe", "Employee sickness insurance — 2.45% standard")}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Health & Tax</p>
           {field("Zdrowotne (Health)", "zdrowotne", "Applied on (Gross − ZUS)")}
           {field("KUP (Cost of Work)", "kup", "Cost of obtaining income — applied on Gross")}
-          {field("PIT (Income Tax)", "pit", "Flat tax rate — no PIT-2 reduction")}
+          {field("PIT (Income Tax)", "pit", "Flat tax rate before PIT-2 reduction")}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">PIT-2 Declaration</p>
+          <div className="flex items-center justify-between gap-4 py-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white">PIT-2 Monthly Reduction</p>
+              <p className="text-[10px] text-gray-500 font-mono">Monthly tax advance reduction for workers who filed PIT-2 (300 PLN = 3,600/yr ÷ 12 at 12%)</p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <input
+                type="number" step="1" min="0"
+                value={draft.pit2Reduction ?? 300}
+                onChange={(e) => setDraft({ ...draft, pit2Reduction: parseFloat(e.target.value) || 0 })}
+                className="w-20 bg-slate-900 border border-slate-600 text-white rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-purple-500/60 text-right"
+              />
+              <span className="text-xs text-gray-400">PLN</span>
+            </div>
+          </div>
         </div>
 
         <div className="bg-slate-800/60 rounded-xl px-4 py-3 mb-5 border border-slate-700 text-xs font-mono">
-          <p className="text-gray-400 mb-1">Effective employee ZUS:</p>
+          <p className="text-gray-400 mb-1">Effective employee ZUS (all 3 contributions):</p>
           <p className="text-purple-300 font-bold text-sm">
-            {(draft.emerytalneEmployee + draft.rentoweEmployee).toFixed(2)}%
-            <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe, chorobowe excluded)</span>
+            {(draft.emerytalneEmployee + draft.rentoweEmployee + (draft.chorobowe ?? 2.45)).toFixed(2)}%
+            <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe + chorobowe)</span>
           </p>
         </div>
 
@@ -330,6 +358,7 @@ export default function PayrollPage() {
   const [showZUS, setShowZUS] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [splitHours, setSplitHours] = useState<Record<string, number>>({});
+  const [pit2Overrides, setPit2Overrides] = useState<Record<string, boolean>>({});
   const [zusRates, setZUSRates] = useState<ZUSRates>(loadZUSRates);
   const [showRatesModal, setShowRatesModal] = useState(false);
 
@@ -377,6 +406,14 @@ export default function PayrollPage() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ iban }),
     }).then(() => queryClient.invalidateQueries({ queryKey: ["payroll-current"] }));
+  };
+
+  const handleTogglePIT2 = (id: string, newVal: boolean) => {
+    setPit2Overrides((p) => ({ ...p, [id]: newVal }));
+    fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pit2: newVal }),
+    }).catch(() => {});
   };
 
   const commitMutation = useMutation({
@@ -448,7 +485,7 @@ export default function PayrollPage() {
   const zusTotal = useMemo(() => {
     if (!showZUS || !isAdmin) return null;
     return filteredWorkers.reduce((acc, w) => {
-      const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates);
+      const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, pit2Overrides[w.id] ?? w.pit2);
       return {
         zus: acc.zus + z.employeeZUS,
         health: acc.health + z.healthInsurance,
@@ -760,7 +797,8 @@ export default function PayrollPage() {
                   </tr>
                 ) : (
                   filteredWorkers.map((w) => {
-                    const zus = (showZUS && isAdmin) ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates) : null;
+                    const wPit2 = pit2Overrides[w.id] ?? w.pit2;
+                    const zus = (showZUS && isAdmin) ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, wPit2) : null;
                     const wSplitHrs = splitHours[w.id] ?? 0;
                     const split = (showZUS && showSplit && isAdmin && zus) ? calcSplit(zus.takeHome, wSplitHrs, w.hourlyRate, zusRates) : null;
                     return (
@@ -818,7 +856,20 @@ export default function PayrollPage() {
                             <span className="text-sm font-mono text-purple-400">− {fmt(zus.healthInsurance)}</span>
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <span className="text-sm font-mono text-purple-400">− {fmt(zus.estimatedTax)}</span>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-sm font-mono text-purple-400">− {fmt(zus.estimatedTax)}</span>
+                              <button
+                                onClick={() => handleTogglePIT2(w.id, !wPit2)}
+                                title={wPit2 ? "PIT-2 filed — click to remove" : "PIT-2 not filed — click to apply"}
+                                className={`flex items-center gap-1 text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full transition-all ${
+                                  wPit2
+                                    ? "bg-green-600/30 text-green-400 border border-green-500/40 hover:bg-green-600/50"
+                                    : "bg-slate-700 text-gray-600 border border-slate-600 hover:text-gray-400"
+                                }`}
+                              >
+                                PIT-2 {wPit2 ? "✓" : "○"}
+                              </button>
+                            </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>

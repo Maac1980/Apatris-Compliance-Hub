@@ -22,6 +22,7 @@ router.get("/payroll/current", async (_req, res) => {
       name: w.name,
       email: w.email ?? null,
       iban: w.iban ?? null,
+      pit2: w.pit2 ?? false,
       specialization: w.specialization,
       assignedSite: w.assignedSite,
       hourlyRate: w.hourlyRate ?? 0,
@@ -174,7 +175,7 @@ router.post("/payroll/commit", async (req, res) => {
 
       if (commitId) {
         const snapshotValues = snapshots.map((snap) => {
-          const zus  = snap.grossPayout * 0.1126;
+          const zus  = snap.grossPayout * 0.1371;  // 9.76 + 1.5 + 2.45 (incl. chorobowe)
           const hlth = (snap.grossPayout - zus) * 0.09;
           const kup  = snap.grossPayout * 0.20;
           const pit  = Math.max(0, (snap.grossPayout - zus - kup)) * 0.12;

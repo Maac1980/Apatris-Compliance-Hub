@@ -544,6 +544,8 @@ router.patch("/workers/:id", async (req, res) => {
     if (body.zusStatus !== undefined) airtableFields["ZUS Status"] = body.zusStatus || null;
     // Bank
     if (body.iban !== undefined) airtableFields["IBAN"] = body.iban ? String(body.iban).toUpperCase().replace(/\s/g, "") : null;
+    // PIT-2 declaration (checkbox)
+    if (body.pit2 !== undefined) airtableFields["PIT2"] = body.pit2 === true || body.pit2 === "true";
     // EN ISO 9606
     if (body.weldingProcess !== undefined) airtableFields["Welding Process"] = body.weldingProcess || null;
     if (body.weldingMaterialGroup !== undefined) airtableFields["Welding Material Group"] = body.weldingMaterialGroup || null;
