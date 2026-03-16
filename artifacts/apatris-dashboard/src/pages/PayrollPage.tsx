@@ -6,7 +6,7 @@ import {
   ArrowLeft, Calculator, CheckCircle2, Loader2, AlertTriangle,
   ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck,
   Search, Building2, Mail, Landmark, ToggleLeft, ToggleRight,
-  Settings, RefreshCw, Info, Edit2, X, Save
+  Settings, RefreshCw, Info, Edit2, X
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -541,7 +541,7 @@ export default function PayrollPage() {
             { label: "Total Hours", value: fmt(totals.hours), icon: Calculator, color: "text-purple-400" },
             { label: "Gross Payroll", value: `${fmt(totals.gross)} PLN`, icon: DollarSign, color: "text-blue-400" },
             { label: "Deductions", value: `${fmt(totals.advances + totals.penalties)} PLN`, icon: TrendingDown, color: "text-orange-400" },
-            { label: "Total Netto", value: `${fmt(totals.netto)} PLN`, icon: CheckCircle2, color: "text-green-400" },
+            { label: "Total Net Pay", value: `${fmt(totals.netto)} PLN`, icon: CheckCircle2, color: "text-green-400" },
           ].map((c) => (
             <div key={c.label} className="bg-slate-800 border border-slate-700 rounded-xl p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -683,7 +683,7 @@ export default function PayrollPage() {
                     {isAdmin ? <span className="text-red-400">Penalties ✎</span> : <span className="text-gray-600">Penalties</span>}
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "130px" }}>
-                    <span className="text-green-400">{showZUS && isAdmin ? "Take-Home" : "Final Netto"}</span>
+                    <span className="text-green-400">{showZUS && isAdmin ? "Take-Home" : "Final Net"}</span>
                   </th>
                 </tr>
               </thead>
@@ -919,7 +919,7 @@ export default function PayrollPage() {
               <div className="flex justify-between text-sm"><span className="text-gray-400">Gross Payroll:</span><span className="font-mono text-blue-400">{fmt(totals.gross)} PLN</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">Total Deductions:</span><span className="font-mono text-red-400">− {fmt(totals.advances + totals.penalties)} PLN</span></div>
               <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold">
-                <span className="text-gray-300">Final Netto Payout:</span>
+                <span className="text-gray-300">Final Net Payout:</span>
                 <span className="font-mono text-green-400">{fmt(totals.netto)} PLN</span>
               </div>
             </div>
@@ -958,7 +958,7 @@ export default function PayrollPage() {
                 </div>
               )}
               <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold">
-                <span className="text-gray-300">Total Netto Paid:</span>
+                <span className="text-gray-300">Total Net Paid:</span>
                 <span className="font-mono text-green-400">{fmt(commitResult.totalNettoPayout)} PLN</span>
               </div>
             </div>

@@ -63,7 +63,7 @@ const STATUS_CONFIG: Record<ComplianceStatus, { label: string; bg: string; borde
   },
 };
 
-const DOC_TYPES = ["TRC", "Passport", "BHP", "Visa", "Umowa", "Zezwolenie", "Contract", "Medical"];
+const DOC_TYPES = ["TRC", "Passport", "BHP", "Medical", "Contract", "Work Permit", "Visa", "Other"];
 
 function AddDocumentModal({
   onClose,

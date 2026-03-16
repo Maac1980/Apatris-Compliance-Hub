@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, History, BarChart3, Activity, MessageSquare,
+  ArrowLeft, History, BarChart3, Activity,
   ChevronDown, ChevronRight, Download, TrendingUp, Users,
-  DollarSign, CheckCircle2, AlertCircle, Clock, Mail, Phone
+  DollarSign, CheckCircle2, Clock, Mail, Phone
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -71,23 +71,6 @@ function Tab({ id, active, label, icon, onClick }: { id: string; active: boolean
     >
       {icon}{label}
     </button>
-  );
-}
-
-// ── Bar chart (CSS, no lib) ────────────────────────────────────────────────────
-function BarChart({ data, maxVal, color, label }: { data: number[]; maxVal: number; color: string; label: string }) {
-  return (
-    <div className="flex items-end gap-1 h-24">
-      {data.map((v, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-          <div
-            className={`w-full rounded-t transition-all ${color}`}
-            style={{ height: maxVal > 0 ? `${(v / maxVal) * 80}px` : "2px", minHeight: "2px" }}
-            title={`${label}: ${fmt(v)} PLN`}
-          />
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -187,7 +170,7 @@ function PayrollTab() {
                       <table className="w-full text-left" style={{ minWidth: "700px" }}>
                         <thead>
                           <tr className="border-b border-white/5">
-                            {["Worker", "Site", "Hours", "Rate", "Gross", "ZUS", "Health", "PIT", "Advance", "Penalties", "Netto"].map((h) => (
+                            {["Worker", "Site", "Hours", "Rate", "Gross", "ZUS", "Health", "PIT", "Advance", "Penalties", "Net Pay"].map((h) => (
                               <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">{h}</th>
                             ))}
                           </tr>
@@ -233,7 +216,6 @@ function AnalyticsTab() {
 
   const monthly = data?.monthly ?? [];
   const maxGross = Math.max(...monthly.map((m: any) => Number(m.total_gross)), 1);
-  const maxNetto = Math.max(...monthly.map((m: any) => Number(m.total_netto)), 1);
   const topWorkers = data?.topWorkers ?? [];
   const maxEarned = Math.max(...topWorkers.map((w: any) => Number(w.total_gross)), 1);
   const actions = data?.actionBreakdown ?? [];
