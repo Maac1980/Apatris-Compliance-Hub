@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, Calculator, CheckCircle2, Loader2, AlertTriangle,
   ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck,
-  Search, Building2, Mail, Landmark, ToggleLeft, ToggleRight
+  Search, Building2, Mail, Landmark, ToggleLeft, ToggleRight,
+  Settings, RefreshCw, Info, Edit2, X, Save
 } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
@@ -43,17 +44,47 @@ interface ZUSBreakdown {
   takeHome: number;
 }
 
-function calcZUS(gross: number, advance: number, penalties: number): ZUSBreakdown {
-  // Employee ZUS: emerytalne 9.76% + rentowe 1.5% = 11.26%
-  // Chorobowe (sick leave 2.45%) excluded — voluntary on umowa zlecenie
-  const employeeZUS = gross * 0.1126;
-  const healthInsurance = (gross - employeeZUS) * 0.09;
-  // KUP: 20% of gross (umowa zlecenie standard)
-  const kup = gross * 0.20;
-  // Tax base after ZUS and KUP
+// ─── ZUS Rates Config ─────────────────────────────────────────────────────────
+interface ZUSRates {
+  year: number;
+  emerytalneEmployee: number;  // %
+  rentoweEmployee: number;     // %
+  zdrowotne: number;           // % of (gross - ZUS)
+  kup: number;                 // % cost-of-obtaining
+  pit: number;                 // % flat PIT rate
+  updatedAt: string;
+}
+
+const DEFAULT_RATES_2026: ZUSRates = {
+  year: 2026,
+  emerytalneEmployee: 9.76,
+  rentoweEmployee: 1.5,
+  zdrowotne: 9.0,
+  kup: 20.0,
+  pit: 12.0,
+  updatedAt: "2026-01-01",
+};
+
+function loadZUSRates(): ZUSRates {
+  try {
+    const stored = localStorage.getItem("apatris_zus_rates");
+    if (stored) return JSON.parse(stored) as ZUSRates;
+  } catch {}
+  return DEFAULT_RATES_2026;
+}
+
+function saveZUSRates(rates: ZUSRates) {
+  localStorage.setItem("apatris_zus_rates", JSON.stringify(rates));
+}
+
+// ─── Calculation ──────────────────────────────────────────────────────────────
+function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates): ZUSBreakdown {
+  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee) / 100;
+  const employeeZUS = gross * zusRate;
+  const healthInsurance = (gross - employeeZUS) * (rates.zdrowotne / 100);
+  const kup = gross * (rates.kup / 100);
   const taxBase = Math.max(0, gross - employeeZUS - kup);
-  // PIT-2 reduction excluded — no declaration assumed for foreign/multi-job workers
-  const estimatedTax = taxBase * 0.12;
+  const estimatedTax = taxBase * (rates.pit / 100);
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome };
@@ -63,11 +94,12 @@ function fmt(n: number) {
   return n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ─── Editable Number Cell ─────────────────────────────────────────────────────
 function NumCell({
-  value, workerId, field, onSave, accent,
+  value, workerId, field, onSave, accent, disabled,
 }: {
   value: number; workerId: string; field: "hourlyRate" | "monthlyHours" | "advance" | "penalties";
-  onSave: (id: string, field: string, val: number) => void; accent?: string;
+  onSave: (id: string, field: string, val: number) => void; accent?: string; disabled?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
@@ -83,6 +115,10 @@ function NumCell({
     else setDraft(String(value));
   };
 
+  if (disabled) {
+    return <span className={`text-sm font-mono text-gray-600 block text-right px-2`}>{fmt(value)}</span>;
+  }
+
   if (editing) {
     return (
       <input
@@ -91,7 +127,7 @@ function NumCell({
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setEditing(false); setDraft(String(value)); } }}
         className="w-full bg-slate-700 border border-red-500/60 text-white rounded px-2 py-1 text-sm font-mono focus:outline-none text-right"
-        style={{ maxWidth: "90px" }}
+        style={{ minWidth: "80px", maxWidth: "110px" }}
       />
     );
   }
@@ -104,6 +140,95 @@ function NumCell({
   );
 }
 
+// ─── ZUS Rates Editor Modal ───────────────────────────────────────────────────
+function ZUSRatesModal({ rates, onSave, onClose }: {
+  rates: ZUSRates; onSave: (r: ZUSRates) => void; onClose: () => void;
+}) {
+  const currentYear = new Date().getFullYear();
+  const [draft, setDraft] = useState<ZUSRates>({ ...rates });
+
+  const field = (label: string, key: keyof ZUSRates, desc: string) => (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-slate-700/50 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-white">{label}</p>
+        <p className="text-[10px] text-gray-500 font-mono">{desc}</p>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <input
+          type="number" step="0.01" min="0" max="100"
+          value={draft[key] as number}
+          onChange={(e) => setDraft({ ...draft, [key]: parseFloat(e.target.value) || 0 })}
+          className="w-20 bg-slate-900 border border-slate-600 text-white rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-purple-500/60 text-right"
+        />
+        <span className="text-xs text-gray-400">%</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-purple-500/40 rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Settings className="w-4 h-4 text-purple-400" /> ZUS / PIT Rates
+            </h2>
+            <p className="text-xs text-gray-400 font-mono mt-0.5">Umowa Zlecenie — Update annually when ZUS changes</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs text-gray-400 font-mono block mb-1">Rate Year</label>
+          <input
+            type="number" min="2020" max="2099"
+            value={draft.year}
+            onChange={(e) => setDraft({ ...draft, year: parseInt(e.target.value) || currentYear })}
+            className="w-28 bg-slate-800 border border-slate-600 text-white rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:border-purple-500/60"
+          />
+          {draft.year !== currentYear && (
+            <p className="text-xs text-yellow-400 font-mono mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> Year differs from current year ({currentYear})
+            </p>
+          )}
+        </div>
+
+        <div className="bg-slate-800 rounded-xl p-4 mb-5 border border-slate-700">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-3">Employee Contributions</p>
+          {field("Emerytalne (Pension)", "emerytalneEmployee", "Employee pension contribution")}
+          {field("Rentowe (Disability)", "rentoweEmployee", "Employee disability contribution")}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Deductions</p>
+          {field("Zdrowotne (Health)", "zdrowotne", "Applied on (Gross − ZUS)")}
+          {field("KUP (Cost of Work)", "kup", "Cost of obtaining income — applied on Gross")}
+          {field("PIT (Income Tax)", "pit", "Flat tax rate — no PIT-2 reduction")}
+        </div>
+
+        <div className="bg-slate-800/60 rounded-xl px-4 py-3 mb-5 border border-slate-700 text-xs font-mono">
+          <p className="text-gray-400 mb-1">Effective employee ZUS:</p>
+          <p className="text-purple-300 font-bold text-sm">
+            {(draft.emerytalneEmployee + draft.rentoweEmployee).toFixed(2)}%
+            <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe, chorobowe excluded)</span>
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-bold transition-all">
+            Cancel
+          </button>
+          <button onClick={() => { onSave({ ...draft, updatedAt: new Date().toISOString().slice(0, 10) }); onClose(); }}
+            className="flex-1 py-2.5 bg-purple-700 hover:bg-purple-600 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+            <Save className="w-4 h-4" /> Save Rates
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function PayrollPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -111,12 +236,24 @@ export default function PayrollPage() {
   const isAdmin = user?.role === "Admin";
 
   const today = new Date();
+  const currentYear = today.getFullYear();
+
   const [selectedMonth, setSelectedMonth] = useState(format(today, "yyyy-MM"));
   const [showCommitModal, setShowCommitModal] = useState(false);
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
   const [pending, setPending] = useState<Record<string, Record<string, number>>>({});
   const [payrollSearch, setPayrollSearch] = useState("");
   const [showZUS, setShowZUS] = useState(false);
+  const [zusRates, setZUSRates] = useState<ZUSRates>(loadZUSRates);
+  const [showRatesModal, setShowRatesModal] = useState(false);
+
+  // Auto-prompt when new year and rates not updated
+  const ratesOutdated = zusRates.year < currentYear;
+
+  const handleSaveRates = (r: ZUSRates) => {
+    saveZUSRates(r);
+    setZUSRates(r);
+  };
 
   const { data, isLoading, refetch } = useQuery<{ workers: PayrollWorker[] }>({
     queryKey: ["payroll-current"],
@@ -183,7 +320,11 @@ export default function PayrollPage() {
   const filteredWorkers = useMemo(() => {
     if (!payrollSearch.trim()) return workers;
     const q = payrollSearch.toLowerCase();
-    return workers.filter((w) => w.name.toLowerCase().includes(q) || (w.assignedSite || "").toLowerCase().includes(q) || (w.specialization || "").toLowerCase().includes(q));
+    return workers.filter((w) =>
+      w.name.toLowerCase().includes(q) ||
+      (w.assignedSite || "").toLowerCase().includes(q) ||
+      (w.specialization || "").toLowerCase().includes(q)
+    );
   }, [workers, payrollSearch]);
 
   const totals = useMemo(() => ({
@@ -193,6 +334,20 @@ export default function PayrollPage() {
     penalties: workers.reduce((s, w) => s + w.penalties, 0),
     netto: workers.reduce((s, w) => s + w.finalNetto, 0),
   }), [workers]);
+
+  const zusTotal = useMemo(() => {
+    if (!showZUS || !isAdmin) return null;
+    return workers.reduce((acc, w) => {
+      const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates);
+      return {
+        zus: acc.zus + z.employeeZUS,
+        health: acc.health + z.healthInsurance,
+        tax: acc.tax + z.estimatedTax,
+        net: acc.net + z.netAfterTax,
+        take: acc.take + z.takeHome,
+      };
+    }, { zus: 0, health: 0, tax: 0, net: 0, take: 0 });
+  }, [workers, showZUS, isAdmin, zusRates]);
 
   const handleExportPDF = () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -215,61 +370,68 @@ export default function PayrollPage() {
       bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       styles: { cellPadding: 2.5 },
-      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right", fontStyle: "bold" } },
+      columnStyles: {
+        4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" },
+        7: { halign: "right" }, 8: { halign: "right", fontStyle: "bold" }
+      },
     });
 
-    const filename = `apatris-payroll-${selectedMonth}.pdf`;
-    const blob = doc.output("blob"); const url = URL.createObjectURL(blob);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = filename; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.href = url; a.download = `apatris-payroll-${selectedMonth}.pdf`;
+    a.target = "_blank"; a.rel = "noopener noreferrer";
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const handleBankExport = () => {
     const [year, month] = selectedMonth.split("-");
-    const monthNames: Record<string, string> = { "01": "Styczeń", "02": "Luty", "03": "Marzec", "04": "Kwiecień", "05": "Maj", "06": "Czerwiec", "07": "Lipiec", "08": "Sierpień", "09": "Wrzesień", "10": "Październik", "11": "Listopad", "12": "Grudzień" };
+    const monthNames: Record<string, string> = {
+      "01": "Styczeń", "02": "Luty", "03": "Marzec", "04": "Kwiecień",
+      "05": "Maj", "06": "Czerwiec", "07": "Lipiec", "08": "Sierpień",
+      "09": "Wrzesień", "10": "Październik", "11": "Listopad", "12": "Grudzień"
+    };
     const periodPL = `${monthNames[month] ?? month} ${year}`;
     const headers = ["Imię i Nazwisko", "Miejscowość / Budowa", "Kwota Netto (PLN)", "Tytuł Przelewu", "IBAN"];
     const rows = workers.filter((w) => w.finalNetto > 0).map((w) => [
-      w.name,
-      w.assignedSite || "—",
-      fmt(w.finalNetto),
-      `Wynagrodzenie za ${periodPL}`,
-      "",
+      w.name, w.assignedSite || "—", fmt(w.finalNetto), `Wynagrodzenie za ${periodPL}`, "",
     ]);
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `apatris-bank-transfers-${selectedMonth}.csv`; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.href = url; a.download = `apatris-bank-transfers-${selectedMonth}.csv`;
+    a.target = "_blank"; a.rel = "noopener noreferrer";
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
-  const thCls = "px-3 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-left whitespace-nowrap";
-  const tdCls = "px-3 py-2 align-middle";
+  // Column classes
+  const thCls = "px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap";
+  const tdCls = "px-4 py-3 align-middle";
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       {/* Header */}
-      <header className="h-16 border-b border-slate-700 bg-slate-900/95 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between"
+      <header className="h-16 border-b border-slate-700 bg-slate-900/95 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-4"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}>
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <button onClick={() => setLocation("/")} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-mono flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
+          <button onClick={() => setLocation("/")}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-mono flex-shrink-0">
             <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
           </button>
           <div className="w-px h-5 bg-white/10 flex-shrink-0" />
           <div className="flex items-center gap-2.5 min-w-0">
             <Calculator className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-bold tracking-wide text-white leading-none truncate">Monthly Payroll Run</h1>
+              <h1 className="text-sm sm:text-base font-bold tracking-wide text-white leading-none">Monthly Payroll Run</h1>
               <p className="text-[10px] text-red-400 font-mono uppercase tracking-widest hidden sm:block">Rozliczenie Miesięczne</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-gray-400" />
             <input
               type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}
@@ -298,8 +460,27 @@ export default function PayrollPage() {
         </div>
       </header>
 
-      <main className="p-4 sm:p-6 max-w-[1600px] mx-auto space-y-6">
-        {/* Summary cards */}
+      <main className="p-4 sm:p-6 max-w-[1800px] mx-auto space-y-5">
+
+        {/* ── Outdated Rates Alert ─────────────────────────────────────── */}
+        {isAdmin && ratesOutdated && (
+          <div className="flex items-start gap-3 px-4 py-3 bg-yellow-950/40 border border-yellow-500/40 rounded-xl">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-yellow-300 uppercase tracking-widest mb-0.5">ZUS Rates Outdated</p>
+              <p className="text-xs text-yellow-200/70 font-mono">
+                Your saved rates are for {zusRates.year}, but the current year is {currentYear}.
+                Please review and update ZUS rates for {currentYear}.
+              </p>
+            </div>
+            <button onClick={() => setShowRatesModal(true)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-yellow-700 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
+              <RefreshCw className="w-3 h-3" /> Update Rates
+            </button>
+          </div>
+        )}
+
+        {/* ── Summary Cards ────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
           {[
             { label: "Active Workers", value: workers.length.toString(), icon: Users, color: "text-blue-400" },
@@ -313,38 +494,66 @@ export default function PayrollPage() {
                 <c.icon className={`w-4 h-4 ${c.color} flex-shrink-0`} />
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-tight">{c.label}</p>
               </div>
-              <p className={`text-base sm:text-xl font-mono font-bold ${c.color}`}>{c.value}</p>
+              <p className={`text-base sm:text-xl font-mono font-bold ${c.color} truncate`}>{c.value}</p>
             </div>
           ))}
         </div>
 
-        {/* ZUS View banner */}
+        {/* ── ZUS View Banner ──────────────────────────────────────────── */}
         {showZUS && isAdmin && (
-          <div className="flex items-start gap-3 px-4 py-3 bg-purple-950/40 border border-purple-500/30 rounded-xl text-xs text-purple-300 font-mono">
+          <div className="flex flex-col sm:flex-row items-start gap-3 px-4 py-4 bg-purple-950/40 border border-purple-500/30 rounded-xl">
             <Calculator className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="text-purple-300 font-bold uppercase tracking-widest text-[10px]">
+                  ZUS / PIT Rates — {zusRates.year}
+                </span>
+                <span className="text-[10px] text-gray-500 font-mono">Last updated: {zusRates.updatedAt}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[10px] font-mono">
+                {[
+                  { label: "Emerytalne", value: `${zusRates.emerytalneEmployee}%` },
+                  { label: "Rentowe", value: `${zusRates.rentoweEmployee}%` },
+                  { label: "Zdrowotne", value: `${zusRates.zdrowotne}% (net base)` },
+                  { label: "KUP", value: `${zusRates.kup}%` },
+                  { label: "PIT flat", value: `${zusRates.pit}%` },
+                ].map((r) => (
+                  <div key={r.label} className="bg-purple-900/30 rounded-lg px-2.5 py-1.5 border border-purple-700/30">
+                    <p className="text-gray-500 text-[9px] uppercase tracking-widest">{r.label}</p>
+                    <p className="text-purple-200 font-bold">{r.value}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500 font-mono mt-2">
+                Effective ZUS: {(zusRates.emerytalneEmployee + zusRates.rentoweEmployee).toFixed(2)}% · Chorobowe excluded (voluntary) · ZUS base = Gross Salary (Rate × Hours)
+              </p>
+            </div>
+            <button onClick={() => setShowRatesModal(true)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purple-800/60 hover:bg-purple-700/60 border border-purple-500/40 text-purple-200 rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
+              <Edit2 className="w-3 h-3" /> Edit Rates
+            </button>
+          </div>
+        )}
+
+        {/* ── Coordinator Notice ───────────────────────────────────────── */}
+        {!isAdmin && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl">
+            <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
             <div>
-              <span className="text-purple-300 font-bold uppercase tracking-widest text-[10px] block mb-0.5">ZUS / PIT Breakdown — Umowa Zlecenie</span>
-              Employee ZUS 11.26% (emerytalne 9.76% + rentowe 1.5%) · Chorobowe excluded (voluntary) · Health Insurance 9% · Estimated PIT 12% — no PIT-2 reduction applied. Values are estimates; exact amounts depend on individual declarations.
+              <span className="text-blue-400 font-bold uppercase tracking-widest text-[10px]">Coordinator View</span>
+              <span className="text-white/20 mx-2">|</span>
+              <span className="text-xs text-blue-200/70 font-mono">Update worker hours by clicking the yellow Hours cell. Rate, advances, penalties and payroll close are Admin-only.</span>
             </div>
           </div>
         )}
 
-        {/* Coordinator notice */}
-        {!isAdmin && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-sm text-blue-300 font-mono">
-            <span className="text-blue-400 font-bold uppercase tracking-widest text-[10px]">Coordinator View</span>
-            <span className="text-white/20">|</span>
-            You can update worker hours by clicking the yellow Hours cell. Rate, advances, penalties and payroll close are Admin-only.
-          </div>
-        )}
-
-        {/* Payroll Grid */}
+        {/* ── Payroll Grid ─────────────────────────────────────────────── */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
-              {isAdmin ? (showZUS ? "Payroll Grid — ZUS Breakdown Mode" : "Payroll Grid — Click any value to edit") : "Hours Grid — Click the Hours cell to update"}
+              {isAdmin ? (showZUS ? "Payroll Grid — ZUS Breakdown" : "Payroll Grid — Click any value to edit") : "Hours Grid — Click Hours to update"}
             </p>
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-3 ml-auto flex-wrap">
               {saveMutation.isPending && (
                 <span className="flex items-center gap-1.5 text-xs text-yellow-400 font-mono">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
@@ -353,106 +562,167 @@ export default function PayrollPage() {
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
                 <input type="text" placeholder="Search workers…" value={payrollSearch} onChange={(e) => setPayrollSearch(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-600 text-white rounded-lg text-xs font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 w-40 sm:w-44" />
+                  className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-600 text-white rounded-lg text-xs font-mono focus:outline-none focus:border-red-500/60 placeholder:text-gray-600 w-44 sm:w-52" />
               </div>
-              {payrollSearch && <span className="text-[10px] font-mono text-gray-400">{filteredWorkers.length} / {workers.length}</span>}
+              {payrollSearch && (
+                <span className="text-[10px] font-mono text-gray-400">{filteredWorkers.length} / {workers.length}</span>
+              )}
             </div>
           </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ minWidth: showZUS ? "1200px" : "900px" }}>
+            <table className="w-full border-collapse" style={{ minWidth: showZUS && isAdmin ? "1300px" : "860px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>
-                  <th className={thCls}>Worker</th>
-                  <th className={thCls}>Spec / Site</th>
-                  <th className={`${thCls} text-right`}>{isAdmin ? "Rate (PLN/h)" : <span className="text-gray-600">Rate</span>}</th>
-                  <th className={`${thCls} text-right`}><span className="text-yellow-400">Hours ✎</span></th>
-                  <th className={`${thCls} text-right`}>{isAdmin ? "Gross (PLN)" : <span className="text-gray-600">Gross</span>}</th>
+                  <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>Worker</th>
+                  <th className={`${thCls} text-left`} style={{ minWidth: "140px" }}>Spec / Site</th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
+                    {isAdmin ? "Rate (PLN/h)" : <span className="text-gray-600">Rate</span>}
+                  </th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "100px" }}>
+                    <span className="text-yellow-400">Hours ✎</span>
+                  </th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}>
+                    {isAdmin ? "Gross (PLN)" : <span className="text-gray-600">Gross</span>}
+                  </th>
                   {showZUS && isAdmin && <>
-                    <th className={`${thCls} text-right text-purple-400`}>Emp. ZUS</th>
-                    <th className={`${thCls} text-right text-purple-400`}>Health Ins.</th>
-                    <th className={`${thCls} text-right text-purple-400`}>Est. PIT</th>
-                    <th className={`${thCls} text-right text-purple-300`}>Net After Tax</th>
+                    <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Emp. ZUS</th>
+                    <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
+                    <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
+                    <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Net After Tax</th>
                   </>}
-                  <th className={`${thCls} text-right`}>{isAdmin ? <span className="text-orange-400">Advances ✎</span> : <span className="text-gray-600">Advances</span>}</th>
-                  <th className={`${thCls} text-right`}>{isAdmin ? <span className="text-red-400">Penalties ✎</span> : <span className="text-gray-600">Penalties</span>}</th>
-                  <th className={`${thCls} text-right`}><span className="text-green-400">{showZUS && isAdmin ? "Take-Home" : "Final Netto"}</span></th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
+                    {isAdmin ? <span className="text-orange-400">Advances ✎</span> : <span className="text-gray-600">Advances</span>}
+                  </th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
+                    {isAdmin ? <span className="text-red-400">Penalties ✎</span> : <span className="text-gray-600">Penalties</span>}
+                  </th>
+                  <th className={`${thCls} text-right`} style={{ minWidth: "130px" }}>
+                    <span className="text-green-400">{showZUS && isAdmin ? "Take-Home" : "Final Netto"}</span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+
+              <tbody className="divide-y divide-slate-700/40">
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}><td colSpan={showZUS ? 12 : 8} className="px-4 py-4"><div className="h-4 bg-white/5 rounded animate-pulse" /></td></tr>
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={showZUS && isAdmin ? 11 : 7} className="px-5 py-4">
+                        <div className="h-4 bg-white/5 rounded animate-pulse" />
+                      </td>
+                    </tr>
                   ))
                 ) : filteredWorkers.length === 0 ? (
-                  <tr><td colSpan={showZUS ? 12 : 8} className="px-4 py-10 text-center text-gray-500 font-mono text-sm">{payrollSearch ? "No workers match your search" : "No workers found"}</td></tr>
+                  <tr>
+                    <td colSpan={showZUS && isAdmin ? 11 : 7} className="px-5 py-12 text-center text-gray-500 font-mono text-sm">
+                      {payrollSearch ? "No workers match your search" : "No workers found"}
+                    </td>
+                  </tr>
                 ) : (
                   filteredWorkers.map((w) => {
-                    const zus = showZUS ? calcZUS(w.grossPayout, w.advance, w.penalties) : null;
+                    const zus = (showZUS && isAdmin) ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates) : null;
                     return (
-                      <tr key={w.id} className="hover:bg-slate-700/30 transition-colors group">
+                      <tr key={w.id} className="hover:bg-slate-700/25 transition-colors group">
+                        {/* Worker */}
                         <td className={tdCls}>
-                          <p className="text-sm font-semibold text-white">{w.name}</p>
-                          {w.email && <p className="text-[10px] text-gray-500 font-mono flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3" />{w.email}</p>}
+                          <p className="text-sm font-semibold text-white leading-tight whitespace-nowrap">{w.name}</p>
+                          {w.email && (
+                            <p className="text-[10px] text-gray-500 font-mono flex items-center gap-1 mt-0.5">
+                              <Mail className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[160px]">{w.email}</span>
+                            </p>
+                          )}
                         </td>
+                        {/* Spec / Site */}
                         <td className={tdCls}>
-                          <span className="text-xs font-mono text-gray-400">{w.specialization || "—"}</span>
-                          {w.assignedSite && <span className="ml-1.5 text-xs text-red-400">{w.assignedSite}</span>}
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-mono text-gray-400 whitespace-nowrap">{w.specialization || "—"}</span>
+                            {w.assignedSite && (
+                              <span className="text-[10px] text-red-400 whitespace-nowrap">{w.assignedSite}</span>
+                            )}
+                          </div>
                         </td>
+                        {/* Rate */}
                         <td className={`${tdCls} text-right`}>
                           {isAdmin
                             ? <NumCell value={w.hourlyRate} workerId={w.id} field="hourlyRate" onSave={handleSave} accent="text-blue-400" />
-                            : <span className="text-sm font-mono text-gray-600">{fmt(w.hourlyRate)}</span>}
+                            : <span className="text-sm font-mono text-gray-600 block text-right">{fmt(w.hourlyRate)}</span>}
                         </td>
+                        {/* Hours */}
                         <td className={`${tdCls} text-right`}>
                           <NumCell value={w.monthlyHours} workerId={w.id} field="monthlyHours" onSave={handleSave} accent="text-yellow-400" />
                         </td>
+                        {/* Gross */}
                         <td className={`${tdCls} text-right`}>
-                          <span className={`text-sm font-mono ${isAdmin ? "text-blue-400" : "text-gray-600"}`}>{fmt(w.grossPayout)}</span>
+                          <span className={`text-sm font-mono font-semibold ${isAdmin ? "text-blue-400" : "text-gray-600"}`}>
+                            {fmt(w.grossPayout)}
+                          </span>
                         </td>
+                        {/* ZUS columns */}
                         {showZUS && isAdmin && zus && <>
-                          <td className={`${tdCls} text-right`}><span className="text-sm font-mono text-purple-400">− {fmt(zus.employeeZUS)}</span></td>
-                          <td className={`${tdCls} text-right`}><span className="text-sm font-mono text-purple-400">− {fmt(zus.healthInsurance)}</span></td>
-                          <td className={`${tdCls} text-right`}><span className="text-sm font-mono text-purple-400">− {fmt(zus.estimatedTax)}</span></td>
-                          <td className={`${tdCls} text-right`}><span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span></td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono text-purple-400">− {fmt(zus.employeeZUS)}</span>
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono text-purple-400">− {fmt(zus.healthInsurance)}</span>
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono text-purple-400">− {fmt(zus.estimatedTax)}</span>
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
+                          </td>
                         </>}
+                        {/* Advances */}
                         <td className={`${tdCls} text-right`}>
                           {isAdmin
                             ? <NumCell value={w.advance} workerId={w.id} field="advance" onSave={handleSave} accent="text-orange-400" />
-                            : <span className="text-sm font-mono text-gray-600">{fmt(w.advance)}</span>}
+                            : <span className="text-sm font-mono text-gray-600 block text-right">{fmt(w.advance)}</span>}
                         </td>
+                        {/* Penalties */}
                         <td className={`${tdCls} text-right`}>
                           {isAdmin
                             ? <NumCell value={w.penalties} workerId={w.id} field="penalties" onSave={handleSave} accent="text-red-400" />
-                            : <span className="text-sm font-mono text-gray-600">{fmt(w.penalties)}</span>}
+                            : <span className="text-sm font-mono text-gray-600 block text-right">{fmt(w.penalties)}</span>}
                         </td>
+                        {/* Take-home / Netto */}
                         <td className={`${tdCls} text-right`}>
-                          <span className={`text-sm font-mono font-bold ${(showZUS && zus ? zus.takeHome : w.finalNetto) < 0 ? "text-red-400" : "text-green-400"}`}>
-                            {fmt(showZUS && zus ? zus.takeHome : w.finalNetto)} PLN
-                          </span>
+                          <div>
+                            <span className={`text-sm font-mono font-bold ${(showZUS && zus ? zus.takeHome : w.finalNetto) < 0 ? "text-red-400" : "text-green-400"}`}>
+                              {fmt(showZUS && zus ? zus.takeHome : w.finalNetto)}
+                            </span>
+                            <span className="text-[10px] text-gray-500 ml-1 font-mono">PLN</span>
+                          </div>
                         </td>
                       </tr>
                     );
                   })
                 )}
               </tbody>
+
+              {/* Totals Footer */}
               {filteredWorkers.length > 0 && (
-                <tfoot className="bg-slate-900/80 border-t border-slate-600">
+                <tfoot className="bg-slate-900/80 border-t-2 border-slate-600">
                   <tr>
-                    <td className={`${tdCls} text-xs font-bold text-gray-400 uppercase tracking-widest`} colSpan={showZUS && isAdmin ? 5 : 3}>
-                      TOTALS — {filteredWorkers.length}{payrollSearch && workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
+                    <td className={`${tdCls} text-xs font-bold text-gray-300 uppercase tracking-widest`} colSpan={2}>
+                      TOTALS — {filteredWorkers.length}
+                      {payrollSearch && workers.length !== filteredWorkers.length ? ` of ${workers.length}` : ""} workers
                     </td>
-                    {showZUS && isAdmin && <td colSpan={4} className={`${tdCls} text-right text-xs font-mono text-purple-400`}>ZUS est. included above</td>}
+                    <td className={`${tdCls} text-right text-sm font-mono text-gray-500`}>—</td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-yellow-400`}>{fmt(totals.hours)}</td>
-                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-blue-400`}>{fmt(totals.gross)} PLN</td>
-                    {showZUS && isAdmin && <>
-                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>— PLN</td>
-                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>— PLN</td>
-                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>— PLN</td>
-                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-300`}>— PLN</td>
+                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-blue-400`}>{fmt(totals.gross)}</td>
+                    {showZUS && isAdmin && zusTotal && <>
+                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.zus)}</td>
+                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.health)}</td>
+                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-400`}>− {fmt(zusTotal.tax)}</td>
+                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-300`}>{fmt(zusTotal.net)}</td>
                     </>}
-                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-orange-400`}>{fmt(totals.advances)} PLN</td>
-                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-red-400`}>{fmt(totals.penalties)} PLN</td>
-                    <td className={`${tdCls} text-right text-lg font-mono font-bold text-green-400`}>{fmt(totals.netto)} PLN</td>
+                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-orange-400`}>{fmt(totals.advances)}</td>
+                    <td className={`${tdCls} text-right text-sm font-mono font-bold text-red-400`}>{fmt(totals.penalties)}</td>
+                    <td className={`${tdCls} text-right`}>
+                      <span className="text-base font-mono font-bold text-green-400">{fmt(totals.netto)}</span>
+                      <span className="text-xs text-gray-500 ml-1 font-mono">PLN</span>
+                    </td>
                   </tr>
                 </tfoot>
               )}
@@ -460,32 +730,43 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* Commit to Ledger */}
+        {/* ── Close Month ──────────────────────────────────────────────── */}
         {isAdmin && (
           <div className="border border-red-500/30 bg-red-950/20 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-red-400" /> Close Month & Save to Ledger
               </h2>
-              <p className="text-xs text-gray-400 font-mono mt-1">Zamknij Miesiąc — Saves a permanent snapshot for each worker and resets Hours, Advances & Penalties to 0.</p>
-              <p className="text-xs text-yellow-400 font-mono mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> This action cannot be undone. Ensure all values are correct before committing.</p>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                Zamknij Miesiąc — Saves a permanent snapshot for each worker and resets Hours, Advances & Penalties to 0.
+              </p>
+              <p className="text-xs text-yellow-400 font-mono mt-1 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> This action cannot be undone. Ensure all values are correct before committing.
+              </p>
               {workers.filter((w) => w.email).length > 0 && (
-                <p className="text-xs text-blue-400 font-mono mt-1 flex items-center gap-1"><Mail className="w-3 h-3" /> Payslip emails will be sent to {workers.filter((w) => w.email).length} workers with email addresses.</p>
+                <p className="text-xs text-blue-400 font-mono mt-1 flex items-center gap-1">
+                  <Mail className="w-3 h-3" /> Payslip emails will be sent to {workers.filter((w) => w.email).length} workers with email addresses.
+                </p>
               )}
             </div>
             <button onClick={() => setShowCommitModal(true)} disabled={workers.length === 0}
-              className="flex-shrink-0 flex items-center gap-2 px-5 sm:px-6 py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold uppercase tracking-wider text-sm transition-all shadow-[0_0_20px_rgba(196,30,24,0.4)] whitespace-nowrap">
+              className="flex-shrink-0 flex items-center gap-2 px-5 sm:px-6 py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold uppercase tracking-wider text-sm transition-all shadow-[0_0_20px_rgba(196,30,24,0.3)] whitespace-nowrap">
               <FileCheck className="w-4 h-4" /> Close Month — {selectedMonth}
             </button>
           </div>
         )}
       </main>
 
-      {/* Commit Confirmation Modal */}
+      {/* ── ZUS Rates Modal ──────────────────────────────────────────────── */}
+      {showRatesModal && (
+        <ZUSRatesModal rates={zusRates} onSave={handleSaveRates} onClose={() => setShowRatesModal(false)} />
+      )}
+
+      {/* ── Commit Confirmation Modal ─────────────────────────────────── */}
       {showCommitModal && !commitResult && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-red-500/40 rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
@@ -499,36 +780,54 @@ export default function PayrollPage() {
               <div className="flex justify-between text-sm"><span className="text-gray-400">Total Hours:</span><span className="font-mono text-yellow-400">{fmt(totals.hours)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">Gross Payroll:</span><span className="font-mono text-blue-400">{fmt(totals.gross)} PLN</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">Total Deductions:</span><span className="font-mono text-red-400">− {fmt(totals.advances + totals.penalties)} PLN</span></div>
-              <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold"><span className="text-gray-300">Final Netto Payout:</span><span className="font-mono text-green-400">{fmt(totals.netto)} PLN</span></div>
+              <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold">
+                <span className="text-gray-300">Final Netto Payout:</span>
+                <span className="font-mono text-green-400">{fmt(totals.netto)} PLN</span>
+              </div>
             </div>
-            <p className="text-xs text-yellow-400 mb-5 font-mono">After committing, Hours, Advances and Penalties will be reset to 0 for all workers.</p>
+            <p className="text-xs text-yellow-400 mb-5 font-mono">
+              After committing, Hours, Advances and Penalties will be reset to 0 for all workers.
+            </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowCommitModal(false)} className="flex-1 py-2.5 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-bold transition-all">Cancel</button>
+              <button onClick={() => setShowCommitModal(false)}
+                className="flex-1 py-2.5 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-bold transition-all">
+                Cancel
+              </button>
               <button onClick={() => { commitMutation.mutate(); setShowCommitModal(false); }} disabled={commitMutation.isPending}
                 className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                {commitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />} Confirm & Commit
+                {commitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />}
+                Confirm & Commit
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success Modal */}
+      {/* ── Success Modal ─────────────────────────────────────────────── */}
       {commitResult && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-green-500/40 rounded-2xl shadow-2xl max-w-md w-full p-6 text-center">
             <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-1">Month Closed Successfully</h2>
             <p className="text-sm text-gray-400 font-mono mb-5">{commitResult.monthYear} — Ledger updated</p>
-            <div className="space-y-2 mb-6 p-4 bg-slate-800 rounded-xl text-left">
+            <div className="space-y-2 mb-6 p-4 bg-slate-800 rounded-xl text-left border border-slate-700">
               <div className="flex justify-between text-sm"><span className="text-gray-400">Workers Processed:</span><span className="font-mono text-white">{commitResult.workersProcessed}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">Snapshots Saved:</span><span className="font-mono text-green-400">{commitResult.snapshotsSaved}</span></div>
               {commitResult.payslipsSent > 0 && (
-                <div className="flex justify-between text-sm"><span className="text-gray-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Payslips Emailed:</span><span className="font-mono text-blue-400">{commitResult.payslipsSent} workers</span></div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Payslips Emailed:</span>
+                  <span className="font-mono text-blue-400">{commitResult.payslipsSent} workers</span>
+                </div>
               )}
-              <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold"><span className="text-gray-300">Total Netto Paid:</span><span className="font-mono text-green-400">{fmt(commitResult.totalNettoPayout)} PLN</span></div>
+              <div className="flex justify-between text-base border-t border-slate-600 pt-2 mt-2 font-bold">
+                <span className="text-gray-300">Total Netto Paid:</span>
+                <span className="font-mono text-green-400">{fmt(commitResult.totalNettoPayout)} PLN</span>
+              </div>
             </div>
-            <button onClick={() => setCommitResult(null)} className="w-full py-2.5 bg-green-700 hover:bg-green-600 text-white rounded-xl font-bold transition-all">Done</button>
+            <button onClick={() => setCommitResult(null)}
+              className="w-full py-2.5 bg-green-700 hover:bg-green-600 text-white rounded-xl font-bold transition-all">
+              Done
+            </button>
           </div>
         </div>
       )}
