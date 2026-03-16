@@ -143,6 +143,18 @@ export default function Dashboard() {
     if (user?.assignedSite) setSite(user.assignedSite);
   }, [user?.assignedSite]);
 
+  // QR deep-link: ?worker=<id> auto-opens the profile panel
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wid = params.get("worker");
+    if (wid) {
+      setSelectedWorkerId(wid);
+      // Clean URL without page reload
+      const clean = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, "", clean);
+    }
+  }, []);
+
   const { data: workersData, isLoading: isLoadingWorkers } = useGetWorkers({ 
     search: search || undefined, 
     specialization: specialization || undefined, 

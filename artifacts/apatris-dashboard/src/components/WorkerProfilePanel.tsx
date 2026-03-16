@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
   XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
-  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator, Link, CheckSquare, Square
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator, Link, CheckSquare, Square, QrCode
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -234,6 +235,92 @@ function UploadButton({ workerId, docType, label, accent = "red" }: { workerId: 
   );
 }
 
+/* ─── QR Code Modal ─────────────────────────────────────────────────────────── */
+function QRModal({ worker, onClose }: { worker: any; onClose: () => void }) {
+  const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+  const url = `${window.location.origin}${base}?worker=${encodeURIComponent(worker.id)}`;
+
+  function downloadQR() {
+    const svg = document.getElementById("worker-qr-svg");
+    if (!svg) return;
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([serialized], { type: "image/svg+xml" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${worker.name.replace(/\s+/g, "_")}_QR.svg`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 100);
+  }
+
+  const cs = worker.complianceStatus as string;
+  const statusColor = cs === "critical" || cs === "non-compliant" ? "#ef4444" : cs === "warning" ? "#eab308" : "#22c55e";
+  const statusLabel = cs === "critical" || cs === "non-compliant" ? "CRITICAL" : cs === "warning" ? "WARNING" : "COMPLIANT";
+
+  const docs: [string, string | null | undefined][] = [
+    ["TRC", worker.trcExpiry], ["Passport", worker.passportExpiry],
+    ["Medical", worker.medicalExamExpiry], ["BHP", worker.bhpExpiry],
+  ];
+  function daysLeft(d: string | null | undefined): string {
+    if (!d) return "—";
+    const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+    if (diff < 0) return "EXPIRED";
+    return `${diff}d`;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-slate-900 border border-white/15 rounded-2xl shadow-2xl w-full max-w-xs p-6 flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+        {/* Title */}
+        <div className="w-full flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 font-mono">Worker QR</span>
+          <button onClick={onClose} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-full transition-colors"><X className="w-4 h-4 text-gray-300" /></button>
+        </div>
+
+        {/* QR Code */}
+        <div className="bg-white p-3 rounded-xl shadow-inner">
+          <QRCodeSVG id="worker-qr-svg" value={url} size={180} bgColor="#ffffff" fgColor="#0f172a" level="M" />
+        </div>
+
+        {/* Worker summary */}
+        <div className="w-full bg-slate-800/60 rounded-xl border border-white/10 p-3 space-y-2">
+          <p className="font-bold text-white text-sm font-mono text-center">{worker.name}</p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs font-mono text-gray-400">{worker.specialization || "No Spec"}</span>
+            {worker.assignedSite && (
+              <span className="text-[10px] font-bold text-red-300 bg-red-600/20 border border-red-500/30 rounded px-2 py-0.5">{worker.assignedSite}</span>
+            )}
+          </div>
+          <div className="flex items-center justify-center">
+            <span className="text-xs font-bold px-3 py-0.5 rounded-full border font-mono" style={{ color: statusColor, borderColor: statusColor, backgroundColor: `${statusColor}18` }}>{statusLabel}</span>
+          </div>
+          {/* Document expiry grid */}
+          <div className="grid grid-cols-2 gap-1 mt-1">
+            {docs.map(([label, expiry]) => {
+              const dl = daysLeft(expiry);
+              const isExpired = dl === "EXPIRED";
+              const isSoon = !isExpired && expiry && Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000) <= 30;
+              return (
+                <div key={label} className="flex items-center justify-between bg-slate-900/60 rounded px-2 py-1">
+                  <span className="text-[10px] font-mono text-gray-500">{label}</span>
+                  <span className={`text-[10px] font-bold font-mono ${isExpired ? "text-red-400" : isSoon ? "text-yellow-400" : "text-green-400"}`}>{dl}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hint */}
+        <p className="text-[10px] text-gray-500 font-mono text-center leading-relaxed">Scan to open this worker's full profile including documents, payroll & compliance status.</p>
+
+        {/* Download button */}
+        <button onClick={downloadQR} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-red-700 hover:bg-red-600 border border-red-500 text-white text-xs font-bold uppercase tracking-wider transition-colors">
+          <Download className="w-3.5 h-3.5" /> Download QR
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── PIP Inspection Modal ─────────────────────────────────────────────────── */
 function PIPModal({ worker, onClose }: { worker: any; onClose: () => void }) {
   const today = format(new Date(), "dd.MM.yyyy");
@@ -368,6 +455,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
 
   const [isEditing, setIsEditing] = useState(false);
   const [showPIP, setShowPIP] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Core fields
@@ -673,6 +761,9 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider border ${copiedLink ? "bg-green-600 border-green-500 text-white" : "bg-slate-700 hover:bg-slate-600 border-slate-500 text-gray-300"}`}
                 >
                   <Link className="w-3.5 h-3.5" /> {copiedLink ? "Copied!" : "Upload Link"}
+                </button>
+                <button onClick={() => setShowQR(true)} title="Show QR code for this worker" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
+                  <QrCode className="w-3.5 h-3.5" /> QR
                 </button>
                 <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
                   <ClipboardCheck className="w-3.5 h-3.5" /> PIP
@@ -1218,6 +1309,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
       </div>
 
       {showPIP && worker && <PIPModal worker={worker} onClose={() => setShowPIP(false)} />}
+      {showQR && worker && <QRModal worker={worker} onClose={() => setShowQR(false)} />}
     </>
   );
 }
