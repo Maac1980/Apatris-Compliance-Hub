@@ -1,4 +1,5 @@
 import { Router } from "express";
+import PDFDocument from "pdfkit";
 import { fetchAllRecords, updateRecord } from "../lib/airtable.js";
 import { mapRecordToWorker } from "../lib/compliance.js";
 import {
@@ -239,6 +240,126 @@ router.get("/payroll/history", async (_req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
+  }
+});
+
+// ─── GET /payroll/export/bank-csv ────────────────────────────────────────────
+router.get("/payroll/export/bank-csv", async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    const [year, mon] = month.split("-");
+    const monthNames: Record<string, string> = {
+      "01": "Styczen", "02": "Luty", "03": "Marzec", "04": "Kwiecien",
+      "05": "Maj", "06": "Czerwiec", "07": "Lipiec", "08": "Sierpien",
+      "09": "Wrzesien", "10": "Pazdziernik", "11": "Listopad", "12": "Grudzien",
+    };
+    const periodPL = `${monthNames[mon] ?? mon} ${year}`;
+
+    const records = await fetchAllRecords();
+    const workers = records.map(mapRecordToWorker);
+
+    const headers = ["Imie i Nazwisko", "Miejscowosc / Budowa", "Kwota Netto (PLN)", "Tytul Przelewu", "IBAN"];
+    const rows = workers
+      .filter((w) => (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) - (w.advance ?? 0) - (w.penalties ?? 0) > 0)
+      .map((w) => {
+        const gross = (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0);
+        const netto = gross - (w.advance ?? 0) - (w.penalties ?? 0);
+        return [
+          w.name,
+          w.assignedSite || "—",
+          netto.toFixed(2).replace(".", ","),
+          `Wynagrodzenie za ${periodPL}`,
+          "",
+        ];
+      });
+
+    const csvContent = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+
+    const filename = `apatris-bank-transfers-${month}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    res.send("\uFEFF" + csvContent);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ─── GET /payroll/export/pdf ──────────────────────────────────────────────────
+router.get("/payroll/export/pdf", async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    const now = new Date();
+
+    const records = await fetchAllRecords();
+    const workers = records.map(mapRecordToWorker);
+
+    const fmtPLN = (n: number) =>
+      n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const rows = workers.map((w) => {
+      const rate = w.hourlyRate ?? 0;
+      const hours = w.monthlyHours ?? 0;
+      const advance = w.advance ?? 0;
+      const penalties = w.penalties ?? 0;
+      const gross = rate * hours;
+      const netto = gross - advance - penalties;
+      return { name: w.name, spec: w.specialization || "—", site: w.assignedSite || "—", rate, hours, gross, advance, penalties, netto };
+    });
+
+    const totalHours  = rows.reduce((s, r) => s + r.hours, 0);
+    const totalGross  = rows.reduce((s, r) => s + r.gross, 0);
+    const totalAdv    = rows.reduce((s, r) => s + r.advance, 0);
+    const totalPen    = rows.reduce((s, r) => s + r.penalties, 0);
+    const totalNetto  = rows.reduce((s, r) => s + r.netto, 0);
+
+    const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+    const filename = `apatris-payroll-${month}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(18).fillColor("#C41E18").text("APATRIS SP. Z O.O. — PAYROLL SUMMARY", 40, 35);
+    doc.fontSize(9).fillColor("#666666")
+      .text(`Period: ${month}   |   Generated: ${now.toLocaleDateString("pl-PL")} ${now.toLocaleTimeString("pl-PL")}`, 40, 62)
+      .text("ul. Chłodna 51, 00-867 Warszawa  ·  NIP: 5252828706  ·  KRS: 0000849614", 40, 75);
+
+    // Table header
+    const cols = [200, 70, 90, 55, 70, 70, 70, 70, 90];
+    const headers2 = ["Worker", "Spec", "Site", "Rate", "Hours", "Gross (PLN)", "Advance", "Penalties", "Netto (PLN)"];
+    let y = 100;
+    doc.rect(40, y, 762, 18).fill("#C41E18");
+    doc.fontSize(8).fillColor("#ffffff");
+    let x = 40;
+    headers2.forEach((h, i) => { doc.text(h, x + 3, y + 5, { width: cols[i], align: i >= 3 ? "right" : "left" }); x += cols[i]; });
+
+    y += 18;
+    rows.forEach((r, idx) => {
+      if (y > 530) { doc.addPage(); y = 40; }
+      doc.rect(40, y, 762, 16).fill(idx % 2 === 0 ? "#f8fafc" : "#ffffff");
+      doc.fontSize(8).fillColor("#1e293b");
+      x = 40;
+      const cells = [r.name, r.spec, r.site, fmtPLN(r.rate), String(r.hours), fmtPLN(r.gross), fmtPLN(r.advance), fmtPLN(r.penalties), fmtPLN(r.netto)];
+      cells.forEach((c, i) => { doc.text(c, x + 3, y + 4, { width: cols[i] - 3, align: i >= 3 ? "right" : "left" }); x += cols[i]; });
+      y += 16;
+    });
+
+    // Totals row
+    doc.rect(40, y, 762, 18).fill("#1e293b");
+    doc.fontSize(8).fillColor("#ffffff");
+    x = 40;
+    const totCells = ["TOTALS", "", "", "", String(totalHours), fmtPLN(totalGross), fmtPLN(totalAdv), fmtPLN(totalPen), fmtPLN(totalNetto)];
+    totCells.forEach((c, i) => { doc.text(c, x + 3, y + 5, { width: cols[i] - 3, align: i >= 3 ? "right" : "left" }); x += cols[i]; });
+
+    doc.end();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    if (!res.headersSent) res.status(500).json({ error: message });
   }
 });
 

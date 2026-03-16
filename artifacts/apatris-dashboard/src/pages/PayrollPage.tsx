@@ -9,8 +9,6 @@ import {
   Settings, RefreshCw, Info, Edit2, X, Save
 } from "lucide-react";
 import { format } from "date-fns";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 interface PayrollWorker {
   id: string;
@@ -384,61 +382,13 @@ export default function PayrollPage() {
   }, [workers, showZUS, isAdmin, zusRates]);
 
   const handleExportPDF = () => {
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(196, 30, 24);
-    doc.text("APATRIS SP. Z O.O. — PAYROLL SUMMARY", 14, 18);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100, 100, 100);
-    doc.text(`Period: ${selectedMonth}  |  Generated: ${format(new Date(), "dd.MM.yyyy HH:mm")}  |  By: ${user?.name}`, 14, 26);
-
-    autoTable(doc, {
-      startY: 32,
-      head: [["Worker", "Spec", "Site", "Rate (PLN/h)", "Hours", "Gross (PLN)", "Advances", "Penalties", "Final Netto (PLN)"]],
-      body: workers.map((w) => [
-        w.name, w.specialization || "—", w.assignedSite || "—",
-        fmt(w.hourlyRate), String(w.monthlyHours),
-        fmt(w.grossPayout), fmt(w.advance), fmt(w.penalties), fmt(w.finalNetto),
-      ]),
-      foot: [["TOTALS", "", "", "", fmt(totals.hours), fmt(totals.gross), fmt(totals.advances), fmt(totals.penalties), fmt(totals.netto)]],
-      headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold", fontSize: 8 },
-      footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      styles: { cellPadding: 2.5 },
-      columnStyles: {
-        4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" },
-        7: { halign: "right" }, 8: { halign: "right", fontStyle: "bold" }
-      },
-    });
-
-    const blob = doc.output("blob");
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `apatris-payroll-${selectedMonth}.pdf`;
-    a.target = "_blank"; a.rel = "noopener noreferrer";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.open(`${window.location.origin}${base}/api/payroll/export/pdf?month=${selectedMonth}`, "_blank");
   };
 
   const handleBankExport = () => {
-    const [year, month] = selectedMonth.split("-");
-    const monthNames: Record<string, string> = {
-      "01": "Styczeń", "02": "Luty", "03": "Marzec", "04": "Kwiecień",
-      "05": "Maj", "06": "Czerwiec", "07": "Lipiec", "08": "Sierpień",
-      "09": "Wrzesień", "10": "Październik", "11": "Listopad", "12": "Grudzień"
-    };
-    const periodPL = `${monthNames[month] ?? month} ${year}`;
-    const headers = ["Imię i Nazwisko", "Miejscowość / Budowa", "Kwota Netto (PLN)", "Tytuł Przelewu", "IBAN"];
-    const rows = workers.filter((w) => w.finalNetto > 0).map((w) => [
-      w.name, w.assignedSite || "—", fmt(w.finalNetto), `Wynagrodzenie za ${periodPL}`, "",
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `apatris-bank-transfers-${selectedMonth}.csv`;
-    a.target = "_blank"; a.rel = "noopener noreferrer";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.open(`${window.location.origin}${base}/api/payroll/export/bank-csv?month=${selectedMonth}`, "_blank");
   };
 
   // Column classes
