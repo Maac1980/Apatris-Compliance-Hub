@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, UserPlus, Loader2, CheckCircle2 } from "lucide-react";
+import { X, UserPlus, Loader2, Landmark } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -64,12 +64,14 @@ export function AddWorkerModal({ isOpen, onClose, onCreated }: Props) {
   const [nip, setNip] = useState("");
   const [visaType, setVisaType] = useState("");
   const [zusStatus, setZusStatus] = useState("");
+  // Bank
+  const [iban, setIban] = useState("");
 
   const reset = () => {
     setName(""); setSpecialization(""); setAssignedSite(""); setEmail(""); setPhone("");
     setTrcExpiry(""); setPassportExpiry(""); setBhpExpiry(""); setContractEndDate("");
     setWorkPermitExpiry(""); setMedicalExamExpiry(""); setOswiadczenieExpiry(""); setUdtCertExpiry("");
-    setPesel(""); setNip(""); setVisaType(""); setZusStatus("");
+    setPesel(""); setNip(""); setVisaType(""); setZusStatus(""); setIban("");
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -96,6 +98,7 @@ export function AddWorkerModal({ isOpen, onClose, onCreated }: Props) {
       if (nip.trim()) body.nip = nip.trim();
       if (visaType) body.visaType = visaType;
       if (zusStatus) body.zusStatus = zusStatus;
+      if (iban.trim()) body.iban = iban.trim().toUpperCase().replace(/\s/g, "");
 
       const res = await fetch(`${import.meta.env.BASE_URL}api/workers`, {
         method: "POST",
@@ -232,6 +235,24 @@ export function AddWorkerModal({ isOpen, onClose, onCreated }: Props) {
                   <option value="">— Select —</option>
                   {VISA_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
+              </Field>
+            </div>
+
+            <SectionTitle>Bank Details</SectionTitle>
+            <div className="grid grid-cols-1 gap-3">
+              <Field label="IBAN (Bank Account Number)">
+                <div className="relative">
+                  <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={iban}
+                    onChange={(e) => setIban(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                    placeholder="e.g. PL61109010140000071219812874"
+                    className={`${inputCls} pl-9`}
+                    maxLength={34}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-600 font-mono mt-1.5">Used for automatic bank transfer CSV generation. Spaces are auto-removed.</p>
               </Field>
             </div>
 

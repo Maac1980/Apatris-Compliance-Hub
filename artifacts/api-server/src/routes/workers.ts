@@ -429,6 +429,7 @@ router.post("/workers", async (req, res) => {
     if (body.nip) fields["NIP"] = body.nip;
     if (body.visaType) fields["Visa Type"] = body.visaType;
     if (body.zusStatus) fields["ZUS Status"] = body.zusStatus;
+    if (body.iban) fields["IBAN"] = String(body.iban).toUpperCase().replace(/\s/g, "");
 
     const record = await createRecord(fields);
     const worker = mapRecordToWorker(record);
@@ -541,6 +542,8 @@ router.patch("/workers/:id", async (req, res) => {
     if (body.nip !== undefined) airtableFields["NIP"] = body.nip || null;
     if (body.visaType !== undefined) airtableFields["Visa Type"] = body.visaType || null;
     if (body.zusStatus !== undefined) airtableFields["ZUS Status"] = body.zusStatus || null;
+    // Bank
+    if (body.iban !== undefined) airtableFields["IBAN"] = body.iban ? String(body.iban).toUpperCase().replace(/\s/g, "") : null;
     // EN ISO 9606
     if (body.weldingProcess !== undefined) airtableFields["Welding Process"] = body.weldingProcess || null;
     if (body.weldingMaterialGroup !== undefined) airtableFields["Welding Material Group"] = body.weldingMaterialGroup || null;

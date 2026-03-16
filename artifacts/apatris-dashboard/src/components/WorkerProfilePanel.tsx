@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   X, Mail, Phone, FileText, Download, Upload, CheckCircle2, Loader2, Pencil, Save,
   XCircle, MapPin, ChevronDown, Plus, MessageSquare, AlertTriangle, Shield,
-  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator, Link, CheckSquare, Square, QrCode
+  CreditCard, Flame, ClipboardCheck, ChevronRight, Printer, Trash2, History, Calculator, Link, CheckSquare, Square, QrCode, Landmark
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { format, parseISO } from "date-fns";
@@ -479,6 +479,8 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [editNip, setEditNip] = useState("");
   const [editVisaType, setEditVisaType] = useState("");
   const [editZusStatus, setEditZusStatus] = useState("");
+  // Bank
+  const [editIban, setEditIban] = useState("");
   // EN ISO 9606
   const [editWorkPermitExpiry, setEditWorkPermitExpiry] = useState("");
   // Welding cert
@@ -633,6 +635,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
       setEditNip(w.nip || "");
       setEditVisaType(w.visaType || "");
       setEditZusStatus(w.zusStatus || "");
+      setEditIban(w.iban || w.IBAN || "");
       setEditWorkPermitExpiry(w.workPermitExpiry || "");
       setEditWeldingProcess(w.weldingProcess || "");
       setEditWeldingMaterialGroup(w.weldingMaterialGroup || "");
@@ -677,6 +680,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
         nip: editNip,
         visaType: editVisaType,
         zusStatus: editZusStatus,
+        iban: editIban,
         weldingProcess: editWeldingProcess,
         weldingMaterialGroup: editWeldingMaterialGroup,
         weldingThickness: editWeldingThickness,
@@ -916,6 +920,24 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                           <option value="">— Select —</option>
                           {VISA_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
+                      </div>
+                    </div>
+                  </EditSection>
+
+                  {/* Bank Details */}
+                  <EditSection title="Bank Details" icon={Landmark} defaultOpen={!!editIban}>
+                    <div className="space-y-3">
+                      <div>
+                        <label className={labelCls}>IBAN (Bank Account Number)</label>
+                        <input
+                          type="text"
+                          value={editIban}
+                          onChange={(e) => setEditIban(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                          placeholder="e.g. PL61109010140000071219812874"
+                          className={inputCls}
+                          maxLength={34}
+                        />
+                        <p className="text-[10px] text-gray-600 font-mono mt-1">Used for bank transfer CSV. No spaces needed — they are auto-removed.</p>
                       </div>
                     </div>
                   </EditSection>
@@ -1185,6 +1207,20 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       {(worker as any).workPermitExpiry && <DocRow label="Work Permit" date={(worker as any).workPermitExpiry} />}
                     </div>
                   </div>
+
+                  {/* Bank Details — view mode */}
+                  {((worker as any).iban || (worker as any).IBAN) && (
+                    <div>
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Bank Details</h3>
+                      <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                        <FRow
+                          label="IBAN"
+                          value={(worker as any).iban || (worker as any).IBAN}
+                          accent="blue"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Identity & Legal */}
                   {((worker as any).pesel || (worker as any).nip || (worker as any).zusStatus || (worker as any).visaType || (worker as any).rodoConsentDate || (worker as any).pupFiledDate) && (
