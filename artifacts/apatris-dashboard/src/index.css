@@ -335,3 +335,139 @@
   .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after { inset: -1px; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   HYBRID APP SHELL — GLOBAL PHYSICS LOCK
+   ═══════════════════════════════════════════════════════════════════ */
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  touch-action: none;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollable content wrapper */
+.app-content-scroll {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Horizontal table swipe (Payroll Ledger) */
+.app-table-scroll {
+  overflow-x: auto;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.app-table-scroll::-webkit-scrollbar { height: 4px; }
+.app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   DESKTOP SIDEBAR (≥ 769px)
+   ═══════════════════════════════════════════════════════════════════ */
+.app-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 250px;
+  height: 100vh;
+  z-index: 200;
+  background: #0f172a;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    4px 0 32px rgba(0, 0, 0, 0.55),
+    2px 0 8px  rgba(196, 30, 24, 0.07),
+    inset -1px 0 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+/* Offset page content for sidebar */
+body.has-app-shell .app-shell-page {
+  margin-left: 250px;
+  width: calc(100vw - 250px);
+  max-width: calc(100vw - 250px);
+}
+
+/* Hide page-header nav buttons — sidebar handles navigation */
+body.has-app-shell .app-shell-nav-btns {
+  display: none !important;
+}
+
+/* Expand tables to full width on desktop */
+@media (min-width: 769px) {
+  body.has-app-shell .app-shell-page .app-table-scroll table {
+    min-width: 100%;
+  }
+}
+
+/* Bottom bar hidden on desktop */
+.app-bottom-bar {
+  display: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE BOTTOM BAR (≤ 768px)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Sidebar hidden on mobile */
+  .app-sidebar {
+    display: none !important;
+  }
+
+  /* Remove desktop page offset */
+  body.has-app-shell .app-shell-page {
+    margin-left: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  /* Bottom bar visible on mobile */
+  .app-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    z-index: 200;
+    background: #0f172a;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    align-items: stretch;
+    justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow:
+      0 -4px 32px rgba(0, 0, 0, 0.55),
+      0 -1px 8px  rgba(196, 30, 24, 0.08),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Push scrollable content above the bottom bar */
+  body.has-app-shell .app-shell-page main,
+  body.has-app-shell .app-shell-page .overflow-y-auto {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Horizontal scroll on mobile tables */
+  .app-table-scroll {
+    touch-action: pan-x pan-y;
+  }
+}

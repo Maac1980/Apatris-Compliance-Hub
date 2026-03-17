@@ -337,7 +337,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-screen bg-slate-900 text-foreground flex flex-col relative overflow-hidden">
+    <div className="app-shell-page h-screen bg-slate-900 text-foreground flex flex-col relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/8 blur-[140px] rounded-full" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full" />
@@ -374,47 +374,50 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Compliance Alerts */}
-          <button
-            onClick={() => setLocation("/compliance-alerts")}
-            className="flex items-center gap-2 px-4 py-2 border border-orange-600/60 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]"
-            title="Compliance Alerts"
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span className="hidden sm:inline">{t("header.compliance")}</span>
-          </button>
-
-          {/* Monthly Payroll Run — Admin + Coordinator */}
-          <button
-            onClick={() => setLocation("/payroll")}
-            className="flex items-center gap-2 px-4 py-2 border border-green-600/60 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-            title="Monthly Payroll Run"
-          >
-            <Calculator className="w-4 h-4" />
-            <span className="hidden sm:inline">Payroll</span>
-          </button>
-
-          {/* History & Analytics */}
-          <button
-            onClick={() => setLocation("/history")}
-            className="flex items-center gap-2 px-4 py-2 border border-purple-600/60 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(147,51,234,0.3)]"
-            title="History & Analytics"
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">History</span>
-          </button>
-
-          {/* Admin Settings — Admin only */}
-          {isAdmin && (
+          {/* Navigation buttons — hidden by AppShell CSS (sidebar/bottom bar handle routing) */}
+          <div className="app-shell-nav-btns flex items-center gap-2">
+            {/* Compliance Alerts */}
             <button
-              onClick={() => setLocation("/admin-settings")}
-              className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
-              title="Admin Settings"
+              onClick={() => setLocation("/compliance-alerts")}
+              className="flex items-center gap-2 px-4 py-2 border border-orange-600/60 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]"
+              title="Compliance Alerts"
             >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("header.admin")}</span>
+              <ClipboardList className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("header.compliance")}</span>
             </button>
-          )}
+
+            {/* Monthly Payroll Run — Admin + Coordinator */}
+            <button
+              onClick={() => setLocation("/payroll")}
+              className="flex items-center gap-2 px-4 py-2 border border-green-600/60 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+              title="Monthly Payroll Run"
+            >
+              <Calculator className="w-4 h-4" />
+              <span className="hidden sm:inline">Payroll</span>
+            </button>
+
+            {/* History & Analytics */}
+            <button
+              onClick={() => setLocation("/history")}
+              className="flex items-center gap-2 px-4 py-2 border border-purple-600/60 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+              title="History & Analytics"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+
+            {/* Admin Settings — Admin only */}
+            {isAdmin && (
+              <button
+                onClick={() => setLocation("/admin-settings")}
+                className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
+                title="Admin Settings"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("header.admin")}</span>
+              </button>
+            )}
+          </div>
 
           {/* ⚡ AI Smart Upload — Admin only */}
           {isAdmin && (

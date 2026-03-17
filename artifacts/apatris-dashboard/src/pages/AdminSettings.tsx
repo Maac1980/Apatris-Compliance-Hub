@@ -271,7 +271,7 @@ export default function AdminSettings() {
   ];
 
   return (
-    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="app-shell-page h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       <header
         className="h-16 border-b border-slate-700 bg-slate-900/95 backdrop-blur-xl sticky top-0 z-30 px-6 flex items-center justify-between"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}

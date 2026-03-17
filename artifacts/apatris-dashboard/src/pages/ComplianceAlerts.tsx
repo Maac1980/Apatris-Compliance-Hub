@@ -245,7 +245,7 @@ export default function ComplianceAlerts() {
   const criticalCount = summary.red + summary.expired;
 
   return (
-    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="app-shell-page h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
 
       {/* Header */}
       <header

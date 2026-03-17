@@ -573,7 +573,7 @@ export default function PayrollPage() {
   const tdCls = "px-4 py-3 align-middle";
 
   return (
-    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="app-shell-page h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-700 bg-slate-900/95 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-4"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}>
@@ -997,7 +997,7 @@ export default function PayrollPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          <div className="app-table-scroll">
             <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "2050px" : showZUS && isAdmin ? "1650px" : "1060px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>

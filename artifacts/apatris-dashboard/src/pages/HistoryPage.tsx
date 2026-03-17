@@ -489,7 +489,7 @@ export default function HistoryPage() {
   const [tab, setTab] = useState<"payroll" | "analytics" | "activity" | "messages">("payroll");
 
   return (
-    <div className="h-screen bg-slate-950 text-white flex flex-col overflow-hidden">
+    <div className="app-shell-page h-screen bg-slate-950 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
