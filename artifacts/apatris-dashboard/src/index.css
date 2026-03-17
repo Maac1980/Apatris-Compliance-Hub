@@ -538,3 +538,12 @@ body.has-app-shell .app-shell-nav-btns {
 @media (min-width: 769px) {
   .mobile-hide-logo-text { display: block; }
 }
+
+/* ── Defensive fix: mx-auto on a flex-column child prevents stretch,
+   causing the element to collapse to fit-content width.
+   Explicitly set width:100% on all main/content areas inside the
+   app content wrapper so the table container always fills the pane.   ── */
+.app-content-wrapper main,
+.app-content-wrapper .app-content-scroll {
+  width: 100%;
+}

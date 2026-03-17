@@ -628,7 +628,7 @@ export default function PayrollPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-[1800px] mx-auto space-y-5">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-[1800px] mx-auto w-full space-y-5">
 
         {/* ── Outdated Rates Alert ─────────────────────────────────────── */}
         {isAdmin && ratesOutdated && (
