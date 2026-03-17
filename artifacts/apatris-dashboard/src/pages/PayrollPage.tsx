@@ -160,14 +160,17 @@ function saveZUSRates(rates: ZUSRates) {
 
 // ─── Calculation ──────────────────────────────────────────────────────────────
 // pit2: worker has filed PIT-2 → monthly tax advance reduced by rates.pit2Reduction PLN
+// Health insurance (7.75% of health base) is credited against the tax advance — 2026 standard.
 function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates, pit2 = false): ZUSBreakdown {
   const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
   const employeeZUS = gross * zusRate;
-  const healthInsurance = (gross - employeeZUS) * (rates.zdrowotne / 100);
+  const healthBase = gross - employeeZUS;
+  const healthInsurance = healthBase * (rates.zdrowotne / 100);
+  const healthTaxCredit = healthBase * 0.0775; // 7.75% of health base credited against PIT advance
   const kup = gross * (rates.kup / 100);
   const taxBase = Math.max(0, gross - employeeZUS - kup);
   const grossTax = taxBase * (rates.pit / 100);
-  const estimatedTax = Math.max(0, grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
+  const estimatedTax = Math.max(0, grossTax - healthTaxCredit - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net

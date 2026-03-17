@@ -326,11 +326,13 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       const gross    = rate * hours;
 
       const empZUS     = gross * EMP_ZUS_RATE;
-      const health     = (gross - empZUS) * HEALTH_RATE;
+      const healthBase = gross - empZUS;
+      const health     = healthBase * HEALTH_RATE;
+      const healthTaxCredit = healthBase * 0.0775; // 7.75% health credit against PIT advance (2026)
       const kup        = gross * KUP_RATE;
       const taxBase    = Math.max(0, gross - empZUS - kup);
       const grossTax   = taxBase * PIT_RATE;
-      const pit        = Math.max(0, grossTax - (w.pit2 ? PIT2_REDUCTION : 0));
+      const pit        = Math.max(0, grossTax - healthTaxCredit - (w.pit2 ? PIT2_REDUCTION : 0));
       const netAfterTax = Math.max(0, gross - empZUS - health - pit);
       const netPay     = netAfterTax - advance - penalties;
 
