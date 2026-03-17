@@ -129,7 +129,7 @@ const DEFAULT_RATES_2026: ZUSRates = {
   year: 2026,
   emerytalneEmployee: 9.76,
   rentoweEmployee: 1.5,
-  chorobowe: 2.45,
+  chorobowe: 0,   // voluntary for umowa zlecenie — not included per 2026 standard
   zdrowotne: 9.0,
   kup: 20.0,
   pit: 12.0,
@@ -147,7 +147,10 @@ function loadZUSRates(): ZUSRates {
     const stored = localStorage.getItem("apatris_zus_rates");
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<ZUSRates>;
-      // Merge with defaults so missing fields (e.g. chorobowe, pit2Reduction) are filled in
+      // Migrate: if chorobowe is still the old 2.45 default, reset to 0 (2026 standard — voluntary, not included)
+      if (parsed.chorobowe === 2.45) {
+        parsed.chorobowe = 0;
+      }
       return { ...DEFAULT_RATES_2026, ...parsed };
     }
   } catch {}
@@ -160,17 +163,16 @@ function saveZUSRates(rates: ZUSRates) {
 
 // ─── Calculation ──────────────────────────────────────────────────────────────
 // pit2: worker has filed PIT-2 → monthly tax advance reduced by rates.pit2Reduction PLN
-// Health insurance (7.75% of health base) is credited against the tax advance — 2026 standard.
+// chorobowe defaults to 0 — voluntary for umowa zlecenie (not selected per 2026 standard)
 function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates, pit2 = false): ZUSBreakdown {
-  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
+  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 0)) / 100;
   const employeeZUS = gross * zusRate;
   const healthBase = gross - employeeZUS;
   const healthInsurance = healthBase * (rates.zdrowotne / 100);
-  const healthTaxCredit = healthBase * 0.0775; // 7.75% of health base credited against PIT advance
   const kup = gross * (rates.kup / 100);
   const taxBase = Math.max(0, gross - employeeZUS - kup);
   const grossTax = taxBase * (rates.pit / 100);
-  const estimatedTax = Math.max(0, grossTax - healthTaxCredit - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
+  const estimatedTax = Math.max(0, grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net

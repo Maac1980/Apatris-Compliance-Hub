@@ -298,7 +298,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
 
     // Default ZUS/PIT rates (2026 Poland Umowa Zlecenie)
-    const EMP_ZUS_RATE   = 0.1371; // 9.76 + 1.5 + 2.45
+    const EMP_ZUS_RATE   = 0.1126; // 9.76 + 1.5 (no chorobowe — voluntary, not included per 2026 standard)
     const HEALTH_RATE    = 0.09;   // applied on (gross - empZUS)
     const KUP_RATE       = 0.20;   // cost of obtaining income
     const PIT_RATE       = 0.12;
@@ -328,11 +328,10 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       const empZUS     = gross * EMP_ZUS_RATE;
       const healthBase = gross - empZUS;
       const health     = healthBase * HEALTH_RATE;
-      const healthTaxCredit = healthBase * 0.0775; // 7.75% health credit against PIT advance (2026)
       const kup        = gross * KUP_RATE;
       const taxBase    = Math.max(0, gross - empZUS - kup);
       const grossTax   = taxBase * PIT_RATE;
-      const pit        = Math.max(0, grossTax - healthTaxCredit - (w.pit2 ? PIT2_REDUCTION : 0));
+      const pit        = Math.max(0, grossTax - (w.pit2 ? PIT2_REDUCTION : 0));
       const netAfterTax = Math.max(0, gross - empZUS - health - pit);
       const netPay     = netAfterTax - advance - penalties;
 
