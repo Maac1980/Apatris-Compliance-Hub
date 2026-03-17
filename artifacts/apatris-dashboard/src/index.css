@@ -337,44 +337,57 @@
 }
 
 
+
 /* ═══════════════════════════════════════════════════════════════════
-   HYBRID APP SHELL — GLOBAL PHYSICS LOCK
+   HYBRID APP SHELL — SAFE PWA LOCK
+   Removes position:fixed and touch-action:none which blocked all
+   touch-based scrolling. Uses overscroll-behavior instead.
    ═══════════════════════════════════════════════════════════════════ */
-html, body {
-  height: 100vh;
-  width: 100vw;
+html {
+  height: 100%;
   overflow: hidden;
-  position: fixed;
+}
+body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  touch-action: none;
+  overflow: hidden;
+  overscroll-behavior: none;   /* kills iOS bounce/elastic scroll */
 }
-
 #root {
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Scrollable content wrapper */
+/* Every main scroll container scrolls vertically via touch */
+main,
 .app-content-scroll {
-  height: 100%;
-  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
 }
 
-/* Horizontal table swipe (Payroll Ledger) */
+/* Horizontal table swipe — scrollbar styled, touch-friendly */
 .app-table-scroll {
   overflow-x: auto;
-  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;   /* allow both axes so vertical still works on iOS */
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
 }
 .app-table-scroll::-webkit-scrollbar { height: 4px; }
-.app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+
+/* No visible scrollbar but still scrollable (header button bar) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -388,7 +401,7 @@ html, body {
   height: 100vh;
   z-index: 200;
   background: #0f172a;
-  border-right: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.07);
   display: flex;
   flex-direction: column;
   box-shadow:
@@ -398,29 +411,20 @@ html, body {
   overflow: hidden;
 }
 
-/* Offset page content for sidebar */
+/* Page offset — sidebar takes 250px on left */
 body.has-app-shell .app-shell-page {
   margin-left: 250px;
   width: calc(100vw - 250px);
   max-width: calc(100vw - 250px);
 }
 
-/* Hide page-header nav buttons — sidebar handles navigation */
+/* Hide page header nav buttons — sidebar handles navigation */
 body.has-app-shell .app-shell-nav-btns {
   display: none !important;
 }
 
-/* Expand tables to full width on desktop */
-@media (min-width: 769px) {
-  body.has-app-shell .app-shell-page .app-table-scroll table {
-    min-width: 100%;
-  }
-}
-
 /* Bottom bar hidden on desktop */
-.app-bottom-bar {
-  display: none;
-}
+.app-bottom-bar { display: none; }
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -429,18 +433,16 @@ body.has-app-shell .app-shell-nav-btns {
 @media (max-width: 768px) {
 
   /* Sidebar hidden on mobile */
-  .app-sidebar {
-    display: none !important;
-  }
+  .app-sidebar { display: none !important; }
 
-  /* Remove desktop page offset */
+  /* No page offset on mobile */
   body.has-app-shell .app-shell-page {
     margin-left: 0 !important;
     width: 100vw !important;
     max-width: 100vw !important;
   }
 
-  /* Bottom bar visible on mobile */
+  /* Bottom bar */
   .app-bottom-bar {
     display: flex;
     position: fixed;
@@ -450,7 +452,7 @@ body.has-app-shell .app-shell-nav-btns {
     height: 70px;
     z-index: 200;
     background: #0f172a;
-    border-top: 1px solid rgba(255,255,255,0.07);
+    border-top: 1px solid rgba(255,255,255,0.08);
     align-items: stretch;
     justify-content: space-around;
     padding-bottom: env(safe-area-inset-bottom);
@@ -466,8 +468,10 @@ body.has-app-shell .app-shell-nav-btns {
     padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 
-  /* Horizontal scroll on mobile tables */
-  .app-table-scroll {
-    touch-action: pan-x pan-y;
-  }
+  /* Dashboard logo text — hide on mobile to save header space */
+  .mobile-hide-logo-text { display: none; }
+}
+
+@media (min-width: 769px) {
+  .mobile-hide-logo-text { display: block; }
 }

@@ -348,21 +348,22 @@ export default function Dashboard() {
 
       {/* Header */}
       <header
-        className="h-16 border-b border-slate-700 bg-slate-900/95 backdrop-blur-xl sticky top-0 z-30 px-6 flex items-center justify-between"
+        className="h-14 sm:h-16 border-b border-slate-700 bg-slate-900/95 backdrop-blur-xl sticky top-0 z-30 px-3 sm:px-6 flex items-center gap-3"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}
       >
-        <div className="flex items-center gap-3">
+        {/* Logo — always visible; subtitle text hidden on mobile */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <div
-            className="w-12 h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
             style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 12px rgba(196,30,24,0.2)" }}
             aria-label="Apatris Logo"
           >
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="30" height="30" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z" fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
               <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900" fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
             </svg>
           </div>
-          <div>
+          <div className="mobile-hide-logo-text">
             <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
               {t("header.title")}
             </h1>
@@ -374,8 +375,10 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-2">
+
+        {/* Action buttons — horizontally scrollable on mobile so nothing is clipped */}
+        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-max ml-auto pr-1">
           {/* Navigation buttons — hidden by AppShell CSS (sidebar/bottom bar handle routing) */}
           <div className="app-shell-nav-btns flex items-center gap-2">
             {/* Compliance Alerts */}
@@ -505,7 +508,8 @@ export default function Dashboard() {
               <LogOut className="w-5 h-5" />
             </button>
           </div>
-        </div>
+        </div>{/* end inner flex row */}
+        </div>{/* end scrollable wrapper */}
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
