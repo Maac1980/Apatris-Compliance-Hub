@@ -539,6 +539,11 @@ export default function PayrollPage() {
   }, [filteredWorkers, showZUS, isAdmin, zusRates]);
 
   const triggerDownload = (url: string, filename: string) => {
+    const isIOSPWA = (window.navigator as any).standalone === true;
+    if (isIOSPWA) {
+      window.open(url, "_blank");
+      return;
+    }
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
@@ -568,14 +573,14 @@ export default function PayrollPage() {
   const tdCls = "px-4 py-3 align-middle";
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-700 bg-slate-900/95 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-4"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}>
         <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
           <button onClick={() => setLocation("/")}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-mono flex-shrink-0">
-            <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
+            <ArrowLeft className="w-4 h-4" /> <span>Dashboard</span>
           </button>
           <div className="w-px h-5 bg-white/10 flex-shrink-0" />
           <div className="flex items-center gap-2.5 min-w-0">
@@ -623,7 +628,7 @@ export default function PayrollPage() {
         </div>
       </header>
 
-      <main className="p-4 sm:p-6 max-w-[1800px] mx-auto space-y-5">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-[1800px] mx-auto space-y-5">
 
         {/* ── Outdated Rates Alert ─────────────────────────────────────── */}
         {isAdmin && ratesOutdated && (

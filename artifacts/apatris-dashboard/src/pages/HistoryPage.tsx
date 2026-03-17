@@ -489,7 +489,7 @@ export default function HistoryPage() {
   const [tab, setTab] = useState<"payroll" | "analytics" | "activity" | "messages">("payroll");
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="h-screen bg-slate-950 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
@@ -511,7 +511,7 @@ export default function HistoryPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="flex-1 overflow-y-auto max-w-6xl mx-auto px-4 py-6 space-y-6 w-full">
         {/* Tabs */}
         <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-900/60 rounded-xl border border-white/5 w-fit">
           <Tab id="payroll"   active={tab==="payroll"}   label="Payroll"   icon={<DollarSign className="w-4 h-4" />}     onClick={() => setTab("payroll")} />

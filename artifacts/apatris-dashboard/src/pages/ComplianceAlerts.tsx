@@ -245,7 +245,7 @@ export default function ComplianceAlerts() {
   const criticalCount = summary.red + summary.expired;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
 
       {/* Header */}
       <header
@@ -296,7 +296,7 @@ export default function ComplianceAlerts() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
 
         {/* Instant alert banner — fires when a document is manually added in warning/critical zone */}
         {instantAlert && (

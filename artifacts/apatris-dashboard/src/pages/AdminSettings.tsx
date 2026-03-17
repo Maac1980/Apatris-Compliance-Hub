@@ -271,7 +271,7 @@ export default function AdminSettings() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       <header
         className="h-16 border-b border-slate-700 bg-slate-900/95 backdrop-blur-xl sticky top-0 z-30 px-6 flex items-center justify-between"
         style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}
@@ -301,7 +301,7 @@ export default function AdminSettings() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 lg:p-10 max-w-5xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto p-6 lg:p-10 max-w-5xl mx-auto w-full">
         {/* Tabs */}
         <div className="flex gap-1 mb-8 bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit">
           {TABS.map(({ id, label, icon: Icon }) => (

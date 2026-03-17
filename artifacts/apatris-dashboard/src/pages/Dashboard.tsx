@@ -337,7 +337,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-foreground flex flex-col relative">
+    <div className="h-screen bg-slate-900 text-foreground flex flex-col relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/8 blur-[140px] rounded-full" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full" />
@@ -491,7 +491,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard title={t("stats.totalWorkforce")} value={stats?.total || "0"} icon={Users} />
