@@ -1211,8 +1211,9 @@ export default function Dashboard() {
 
       {/* ── Mobile Install Banner ─────────────────────────────────────────── */}
       {isMobile && !isInstalledPWA && !mobileBannerDismissed && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
-          <div className="bg-slate-900 border-t border-lime-500/40 shadow-2xl px-4 pt-4 pb-6">
+        <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="bg-slate-900 border-t border-lime-500/40 shadow-2xl px-4 pt-4 pb-5">
             {/* Header row */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -1229,7 +1230,7 @@ export default function Dashboard() {
                   setMobileBannerDismissed(true);
                   localStorage.setItem("apatris-install-dismissed", "1");
                 }}
-                className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg"
+                className="p-2 text-gray-500 active:text-white transition-colors rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1245,7 +1246,7 @@ export default function Dashboard() {
                   setMobileBannerDismissed(true);
                   localStorage.setItem("apatris-install-dismissed", "1");
                 }}
-                className="w-full py-3 bg-lime-500 hover:bg-lime-400 text-black font-bold font-mono uppercase text-sm rounded-xl tracking-wide transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-lime-500 active:bg-lime-400 text-black font-bold font-mono uppercase text-sm rounded-xl tracking-wide transition-all flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Tap to Install Now
@@ -1271,21 +1272,53 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* iOS Safari steps */}
+            {/* iOS — Apple blocks one-tap install; guide user via Safari Share menu */}
             {isIOS && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold text-blue-400 font-mono uppercase tracking-wider mb-2">iPhone / iPad Safari — 3 steps:</p>
-                <div className="flex gap-2 text-sm text-gray-300 font-mono">
-                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">1.</span>
-                  <span>Open in <span className="text-white font-bold">Safari</span> (not Chrome)</span>
+              <div>
+                <div className="bg-blue-950/60 border border-blue-500/30 rounded-xl p-3 mb-3">
+                  <p className="text-xs text-blue-300 font-mono leading-relaxed">
+                    <span className="font-bold text-white">Apple requires Safari</span> to install web apps.
+                    Tap <span className="font-bold text-white">Copy Link</span> below, open Safari, paste the link, then follow the 3 steps.
+                  </p>
                 </div>
-                <div className="flex gap-2 text-sm text-gray-300 font-mono">
-                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">2.</span>
-                  <span>Tap <span className="text-white font-bold">Share</span> <span className="text-gray-400">(↑ box icon, bottom bar)</span></span>
-                </div>
-                <div className="flex gap-2 text-sm text-gray-300 font-mono">
-                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">3.</span>
-                  <span>Tap <span className="text-white font-bold">"Add to Home Screen"</span> → <span className="text-white font-bold">Add</span> ✓</span>
+
+                {/* Copy Link button — actionable tap for iOS */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin).catch(() => {
+                      const el = document.createElement("textarea");
+                      el.value = window.location.origin;
+                      document.body.appendChild(el);
+                      el.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(el);
+                    });
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 2500);
+                  }}
+                  className="w-full py-3 bg-blue-600 active:bg-blue-500 text-white font-bold font-mono uppercase text-sm rounded-xl tracking-wide transition-all flex items-center justify-center gap-2 mb-3"
+                >
+                  {urlCopied ? (
+                    <><span className="text-lg leading-none">✓</span> Link Copied!</>
+                  ) : (
+                    <><span className="text-base leading-none">📋</span> Copy App Link</>
+                  )}
+                </button>
+
+                {/* Steps */}
+                <div className="space-y-1.5">
+                  <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                    <span className="text-blue-400 font-bold w-4 flex-shrink-0">1.</span>
+                    <span>Open <span className="text-white font-bold">Safari</span> → paste the link → go</span>
+                  </div>
+                  <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                    <span className="text-blue-400 font-bold w-4 flex-shrink-0">2.</span>
+                    <span>Tap the <span className="text-white font-bold">Share ↑</span> icon at the bottom</span>
+                  </div>
+                  <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                    <span className="text-blue-400 font-bold w-4 flex-shrink-0">3.</span>
+                    <span>Tap <span className="text-white font-bold">"Add to Home Screen"</span> → <span className="text-white font-bold">Add</span> ✓</span>
+                  </div>
                 </div>
               </div>
             )}
