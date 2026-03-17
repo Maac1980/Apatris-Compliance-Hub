@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import {
-  ArrowLeft, Calculator, CheckCircle2, Loader2, AlertTriangle,
+  Calculator, CheckCircle2, Loader2, AlertTriangle,
   ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck,
   Search, Building2, Mail, Landmark, ToggleLeft, ToggleRight,
   Settings, RefreshCw, Info, Edit2, X, BookOpen, Save
@@ -575,20 +575,13 @@ export default function PayrollPage() {
   return (
     <div className="app-shell-page h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="h-16 border-b border-slate-700 bg-slate-900/95 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-4"
-        style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}>
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
-          <button onClick={() => setLocation("/")}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-mono flex-shrink-0">
-            <ArrowLeft className="w-4 h-4" /> <span>Dashboard</span>
-          </button>
-          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Calculator className="w-5 h-5 text-red-500 flex-shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-bold tracking-wide text-white leading-none">Monthly Payroll Run</h1>
-              <p className="text-[10px] text-red-400 font-mono uppercase tracking-widest hidden sm:block">Rozliczenie Miesięczne</p>
-            </div>
+      <header className="h-12 border-b border-slate-700/60 bg-slate-900/98 sticky top-0 z-30 px-4 sm:px-5 flex items-center justify-between gap-4"
+        style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.04), 0 2px 16px rgba(0,0,0,0.25)" }}>
+        <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+          <Calculator className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <div className="min-w-0">
+            <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-white font-mono leading-none">Monthly Payroll Run</span>
+            <span className="text-[10px] text-red-400/70 font-mono uppercase tracking-widest hidden sm:inline ml-2">· Rozliczenie Miesięczne</span>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">

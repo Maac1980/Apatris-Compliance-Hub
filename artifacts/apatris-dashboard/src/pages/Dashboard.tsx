@@ -346,170 +346,104 @@ export default function Dashboard() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[30%] bg-destructive/3 blur-[160px] rounded-full" />
       </div>
 
-      {/* Header */}
+      {/* ── Page action bar ─────────────────────────────────────────────── */}
       <header
-        className="h-14 sm:h-16 border-b border-slate-700 bg-slate-900/95 backdrop-blur-xl sticky top-0 z-30 px-3 sm:px-6 flex items-center gap-3"
-        style={{ boxShadow: "0 1px 0 rgba(196,30,24,0.08), 0 4px 20px rgba(0,0,0,0.3)" }}
+        className="h-12 border-b border-slate-700/60 bg-slate-900/98 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-5 flex items-center gap-3"
+        style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.04), 0 2px 16px rgba(0,0,0,0.25)" }}
       >
-        {/* Logo — always visible; subtitle text hidden on mobile */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <div
-            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
-            style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 12px rgba(196,30,24,0.2)" }}
-            aria-label="Apatris Logo"
-          >
-            <svg width="30" height="30" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z" fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
-              <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900" fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
-            </svg>
-          </div>
-          <div className="mobile-hide-logo-text">
-            <h1 className="text-lg font-bold tracking-[0.15em] uppercase leading-none text-white">
-              {t("header.title")}
-            </h1>
-            <p
-              className="text-[9px] text-red-500 font-bold font-mono tracking-[0.2em] uppercase leading-none mt-0.5"
-              style={{ textShadow: "0 0 8px rgba(239,68,68,0.7)" }}
-            >
-              OUTSOURCING · CERTIFIED WELDERS
-            </p>
-          </div>
+        {/* Page label */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Users className="w-4 h-4 text-red-400" />
+          <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-white font-mono">Workers</span>
         </div>
+        <div className="w-px h-4 bg-white/10 flex-shrink-0" />
 
-        {/* Action buttons — horizontally scrollable on mobile so nothing is clipped */}
+        {/* Scrollable action strip */}
         <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-1.5 sm:gap-2 w-max ml-auto pr-1">
-          {/* Navigation buttons — hidden by AppShell CSS (sidebar/bottom bar handle routing) */}
-          <div className="app-shell-nav-btns flex items-center gap-2">
-            {/* Compliance Alerts */}
-            <button
-              onClick={() => setLocation("/compliance-alerts")}
-              className="flex items-center gap-2 px-4 py-2 border border-orange-600/60 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]"
-              title="Compliance Alerts"
-            >
-              <ClipboardList className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("header.compliance")}</span>
-            </button>
+          <div className="flex items-center gap-1.5 w-max">
 
-            {/* Monthly Payroll Run — Admin + Coordinator */}
-            <button
-              onClick={() => setLocation("/payroll")}
-              className="flex items-center gap-2 px-4 py-2 border border-green-600/60 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-              title="Monthly Payroll Run"
-            >
-              <Calculator className="w-4 h-4" />
-              <span className="hidden sm:inline">Payroll</span>
-            </button>
+            {/* Nav buttons — hidden when AppShell top bar is active */}
+            <div className="app-shell-nav-btns flex items-center gap-1.5">
+              <button onClick={() => setLocation("/compliance-alerts")}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-orange-600/50 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                <ClipboardList className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.compliance")}</span>
+              </button>
+              <button onClick={() => setLocation("/payroll")}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600/50 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                <Calculator className="w-3.5 h-3.5" /><span className="hidden sm:inline">Payroll</span>
+              </button>
+              <button onClick={() => setLocation("/history")}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-purple-600/50 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                <History className="w-3.5 h-3.5" /><span className="hidden sm:inline">History</span>
+              </button>
+              {isAdmin && (
+                <button onClick={() => setLocation("/admin-settings")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                  <Settings className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.admin")}</span>
+                </button>
+              )}
+            </div>
 
-            {/* History & Analytics */}
-            <button
-              onClick={() => setLocation("/history")}
-              className="flex items-center gap-2 px-4 py-2 border border-purple-600/60 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(147,51,234,0.3)]"
-              title="History & Analytics"
-            >
-              <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
-            </button>
-
-            {/* Admin Settings — Admin only */}
+            {/* ⚡ AI Smart Upload */}
             {isAdmin && (
-              <button
-                onClick={() => setLocation("/admin-settings")}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
-                title="Admin Settings"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">{t("header.admin")}</span>
+              <button onClick={() => setBulkUploadOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/50 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_12px_rgba(196,30,24,0.35)]">
+                <Zap className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.aiUpload")}</span>
               </button>
             )}
-          </div>
 
-          {/* ⚡ AI Smart Upload — Admin only */}
-          {isAdmin && (
-            <button
-              onClick={() => setBulkUploadOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-red-600/70 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(196,30,24,0.4)]"
-            >
-              <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("header.aiUpload")}</span>
+            {/* + Add Worker */}
+            {isAdmin && (
+              <button onClick={() => setAddWorkerOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 border border-red-400/60 text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)] hover:shadow-[0_0_16px_rgba(196,30,24,0.5)]">
+                <Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Worker</span>
+              </button>
+            )}
+
+            {/* ↑ Bulk Import */}
+            {isAdmin && (
+              <button onClick={() => setBulkImportOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/50 text-lime-400 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_10px_rgba(132,204,22,0.3)]">
+                <Upload className="w-3.5 h-3.5" /><span className="hidden sm:inline">Bulk Import</span>
+              </button>
+            )}
+
+            {/* 📄 Report */}
+            <button onClick={() => setReportOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+              <FileText className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.generateReport")}</span>
             </button>
-          )}
 
-          {/* + Add Worker — Admin only */}
-          {isAdmin && (
-            <button
-              onClick={() => setAddWorkerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(196,30,24,0.35)] hover:shadow-[0_0_18px_rgba(196,30,24,0.5)]"
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Worker</span>
+            {/* ↓ Export */}
+            <button onClick={handleDownloadCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+              <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span>
             </button>
-          )}
 
-          {/* Bulk Import CSV — Admin only */}
-          {isAdmin && (
+            {/* 🔔 Notifications */}
+            <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
+
+            {/* 🌐 Language */}
+            <LanguageToggle />
+
+            {/* 📲 Install App */}
             <button
-              onClick={() => setBulkImportOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-lime-500/60 text-lime-400 hover:bg-lime-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(132,204,22,0.3)]"
-              title="Import multiple workers from a CSV file"
+              onClick={async () => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  await deferredPrompt.userChoice;
+                  setDeferredPrompt(null);
+                } else {
+                  setShowInstallModal(true);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/40 text-lime-400/80 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all"
+              title="Install as app on your device"
             >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Bulk Import</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setReportOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-red-600/70 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(196,30,24,0.4)]"
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">{t("header.generateReport")}</span>
-          </button>
-          <button
-            onClick={handleDownloadCSV}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all"
-            title="Export worker list — saves to your Downloads folder"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
-
-          {/* Notification Bell */}
-          <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
-
-          <LanguageToggle />
-
-          {/* Install App button */}
-          <button
-            onClick={async () => {
-              if (deferredPrompt) {
-                deferredPrompt.prompt();
-                await deferredPrompt.userChoice;
-                setDeferredPrompt(null);
-              } else {
-                setShowInstallModal(true);
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/60 text-lime-400 hover:bg-lime-500 hover:text-black rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_12px_rgba(132,204,22,0.4)]"
-            title="Install as app on your device"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Install App</span>
-          </button>
-          
-          <div className="w-px h-6 bg-white/10" />
-          
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden md:block">
-              <p className="text-sm font-bold text-white leading-tight">{user?.name}</p>
-              <p className="text-xs text-primary font-mono">{user?.role}</p>
-            </div>
-            <button onClick={logout} title={t("header.logout")} className="p-2 text-muted-foreground hover:text-white transition-colors">
-              <LogOut className="w-5 h-5" />
+              <Download className="w-3.5 h-3.5" /><span className="hidden lg:inline">Install App</span>
             </button>
           </div>
-        </div>{/* end inner flex row */}
-        </div>{/* end scrollable wrapper */}
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
