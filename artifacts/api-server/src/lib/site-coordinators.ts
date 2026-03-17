@@ -1,11 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import crypto from "crypto";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, "../../data");
+const DATA_DIR = path.resolve(process.cwd(), "artifacts/api-server/data");
 const FILE = path.join(DATA_DIR, "site-coordinators.json");
 
 export interface SiteCoordinator {

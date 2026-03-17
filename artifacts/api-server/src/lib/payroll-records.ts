@@ -1,10 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "../../data");
+const DATA_DIR = path.resolve(process.cwd(), "artifacts/api-server/data");
 const FILE = path.join(DATA_DIR, "payroll-records.json");
 
 export interface PayrollRecord {

@@ -132,6 +132,14 @@ Expected Airtable field names (flexible mapping):
 - Passport (attachment field)
 - Contract (attachment field)
 
+## Deployment Notes
+
+- **Build**: Replit runs `pnpm --filter @workspace/apatris-dashboard run build` (Vite → `dist/public/`) and `pnpm --filter @workspace/api-server run build` (esbuild CJS → `dist/index.cjs`)
+- **Run**: `node artifacts/api-server/dist/index.cjs` from workspace root — listens on `$PORT`, serves API at `/api` and React frontend (SPA) from static files.
+- **Vite config**: `PORT` and `BASE_PATH` are optional (defaults: `3000` / `/`) so deployment build never crashes.
+- **Data files**: `notif-log.ts`, `snapshot.ts`, `payroll-records.ts`, `site-coordinators.ts` use `process.cwd()` as anchor for the `data/` dir — works correctly in both dev (`tsx`) and production (bundled CJS).
+- **Express 5 wildcard**: SPA catch-all uses `"*splat"` pattern (required by path-to-regexp v8+).
+
 ## Compliance Logic
 
 - **Critical**: any document expires in < 30 days
