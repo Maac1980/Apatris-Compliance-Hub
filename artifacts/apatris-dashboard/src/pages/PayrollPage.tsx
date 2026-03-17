@@ -398,6 +398,8 @@ export default function PayrollPage() {
   const [showRatesModal, setShowRatesModal] = useState(false);
   const [showBulkHours, setShowBulkHours] = useState(false);
   const [bulkHoursVal, setBulkHoursVal] = useState("160");
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcGross, setCalcGross] = useState("5024");
 
   // Auto-prompt when new year and rates not updated
   const ratesOutdated = zusRates.year < currentYear;
@@ -791,6 +793,154 @@ export default function PayrollPage() {
               )}
             </div>
           </div>
+
+          {/* ── Brutto → Netto Calculator ─────────────────────────────────── */}
+          {(() => {
+            const gross = parseFloat(calcGross) || 0;
+            const workerZUS = gross * 0.1126;
+            const healthBase = gross - workerZUS;
+            const healthTax = healthBase * 0.09;
+            const taxBase = Math.round(healthBase * 0.80);
+            const incomeTax = Math.max(0, Math.round(taxBase * 0.12 - 300));
+            const netto = gross - workerZUS - healthTax - incomeTax;
+            const pct = (v: number) => gross > 0 ? `${((v / gross) * 100).toFixed(1)}%` : "—";
+            const plnFmt = (v: number) => v.toFixed(2);
+            return (
+              <div className="border-b border-slate-700">
+                <button
+                  onClick={() => setShowCalc((v) => !v)}
+                  className="w-full px-4 py-2.5 flex items-center justify-between group hover:bg-slate-800/40 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <Calculator className="w-4 h-4 text-lime-400" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-lime-400">Brutto → Netto Calculator</span>
+                    <span className="text-[10px] font-mono text-gray-500">Umowa Zlecenie 2026</span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showCalc ? "rotate-180" : ""}`} />
+                </button>
+
+                {showCalc && (
+                  <div className="px-4 pb-5 pt-1 bg-slate-900/50">
+                    {/* Input */}
+                    <div className="flex items-center gap-3 mb-5">
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">Gross (Brutto)</label>
+                      <div className="relative flex-1 max-w-xs">
+                        <input
+                          type="number"
+                          value={calcGross}
+                          onChange={(e) => setCalcGross(e.target.value)}
+                          min={0}
+                          step={0.01}
+                          placeholder="5024.00"
+                          className="w-full bg-slate-800 border border-lime-500/40 focus:border-lime-400 text-white rounded-xl px-4 py-2.5 text-lg font-mono font-bold focus:outline-none focus:ring-1 focus:ring-lime-500/30 transition-all pr-16"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-gray-500">PLN</span>
+                      </div>
+                      <div className="text-[10px] text-gray-600 font-mono leading-relaxed">
+                        ZUS: 11.26% • Health: 9% • KUP: 20% • PIT: 12% − 300 (PIT-2)
+                      </div>
+                    </div>
+
+                    {/* Breakdown */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Left: deduction steps */}
+                      <div className="bg-slate-800/60 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="px-4 py-2 border-b border-slate-700 bg-slate-800">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Deduction Breakdown</span>
+                        </div>
+                        <div className="divide-y divide-slate-700/60">
+                          {/* Gross row */}
+                          <div className="flex items-center justify-between px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-bold text-white">Gross (Brutto)</p>
+                              <p className="text-[10px] text-gray-500 font-mono">Wynagrodzenie brutto</p>
+                            </div>
+                            <span className="text-sm font-mono font-bold text-white">{plnFmt(gross)} PLN</span>
+                          </div>
+                          {/* Worker ZUS */}
+                          <div className="flex items-center justify-between px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-semibold text-red-400">− Worker ZUS (11.26%)</p>
+                              <p className="text-[10px] text-gray-500 font-mono">Emerytalne 9.76% + Rentowe 1.50%</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-mono font-bold text-red-400">−{plnFmt(workerZUS)}</span>
+                              <span className="block text-[10px] text-gray-600 font-mono">{pct(workerZUS)}</span>
+                            </div>
+                          </div>
+                          {/* Health Tax */}
+                          <div className="flex items-center justify-between px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-semibold text-orange-400">− Health Insurance (9%)</p>
+                              <p className="text-[10px] text-gray-500 font-mono">Składka zdrowotna · base = {plnFmt(healthBase)}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-mono font-bold text-orange-400">−{plnFmt(healthTax)}</span>
+                              <span className="block text-[10px] text-gray-600 font-mono">{pct(healthTax)}</span>
+                            </div>
+                          </div>
+                          {/* Tax base */}
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/40">
+                            <div>
+                              <p className="text-[10px] text-gray-500 font-mono">Tax Base (po KUP 20%)</p>
+                              <p className="text-[10px] text-gray-600 font-mono">round({plnFmt(healthBase)} × 0.80) = {taxBase}</p>
+                            </div>
+                            <span className="text-xs font-mono text-gray-400">{taxBase} PLN</span>
+                          </div>
+                          {/* Income Tax */}
+                          <div className="flex items-center justify-between px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-semibold text-yellow-400">− Income Tax / Zaliczka PIT</p>
+                              <p className="text-[10px] text-gray-500 font-mono">round({taxBase} × 12% − 300 PIT-2)</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-mono font-bold text-yellow-400">−{plnFmt(incomeTax)}</span>
+                              <span className="block text-[10px] text-gray-600 font-mono">{pct(incomeTax)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: result + pie-chart-like visual */}
+                      <div className="flex flex-col gap-3">
+                        {/* Netto result */}
+                        <div className="bg-slate-800/60 rounded-xl border border-lime-500/30 p-5 flex flex-col items-center justify-center text-center flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-lime-400 mb-1">NET IN HAND · NETTO</p>
+                          <p className="text-4xl font-mono font-black text-lime-400 leading-none">
+                            {plnFmt(netto)}
+                          </p>
+                          <p className="text-sm text-gray-400 font-mono mt-1">PLN / month</p>
+                          <div className="mt-3 pt-3 border-t border-slate-700 w-full text-center">
+                            <span className="text-[10px] font-mono text-gray-500">
+                              {gross > 0 ? `${((netto / gross) * 100).toFixed(1)}% of gross` : "—"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Cost breakdown bar */}
+                        {gross > 0 && (
+                          <div className="bg-slate-800/60 rounded-xl border border-slate-700 p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Cost Split</p>
+                            <div className="flex rounded-full overflow-hidden h-3 mb-3" style={{ gap: 1 }}>
+                              <div title={`ZUS ${pct(workerZUS)}`} className="bg-red-500 transition-all" style={{ width: pct(workerZUS) }} />
+                              <div title={`Health ${pct(healthTax)}`} className="bg-orange-500 transition-all" style={{ width: pct(healthTax) }} />
+                              <div title={`PIT ${pct(incomeTax)}`} className="bg-yellow-500 transition-all" style={{ width: pct(incomeTax) }} />
+                              <div title={`Netto ${pct(netto)}`} className="bg-lime-500 flex-1 transition-all" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-mono">
+                              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />ZUS {pct(workerZUS)}</span>
+                              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />Health {pct(healthTax)}</span>
+                              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" />PIT {pct(incomeTax)}</span>
+                              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-lime-500 inline-block" />Netto {pct(netto)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ── Site filter tabs ── */}
           {availableSites.length > 0 && (
