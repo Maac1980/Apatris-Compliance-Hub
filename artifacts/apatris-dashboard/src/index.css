@@ -508,9 +508,11 @@ body.has-app-shell .app-shell-nav-btns {
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 .table-responsive::-webkit-scrollbar,
-.app-table-scroll::-webkit-scrollbar  { height: 4px; }
+.app-table-scroll::-webkit-scrollbar  { height: 4px; width: 4px; }
 .table-responsive::-webkit-scrollbar-thumb,
 .app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+.table-responsive::-webkit-scrollbar-corner,
+.app-table-scroll::-webkit-scrollbar-corner { background: transparent; }
 
 /* Parent wrapper — must have these to force scrollbar to appear.
    CRITICAL: width + max-width cap the BFC so it never expands to match
