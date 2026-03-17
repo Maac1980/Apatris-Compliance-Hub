@@ -4,6 +4,14 @@
 
 Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspace monorepo with TypeScript.
 
+## Layout Architecture
+
+**Desktop (≥769px):** Full-width top navigation bar (`app-top-bar`, 52px) containing: brand logo | nav tabs (Workers, Payroll Ledger, Compliance Alerts, History & Analytics) | Admin Settings gear | user chip + logout. Content fills remaining height with full viewport width.
+
+**Mobile (≤768px):** Top bar shows brand + user/logout only (nav tabs hidden). Fixed bottom bar provides tab navigation (Workers, Ledger, Alerts, History). Page main gets padding-bottom to clear the bottom bar.
+
+**CSS structure:** `app-shell-root` (flex-column) → `app-top-bar` (52px flex-shrink-0) + `app-content-wrapper` (flex:1) → page `.app-shell-page` (flex:1, height:100%) → page `<header>` + `<main>` (overflow-y:auto).
+
 ## Implemented Features
 
 ### Persistent Storage & History Layer (Complete)

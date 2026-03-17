@@ -5,30 +5,11 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
 } from "lucide-react";
 
-const SIDEBAR_NAV = [
-  {
-    path: "/", label: "Workers", icon: Users,
-    color: "text-red-400", activeBg: "bg-red-900/30", activeBorder: "border-red-500/40",
-  },
-  {
-    path: "/payroll", label: "Payroll Ledger", icon: Calculator,
-    color: "text-green-400", activeBg: "bg-green-900/30", activeBorder: "border-green-500/40",
-  },
-  {
-    path: "/compliance-alerts", label: "Compliance Alerts", icon: AlertTriangle,
-    color: "text-orange-400", activeBg: "bg-orange-900/30", activeBorder: "border-orange-500/40",
-  },
-  {
-    path: "/history", label: "History & Analytics", icon: History,
-    color: "text-purple-400", activeBg: "bg-purple-900/30", activeBorder: "border-purple-500/40",
-  },
-];
-
-const ADMIN_NAV = [
-  {
-    path: "/admin-settings", label: "Admin Settings", icon: Settings,
-    color: "text-slate-300", activeBg: "bg-slate-700/50", activeBorder: "border-slate-500/40",
-  },
+const TOP_NAV = [
+  { path: "/",                  label: "Workers",           icon: Users,          color: "text-red-400",    activeColor: "border-red-500 text-red-400" },
+  { path: "/payroll",           label: "Payroll Ledger",    icon: Calculator,     color: "text-green-400",  activeColor: "border-green-400 text-green-400" },
+  { path: "/compliance-alerts", label: "Compliance Alerts", icon: AlertTriangle,  color: "text-orange-400", activeColor: "border-orange-400 text-orange-400" },
+  { path: "/history",           label: "History & Analytics", icon: History,      color: "text-purple-400", activeColor: "border-purple-400 text-purple-400" },
 ];
 
 const BOTTOM_NAV = [
@@ -67,88 +48,69 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-shell-root">
-      {/* ─── Desktop Sidebar ──────────────────────────────────────────── */}
-      <aside className="app-sidebar">
+      {/* ─── Top Navigation Bar ───────────────────────────────────────── */}
+      <header className="app-top-bar">
         {/* Brand */}
-        <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
-              style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 12px rgba(196,30,24,0.2)" }}
-            >
-              <svg width="28" height="28" viewBox="0 0 38 38" fill="none">
-                <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z"
-                  fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
-                <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900"
-                  fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-bold tracking-widest uppercase text-white leading-none">APATRIS</p>
-              <p className="text-[9px] text-red-500 font-mono tracking-widest uppercase mt-0.5">Compliance Portal</p>
-            </div>
+        <div className="app-top-brand">
+          <div
+            className="w-8 h-8 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
+            style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 10px rgba(196,30,24,0.2)" }}
+          >
+            <svg width="22" height="22" viewBox="0 0 38 38" fill="none">
+              <path d="M19 2 L33 8.5 L33 21 Q33 30 19 36 Q5 30 5 21 L5 8.5 Z"
+                fill="#fef2f2" stroke="#C41E18" strokeWidth="1.5" strokeLinejoin="round" />
+              <text x="19" y="28" textAnchor="middle" fontSize="19" fontWeight="900"
+                fontFamily="Arial Black, Arial, sans-serif" fill="#C41E18" letterSpacing="-0.5">A</text>
+            </svg>
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-sm font-bold tracking-widest uppercase text-white leading-none">APATRIS</p>
+            <p className="text-[9px] text-red-500 font-mono tracking-widest uppercase leading-none mt-0.5">Compliance Portal</p>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600 px-3 mb-3">Navigation</p>
-          {SIDEBAR_NAV.map(({ path, label, icon: Icon, color, activeBg, activeBorder }) => {
+        {/* Nav tabs — hidden on mobile (bottom bar handles it) */}
+        <nav className="app-top-nav">
+          {TOP_NAV.map(({ path, label, icon: Icon, activeColor }) => {
             const active = isActive(path);
             return (
               <button
                 key={path}
                 onClick={() => setLocation(path)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-mono font-medium transition-all border ${
-                  active
-                    ? `${activeBg} ${activeBorder} ${color}`
-                    : "border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
-                }`}
+                className={`app-top-nav-item ${active ? `app-top-nav-item--active ${activeColor}` : "text-slate-400 border-transparent hover:text-white hover:border-slate-600"}`}
               >
-                <Icon className={`w-4 h-4 flex-shrink-0`} />
-                <span className="truncate">{label}</span>
-                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-current flex-shrink-0 opacity-70" />}
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{label}</span>
               </button>
             );
           })}
-
-          {isAdmin && (
-            <>
-              <div className="my-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600 px-3 mb-3">Admin</p>
-              {ADMIN_NAV.map(({ path, label, icon: Icon, color, activeBg, activeBorder }) => {
-                const active = isActive(path);
-                return (
-                  <button
-                    key={path}
-                    onClick={() => setLocation(path)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-mono font-medium transition-all border ${
-                      active
-                        ? `${activeBg} ${activeBorder} ${color}`
-                        : "border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{label}</span>
-                    {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-current flex-shrink-0 opacity-70" />}
-                  </button>
-                );
-              })}
-            </>
-          )}
         </nav>
 
-        {/* User + Logout */}
-        <div className="px-3 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
-            <div className="w-8 h-8 rounded-full bg-red-900/50 border border-red-500/30 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-red-400 font-mono">
+        {/* Right: admin settings + user chip */}
+        <div className="app-top-right">
+          {isAdmin && (
+            <button
+              onClick={() => setLocation("/admin-settings")}
+              title="Admin Settings"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isActive("/admin-settings")
+                  ? "text-white bg-slate-700"
+                  : "text-slate-500 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-700/60">
+            <div className="w-7 h-7 rounded-full bg-red-900/50 border border-red-500/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-[11px] font-bold text-red-400 font-mono">
                 {user?.name?.charAt(0)?.toUpperCase() ?? "A"}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate leading-tight">{user?.name}</p>
-              <p className="text-[10px] text-red-400 font-mono leading-tight">{user?.role}</p>
+            <div className="hidden md:block">
+              <p className="text-xs font-bold text-white leading-none">{user?.name}</p>
+              <p className="text-[10px] text-red-400 font-mono leading-none mt-0.5">{user?.role}</p>
             </div>
             <button
               onClick={logout}
@@ -159,9 +121,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </div>
-      </aside>
+      </header>
 
-      {/* ─── Page content (wraps children; provides min-width:0 for flex) ── */}
+      {/* ─── Page content ─────────────────────────────────────────────── */}
       <div className="app-content-wrapper">
         {children}
       </div>
@@ -174,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               key={path}
               onClick={() => setLocation(path)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors`}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors"
             >
               <div className={`p-1.5 rounded-xl transition-all ${active ? "bg-red-900/40" : ""}`}>
                 <Icon className={`w-5 h-5 ${active ? "text-[#C41E18]" : "text-slate-500"}`} />
