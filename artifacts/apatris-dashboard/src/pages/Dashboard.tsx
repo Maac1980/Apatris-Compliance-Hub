@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
-  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
+  Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings,
   Phone, MessageSquare, TrendingUp, Calculator, Download, Upload, CalendarDays, ChevronLeft, ChevronRight,
   CheckSquare, Square, Archive, X, Send, History
 } from "lucide-react";
@@ -357,28 +357,6 @@ export default function Dashboard() {
           <div className="overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2 w-max">
 
-              {/* Nav buttons — hidden when AppShell is present */}
-              <div className="app-shell-nav-btns flex items-center gap-2">
-                <button onClick={() => setLocation("/compliance-alerts")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-orange-600/50 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                  <ClipboardList className="w-3.5 h-3.5" /><span>{t("header.compliance")}</span>
-                </button>
-                <button onClick={() => setLocation("/payroll")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600/50 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                  <Calculator className="w-3.5 h-3.5" /><span>Payroll</span>
-                </button>
-                <button onClick={() => setLocation("/history")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-purple-600/50 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                  <History className="w-3.5 h-3.5" /><span>History</span>
-                </button>
-                {isAdmin && (
-                  <button onClick={() => setLocation("/admin-settings")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                    <Settings className="w-3.5 h-3.5" /><span>{t("header.admin")}</span>
-                  </button>
-                )}
-              </div>
-
               {/* ⚡ AI Smart Upload */}
               {isAdmin && (
                 <button onClick={() => setBulkUploadOpen(true)}
@@ -443,6 +421,34 @@ export default function Dashboard() {
 
         {/* ── Page content ─────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8">
+
+        {/* ── Section Navigation Grid (desktop square cards) ───────────────── */}
+        <div className="hidden md:grid grid-cols-4 gap-4">
+          {([
+            { path: "/",                  label: "Workers",             icon: Users,         iconCls: "text-red-400",    hoverBorder: "hover:border-red-500/70",    hoverGlow: "hover:shadow-[0_8px_28px_rgba(196,30,24,0.30)]",   hoverBg: "hover:bg-red-950/25"   },
+            { path: "/payroll",           label: "Payroll Ledger",      icon: Calculator,    iconCls: "text-green-400",  hoverBorder: "hover:border-green-500/70",  hoverGlow: "hover:shadow-[0_8px_28px_rgba(34,197,94,0.25)]",   hoverBg: "hover:bg-green-950/25" },
+            { path: "/compliance-alerts", label: "Compliance Alerts",   icon: AlertTriangle, iconCls: "text-orange-400", hoverBorder: "hover:border-orange-500/70", hoverGlow: "hover:shadow-[0_8px_28px_rgba(249,115,22,0.25)]",  hoverBg: "hover:bg-orange-950/25"},
+            { path: "/history",           label: "History & Analytics", icon: History,       iconCls: "text-purple-400", hoverBorder: "hover:border-purple-500/70", hoverGlow: "hover:shadow-[0_8px_28px_rgba(168,85,247,0.25)]",  hoverBg: "hover:bg-purple-950/25"},
+          ] as const).map(({ path, label, icon: Icon, iconCls, hoverBorder, hoverGlow, hoverBg }) => (
+            <button
+              key={path}
+              onClick={() => setLocation(path)}
+              className={[
+                "group aspect-square flex flex-col items-center justify-center gap-3 rounded-2xl",
+                "border border-slate-700/60 bg-slate-800/40 backdrop-blur",
+                "transition-all duration-200 cursor-pointer",
+                "-translate-y-0 hover:-translate-y-1.5",
+                hoverBorder, hoverGlow, hoverBg,
+              ].join(" ")}
+            >
+              <Icon className={`w-12 h-12 transition-transform duration-200 group-hover:scale-110 ${iconCls}`} strokeWidth={1.5} />
+              <span className="text-[11px] font-display font-bold uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors text-center leading-tight px-3">
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard title={t("stats.totalWorkforce")} value={stats?.total || "0"} icon={Users} />

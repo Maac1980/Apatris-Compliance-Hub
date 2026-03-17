@@ -5,13 +5,6 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
 } from "lucide-react";
 
-const TOP_NAV = [
-  { path: "/",                  label: "Workers",             icon: Users,         color: "text-red-400",    activeColor: "border-red-500 text-red-300",    activeBg: "rgba(196,30,24,0.12)" },
-  { path: "/payroll",           label: "Payroll Ledger",      icon: Calculator,    color: "text-green-400",  activeColor: "border-green-400 text-green-300", activeBg: "rgba(34,197,94,0.10)" },
-  { path: "/compliance-alerts", label: "Compliance Alerts",   icon: AlertTriangle, color: "text-orange-400", activeColor: "border-orange-400 text-orange-300", activeBg: "rgba(234,88,12,0.10)" },
-  { path: "/history",           label: "History & Analytics", icon: History,       color: "text-purple-400", activeColor: "border-purple-400 text-purple-300", activeBg: "rgba(147,51,234,0.10)" },
-];
-
 const BOTTOM_NAV = [
   { path: "/",                   label: "Workers", icon: Users },
   { path: "/payroll",            label: "Ledger",  icon: Calculator },
@@ -65,27 +58,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-bold tracking-widest uppercase text-white leading-none">APATRIS</p>
-            <p className="text-[9px] text-red-500 font-mono tracking-widest uppercase leading-none mt-0.5">Compliance Portal</p>
+            <p className="text-[9px] text-slate-400 font-mono tracking-widest uppercase leading-none mt-0.5">Outsourcing &amp; Certified Welders</p>
           </div>
         </div>
-
-        {/* Nav tabs — hidden on mobile (bottom bar handles it) */}
-        <nav className="app-top-nav">
-          {TOP_NAV.map(({ path, label, icon: Icon, activeColor, activeBg }) => {
-            const active = isActive(path);
-            return (
-              <button
-                key={path}
-                onClick={() => setLocation(path)}
-                className={`app-top-nav-item ${active ? `app-top-nav-item--active ${activeColor}` : "text-slate-400 border-transparent hover:text-slate-200 hover:border-slate-600"}`}
-                style={active ? { background: activeBg } : undefined}
-              >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </nav>
 
         {/* Right: admin settings + user chip */}
         <div className="app-top-right">
