@@ -266,6 +266,11 @@
     border-color: rgba(138, 155, 176, 0.15);
   }
 
+  /* Skeleton shimmer animation */
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+
   /* Fade-in animation */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(16px); }

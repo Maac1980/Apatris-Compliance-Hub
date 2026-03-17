@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+// 8 hours — matches construction-site work patterns
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;
+const STORAGE_KEY = "apatris_auth";
+const TOKEN_KEY  = "apatris_jwt";
 
 interface User {
   id?: string;
@@ -18,6 +21,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   sessionExpired: boolean;
+  isRestoring: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,12 +29,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [, setLocation] = useLocation();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const logout = useCallback((expired = false) => {
     setUser(null);
-    localStorage.removeItem("apatris_auth");
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     if (expired) setSessionExpired(true);
     setLocation("/login");
   }, [setLocation]);
@@ -40,10 +46,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     timerRef.current = setTimeout(() => logout(true), SESSION_TIMEOUT_MS);
   }, [logout]);
 
+  // ── Restore session on mount ─────────────────────────────────────────────
   useEffect(() => {
-    const stored = localStorage.getItem("apatris_auth");
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch { /* ignore */ }
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    const storedUser  = localStorage.getItem(STORAGE_KEY);
+
+    if (!storedToken && !storedUser) {
+      setIsRestoring(false);
+      return;
+    }
+
+    if (storedToken) {
+      // Validate JWT with server — get fresh user payload
+      fetch(`${import.meta.env.BASE_URL}api/auth/verify`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            const { jwt: newToken, ...userData } = data as any;
+            setUser(userData as User);
+            if (newToken) localStorage.setItem(TOKEN_KEY, newToken);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(TOKEN_KEY);
+          }
+        })
+        .catch(() => {
+          // Offline — restore from localStorage so app works without network
+          if (storedUser) {
+            try { setUser(JSON.parse(storedUser)); } catch { /* ignore */ }
+          }
+        })
+        .finally(() => setIsRestoring(false));
+    } else if (storedUser) {
+      // Legacy session without JWT — restore directly
+      try { setUser(JSON.parse(storedUser)); } catch { /* ignore */ }
+      setIsRestoring(false);
     }
   }, []);
 
@@ -76,14 +116,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await res.json();
 
-      // 2FA challenge: backend sent OTP to admin's email
       if (data.otpRequired) {
         return { ok: true, otpRequired: true, session: data.session };
       }
 
-      setUser(data as User);
+      const { jwt: token, ...userData } = data as any;
+      setUser(userData as User);
       setSessionExpired(false);
-      localStorage.setItem("apatris_auth", JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      if (token) localStorage.setItem(TOKEN_KEY, token);
       return { ok: true };
     } catch {
       return { ok: false, error: "Connection error — please try again" };
@@ -103,10 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, error: (data as any).error || "Invalid code" };
       }
 
-      const data: User = await res.json();
-      setUser(data);
+      const data = await res.json();
+      const { jwt: token, ...userData } = data as any;
+      setUser(userData as User);
       setSessionExpired(false);
-      localStorage.setItem("apatris_auth", JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      if (token) localStorage.setItem(TOKEN_KEY, token);
       return { ok: true };
     } catch {
       return { ok: false, error: "Connection error — please try again" };
@@ -116,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logoutPublic = useCallback(() => logout(false), [logout]);
 
   return (
-    <AuthContext.Provider value={{ user, login, verifyOtp, logout: logoutPublic, isAuthenticated: !!user, sessionExpired }}>
+    <AuthContext.Provider value={{ user, login, verifyOtp, logout: logoutPublic, isAuthenticated: !!user, sessionExpired, isRestoring }}>
       {sessionExpired && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-red-500/40 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
@@ -126,9 +169,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               </svg>
             </div>
             <h2 className="text-lg font-bold text-white mb-2">Session Expired</h2>
-            <p className="text-gray-400 text-sm mb-6">Your session timed out after 30 minutes of inactivity. Please log in again.</p>
+            <p className="text-gray-400 text-sm mb-6">Your session timed out after 8 hours of inactivity. Please log in again.</p>
             <button
-              onClick={() => setSessionExpired(false)}
+              onClick={() => { setSessionExpired(false); setLocation("/login"); }}
               className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm uppercase tracking-wider"
             >
               Log In Again

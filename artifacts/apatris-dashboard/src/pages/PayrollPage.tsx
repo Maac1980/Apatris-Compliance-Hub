@@ -9,6 +9,8 @@ import {
   Settings, RefreshCw, Info, Edit2, X, BookOpen, Save
 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { PayrollRowSkeleton } from "@/components/Skeleton";
 
 interface PayrollWorker {
   id: string;
@@ -378,6 +380,7 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PayrollPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const isAdmin = user?.role === "Admin";
@@ -470,6 +473,10 @@ export default function PayrollPage() {
       setPending({});
       queryClient.invalidateQueries({ queryKey: ["payroll-current"] });
       refetch();
+      toast({
+        title: "Payroll committed ✓",
+        description: `${result.savedCount ?? "All"} records saved for ${selectedMonth}.`,
+      });
     },
   });
 
@@ -556,16 +563,19 @@ export default function PayrollPage() {
   const handleExportPDF = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     triggerDownload(`${window.location.origin}${base}/api/payroll/export/pdf?month=${selectedMonth}`, `Apatris-Payroll-${selectedMonth}.pdf`);
+    toast({ title: "PDF downloading", description: `Payroll report for ${selectedMonth}.` });
   };
 
   const handleBankExport = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     triggerDownload(`${window.location.origin}${base}/api/payroll/export/bank-csv?month=${selectedMonth}`, `Apatris-Bank-${selectedMonth}.csv`);
+    toast({ title: "Bank CSV downloading", description: `Transfer list for ${selectedMonth}.` });
   };
 
   const handleAccountingExport = () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     triggerDownload(`${window.location.origin}${base}/api/payroll/export/accounting-csv?month=${selectedMonth}`, `Apatris-Accounting-${selectedMonth}.csv`);
+    toast({ title: "Accounting CSV downloading", description: `Full ZUS breakdown for ${selectedMonth}.` });
   };
 
   // Column classes
@@ -1035,12 +1045,8 @@ export default function PayrollPage() {
 
               <tbody className="divide-y divide-slate-700/40">
                 {isLoading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={showZUS && isAdmin ? 11 : 7} className="px-5 py-4">
-                        <div className="h-4 bg-white/5 rounded animate-pulse" />
-                      </td>
-                    </tr>
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <PayrollRowSkeleton key={i} cols={showZUS && isAdmin ? 11 : 7} />
                   ))
                 ) : filteredWorkers.length === 0 ? (
                   <tr>

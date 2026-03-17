@@ -59,6 +59,8 @@ function buildWhatsAppUrl(phone: string, urgentDoc: string | null): string {
   return `https://wa.me/${num}`;
 }
 
+import { useToast } from "@/hooks/use-toast";
+import { WorkerRowSkeleton, StatCardSkeleton, SiteCardSkeleton } from "@/components/Skeleton";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkerProfilePanel } from "@/components/WorkerProfilePanel";
@@ -111,6 +113,7 @@ interface TrendSnapshot { date: string; total: number; compliant: number; warnin
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const { t } = useTranslation();
   const isAdmin = user?.role === "Admin";
   const [, setLocation] = useLocation();
@@ -324,6 +327,7 @@ export default function Dashboard() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
+    toast({ title: "Export complete", description: `${ws.length} workers saved to CSV.` });
   };
 
   const handleNotify = (e: React.MouseEvent, worker: any) => {
@@ -686,9 +690,16 @@ export default function Dashboard() {
           {/* ── Mobile Card List (phones / small tablets) ──────────────────── */}
           <div className="md:hidden">
             {isLoadingWorkers ? (
-              <div className="p-4 space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="p-3 rounded-xl border border-slate-700/40 bg-slate-800/30 space-y-2">
+                    <div className="relative overflow-hidden rounded bg-slate-700 h-4 w-36">
+                      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                    </div>
+                    <div className="relative overflow-hidden rounded bg-slate-700 h-3 w-24">
+                      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (workersData?.workers ?? []).length === 0 ? (
@@ -777,12 +788,8 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
                 {isLoadingWorkers ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={11} className="px-6 py-6">
-                        <div className="h-4 bg-white/5 rounded animate-pulse w-full" />
-                      </td>
-                    </tr>
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <WorkerRowSkeleton key={i} cols={11} />
                   ))
                 ) : workersData?.workers.length === 0 ? (
                   <tr>

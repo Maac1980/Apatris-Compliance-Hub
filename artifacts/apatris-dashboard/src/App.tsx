@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { PageLoader } from "@/components/Skeleton";
 
 import { AppShell } from "@/components/AppShell";
 
@@ -28,14 +29,22 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isRestoring } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isRestoring && !isAuthenticated) {
       setLocation("/login");
     }
-  }, [isAuthenticated, setLocation]);
+  }, [isAuthenticated, isRestoring, setLocation]);
+
+  if (isRestoring) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <PageLoader />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return null;
 

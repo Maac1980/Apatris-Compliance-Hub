@@ -1,10 +1,23 @@
 import { Router } from "express";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/site-coordinators.js";
 import { sendOtpEmail, isMailConfigured } from "../lib/mailer.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
+
+// JWT secret — set JWT_SECRET env var in production; falls back to a random
+// per-process secret (sessions invalidated on server restart).
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  (() => {
+    const fallback = crypto.randomBytes(48).toString("hex");
+    console.warn("[Auth] JWT_SECRET not set — using ephemeral secret. Sessions will be lost on restart.");
+    return fallback;
+  })();
+
+const JWT_EXPIRES_IN = "72h"; // 3 days
 
 const ALLOWED_USERS = [
   {
@@ -35,6 +48,10 @@ setInterval(() => {
     if (val.expires < now) otpStore.delete(key);
   }
 }, 10 * 60 * 1000);
+
+function signToken(userData: { email: string; name: string; role: string; assignedSite?: string }) {
+  return jwt.sign(userData, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
 
 // ─── POST /api/auth/login ────────────────────────────────────────────────────
 router.post("/auth/login", async (req, res) => {
@@ -70,15 +87,17 @@ router.post("/auth/login", async (req, res) => {
         } catch (e) {
           console.error("[Auth] Failed to send OTP email:", e);
           // On email failure, fall back to direct login so admin is never locked out
+          const token = signToken(userData);
           appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed)" });
-          return res.json(userData);
+          return res.json({ ...userData, jwt: token });
         }
         return res.json({ otpRequired: true, session });
       }
 
-      // No SMTP: direct login
+      // No SMTP: direct login with JWT
+      const token = signToken(userData);
       appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (SMTP not configured)" });
-      return res.json(userData);
+      return res.json({ ...userData, jwt: token });
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
@@ -87,12 +106,14 @@ router.post("/auth/login", async (req, res) => {
       if (!verifyCoordinatorPassword(coordinator, password)) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      return res.json({
+      const userData = {
         email: coordinator.email,
         name: coordinator.name,
         role: "Coordinator",
         assignedSite: coordinator.assignedSite,
-      });
+      };
+      const token = signToken(userData);
+      return res.json({ ...userData, jwt: token });
     }
 
     return res.status(403).json({ error: "Access Denied: Contact Administrator." });
@@ -128,6 +149,8 @@ router.post("/auth/verify-otp", (req, res) => {
 
     otpStore.delete(session);
 
+    const token = signToken(entry.userData);
+
     appendAuditLog({
       timestamp: new Date().toISOString(),
       actor: entry.userData.name,
@@ -138,10 +161,35 @@ router.post("/auth/verify-otp", (req, res) => {
       note: "Login verified via 2FA OTP",
     });
 
-    return res.json(entry.userData);
+    return res.json({ ...entry.userData, jwt: token });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";
     return res.status(500).json({ error: message });
+  }
+});
+
+// ─── GET /api/auth/verify ─────────────────────────────────────────────────────
+// Validates a stored JWT and returns fresh user data. Used by the frontend
+// to silently restore a session without a full login flow.
+router.get("/auth/verify", (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token" });
+    }
+    const token = authHeader.slice(7);
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      email: string; name: string; role: string; assignedSite?: string;
+    };
+    return res.json({
+      email: payload.email,
+      name: payload.name,
+      role: payload.role,
+      assignedSite: payload.assignedSite,
+      jwt: token,
+    });
+  } catch {
+    return res.status(401).json({ error: "Token invalid or expired" });
   }
 });
 
