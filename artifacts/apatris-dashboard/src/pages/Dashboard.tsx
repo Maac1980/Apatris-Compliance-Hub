@@ -135,6 +135,15 @@ export default function Dashboard() {
   const [calendarMonth, setCalendarMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [showArchived, setShowArchived] = useState(false);
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(new Set());
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Capture the beforeinstallprompt event for Android Chrome one-tap install
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   const isCoordinator = user?.role === "Coordinator";
 
@@ -436,6 +445,24 @@ export default function Dashboard() {
           <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
 
           <LanguageToggle />
+
+          {/* Install App button */}
+          <button
+            onClick={async () => {
+              if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                setDeferredPrompt(null);
+              } else {
+                setShowInstallModal(true);
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/60 text-lime-400 hover:bg-lime-500 hover:text-black rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_12px_rgba(132,204,22,0.4)]"
+            title="Install as app on your device"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Install App</span>
+          </button>
           
           <div className="w-px h-6 bg-white/10" />
           
@@ -1052,6 +1079,71 @@ export default function Dashboard() {
         onClose={() => setAddWorkerOpen(false)}
         onCreated={(id) => setSelectedWorkerId(id)}
       />
+
+      {/* Install App Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}>
+          <div className="bg-slate-900 border border-lime-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-white uppercase tracking-wider">Install App</h2>
+                <p className="text-xs text-gray-400 font-mono mt-0.5">Add APATRIS to your home screen</p>
+              </div>
+              <button onClick={() => setShowInstallModal(false)} className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Android */}
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-lime-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-lime-400" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0 0 12 1.5c-.96 0-1.86.23-2.66.63L7.85.65c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31A5.981 5.981 0 0 0 6 7.5h12a5.98 5.98 0 0 0-2.47-5.34zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+                  </div>
+                  <span className="text-sm font-bold text-lime-400 uppercase tracking-wider">Android (Chrome)</span>
+                </div>
+                <ol className="space-y-1.5 text-sm text-gray-300 font-mono">
+                  <li className="flex gap-2"><span className="text-lime-500 font-bold">1.</span> Tap the <span className="text-white font-bold">⋮ three-dot menu</span> at top right</li>
+                  <li className="flex gap-2"><span className="text-lime-500 font-bold">2.</span> Tap <span className="text-white font-bold">"Install App"</span> or <span className="text-white font-bold">"Add to Home Screen"</span></li>
+                  <li className="flex gap-2"><span className="text-lime-500 font-bold">3.</span> Tap <span className="text-white font-bold">Install</span> — done ✓</li>
+                </ol>
+              </div>
+
+              {/* iPhone */}
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                  </div>
+                  <span className="text-sm font-bold text-blue-400 uppercase tracking-wider">iPhone / iPad (Safari)</span>
+                </div>
+                <ol className="space-y-1.5 text-sm text-gray-300 font-mono">
+                  <li className="flex gap-2"><span className="text-blue-400 font-bold">1.</span> Open this URL in <span className="text-white font-bold">Safari</span> (not Chrome)</li>
+                  <li className="flex gap-2"><span className="text-blue-400 font-bold">2.</span> Tap the <span className="text-white font-bold">Share button</span> <span className="text-gray-400">(box with arrow, bottom bar)</span></li>
+                  <li className="flex gap-2"><span className="text-blue-400 font-bold">3.</span> Scroll down → tap <span className="text-white font-bold">"Add to Home Screen"</span></li>
+                  <li className="flex gap-2"><span className="text-blue-400 font-bold">4.</span> Tap <span className="text-white font-bold">Add</span> — done ✓</li>
+                </ol>
+              </div>
+
+              {/* Desktop */}
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                  </div>
+                  <span className="text-sm font-bold text-purple-400 uppercase tracking-wider">Desktop (Chrome / Edge)</span>
+                </div>
+                <ol className="space-y-1.5 text-sm text-gray-300 font-mono">
+                  <li className="flex gap-2"><span className="text-purple-400 font-bold">1.</span> Look for the <span className="text-white font-bold">install icon</span> in the browser address bar <span className="text-gray-400">(⊕ or screen icon)</span></li>
+                  <li className="flex gap-2"><span className="text-purple-400 font-bold">2.</span> Click it → click <span className="text-white font-bold">Install</span></li>
+                  <li className="flex gap-2"><span className="text-purple-400 font-bold">3.</span> APATRIS opens as its own window — done ✓</li>
+                </ol>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-gray-500 font-mono mt-4">Once installed, the app opens full-screen with no browser bar.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

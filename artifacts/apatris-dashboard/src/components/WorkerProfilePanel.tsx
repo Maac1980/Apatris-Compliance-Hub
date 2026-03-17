@@ -1125,7 +1125,10 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                     </div>
                     <div className="flex items-center gap-2 text-sm flex-wrap">
                       <Phone className="w-4 h-4 text-red-400 flex-shrink-0" />
-                      <span className="text-gray-300 font-mono flex-1">{(worker as any).phone || t("panel.noPhone")}</span>
+                      {(worker as any).phone
+                        ? <a href={`tel:${(worker as any).phone}`} className="text-lime-400 font-mono flex-1 hover:text-lime-300 hover:underline transition-colors">{(worker as any).phone}</a>
+                        : <span className="text-gray-500 font-mono flex-1">{t("panel.noPhone")}</span>
+                      }
                       {(worker as any).phone && (
                         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap mt-1">
                           <a href={`tel:${(worker as any).phone}`} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-400 text-xs font-bold transition-colors"><Phone className="w-3.5 h-3.5" />{t("comm.call")}</a>
