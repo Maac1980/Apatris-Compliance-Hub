@@ -175,10 +175,11 @@ router.post("/payroll/commit", async (req, res) => {
 
       if (commitId) {
         const snapshotValues = snapshots.map((snap) => {
-          const zus  = snap.grossPayout * 0.1371;  // 9.76 + 1.5 + 2.45 (incl. chorobowe)
-          const hlth = (snap.grossPayout - zus) * 0.09;
-          const kup  = snap.grossPayout * 0.20;
-          const pit  = Math.max(0, (snap.grossPayout - zus - kup)) * 0.12;
+          const zus       = snap.grossPayout * 0.1126; // 9.76 + 1.5 — no chorobowe (2026 standard)
+          const hlthBase  = snap.grossPayout - zus;
+          const hlth      = hlthBase * 0.09;
+          const txBase    = Math.max(0, Math.round(hlthBase * 0.80)); // KUP 20% of health base, rounded
+          const pit       = Math.max(0, Math.round(txBase * 0.12 - 300)); // PIT-2 applied, rounded
           return [
             commitId, monthYear, snap.workerId, snap.workerName,
             workerSiteMap.get(snap.workerId) ?? "",
