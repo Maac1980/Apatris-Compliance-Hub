@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(new Set());
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Capture the beforeinstallprompt event for Android Chrome one-tap install
@@ -1090,6 +1091,27 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-400 font-mono mt-0.5">Add APATRIS to your home screen</p>
               </div>
               <button onClick={() => setShowInstallModal(false)} className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* URL copy box */}
+            <div className="mb-5 bg-slate-800 border border-lime-500/30 rounded-xl p-3">
+              <p className="text-xs text-gray-400 font-mono mb-2 uppercase tracking-wider">Your app URL</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs text-lime-400 font-mono bg-black/30 rounded-lg px-3 py-2 truncate select-all">
+                  {window.location.origin}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin);
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 2000);
+                  }}
+                  className="flex-shrink-0 px-3 py-2 text-xs font-bold text-black bg-lime-500 hover:bg-lime-400 rounded-lg transition-colors font-mono uppercase"
+                >
+                  {urlCopied ? "Copied ✓" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 font-mono mt-2">Paste this into Safari to install on iPhone / Mac</p>
             </div>
 
             <div className="space-y-4">
