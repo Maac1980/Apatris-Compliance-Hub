@@ -328,10 +328,10 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       const empZUS     = gross * EMP_ZUS_RATE;
       const healthBase = gross - empZUS;
       const health     = healthBase * HEALTH_RATE;
-      const kup        = gross * KUP_RATE;
-      const taxBase    = Math.max(0, gross - empZUS - kup);
+      // KUP applied on Health Base, tax base rounded to integer (2026 Umowa Zlecenie rules)
+      const taxBase    = Math.max(0, Math.round(healthBase * (1 - KUP_RATE)));
       const grossTax   = taxBase * PIT_RATE;
-      const pit        = Math.max(0, grossTax - (w.pit2 ? PIT2_REDUCTION : 0));
+      const pit        = Math.max(0, Math.round(grossTax - (w.pit2 ? PIT2_REDUCTION : 0)));
       const netAfterTax = Math.max(0, gross - empZUS - health - pit);
       const netPay     = netAfterTax - advance - penalties;
 
