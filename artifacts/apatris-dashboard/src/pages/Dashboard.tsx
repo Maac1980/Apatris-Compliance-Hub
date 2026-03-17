@@ -138,6 +138,17 @@ export default function Dashboard() {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [mobileBannerDismissed, setMobileBannerDismissed] = useState(() =>
+    localStorage.getItem("apatris-install-dismissed") === "1"
+  );
+  const [isInstalledPWA] = useState(() =>
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true
+  );
+
+  // Device detection for the install banner
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
   // Capture the beforeinstallprompt event for Android Chrome one-tap install
   useEffect(() => {
@@ -1179,6 +1190,90 @@ export default function Dashboard() {
             </div>
 
             <p className="text-center text-xs text-gray-500 font-mono mt-4">Once installed, the app opens full-screen with no browser bar.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Install Banner ─────────────────────────────────────────── */}
+      {isMobile && !isInstalledPWA && !mobileBannerDismissed && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
+          <div className="bg-slate-900 border-t border-lime-500/40 shadow-2xl px-4 pt-4 pb-6">
+            {/* Header row */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-[#C41E18] flex items-center justify-center flex-shrink-0">
+                  <Download className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm leading-tight">Install APATRIS</p>
+                  <p className="text-gray-400 text-xs font-mono">Add to your home screen</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setMobileBannerDismissed(true);
+                  localStorage.setItem("apatris-install-dismissed", "1");
+                }}
+                className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Android — one-tap install if prompt available */}
+            {!isIOS && deferredPrompt && (
+              <button
+                onClick={async () => {
+                  deferredPrompt.prompt();
+                  await deferredPrompt.userChoice;
+                  setDeferredPrompt(null);
+                  setMobileBannerDismissed(true);
+                  localStorage.setItem("apatris-install-dismissed", "1");
+                }}
+                className="w-full py-3 bg-lime-500 hover:bg-lime-400 text-black font-bold font-mono uppercase text-sm rounded-xl tracking-wide transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Tap to Install Now
+              </button>
+            )}
+
+            {/* Android — manual steps when no prompt */}
+            {!isIOS && !deferredPrompt && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-lime-400 font-mono uppercase tracking-wider mb-2">Android Chrome — 3 steps:</p>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-lime-500 font-bold w-4 flex-shrink-0">1.</span>
+                  <span>Tap the <span className="text-white font-bold">⋮ menu</span> (top right)</span>
+                </div>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-lime-500 font-bold w-4 flex-shrink-0">2.</span>
+                  <span>Tap <span className="text-white font-bold">"Add to Home Screen"</span></span>
+                </div>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-lime-500 font-bold w-4 flex-shrink-0">3.</span>
+                  <span>Tap <span className="text-white font-bold">Install</span> — done ✓</span>
+                </div>
+              </div>
+            )}
+
+            {/* iOS Safari steps */}
+            {isIOS && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-blue-400 font-mono uppercase tracking-wider mb-2">iPhone / iPad Safari — 3 steps:</p>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">1.</span>
+                  <span>Open in <span className="text-white font-bold">Safari</span> (not Chrome)</span>
+                </div>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">2.</span>
+                  <span>Tap <span className="text-white font-bold">Share</span> <span className="text-gray-400">(↑ box icon, bottom bar)</span></span>
+                </div>
+                <div className="flex gap-2 text-sm text-gray-300 font-mono">
+                  <span className="text-blue-400 font-bold w-4 flex-shrink-0">3.</span>
+                  <span>Tap <span className="text-white font-bold">"Add to Home Screen"</span> → <span className="text-white font-bold">Add</span> ✓</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
