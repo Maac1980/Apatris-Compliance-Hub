@@ -456,8 +456,13 @@ body.has-app-shell .app-shell-nav-btns {
 .table-responsive::-webkit-scrollbar-thumb,
 .app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
 
-/* Parent wrapper — must have these to force scrollbar to appear */
+/* Parent wrapper — must have these to force scrollbar to appear.
+   CRITICAL: width + max-width cap the BFC so it never expands to match
+   the table's intrinsic preferred width (table-layout:auto), which would
+   make app-table-scroll equally wide → zero overflow → no scrollbar. */
 .table-responsive-container {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
 }

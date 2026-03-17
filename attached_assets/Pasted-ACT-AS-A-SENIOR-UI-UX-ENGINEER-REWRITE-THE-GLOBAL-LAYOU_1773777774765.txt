@@ -1,0 +1,23 @@
+ACT AS A SENIOR UI/UX ENGINEER. REWRITE THE GLOBAL LAYOUT ARCHITECTURE TO FIX RESPONSIVE BUGS FOR BOTH DESKTOP AND MOBILE. STRICTLY APPLY THESE CSS RULES:
+
+1. GLOBAL PHYSICS (The Foundation):
+   - In index.html, ensure the viewport is locked: <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+   - Set global html, body: `margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw; box-sizing: border-box;`
+
+2. DESKTOP MODE (min-width: 769px) - "Enterprise Dashboard":
+   - Layout: Use CSS Flexbox or Grid. 
+   - Sidebar: Fixed on the left (e.g., width: 260px; height: 100vh; overflow-y: auto).
+   - Main Content Area: Takes the remaining width `calc(100vw - 260px)`. `height: 100vh; overflow-y: auto;`
+   - Top Bar: Unify branding. Remove duplicate logos. Keep action buttons (ZUS, CSV, PDF) aligned right.
+   - Hide the Mobile Bottom Navigation Bar completely (`display: none;`).
+
+3. MOBILE MODE (max-width: 768px) - "Native App Shell":
+   - Sidebar: Hide completely (`display: none;`).
+   - Top Header: `position: fixed; top: 0; width: 100%; z-index: 1000; padding-top: max(env(safe-area-inset-top), 20px);` (This fixes the battery/clock overlap).
+   - Bottom Nav Bar: `position: fixed; bottom: 0; width: 100%; z-index: 1000; padding-bottom: max(env(safe-area-inset-bottom), 15px); display: flex;` (This forces tabs to the bottom).
+   - Main Content Box: MUST sit between the headers. `height: 100vh; padding-top: 80px; padding-bottom: 100px; overflow-y: auto; -webkit-overflow-scrolling: touch;`
+
+4. TABLE OVERFLOW FIX (Payroll Ledger):
+   - Wrap every data table (like the Payroll Grid) in a `<div class="table-responsive">`.
+   - Apply to `.table-responsive`: `width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;`
+   - CRITICAL: The parent container holding `.table-responsive` MUST have `min-width: 0;` and `overflow: hidden;` applied to it. This prevents the table from stretching the entire screen and forces a horizontal scrollbar to appear.

@@ -740,7 +740,7 @@ export default function PayrollPage() {
         )}
 
         {/* ── Payroll Grid ─────────────────────────────────────────────── */}
-        <div className="table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+        <div className="table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           {/* ── Top bar: title + search ── */}
           <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
@@ -997,7 +997,7 @@ export default function PayrollPage() {
             </div>
           )}
 
-          <div className="app-table-scroll">
+          <div className="app-table-scroll" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "2050px" : showZUS && isAdmin ? "1650px" : "1060px" }}>
               <thead className="bg-slate-900/60 border-b border-slate-700">
                 <tr>
