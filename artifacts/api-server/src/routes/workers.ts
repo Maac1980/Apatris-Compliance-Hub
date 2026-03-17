@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, deleteRecord, initializeFields } from "../lib/airtable.js";
+import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, createRecordsBatch, deleteRecord, initializeFields } from "../lib/airtable.js";
 import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 
@@ -449,6 +449,65 @@ router.post("/workers", async (req, res) => {
     } catch { /* non-blocking */ }
 
     res.status(201).json(worker);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// POST /workers/bulk-import — create multiple workers from CSV data
+router.post("/workers/bulk-import", async (req, res) => {
+  try {
+    const { workers } = req.body as { workers: Array<Record<string, unknown>> };
+    if (!Array.isArray(workers) || workers.length === 0) {
+      res.status(400).json({ error: "workers array is required and must not be empty" });
+      return;
+    }
+
+    const airtableRecords: Array<Record<string, unknown>> = [];
+    let skipped = 0;
+
+    for (const w of workers) {
+      const name = typeof w.name === "string" ? w.name.trim() : "";
+      if (!name) { skipped++; continue; }
+
+      const fields: Record<string, unknown> = { "Full Name": name };
+      if (w.phone)               fields["PHONE"]               = w.phone;
+      if (w.email)               fields["EMAIL"]               = w.email;
+      if (w.specialization)      fields["SPEC"]                = w.specialization;
+      if (w.assignedSite)        fields["SITE"]                = String(w.assignedSite).trim();
+      if (w.iban)                fields["IBAN"]                = String(w.iban).toUpperCase().replace(/\s/g, "");
+      if (w.pesel)               fields["PESEL"]               = w.pesel;
+      if (w.nip)                 fields["NIP"]                 = w.nip;
+      if (w.visaType)            fields["Visa Type"]           = w.visaType;
+      if (w.zusStatus)           fields["ZUS Status"]          = w.zusStatus;
+      if (w.trcExpiry)           fields["TRC_EXPIRY"]          = w.trcExpiry;
+      if (w.passportExpiry)      fields["PASSPORT_EXPIRY"]     = w.passportExpiry;
+      if (w.bhpExpiry)           fields["BHP EXPIRY"]          = w.bhpExpiry;
+      if (w.contractEndDate)     fields["Contract End Date"]   = w.contractEndDate;
+      if (w.workPermitExpiry)    fields["Work Permit Expiry"]  = w.workPermitExpiry;
+      if (w.medicalExamExpiry)   fields["Medical Exam Expiry"] = w.medicalExamExpiry;
+      if (w.oswiadczenieExpiry)  fields["Oswiadczenie Expiry"] = w.oswiadczenieExpiry;
+      if (w.udtCertExpiry)       fields["UDT Cert Expiry"]     = w.udtCertExpiry;
+      airtableRecords.push(fields);
+    }
+
+    const { created, errors } = await createRecordsBatch(airtableRecords);
+
+    try {
+      const actor = (req as any).user;
+      appendAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: actor?.name || "Unknown",
+        actorEmail: actor?.email || "unknown",
+        action: "BULK_IMPORT",
+        workerId: "—",
+        workerName: `${created.length} workers`,
+        note: `CSV bulk import: ${created.length} created, ${skipped} skipped, ${errors.length} errors`,
+      });
+    } catch { /* non-blocking */ }
+
+    res.status(201).json({ imported: created.length, skipped, errors });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });

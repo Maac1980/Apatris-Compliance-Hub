@@ -115,6 +115,33 @@ export async function createRecord(fields: Record<string, unknown>): Promise<Air
   return (await res.json()) as AirtableRecord;
 }
 
+export async function createRecordsBatch(
+  records: Array<Record<string, unknown>>
+): Promise<{ created: AirtableRecord[]; errors: string[] }> {
+  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID is not set");
+
+  const created: AirtableRecord[] = [];
+  const errors: string[] = [];
+  const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
+
+  for (let i = 0; i < records.length; i += 10) {
+    const batch = records.slice(i, i + 10);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ records: batch.map((fields) => ({ fields })) }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      errors.push(`Batch ${Math.floor(i / 10) + 1}: Airtable error ${res.status}: ${text}`);
+    } else {
+      const data = (await res.json()) as { records: AirtableRecord[] };
+      created.push(...data.records);
+    }
+  }
+  return { created, errors };
+}
+
 export async function initializeFields(): Promise<{ created: string[]; skipped: string[]; errors: string[] }> {
   if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
 

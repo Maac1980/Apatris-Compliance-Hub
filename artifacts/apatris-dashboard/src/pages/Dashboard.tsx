@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings, ClipboardList,
-  Phone, MessageSquare, TrendingUp, Calculator, Download, CalendarDays, ChevronLeft, ChevronRight,
+  Phone, MessageSquare, TrendingUp, Calculator, Download, Upload, CalendarDays, ChevronLeft, ChevronRight,
   CheckSquare, Square, Archive, X, Send, History
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -67,6 +67,7 @@ import { ComplianceReportModal } from "@/components/ComplianceReportModal";
 import { BulkUploadModal } from "@/components/BulkUploadModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AddWorkerModal } from "@/components/AddWorkerModal";
+import { BulkImportModal } from "@/components/BulkImportModal";
 
 function LanguageToggle() {
   const { i18n } = useTranslation();
@@ -132,6 +133,7 @@ export default function Dashboard() {
   const [reportOpen, setReportOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addWorkerOpen, setAddWorkerOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [calendarView, setCalendarView] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [showArchived, setShowArchived] = useState(false);
@@ -438,6 +440,18 @@ export default function Dashboard() {
             >
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Add Worker</span>
+            </button>
+          )}
+
+          {/* Bulk Import CSV — Admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => setBulkImportOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-lime-500/60 text-lime-400 hover:bg-lime-600 hover:text-white rounded-lg text-sm font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_15px_rgba(132,204,22,0.3)]"
+              title="Import multiple workers from a CSV file"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Bulk Import</span>
             </button>
           )}
 
@@ -1090,6 +1104,7 @@ export default function Dashboard() {
 
       <ComplianceReportModal isOpen={reportOpen} onClose={() => setReportOpen(false)} />
       <BulkUploadModal isOpen={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} />
+      <BulkImportModal isOpen={bulkImportOpen} onClose={() => setBulkImportOpen(false)} />
       <AddWorkerModal
         isOpen={addWorkerOpen}
         onClose={() => setAddWorkerOpen(false)}
