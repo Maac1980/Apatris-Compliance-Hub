@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
@@ -1095,7 +1096,7 @@ export default function Dashboard() {
       {/* Install App Modal */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}>
-          <div className="bg-slate-900 border border-lime-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-slate-900 border border-lime-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-lg font-bold text-white uppercase tracking-wider">Install App</h2>
@@ -1104,10 +1105,25 @@ export default function Dashboard() {
               <button onClick={() => setShowInstallModal(false)} className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/10"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* URL copy box */}
-            <div className="mb-5 bg-slate-800 border border-lime-500/30 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-mono mb-2 uppercase tracking-wider">Your app URL</p>
-              <div className="flex items-center gap-2">
+            {/* QR Code */}
+            <div className="mb-5 bg-slate-800 border border-lime-500/30 rounded-xl p-4 flex flex-col items-center">
+              <p className="text-xs text-gray-400 font-mono mb-3 uppercase tracking-wider self-start">Scan to open on your phone</p>
+              <div className="bg-white p-3 rounded-xl shadow-lg">
+                <QRCodeSVG
+                  value={window.location.origin}
+                  size={180}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-3 text-center">
+                Point your phone camera at this code<br />
+                <span className="text-lime-400">→ open link → follow install steps below</span>
+              </p>
+              {/* URL copy row */}
+              <div className="w-full mt-3 flex items-center gap-2">
                 <code className="flex-1 text-xs text-lime-400 font-mono bg-black/30 rounded-lg px-3 py-2 truncate select-all">
                   {window.location.origin}
                 </code>
@@ -1122,7 +1138,6 @@ export default function Dashboard() {
                   {urlCopied ? "Copied ✓" : "Copy"}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 font-mono mt-2">Paste this into Safari to install on iPhone / Mac</p>
             </div>
 
             <div className="space-y-4">
