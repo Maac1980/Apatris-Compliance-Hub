@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, History, BarChart3, Activity,
   ChevronDown, ChevronRight, Download, TrendingUp, Users,
-  DollarSign, CheckCircle2, Clock, Mail, Phone
+  DollarSign, CheckCircle2, Clock, Mail, Phone, MessageSquare
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 

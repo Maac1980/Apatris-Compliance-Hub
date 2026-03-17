@@ -451,7 +451,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
   const isCoordinator = user?.role === "Coordinator";
-  const { data: worker, isLoading } = useGetWorker(workerId || "", { query: { enabled: !!workerId } });
+  const { data: worker, isLoading } = useGetWorker(workerId || "", { query: { enabled: !!workerId } as any });
 
   const [isEditing, setIsEditing] = useState(false);
   const [showPIP, setShowPIP] = useState(false);

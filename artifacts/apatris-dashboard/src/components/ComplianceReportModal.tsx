@@ -65,7 +65,7 @@ function exportPDF(report: any) {
 }
 
 export function ComplianceReportModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { data: report, isLoading } = useGetComplianceReport({ query: { enabled: isOpen } });
+  const { data: report, isLoading } = useGetComplianceReport({ query: { enabled: isOpen } as any });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

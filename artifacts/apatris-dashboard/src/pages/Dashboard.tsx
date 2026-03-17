@@ -1009,7 +1009,7 @@ export default function Dashboard() {
               if (targets.length === 0) { alert("No phone numbers available for selected workers."); return; }
               const msg = encodeURIComponent("Dzień dobry, tutaj biuro Apatris. Prosimy o sprawdzenie ważności dokumentów. Dziękujemy.");
               for (const w of targets) {
-                const num = w.phone.replace(/\D/g, "");
+                const num = String(w.phone).replace(/\D/g, "");
                 const n48 = num.startsWith("48") ? num : num.length === 9 ? "48" + num : "48" + num;
                 window.open(`https://wa.me/${n48}?text=${msg}`, "_blank");
               }

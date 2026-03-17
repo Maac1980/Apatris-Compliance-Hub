@@ -159,6 +159,7 @@ async function runDailyScan(): Promise<void> {
             workerName: w.name,
             workerId: w.id,
             documentType: label,
+            issueDate: "",
             expiryDate: expDate,
             daysUntilExpiry: daysLeft,
             status,

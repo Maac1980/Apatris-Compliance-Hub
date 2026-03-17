@@ -263,7 +263,7 @@ const bulkUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize:
 async function scanBulkDocument(
   fileBuffer: Buffer,
   mimeType: string,
-  category: "passport" | "bhp" | "certificate" | "contract"
+  category: "passport" | "bhp" | "certificate" | "contract" | "cv"
 ): Promise<Record<string, string | null>> {
   const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (!imageTypes.includes(mimeType)) return {};
@@ -316,20 +316,21 @@ router.post("/workers/bulk-create", bulkUpload.fields([
   try {
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
+    const emptyDoc: Record<string, string | null> = {};
     // Scan all uploaded files in parallel
     const scans = await Promise.all([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyDoc),
       files?.bhp?.[0]
         ? scanBulkDocument(files.bhp[0].buffer, files.bhp[0].mimetype, "bhp")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyDoc),
       files?.certificate?.[0]
         ? scanBulkDocument(files.certificate[0].buffer, files.certificate[0].mimetype, "certificate")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyDoc),
       files?.contract?.[0]
         ? scanBulkDocument(files.contract[0].buffer, files.contract[0].mimetype, "contract")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyDoc),
     ]);
 
     const [passportData, bhpData, certData, contractData] = scans;
@@ -625,7 +626,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
     // 2. Upload the attachment to Airtable
     await uploadAttachmentToRecord(
-      req.params.id,
+      req.params.id as string,
       fieldName,
       req.file.buffer,
       req.file.originalname,
@@ -658,7 +659,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
       if (Object.keys(airtableUpdates).length > 0) {
         try {
-          await updateRecord(req.params.id, airtableUpdates);
+          await updateRecord(req.params.id as string, airtableUpdates);
         } catch (updateErr) {
           // Log but don't fail — some fields may not exist in the user's Airtable
           console.warn("[upload] Auto-fill partial failure:", updateErr instanceof Error ? updateErr.message : updateErr);
@@ -667,7 +668,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     }
 
     // 4. Return updated worker + what was auto-filled
-    const record = await fetchRecord(req.params.id);
+    const record = await fetchRecord(req.params.id as string);
     res.json({ worker: mapRecordToWorker(record), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -699,16 +700,17 @@ router.post("/workers/apply", applyUpload.fields([
 
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
+    const empty: Record<string, string | null> = {};
     const [passportData, trcData, cvData] = await Promise.all([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
       files?.trc?.[0]
         ? scanBulkDocument(files.trc[0].buffer, files.trc[0].mimetype, "certificate")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
       files?.cv?.[0]
         ? scanBulkDocument(files.cv[0].buffer, files.cv[0].mimetype, "cv")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
     ]);
 
     const airtableFields: Record<string, unknown> = {

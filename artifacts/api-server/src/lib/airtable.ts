@@ -275,7 +275,7 @@ export async function uploadAttachmentToRecord(
   const contentUrl = `https://content.airtable.com/v0/${AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(fieldName)}/uploadAttachment`;
 
   const form = new FormData();
-  form.append("file", new Blob([fileBuffer], { type: mimeType }), filename);
+  form.append("file", new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), filename);
   form.append("filename", filename);
   form.append("contentType", mimeType);
 
