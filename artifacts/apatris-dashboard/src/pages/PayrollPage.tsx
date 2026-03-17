@@ -740,7 +740,7 @@ export default function PayrollPage() {
         )}
 
         {/* ── Payroll Grid ─────────────────────────────────────────────── */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+        <div className="table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
           {/* ── Top bar: title + search ── */}
           <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">

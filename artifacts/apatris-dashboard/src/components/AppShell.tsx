@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     path === "/" ? location === "/" : location.startsWith(path);
 
   return (
-    <>
+    <div className="app-shell-root">
       {/* ─── Desktop Sidebar ──────────────────────────────────────────── */}
       <aside className="app-sidebar">
         {/* Brand */}
@@ -161,8 +161,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* ─── Page content ─────────────────────────────────────────────── */}
-      {children}
+      {/* ─── Page content (wraps children; provides min-width:0 for flex) ── */}
+      <div className="app-content-wrapper">
+        {children}
+      </div>
 
       {/* ─── Mobile Bottom Bar ────────────────────────────────────────── */}
       <nav className="app-bottom-bar">
@@ -186,6 +188,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
-    </>
+    </div>
   );
 }

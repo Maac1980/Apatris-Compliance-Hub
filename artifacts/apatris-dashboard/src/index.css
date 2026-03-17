@@ -338,137 +338,200 @@
 
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   HYBRID APP SHELL — SAFE PWA LOCK
-   Removes position:fixed and touch-action:none which blocked all
-   touch-based scrolling. Uses overscroll-behavior instead.
-   ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL PHYSICS FOUNDATION
+   Spec: html, body — margin:0; padding:0; overflow:hidden; height:100vh;
+         width:100vw; box-sizing:border-box
+   viewport meta in index.html: maximum-scale=1.0, user-scalable=no,
+                                 viewport-fit=cover  (already set)
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
 html {
-  height: 100%;
-  overflow: hidden;
-}
-body {
-  height: 100%;
   margin: 0;
   padding: 0;
+  height: 100vh;
+  width: 100vw;
   overflow: hidden;
-  overscroll-behavior: none;   /* kills iOS bounce/elastic scroll */
 }
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  overscroll-behavior: none;    /* kills iOS elastic bounce without blocking touch */
+}
+
 #root {
   height: 100vh;
-  width: 100%;
+  width: 100vw;
   overflow: hidden;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   APP SHELL ROOT  — flex row: [sidebar 260px] + [content wrapper]
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app-shell-root {
   display: flex;
-  flex-direction: column;
-}
-
-/* Every main scroll container scrolls vertically via touch */
-main,
-.app-content-scroll {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior-y: contain;
-}
-
-/* Horizontal table swipe — scrollbar styled, touch-friendly */
-.app-table-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;   /* allow both axes so vertical still works on iOS */
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.14) transparent;
-}
-.app-table-scroll::-webkit-scrollbar { height: 4px; }
-.app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
-
-/* No visible scrollbar but still scrollable (header button bar) */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-
-/* ═══════════════════════════════════════════════════════════════════
-   DESKTOP SIDEBAR (≥ 769px)
-   ═══════════════════════════════════════════════════════════════════ */
-.app-sidebar {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 250px;
+  flex-direction: row;
   height: 100vh;
-  z-index: 200;
+  width: 100vw;
+  overflow: hidden;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESKTOP SIDEBAR  (≥ 769px)
+   Spec: Fixed left, width:260px, height:100vh, overflow-y:auto
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #0f172a;
-  border-right: 1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
+  z-index: 200;
   box-shadow:
     4px 0 32px rgba(0, 0, 0, 0.55),
-    2px 0 8px  rgba(196, 30, 24, 0.07),
-    inset -1px 0 0 rgba(255,255,255,0.04);
-  overflow: hidden;
+    2px 0 8px rgba(196, 30, 24, 0.07),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04);
 }
 
-/* Page offset — sidebar takes 250px on left */
-body.has-app-shell .app-shell-page {
-  margin-left: 250px;
-  width: calc(100vw - 250px);
-  max-width: calc(100vw - 250px);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTENT WRAPPER  — takes calc(100vw - 260px), height:100vh
+   CRITICAL: min-width:0 prevents flex child from overflowing its container
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app-content-wrapper {
+  flex: 1;
+  min-width: 0;            /* CRITICAL: stops flex item from blowing out layout */
+  height: 100vh;
+  overflow: hidden;        /* pages handle their own inner scroll via main */
+  display: flex;
+  flex-direction: column;
 }
 
-/* Hide page header nav buttons — sidebar handles navigation */
+/* Pages (.app-shell-page) fill the content wrapper exactly */
+.app-shell-page {
+  flex: 1;
+  min-height: 0;           /* allow shrink below content height in flex */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide in-page nav buttons — sidebar handles navigation */
 body.has-app-shell .app-shell-nav-btns {
   display: none !important;
 }
 
-/* Bottom bar hidden on desktop */
+/* Bottom bar hidden on desktop by default */
 .app-bottom-bar { display: none; }
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   MOBILE BOTTOM BAR (≤ 768px)
-   ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLE OVERFLOW FIX
+   Spec: .table-responsive  width:100%; overflow-x:auto; white-space:nowrap;
+         -webkit-overflow-scrolling:touch
+         Parent container: min-width:0; overflow:hidden
+   ═══════════════════════════════════════════════════════════════════════════ */
+.table-responsive,
+.app-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+.table-responsive::-webkit-scrollbar,
+.app-table-scroll::-webkit-scrollbar  { height: 4px; }
+.table-responsive::-webkit-scrollbar-thumb,
+.app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+
+/* Parent wrapper — must have these to force scrollbar to appear */
+.table-responsive-container {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Invisible-scrollbar utility (used on header button bar) */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE MODE  (≤ 768px)  — "Native App Shell"
+   Spec:
+     Sidebar:    display:none
+     Header:     position:fixed; top:0; padding-top:max(safe-area-top,20px)
+     Bottom nav: position:fixed; bottom:0; padding-bottom:max(safe-area-bottom,15px)
+     Main:       height:100vh; padding-top:80px; padding-bottom:100px;
+                 overflow-y:auto; -webkit-overflow-scrolling:touch
+   ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* Sidebar hidden on mobile */
+  /* 1. Sidebar — hidden */
   .app-sidebar { display: none !important; }
 
-  /* No page offset on mobile */
-  body.has-app-shell .app-shell-page {
-    margin-left: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+  /* 2. Content wrapper fills full width */
+  .app-content-wrapper {
+    height: 100vh;
+    width: 100vw;
   }
 
-  /* Bottom bar */
+  /* 3. Page header — fixed at top (fixes battery/clock overlap on iOS PWA) */
+  body.has-app-shell .app-shell-page > header {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100% !important;
+    z-index: 1000 !important;
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+
+  /* 4. Main content — sits between fixed header and fixed bottom nav
+        Spec: height:100vh; padding-top:80px; padding-bottom:100px;
+              overflow-y:auto; -webkit-overflow-scrolling:touch         */
+  body.has-app-shell .app-shell-page > main {
+    padding-top: max(calc(56px + env(safe-area-inset-top)), 76px) !important;
+    padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    height: 100vh !important;
+    overscroll-behavior-y: contain;
+  }
+
+  /* 5. Bottom nav bar — fixed at bottom */
   .app-bottom-bar {
     display: flex;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
+    width: 100%;
     height: 70px;
-    z-index: 200;
+    z-index: 1000;
     background: #0f172a;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     align-items: stretch;
     justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
     box-shadow:
       0 -4px 32px rgba(0, 0, 0, 0.55),
-      0 -1px 8px  rgba(196, 30, 24, 0.08),
-      inset 0 1px 0 rgba(255,255,255,0.04);
+      0 -1px 8px rgba(196, 30, 24, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
-  /* Push scrollable content above the bottom bar */
-  body.has-app-shell .app-shell-page main,
-  body.has-app-shell .app-shell-page .overflow-y-auto {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Dashboard logo text — hide on mobile to save header space */
+  /* Logo text in Dashboard header — hide to save horizontal space */
   .mobile-hide-logo-text { display: none; }
 }
 
