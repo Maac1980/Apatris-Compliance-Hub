@@ -631,7 +631,7 @@ export default function PayrollPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden flex flex-col gap-3 p-3 sm:p-4 max-w-[1800px] mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 p-3 sm:p-4 max-w-[1800px] mx-auto w-full">
 
         {/* ── Top controls (non-scrolling) ─────────────────────────────── */}
         <div className="flex-shrink-0 flex flex-col gap-3">
@@ -750,7 +750,7 @@ export default function PayrollPage() {
         {/* ── Payroll Grid (flex-1: fills remaining height) ────────────── */}
         <div className="flex-1 min-h-0 flex flex-col table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           {/* ── Top bar: title + search ── */}
-          <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-shrink-0 px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
               {isAdmin ? (showZUS ? "Payroll Grid — ZUS Breakdown" : "Payroll Grid — Click any value to edit") : "Hours Grid — Click Hours to update"}
             </p>

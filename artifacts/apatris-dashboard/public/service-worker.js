@@ -1,4 +1,4 @@
-// Apatris Portal — Service Worker v4
+// Apatris Portal — Service Worker v5
 // Strategy:
 //   API calls         → Network-only (never cache)
 //   Static assets     → Stale-While-Revalidate (serve from cache instantly,
@@ -6,7 +6,7 @@
 //   App shell (HTML)  → Network-first with cache fallback (always try fresh HTML,
 //                        fall back to cached shell when offline)
 
-const CACHE_VERSION = "apatris-v4";
+const CACHE_VERSION = "apatris-v5";
 const STATIC_EXTS = [".js", ".css", ".woff", ".woff2", ".ttf", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"];
 
 // Assets to pre-cache immediately on install
