@@ -339,114 +339,106 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-shell-page h-screen bg-slate-900 text-foreground flex flex-col relative overflow-hidden">
+    <div className="app-shell-page bg-slate-900 text-foreground flex flex-col relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/8 blur-[140px] rounded-full" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[30%] bg-destructive/3 blur-[160px] rounded-full" />
       </div>
 
-      {/* ── Page action bar ─────────────────────────────────────────────── */}
-      <header
-        className="h-12 border-b border-slate-700/60 bg-slate-900/98 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-5 flex items-center gap-3"
-        style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.04), 0 2px 16px rgba(0,0,0,0.25)" }}
-      >
-        {/* Page label */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Users className="w-4 h-4 text-red-400" />
-          <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-white font-mono">Workers</span>
-        </div>
-        <div className="w-px h-4 bg-white/10 flex-shrink-0" />
+      <main className="flex-1 overflow-y-auto z-10 w-full">
+        {/* ── Action toolbar ───────────────────────────────────────────────── */}
+        <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 sm:px-6 py-2"
+          style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
+          <div className="overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2 w-max">
 
-        {/* Scrollable action strip */}
-        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5 w-max">
+              {/* Nav buttons — hidden when AppShell is present */}
+              <div className="app-shell-nav-btns flex items-center gap-2">
+                <button onClick={() => setLocation("/compliance-alerts")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-orange-600/50 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                  <ClipboardList className="w-3.5 h-3.5" /><span>{t("header.compliance")}</span>
+                </button>
+                <button onClick={() => setLocation("/payroll")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600/50 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                  <Calculator className="w-3.5 h-3.5" /><span>Payroll</span>
+                </button>
+                <button onClick={() => setLocation("/history")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-purple-600/50 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                  <History className="w-3.5 h-3.5" /><span>History</span>
+                </button>
+                {isAdmin && (
+                  <button onClick={() => setLocation("/admin-settings")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                    <Settings className="w-3.5 h-3.5" /><span>{t("header.admin")}</span>
+                  </button>
+                )}
+              </div>
 
-            {/* Nav buttons — hidden when AppShell top bar is active */}
-            <div className="app-shell-nav-btns flex items-center gap-1.5">
-              <button onClick={() => setLocation("/compliance-alerts")}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-orange-600/50 text-orange-400 hover:bg-orange-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                <ClipboardList className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.compliance")}</span>
-              </button>
-              <button onClick={() => setLocation("/payroll")}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600/50 text-green-400 hover:bg-green-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                <Calculator className="w-3.5 h-3.5" /><span className="hidden sm:inline">Payroll</span>
-              </button>
-              <button onClick={() => setLocation("/history")}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-purple-600/50 text-purple-400 hover:bg-purple-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                <History className="w-3.5 h-3.5" /><span className="hidden sm:inline">History</span>
-              </button>
+              {/* ⚡ AI Smart Upload */}
               {isAdmin && (
-                <button onClick={() => setLocation("/admin-settings")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-                  <Settings className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.admin")}</span>
+                <button onClick={() => setBulkUploadOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/60 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_12px_rgba(196,30,24,0.4)]">
+                  <Zap className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.aiUpload")}</span>
                 </button>
               )}
+
+              {/* + Add Worker */}
+              {isAdmin && (
+                <button onClick={() => setAddWorkerOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C41E18] hover:bg-red-500 border border-red-400/60 text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.35)]">
+                  <Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Worker</span>
+                </button>
+              )}
+
+              {/* ↑ Bulk Import */}
+              {isAdmin && (
+                <button onClick={() => setBulkImportOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/50 text-lime-400 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                  <Upload className="w-3.5 h-3.5" /><span className="hidden sm:inline">Bulk Import</span>
+                </button>
+              )}
+
+              {/* 📄 Report */}
+              <button onClick={() => setReportOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                <FileText className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.generateReport")}</span>
+              </button>
+
+              {/* ↓ Export */}
+              <button onClick={handleDownloadCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
+                <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span>
+              </button>
+
+              {/* 🔔 Notifications */}
+              <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
+
+              {/* 🌐 Language */}
+              <LanguageToggle />
+
+              {/* 📲 Install App */}
+              <button
+                onClick={async () => {
+                  if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    await deferredPrompt.userChoice;
+                    setDeferredPrompt(null);
+                  } else {
+                    setShowInstallModal(true);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/40 text-lime-400/80 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all"
+                title="Install as app on your device"
+              >
+                <Download className="w-3.5 h-3.5" /><span className="hidden lg:inline">Install App</span>
+              </button>
             </div>
-
-            {/* ⚡ AI Smart Upload */}
-            {isAdmin && (
-              <button onClick={() => setBulkUploadOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/50 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_12px_rgba(196,30,24,0.35)]">
-                <Zap className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.aiUpload")}</span>
-              </button>
-            )}
-
-            {/* + Add Worker */}
-            {isAdmin && (
-              <button onClick={() => setAddWorkerOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 border border-red-400/60 text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)] hover:shadow-[0_0_16px_rgba(196,30,24,0.5)]">
-                <Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Worker</span>
-              </button>
-            )}
-
-            {/* ↑ Bulk Import */}
-            {isAdmin && (
-              <button onClick={() => setBulkImportOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/50 text-lime-400 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all hover:shadow-[0_0_10px_rgba(132,204,22,0.3)]">
-                <Upload className="w-3.5 h-3.5" /><span className="hidden sm:inline">Bulk Import</span>
-              </button>
-            )}
-
-            {/* 📄 Report */}
-            <button onClick={() => setReportOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-              <FileText className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("header.generateReport")}</span>
-            </button>
-
-            {/* ↓ Export */}
-            <button onClick={handleDownloadCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 text-gray-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all">
-              <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span>
-            </button>
-
-            {/* 🔔 Notifications */}
-            <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
-
-            {/* 🌐 Language */}
-            <LanguageToggle />
-
-            {/* 📲 Install App */}
-            <button
-              onClick={async () => {
-                if (deferredPrompt) {
-                  deferredPrompt.prompt();
-                  await deferredPrompt.userChoice;
-                  setDeferredPrompt(null);
-                } else {
-                  setShowInstallModal(true);
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-lime-500/40 text-lime-400/80 hover:bg-lime-600 hover:text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wide transition-all"
-              title="Install as app on your device"
-            >
-              <Download className="w-3.5 h-3.5" /><span className="hidden lg:inline">Install App</span>
-            </button>
           </div>
         </div>
-      </header>
 
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8 z-10 max-w-[1600px] mx-auto w-full space-y-8">
+        {/* ── Page content ─────────────────────────────────────────────────── */}
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard title={t("stats.totalWorkforce")} value={stats?.total || "0"} icon={Users} />
@@ -990,6 +982,7 @@ export default function Dashboard() {
           </div>
           </div>{/* end hidden md:block */}
         </div>
+        </div>{/* end page content wrapper */}
       </main>
 
       {/* Bulk WhatsApp floating action bar */}

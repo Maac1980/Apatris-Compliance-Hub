@@ -573,7 +573,7 @@ export default function PayrollPage() {
   const tdCls = "px-4 py-3 align-middle";
 
   return (
-    <div className="app-shell-page h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="app-shell-page bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="h-12 border-b border-slate-700/60 bg-slate-900/98 sticky top-0 z-30 px-4 sm:px-5 flex items-center justify-between gap-4"
         style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.04), 0 2px 16px rgba(0,0,0,0.25)" }}>
