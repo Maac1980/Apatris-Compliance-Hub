@@ -51,7 +51,7 @@ export function WorkersTab() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [addSheetOpen, setAddSheetOpen]     = useState(false);
 
-  const canAddProfessional = role === "TechOps" || role === "Coordinator";
+  const canAddProfessional = role === "Executive";
 
   const pills: ("All" | WorkerStatus)[] = ["All", "Compliant", "Expiring Soon", "Missing Docs", "Non-Compliant"];
 
