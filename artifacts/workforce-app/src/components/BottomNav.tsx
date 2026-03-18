@@ -2,7 +2,7 @@ import { useAuth } from "@/lib/auth";
 import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
-import { MOCK_WORKERS } from "@/data/mockWorkers";
+import { useWorkers } from "@/hooks/useWorkers";
 
 interface Tab {
   id: string;
@@ -75,15 +75,16 @@ const BADGE_BG: Record<Role, string> = {
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
+  const { workers } = useWorkers();
   if (!role) return null;
 
   const tabs = getTabsForRole(role);
   const activeColor = ACTIVE_COLORS[role];
 
-  const alertCount = MOCK_WORKERS.filter(
+  const alertCount = workers.filter(
     w => w.status === "Non-Compliant" || w.status === "Missing Docs"
   ).length;
-  const docQueueCount = MOCK_WORKERS.flatMap(w => w.documents).filter(d => d.status === "Under Review").length;
+  const docQueueCount = workers.flatMap(w => w.documents).filter(d => d.status === "Under Review").length;
 
   function getBadge(tabId: string): number {
     if (tabId === "alerts") return alertCount;

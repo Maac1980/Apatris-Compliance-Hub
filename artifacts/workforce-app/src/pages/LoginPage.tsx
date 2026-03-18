@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { mobileLogin } from "@/lib/api";
 import { Role } from "@/types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Scale, Wrench, ClipboardList, HardHat, ChevronRight,
+  ArrowLeft, Eye, EyeOff, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +19,7 @@ interface RoleCard {
   accent: string;
   badge: string;
   glow: string;
+  borderColor: string;
 }
 
 const ROLES: RoleCard[] = [
@@ -28,6 +32,7 @@ const ROLES: RoleCard[] = [
     accent: "border-indigo-500 text-indigo-400",
     badge: "bg-indigo-600 text-white",
     glow: "hover:shadow-indigo-900/40",
+    borderColor: "border-indigo-500/40",
   },
   {
     role: "LegalHead",
@@ -38,6 +43,7 @@ const ROLES: RoleCard[] = [
     accent: "border-violet-500 text-violet-400",
     badge: "bg-violet-600 text-white",
     glow: "hover:shadow-violet-900/40",
+    borderColor: "border-violet-500/40",
   },
   {
     role: "TechOps",
@@ -48,6 +54,7 @@ const ROLES: RoleCard[] = [
     accent: "border-blue-500 text-blue-400",
     badge: "bg-blue-600 text-white",
     glow: "hover:shadow-blue-900/40",
+    borderColor: "border-blue-500/40",
   },
   {
     role: "Coordinator",
@@ -58,6 +65,7 @@ const ROLES: RoleCard[] = [
     accent: "border-emerald-500 text-emerald-400",
     badge: "bg-emerald-600 text-white",
     glow: "hover:shadow-emerald-900/40",
+    borderColor: "border-emerald-500/40",
   },
   {
     role: "Professional",
@@ -68,6 +76,7 @@ const ROLES: RoleCard[] = [
     accent: "border-amber-500 text-amber-400",
     badge: "bg-amber-500 text-white",
     glow: "hover:shadow-amber-900/40",
+    borderColor: "border-amber-500/40",
   },
 ];
 
@@ -85,9 +94,40 @@ export function LoginPage() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
 
-  const handleLogin = (role: Role) => {
-    login(role);
-    setLocation("/dashboard");
+  const [selectedRole, setSelectedRole] = useState<RoleCard | null>(null);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRoleSelect = (card: RoleCard) => {
+    setSelectedRole(card);
+    setPassword("");
+    setError(null);
+  };
+
+  const handleBack = () => {
+    setSelectedRole(null);
+    setPassword("");
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole || !password.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await mobileLogin(selectedRole.tier, password.trim());
+      login(selectedRole.role, result.name, result.jwt);
+      setLocation("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Authentication failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,7 +135,6 @@ export function LoginPage() {
       className="flex flex-col min-h-full relative overflow-hidden"
       style={{ background: "#0d0d0d" }}
     >
-      {/* Dot-grid overlay — matches Apatris dashboard */}
       <div
         className="absolute inset-0 opacity-[0.12] pointer-events-none"
         style={{
@@ -103,15 +142,11 @@ export function LoginPage() {
           backgroundSize: "28px 28px",
         }}
       />
-
-      {/* Subtle top vignette */}
       <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-      {/* Subtle bottom vignette */}
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
       <div className="relative z-10 flex flex-col min-h-full px-6 py-10">
 
-        {/* Brand header — identical style to Apatris dashboard */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -127,7 +162,6 @@ export function LoginPage() {
           </p>
         </motion.div>
 
-        {/* Divider — "WORKFORCE DEPLOYMENT TERMINAL" */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -141,72 +175,197 @@ export function LoginPage() {
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
         </motion.div>
 
-        {/* Role selector panel */}
         <div className="bg-gray-900/80 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-sm flex-1">
-          <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
-            Select your designation
-          </p>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="space-y-2.5"
-          >
-            {ROLES.map((cfg) => {
-              const Icon = cfg.icon;
-              return (
-                <motion.button
-                  key={cfg.role}
-                  variants={itemVariants}
-                  whileTap={{ scale: 0.975 }}
-                  onClick={() => handleLogin(cfg.role)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3.5 rounded-xl text-left",
-                    "bg-gray-800/60 border border-white/[0.07]",
-                    "hover:bg-gray-700/60 hover:border-white/15",
-                    "active:bg-gray-700/80 transition-all duration-200 shadow-md",
-                    cfg.glow
-                  )}
+          <AnimatePresence mode="wait">
+            {!selectedRole ? (
+              /* ── Step 1: Role selector ── */
+              <motion.div
+                key="role-select"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
+                  Select your designation
+                </p>
+
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="space-y-2.5"
                 >
-                  {/* Colored left accent stripe */}
-                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", cfg.accent.split(" ")[0])} />
+                  {ROLES.map((cfg) => {
+                    const Icon = cfg.icon;
+                    return (
+                      <motion.button
+                        key={cfg.role}
+                        variants={itemVariants}
+                        whileTap={{ scale: 0.975 }}
+                        onClick={() => handleRoleSelect(cfg)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3.5 rounded-xl text-left",
+                          "bg-gray-800/60 border border-white/[0.07]",
+                          "hover:bg-gray-700/60 hover:border-white/15",
+                          "active:bg-gray-700/80 transition-all duration-200 shadow-md",
+                          cfg.glow
+                        )}
+                      >
+                        <div className={cn("w-0.5 self-stretch rounded-full border-l-2", cfg.accent.split(" ")[0])} />
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                          "bg-white/5 border border-white/10",
+                          cfg.accent.split(" ")[1]
+                        )}>
+                          <Icon className="w-5 h-5" strokeWidth={1.8} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[13px] font-bold text-white leading-tight truncate">
+                              {cfg.title}
+                            </span>
+                            <span className={cn(
+                              "text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 tracking-wide",
+                              cfg.badge
+                            )}>
+                              T{cfg.tier}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 font-medium leading-tight truncate">
+                            {cfg.subtitle}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              </motion.div>
+            ) : (
+              /* ── Step 2: Password / PIN ── */
+              <motion.div
+                key="password-entry"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+              >
+                {/* Back button */}
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors mb-5 text-xs font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Change role
+                </button>
 
-                  {/* Icon */}
+                {/* Selected role preview */}
+                <div className={cn(
+                  "flex items-center gap-3 p-3.5 rounded-xl mb-6",
+                  "bg-gray-800/80 border",
+                  selectedRole.borderColor
+                )}>
+                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", selectedRole.accent.split(" ")[0])} />
                   <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                     "bg-white/5 border border-white/10",
-                    cfg.accent.split(" ")[1]
+                    selectedRole.accent.split(" ")[1]
                   )}>
-                    <Icon className="w-5 h-5" strokeWidth={1.8} />
+                    <selectedRole.icon className="w-4.5 h-4.5" strokeWidth={1.8} />
                   </div>
-
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[13px] font-bold text-white leading-tight truncate">
-                        {cfg.title}
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 tracking-wide",
-                        cfg.badge
-                      )}>
-                        T{cfg.tier}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-white truncate">{selectedRole.title}</span>
+                      <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0", selectedRole.badge)}>
+                        T{selectedRole.tier}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 font-medium leading-tight truncate">
-                      {cfg.subtitle}
-                    </p>
+                  </div>
+                </div>
+
+                {/* Password form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono text-gray-500 tracking-widest uppercase block mb-2">
+                      <Lock className="w-3 h-3 inline mr-1.5 mb-0.5" />
+                      {selectedRole.tier === 1 ? "Access password" : "Tier PIN"}
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setError(null);
+                        }}
+                        placeholder={selectedRole.tier === 1 ? "Enter your password" : "Enter tier PIN"}
+                        autoFocus
+                        className={cn(
+                          "w-full bg-gray-800/60 border rounded-xl px-4 py-3.5 pr-12",
+                          "text-white text-sm font-mono placeholder:text-gray-600",
+                          "outline-none focus:ring-2 transition-all",
+                          error
+                            ? "border-red-500/60 focus:ring-red-500/30"
+                            : "border-white/10 focus:border-white/20 focus:ring-white/10"
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {error && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="text-red-400 text-[11px] mt-2 font-medium"
+                        >
+                          {error}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
-                </motion.button>
-              );
-            })}
-          </motion.div>
+                  <motion.button
+                    type="submit"
+                    disabled={!password.trim() || loading}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      "w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-200",
+                      "border border-white/10",
+                      !password.trim() || loading
+                        ? "bg-gray-800/40 text-gray-600 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-100 active:bg-gray-200 shadow-lg"
+                    )}
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        Verifying...
+                      </span>
+                    ) : (
+                      "Authenticate"
+                    )}
+                  </motion.button>
+                </form>
+
+                <p className="text-center text-[10px] text-gray-600 mt-5">
+                  Contact your administrator if you don't have access credentials.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Footer */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

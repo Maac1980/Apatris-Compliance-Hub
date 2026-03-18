@@ -193,4 +193,70 @@ router.get("/auth/verify", (req, res) => {
   }
 });
 
+// ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
+// Validates tier-based credentials for the Workforce mobile app.
+// T1 → checked against APATRIS_PASS_AKSHAY or APATRIS_PASS_MANISH
+// T2–T5 → checked against MOBILE_T2_PIN … MOBILE_T5_PIN environment variables
+const MOBILE_ROLE_NAMES: Record<number, string> = {
+  1: "Executive",
+  2: "LegalHead",
+  3: "TechOps",
+  4: "Coordinator",
+  5: "Professional",
+};
+
+router.post("/auth/mobile-login", (req, res) => {
+  try {
+    const { tier, password } = req.body as { tier?: unknown; password?: unknown };
+
+    if (typeof tier !== "number" || !MOBILE_ROLE_NAMES[tier]) {
+      return res.status(400).json({ error: "Invalid tier." });
+    }
+    if (typeof password !== "string" || !password.trim()) {
+      return res.status(400).json({ error: "Password is required." });
+    }
+
+    const roleName = MOBILE_ROLE_NAMES[tier];
+    let authenticated = false;
+    let userName = roleName;
+
+    if (tier === 1) {
+      const passAkshay = process.env["APATRIS_PASS_AKSHAY"];
+      const passManish = process.env["APATRIS_PASS_MANISH"];
+      if (passAkshay && password === passAkshay) {
+        authenticated = true;
+        userName = "Akshay";
+      } else if (passManish && password === passManish) {
+        authenticated = true;
+        userName = "Manish";
+      }
+    } else {
+      const envKey = `MOBILE_T${tier}_PIN`;
+      const pin = process.env[envKey];
+      if (!pin) {
+        // PIN not configured — block access
+        return res.status(503).json({ error: `Tier ${tier} PIN not configured. Contact system administrator.` });
+      }
+      if (password === pin) {
+        authenticated = true;
+      }
+    }
+
+    if (!authenticated) {
+      return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
+    }
+
+    const token = signToken({
+      email: `${userName.toLowerCase()}@apatris.pl`,
+      name: userName,
+      role: roleName,
+    });
+
+    return res.json({ role: roleName, name: userName, jwt: token });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Login failed";
+    return res.status(500).json({ error: message });
+  }
+});
+
 export default router;

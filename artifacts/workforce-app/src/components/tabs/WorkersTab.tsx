@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Search, ChevronRight, MapPin, Clock, AlertTriangle, ShieldX, Plus, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MOCK_WORKERS, Worker, WorkerStatus, SITES } from "@/data/mockWorkers";
+import { Worker, WorkerStatus, SITES } from "@/data/mockWorkers";
+import { useWorkers } from "@/hooks/useWorkers";
 import { useAuth } from "@/lib/auth";
 import { WorkerDetail } from "@/components/WorkerDetail";
 import { AddProfessionalSheet } from "@/components/AddProfessionalSheet";
@@ -69,6 +70,7 @@ function getUrgentDetail(worker: Worker): { icon: React.ElementType; text: strin
 
 export function WorkersTab() {
   const { role } = useAuth();
+  const { workers, loading, isLive } = useWorkers();
   const [search, setSearch]             = useState("");
   const [filter, setFilter]             = useState<"All" | WorkerStatus>("All");
   const [siteFilter, setSiteFilter]     = useState<SiteFilter>("All Sites");
@@ -81,7 +83,7 @@ export function WorkersTab() {
   const activePill = getActivePillColor(role as Role);
   const fab = getFabColor(role as Role);
 
-  const filtered = MOCK_WORKERS.filter(w => {
+  const filtered = workers.filter(w => {
     const matchesSearch = w.name.toLowerCase().includes(search.toLowerCase())
       || w.trade.toLowerCase().includes(search.toLowerCase())
       || w.workplace.toLowerCase().includes(search.toLowerCase())
@@ -92,10 +94,10 @@ export function WorkersTab() {
   });
 
   const counts = {
-    compliant:    MOCK_WORKERS.filter(w => w.status === "Compliant").length,
-    expiring:     MOCK_WORKERS.filter(w => w.status === "Expiring Soon").length,
-    missing:      MOCK_WORKERS.filter(w => w.status === "Missing Docs").length,
-    nonCompliant: MOCK_WORKERS.filter(w => w.status === "Non-Compliant").length,
+    compliant:    workers.filter(w => w.status === "Compliant").length,
+    expiring:     workers.filter(w => w.status === "Expiring Soon").length,
+    missing:      workers.filter(w => w.status === "Missing Docs").length,
+    nonCompliant: workers.filter(w => w.status === "Non-Compliant").length,
   };
 
   return (
@@ -178,7 +180,7 @@ export function WorkersTab() {
         {/* Count bar */}
         <div className="px-4 mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
-            {filtered.length} of {MOCK_WORKERS.length} professionals
+            {filtered.length} of {workers.length} professionals{isLive ? " · live" : ""}
           </span>
           {(filter !== "All" || siteFilter !== "All Sites") && (
             <button
@@ -189,6 +191,22 @@ export function WorkersTab() {
             </button>
           )}
         </div>
+
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="px-4 pb-4 space-y-2.5">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border p-4 flex items-center gap-3 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 bg-gray-200 rounded w-2/3" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                </div>
+                <div className="w-16 h-6 bg-gray-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* List */}
         <div className="px-4 pb-24 space-y-2.5 flex-1 overflow-y-auto no-scrollbar">

@@ -1,9 +1,15 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Role } from "@/types";
 
+export interface MobileUser {
+  name: string;
+  jwt: string;
+}
+
 interface AuthContextType {
   role: Role | null;
-  login: (role: Role) => void;
+  user: MobileUser | null;
+  login: (role: Role, name: string, jwt: string) => void;
   logout: () => void;
   isReady: boolean;
 }
@@ -12,29 +18,40 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
+  const [user, setUser] = useState<MobileUser | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Rehydrate session from localStorage on mount
     const savedRole = localStorage.getItem("wf_role") as Role | null;
+    const savedName = localStorage.getItem("wf_name");
+    const savedJwt  = localStorage.getItem("wf_jwt");
     if (savedRole) {
       setRole(savedRole);
+      if (savedName && savedJwt) {
+        setUser({ name: savedName, jwt: savedJwt });
+      }
     }
     setIsReady(true);
   }, []);
 
-  const login = (newRole: Role) => {
+  const login = (newRole: Role, name: string, jwt: string) => {
     setRole(newRole);
+    setUser({ name, jwt });
     localStorage.setItem("wf_role", newRole);
+    localStorage.setItem("wf_name", name);
+    localStorage.setItem("wf_jwt", jwt);
   };
 
   const logout = () => {
     setRole(null);
+    setUser(null);
     localStorage.removeItem("wf_role");
+    localStorage.removeItem("wf_name");
+    localStorage.removeItem("wf_jwt");
   };
 
   return (
-    <AuthContext.Provider value={{ role, login, logout, isReady }}>
+    <AuthContext.Provider value={{ role, user, login, logout, isReady }}>
       {children}
     </AuthContext.Provider>
   );
