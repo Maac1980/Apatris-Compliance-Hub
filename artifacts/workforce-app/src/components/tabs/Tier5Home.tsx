@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 interface DocStatus {
   label: string;
@@ -65,6 +66,9 @@ const complianceLabel = overallCompliant ? "FULLY COMPLIANT" : "REVIEW REQUIRED"
 const complianceDot   = overallCompliant ? "bg-emerald-300" : "bg-amber-300";
 
 export function Tier5Home() {
+  const { user } = useAuth();
+  const displayName = user?.name ?? "Deployed Professional";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -100,7 +104,7 @@ export function Tier5Home() {
             <HardHat className="w-8 h-8 text-white" strokeWidth={1.5} />
           </div>
           <div>
-            <div className="text-xl font-black text-white leading-tight">Marek Kowalski</div>
+            <div className="text-xl font-black text-white leading-tight">{displayName}</div>
             <div className="text-xs text-white/80 font-medium">Welder · TIG Specialist</div>
             <div className="flex items-center gap-1.5 mt-1.5">
               <MapPin className="w-3 h-3 text-white/70" />
