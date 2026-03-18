@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { mobileLogin } from "@/lib/api";
+import {
+  isBiometricAvailable,
+  registerBiometric,
+  authenticateBiometric,
+  savePin,
+  getSavedPin,
+  hasSavedPin,
+  hasBiometric,
+  clearSavedPin,
+} from "@/lib/biometric";
 import { Role } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Scale, Wrench, ClipboardList, HardHat, ChevronRight,
-  ArrowLeft, Eye, EyeOff, Lock, User,
+  ArrowLeft, Eye, EyeOff, Lock, Fingerprint, Trash2, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +99,6 @@ const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
 };
-
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 260, damping: 24 } },
@@ -104,46 +113,89 @@ export function LoginPage() {
   const [password, setPassword]          = useState("");
   const [showPassword, setShowPassword]  = useState(false);
   const [loading, setLoading]            = useState(false);
+  const [bioLoading, setBioLoading]      = useState(false);
   const [error, setError]                = useState<string | null>(null);
+  const [rememberDevice, setRememberDevice] = useState(false);
+  const [bioAvailable, setBioAvailable]  = useState(false);
+  const [bioRegistered, setBioRegistered] = useState(false);
+  const [pinSaved, setPinSaved]          = useState(false);
+  const [bioSuccess, setBioSuccess]      = useState(false);
+
+  // Check biometric support on mount
+  useEffect(() => {
+    isBiometricAvailable().then(setBioAvailable);
+  }, []);
+
+  // When role+user selection changes, check saved state
+  const updateSavedState = useCallback((tier: number, userKey?: string) => {
+    setPinSaved(hasSavedPin(tier, userKey));
+    setBioRegistered(hasBiometric(tier, userKey));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRole) return;
+    const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
+    if (selectedRole.tier !== 1 || selectedUser) {
+      updateSavedState(selectedRole.tier, uKey);
+    }
+  }, [selectedRole, selectedUser, updateSavedState]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleRoleSelect = (card: RoleCard) => {
     setSelectedRole(card);
     setSelectedUser(null);
     setPassword("");
     setError(null);
+    setBioSuccess(false);
+    setPinSaved(false);
+    setBioRegistered(false);
   };
 
   const handleUserSelect = (u: typeof T1_USERS[number]) => {
     setSelectedUser(u);
     setPassword("");
     setError(null);
+    setBioSuccess(false);
+    updateSavedState(1, u.key);
   };
 
   const handleBack = () => {
     if (selectedUser) {
-      // On password screen for T1 → back to name picker
       setSelectedUser(null);
       setPassword("");
       setError(null);
+      setBioSuccess(false);
+      setPinSaved(false);
+      setBioRegistered(false);
     } else {
-      // On name picker or T2-T5 password screen → back to role list
       setSelectedRole(null);
       setPassword("");
       setError(null);
+      setBioSuccess(false);
+      setPinSaved(false);
+      setBioRegistered(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRole || !password.trim()) return;
-
+  const doLogin = async (pass: string) => {
+    if (!selectedRole) return;
     setLoading(true);
     setError(null);
-
     try {
       const nameParam = selectedRole.tier === 1 && selectedUser ? selectedUser.key : undefined;
-      const result = await mobileLogin(selectedRole.tier, password.trim(), nameParam);
+      const result = await mobileLogin(selectedRole.tier, pass, nameParam);
       login(selectedRole.role, result.name, result.jwt);
+
+      // Save credentials if "remember device" is checked
+      if (rememberDevice) {
+        const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
+        savePin(selectedRole.tier, pass, uKey);
+        if (bioAvailable) {
+          await registerBiometric(selectedRole.tier, uKey);
+        }
+      }
+
       setLocation("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
@@ -152,7 +204,53 @@ export function LoginPage() {
     }
   };
 
-  // Determine which step we're on
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) return;
+    await doLogin(password.trim());
+  };
+
+  const handleBiometric = async () => {
+    if (!selectedRole) return;
+    const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
+    setBioLoading(true);
+    setError(null);
+    try {
+      const passed = await authenticateBiometric(selectedRole.tier, uKey);
+      if (!passed) {
+        setError("Biometric authentication failed. Enter your PIN manually.");
+        return;
+      }
+      const savedPass = getSavedPin(selectedRole.tier, uKey);
+      if (!savedPass) {
+        setError("Saved credentials not found. Enter your PIN manually.");
+        return;
+      }
+      setBioSuccess(true);
+      // Small delay to show the success state
+      await new Promise(r => setTimeout(r, 500));
+      const nameParam = selectedRole.tier === 1 && selectedUser ? selectedUser.key : undefined;
+      const result = await mobileLogin(selectedRole.tier, savedPass, nameParam);
+      login(selectedRole.role, result.name, result.jwt);
+      setLocation("/dashboard");
+    } catch {
+      setError("Biometric authentication failed. Enter your PIN manually.");
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
+  const handleForgetDevice = () => {
+    if (!selectedRole) return;
+    const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
+    clearSavedPin(selectedRole.tier, uKey);
+    setPinSaved(false);
+    setBioRegistered(false);
+    setPassword("");
+  };
+
+  // ── Step logic ──────────────────────────────────────────────────────────────
+
   const step: "roles" | "name-picker" | "password" =
     !selectedRole
       ? "roles"
@@ -160,11 +258,7 @@ export function LoginPage() {
         ? "name-picker"
         : "password";
 
-  const passwordLabel = selectedRole?.tier === 1
-    ? `Welcome, ${selectedUser?.name ?? ""}`
-    : selectedRole?.tier === 1
-      ? "Access password"
-      : "Tier PIN";
+  const canShowBiometric = bioRegistered && pinSaved && bioAvailable;
 
   return (
     <div
@@ -212,7 +306,6 @@ export function LoginPage() {
         </motion.div>
 
         <div className="bg-gray-900/80 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-sm flex-1">
-
           <AnimatePresence mode="wait">
 
             {/* ── STEP 1: Role selector ──────────────────────────────────── */}
@@ -227,7 +320,6 @@ export function LoginPage() {
                 <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
                   Select your designation
                 </p>
-
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
@@ -236,6 +328,7 @@ export function LoginPage() {
                 >
                   {ROLES.map((cfg) => {
                     const Icon = cfg.icon;
+                    const hasSaved = hasSavedPin(cfg.tier, undefined) || (cfg.tier === 1 && T1_USERS.some(u => hasSavedPin(1, u.key)));
                     return (
                       <motion.button
                         key={cfg.role}
@@ -274,7 +367,12 @@ export function LoginPage() {
                             {cfg.subtitle}
                           </p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {hasSaved && (
+                            <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />
+                          )}
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </div>
                       </motion.button>
                     );
                   })}
@@ -299,7 +397,6 @@ export function LoginPage() {
                   Change role
                 </button>
 
-                {/* Role preview */}
                 <div className={cn(
                   "flex items-center gap-3 p-3.5 rounded-xl mb-6",
                   "bg-gray-800/80 border",
@@ -328,27 +425,39 @@ export function LoginPage() {
                 </p>
 
                 <div className="space-y-3">
-                  {T1_USERS.map((u) => (
-                    <motion.button
-                      key={u.key}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleUserSelect(u)}
-                      className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-xl text-left",
-                        "bg-gray-800/60 border transition-all duration-200",
-                        u.color
-                      )}
-                    >
-                      <div className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-black text-white/70">{u.initials}</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-white">{u.name}</div>
-                        <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · Partner</div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
-                    </motion.button>
-                  ))}
+                  {T1_USERS.map((u) => {
+                    const saved = hasSavedPin(1, u.key);
+                    const bio = hasBiometric(1, u.key);
+                    return (
+                      <motion.button
+                        key={u.key}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleUserSelect(u)}
+                        className={cn(
+                          "w-full flex items-center gap-4 p-4 rounded-xl text-left",
+                          "bg-gray-800/60 border transition-all duration-200",
+                          u.color
+                        )}
+                      >
+                        <div className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-black text-white/70">{u.initials}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-bold text-white">{u.name}</div>
+                          <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · Partner</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {bio && bioAvailable && (
+                            <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />
+                          )}
+                          {saved && !bio && (
+                            <Lock className="w-3.5 h-3.5 text-blue-400" />
+                          )}
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </div>
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
@@ -370,9 +479,9 @@ export function LoginPage() {
                   {selectedRole.tier === 1 ? "Change profile" : "Change role"}
                 </button>
 
-                {/* Selected identity preview */}
+                {/* Identity preview */}
                 <div className={cn(
-                  "flex items-center gap-3 p-3.5 rounded-xl mb-6",
+                  "flex items-center gap-3 p-3.5 rounded-xl mb-5",
                   "bg-gray-800/80 border",
                   selectedRole.borderColor
                 )}>
@@ -405,6 +514,57 @@ export function LoginPage() {
                   </div>
                 </div>
 
+                {/* ── Biometric quick-sign-in ── */}
+                <AnimatePresence>
+                  {canShowBiometric && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      className="mb-5"
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={handleBiometric}
+                        disabled={bioLoading}
+                        whileTap={{ scale: 0.97 }}
+                        className={cn(
+                          "w-full flex flex-col items-center gap-2.5 py-5 rounded-2xl border transition-all duration-200",
+                          bioSuccess
+                            ? "bg-emerald-500/20 border-emerald-500/50"
+                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-[0.98]"
+                        )}
+                      >
+                        {bioSuccess ? (
+                          <>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                            <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Verified</span>
+                          </>
+                        ) : bioLoading ? (
+                          <>
+                            <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            <span className="text-[11px] font-bold text-gray-400 tracking-wide">Scanning…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Fingerprint className="w-9 h-9 text-white/70" strokeWidth={1.5} />
+                            <span className="text-[12px] font-bold text-white/80 tracking-wide">
+                              Sign in with biometrics
+                            </span>
+                            <span className="text-[10px] text-gray-500">Touch sensor or Face ID</span>
+                          </>
+                        )}
+                      </motion.button>
+
+                      <div className="flex items-center gap-3 my-4">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-[10px] text-gray-600 font-mono">or enter PIN</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Password form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -422,7 +582,7 @@ export function LoginPage() {
                           setError(null);
                         }}
                         placeholder={selectedRole.tier === 1 ? "Enter your password" : "Enter tier PIN"}
-                        autoFocus
+                        autoFocus={!canShowBiometric}
                         className={cn(
                           "w-full bg-gray-800/60 border rounded-xl px-4 py-3.5 pr-12",
                           "text-white text-sm font-mono placeholder:text-gray-600",
@@ -455,6 +615,46 @@ export function LoginPage() {
                     </AnimatePresence>
                   </div>
 
+                  {/* Remember device checkbox */}
+                  {!pinSaved && (
+                    <button
+                      type="button"
+                      onClick={() => setRememberDevice(v => !v)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                        rememberDevice
+                          ? "bg-emerald-500/10 border-emerald-500/30"
+                          : "bg-white/[0.03] border-white/8 hover:bg-white/[0.06]"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
+                        rememberDevice ? "bg-emerald-500 border-emerald-500" : "border-white/20"
+                      )}>
+                        {rememberDevice && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="text-xs font-bold text-white/80">Remember this device</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          {bioAvailable ? "Enable biometric sign-in for next time" : "Save credentials for quick access"}
+                        </div>
+                      </div>
+                      {bioAvailable && rememberDevice && <Fingerprint className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    </button>
+                  )}
+
+                  {/* Forget saved device */}
+                  {pinSaved && (
+                    <button
+                      type="button"
+                      onClick={handleForgetDevice}
+                      className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-white/6 bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/20 transition-all text-left"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-gray-600 hover:text-red-400" />
+                      <span className="text-[11px] text-gray-600">Forget saved login for this device</span>
+                    </button>
+                  )}
+
                   <motion.button
                     type="submit"
                     disabled={!password.trim() || loading}
@@ -472,9 +672,7 @@ export function LoginPage() {
                         <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                         Verifying...
                       </span>
-                    ) : (
-                      "Authenticate"
-                    )}
+                    ) : "Authenticate"}
                   </motion.button>
                 </form>
 
