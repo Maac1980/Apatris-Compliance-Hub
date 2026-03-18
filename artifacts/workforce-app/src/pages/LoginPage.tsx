@@ -91,8 +91,8 @@ const ROLES: RoleCard[] = [
 ];
 
 const T1_USERS = [
-  { name: "Akshay", key: "akshay", initials: "AK", color: "border-indigo-500/50 hover:border-indigo-400 text-indigo-300" },
-  { name: "Manish", key: "manish", initials: "MN", color: "border-violet-500/50 hover:border-violet-400 text-violet-300" },
+  { name: "Manish", key: "manish", initials: "MN", role: "Founder & CEO", color: "border-indigo-500/50 hover:border-indigo-400 text-indigo-300" },
+  { name: "Akshay", key: "akshay", initials: "AK", role: "Partner",       color: "border-violet-500/50 hover:border-violet-400 text-violet-300" },
 ];
 
 const containerVariants = {
@@ -444,7 +444,7 @@ export function LoginPage() {
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-bold text-white">{u.name}</div>
-                          <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · Partner</div>
+                          <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · {u.role}</div>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           {bio && bioAvailable && (
@@ -509,7 +509,7 @@ export function LoginPage() {
                       </span>
                     </div>
                     {selectedUser && (
-                      <div className="text-[11px] text-gray-500 mt-0.5">Executive Board · Partner</div>
+                      <div className="text-[11px] text-gray-500 mt-0.5">Executive Board · {selectedUser.role}</div>
                     )}
                   </div>
                 </div>
