@@ -9,12 +9,14 @@ import { useWorkers } from "@/hooks/useWorkers";
 import { AddProfessionalSheet } from "@/components/AddProfessionalSheet";
 import { TimesheetsSheet } from "@/components/TimesheetsSheet";
 import { SiteDeploymentsSheet } from "@/components/SiteDeploymentsSheet";
+import { UDTSheet } from "@/components/UDTSheet";
 
 export function Tier3Home() {
   const { workers, loading, isLive } = useWorkers();
-  const [addOpen, setAddOpen]             = useState(false);
+  const [addOpen, setAddOpen]               = useState(false);
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
-  const [sitesOpen, setSitesOpen]         = useState(false);
+  const [sitesOpen, setSitesOpen]           = useState(false);
+  const [udtOpen, setUdtOpen]               = useState(false);
 
   const expiringCount   = workers.filter(w => w.status === "Expiring Soon").length;
   const activeSites     = new Set(workers.map(w => w.workplace).filter(Boolean)).size;
@@ -45,7 +47,7 @@ export function Tier3Home() {
       iconBg: "bg-teal-50",
       iconColor: "text-teal-600",
       border: "hover:border-teal-200 hover:bg-teal-50/20",
-      onClick: undefined,
+      onClick: () => setUdtOpen(true),
     },
     {
       icon: MapPin,
@@ -195,6 +197,7 @@ export function Tier3Home() {
       <AddProfessionalSheet isOpen={addOpen} onClose={() => setAddOpen(false)} accentColor="blue" />
       <TimesheetsSheet isOpen={timesheetsOpen} onClose={() => setTimesheetsOpen(false)} />
       <SiteDeploymentsSheet isOpen={sitesOpen} onClose={() => setSitesOpen(false)} workers={workers} />
+      <UDTSheet isOpen={udtOpen} onClose={() => setUdtOpen(false)} workers={workers} loading={loading} />
     </motion.div>
   );
 }
