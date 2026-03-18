@@ -1,0 +1,12 @@
+packages:
+  "framer-motion": "For premium micro-interactions, page transitions, and tactile button feedback"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility for merging tailwind classes safely"
+  "lucide-react": "Already in stack, but noting for explicit icon usage"
+
+images: []
+
+notes:
+  - "Phase 1: Pure frontend scaffolding. No API or DB connections yet."
+  - "Using max-w-md to enforce a strict mobile app shell on all devices."
+  - "Authentication is simulated via React Context and localStorage for Phase 1."

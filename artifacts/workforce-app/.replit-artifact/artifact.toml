@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/workforce/"
+title = "Workforce Management App"
+version = "1.0.0"
+id = "artifacts/workforce-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 18891
+name = "web"
+paths = ["/workforce/"]
+
+[services.development]
+run = "pnpm --filter @workspace/workforce-app run dev"
+
+[services.env]
+PORT = "18891"
+BASE_PATH = "/workforce/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/workforce-app", "run", "build"]
+publicDir = "artifacts/workforce-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
