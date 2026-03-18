@@ -1,6 +1,7 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Role } from "@/types";
 
 interface Tab {
   id: string;
@@ -13,41 +14,66 @@ interface BottomNavProps {
   onTabChange: (tab: string) => void;
 }
 
-export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  const { role } = useAuth();
-
-  if (!role) return null;
-
-  const isWorker = role === "Worker";
-
-  // Define tabs based on role
-  const tabs: Tab[] = isWorker
-    ? [
+function getTabsForRole(role: Role): Tab[] {
+  switch (role) {
+    case "Executive":
+      return [
         { id: "home", label: "Home", icon: Home },
-        { id: "docs", label: "My Docs", icon: FileText },
-        { id: "timesheet", label: "Timesheet", icon: Clock },
+        { id: "workers", label: "Workers", icon: Users },
+        { id: "payroll", label: "Payroll", icon: DollarSign },
         { id: "profile", label: "Profile", icon: User },
-      ]
-    : [
+      ];
+    case "LegalHead":
+      return [
         { id: "home", label: "Home", icon: Home },
         { id: "workers", label: "Workers", icon: Users },
         { id: "alerts", label: "Alerts", icon: Bell },
         { id: "profile", label: "Profile", icon: User },
       ];
+    case "TechOps":
+      return [
+        { id: "home", label: "Home", icon: Home },
+        { id: "workers", label: "Workers", icon: Users },
+        { id: "sites", label: "Sites", icon: MapPin },
+        { id: "profile", label: "Profile", icon: User },
+      ];
+    case "Coordinator":
+      return [
+        { id: "home", label: "Home", icon: Home },
+        { id: "queue", label: "Queue", icon: ClipboardList },
+        { id: "profile", label: "Profile", icon: User },
+      ];
+    case "Professional":
+      return [
+        { id: "home", label: "Home", icon: Home },
+        { id: "docs", label: "My Docs", icon: FileText },
+        { id: "timesheet", label: "Timesheet", icon: Clock },
+        { id: "profile", label: "Profile", icon: User },
+      ];
+  }
+}
 
-  // Map roles to their specific UI accent colors
-  const roleColorClasses: Record<string, string> = {
-    Owner: "text-indigo-600",
-    Manager: "text-blue-600",
-    Office: "text-emerald-600",
-    Worker: "text-amber-600",
-  };
+function getActiveColorForRole(role: Role): string {
+  switch (role) {
+    case "Executive":   return "text-indigo-600";
+    case "LegalHead":   return "text-violet-600";
+    case "TechOps":     return "text-blue-600";
+    case "Coordinator": return "text-emerald-600";
+    case "Professional":return "text-amber-600";
+  }
+}
 
-  const activeColor = roleColorClasses[role] || "text-primary";
+export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const { role } = useAuth();
+
+  if (!role) return null;
+
+  const tabs = getTabsForRole(role);
+  const activeColor = getActiveColorForRole(role);
 
   return (
-    <div className="shrink-0 bg-white border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)] pb-safe relative z-50">
-      <div className="flex items-center justify-around h-16 px-2">
+    <div className="shrink-0 bg-white border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)] relative z-50">
+      <div className="flex items-center justify-around h-16 px-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -62,26 +88,12 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               )}
             >
               <div className="relative">
-                <Icon
-                  className={cn(
-                    "w-6 h-6 transition-all duration-300",
-                    isActive ? "stroke-[2.5px]" : "stroke-[1.5px]"
-                  )}
-                />
+                <Icon className={cn("w-6 h-6 transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
                 {isActive && (
-                  <span 
-                    className={cn(
-                      "absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current"
-                    )}
-                  />
+                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />
                 )}
               </div>
-              <span
-                className={cn(
-                  "text-[10px] tracking-wide transition-all duration-300",
-                  isActive ? "font-bold" : "font-medium"
-                )}
-              >
+              <span className={cn("text-[10px] tracking-wide transition-all duration-200", isActive ? "font-bold" : "font-medium")}>
                 {tab.label}
               </span>
             </button>
