@@ -21,6 +21,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "home",    label: "Home",      icon: Home },
         { id: "workers", label: "Directory", icon: Users },
         { id: "payroll", label: "Payroll",   icon: DollarSign },
+        { id: "alerts",  label: "Alerts",    icon: Bell },
         { id: "profile", label: "Profile",   icon: User },
       ];
     case "LegalHead":
@@ -28,32 +29,29 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "home",    label: "Home",      icon: Home },
         { id: "workers", label: "Directory", icon: Users },
         { id: "alerts",  label: "Alerts",    icon: Bell },
+        { id: "queue",   label: "Doc Queue", icon: ClipboardList },
         { id: "profile", label: "Profile",   icon: User },
       ];
     case "TechOps":
-      // Home = Professional Directory (default working view)
-      // Workers = Workspace (operational modules + pending actions)
       return [
-        { id: "home",    label: "Directory",  icon: Users },
-        { id: "workers", label: "Workspace",  icon: LayoutGrid },
-        { id: "sites",   label: "Sites",      icon: MapPin },
-        { id: "profile", label: "Profile",    icon: User },
+        { id: "home",    label: "Directory", icon: Users },
+        { id: "workers", label: "Workspace", icon: LayoutGrid },
+        { id: "sites",   label: "Sites",     icon: MapPin },
+        { id: "profile", label: "Profile",   icon: User },
       ];
     case "Coordinator":
-      // Home = Professional Directory (default working view)
-      // Workers = Workspace (operational modules + compliance alerts)
       return [
-        { id: "home",    label: "Directory",  icon: Users },
-        { id: "workers", label: "Workspace",  icon: LayoutGrid },
-        { id: "queue",   label: "Doc Queue",  icon: ClipboardList },
-        { id: "profile", label: "Profile",    icon: User },
+        { id: "home",    label: "Directory", icon: Users },
+        { id: "workers", label: "Workspace", icon: LayoutGrid },
+        { id: "queue",   label: "Doc Queue", icon: ClipboardList },
+        { id: "profile", label: "Profile",   icon: User },
       ];
     case "Professional":
       return [
-        { id: "home",      label: "Home",     icon: Home },
-        { id: "docs",      label: "My Docs",  icon: FileText },
-        { id: "timesheet", label: "Timesheet",icon: Clock },
-        { id: "profile",   label: "Profile",  icon: User },
+        { id: "home",      label: "Home",      icon: Home },
+        { id: "docs",      label: "My Docs",   icon: FileText },
+        { id: "timesheet", label: "Timesheet", icon: Clock },
+        { id: "profile",   label: "Profile",   icon: User },
       ];
   }
 }

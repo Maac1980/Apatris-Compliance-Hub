@@ -1,7 +1,8 @@
 import {
   Users, ShieldCheck, AlertTriangle, FileWarning, ShieldX,
   Receipt, Clock, Scale, FileSignature, Stethoscope,
-  ChevronRight,
+  LayoutGrid, MapPin, ClipboardList, FileText,
+  ChevronRight, Bell,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -16,11 +17,13 @@ interface ModuleCardProps {
   full?: boolean;
   badge?: string;
   badgeColor?: string;
+  onClick?: () => void;
 }
 
-function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, full, badge, badgeColor }: ModuleCardProps) {
+function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, full, badge, badgeColor, onClick }: ModuleCardProps) {
   return (
     <button
+      onClick={onClick}
       className={cn(
         "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group",
         accent,
@@ -44,53 +47,116 @@ function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, fu
   );
 }
 
-const TIER1_MODULES: ModuleCardProps[] = [
-  {
-    icon: Receipt,
-    label: "ZUS & Payroll",
-    sublabel: "March 2026 · PLN 42,800",
-    iconBg: "bg-indigo-50",
-    iconColor: "text-indigo-600",
-    accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
-    badge: "TIER 1 ONLY",
-    badgeColor: "bg-indigo-600 text-white",
-  },
-  {
-    icon: Clock,
-    label: "Timesheets & Hours",
-    sublabel: "142 hrs logged this month",
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    accent: "hover:border-blue-200 hover:bg-blue-50/20",
-  },
-  {
-    icon: Scale,
-    label: "PIP / Legal Dossiers",
-    sublabel: "5 active dossiers",
-    iconBg: "bg-violet-50",
-    iconColor: "text-violet-600",
-    accent: "hover:border-violet-200 hover:bg-violet-50/20",
-  },
-  {
-    icon: FileSignature,
-    label: "B2B Contracts",
-    sublabel: "2 active · All signed",
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
-    accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
-  },
-  {
-    icon: Stethoscope,
-    label: "UDT & Badania Lekarskie",
-    sublabel: "Next renewal: Jun 2026",
-    iconBg: "bg-teal-50",
-    iconColor: "text-teal-600",
-    accent: "hover:border-teal-200 hover:bg-teal-50/20",
-    full: true,
-  },
-];
+interface OwnerHomeProps {
+  onNavigate: (tab: string) => void;
+}
 
-export function OwnerHome() {
+export function OwnerHome({ onNavigate }: OwnerHomeProps) {
+  const TIER1_MODULES: ModuleCardProps[] = [
+    {
+      icon: Receipt,
+      label: "ZUS & Payroll",
+      sublabel: "March 2026 · PLN 42,800",
+      iconBg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
+      badge: "TIER 1 ONLY",
+      badgeColor: "bg-indigo-600 text-white",
+      onClick: () => onNavigate("payroll"),
+    },
+    {
+      icon: Bell,
+      label: "Compliance Alerts",
+      sublabel: "3 active alerts",
+      iconBg: "bg-red-50",
+      iconColor: "text-red-600",
+      accent: "hover:border-red-200 hover:bg-red-50/20",
+      onClick: () => onNavigate("alerts"),
+    },
+    {
+      icon: Scale,
+      label: "PIP / Legal Dossiers",
+      sublabel: "5 active dossiers",
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      accent: "hover:border-violet-200 hover:bg-violet-50/20",
+    },
+    {
+      icon: FileSignature,
+      label: "B2B Contracts",
+      sublabel: "2 active · All signed",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
+    },
+    {
+      icon: Stethoscope,
+      label: "UDT & Badania Lekarskie",
+      sublabel: "Next renewal: Jun 2026",
+      iconBg: "bg-teal-50",
+      iconColor: "text-teal-600",
+      accent: "hover:border-teal-200 hover:bg-teal-50/20",
+      full: true,
+    },
+  ];
+
+  const OPERATIONAL_MODULES: ModuleCardProps[] = [
+    {
+      icon: LayoutGrid,
+      label: "Workspace",
+      sublabel: "Active ops · Site assignments",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      accent: "hover:border-blue-200 hover:bg-blue-50/20",
+      onClick: () => onNavigate("workspace"),
+    },
+    {
+      icon: MapPin,
+      label: "Site Monitor",
+      sublabel: "4 active sites",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
+      onClick: () => onNavigate("sites"),
+    },
+    {
+      icon: ClipboardList,
+      label: "Doc Queue",
+      sublabel: "Pending approvals",
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      accent: "hover:border-amber-200 hover:bg-amber-50/20",
+      onClick: () => onNavigate("queue"),
+    },
+    {
+      icon: Clock,
+      label: "Timesheets",
+      sublabel: "142 hrs this month",
+      iconBg: "bg-sky-50",
+      iconColor: "text-sky-600",
+      accent: "hover:border-sky-200 hover:bg-sky-50/20",
+      onClick: () => onNavigate("timesheet"),
+    },
+    {
+      icon: FileText,
+      label: "My Docs",
+      sublabel: "Professional documents",
+      iconBg: "bg-gray-50",
+      iconColor: "text-gray-600",
+      accent: "hover:border-gray-200 hover:bg-gray-50/20",
+      onClick: () => onNavigate("docs"),
+    },
+    {
+      icon: Users,
+      label: "Professional Directory",
+      sublabel: "5 deployed · 4 active sites",
+      iconBg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
+      onClick: () => onNavigate("workers"),
+    },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -98,7 +164,7 @@ export function OwnerHome() {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-6 pb-6"
     >
-      {/* Kpi strip */}
+      {/* KPI strip */}
       <div className="space-y-3">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Overview</h2>
 
@@ -159,13 +225,12 @@ export function OwnerHome() {
         <div className="text-[11px] text-muted-foreground mt-1.5">3 of 5 professionals fully compliant · 4 active sites</div>
       </div>
 
-      {/* Platform Modules Grid */}
+      {/* Tier 1 Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Platform Modules</h2>
           <span className="text-[9px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-wide">FULL ACCESS</span>
         </div>
-
         <div className="grid grid-cols-2 gap-3">
           {TIER1_MODULES.map((mod) => (
             <ModuleCard key={mod.label} {...mod} />
@@ -173,17 +238,33 @@ export function OwnerHome() {
         </div>
       </div>
 
+      {/* All Tier Access — T2 / T3 / T4 / T5 screens */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between ml-1">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Operational Access</h2>
+          <span className="text-[9px] font-black bg-gray-700 text-white px-2 py-0.5 rounded-full tracking-wide">T2–T5</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {OPERATIONAL_MODULES.map((mod) => (
+            <ModuleCard key={mod.label} {...mod} />
+          ))}
+        </div>
+      </div>
+
       {/* Critical alert strip */}
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+      <button
+        onClick={() => onNavigate("alerts")}
+        className="w-full bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all text-left"
+      >
         <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
           <AlertTriangle className="w-5 h-5 text-red-600" />
         </div>
         <div className="flex-1">
           <div className="text-sm font-bold text-red-800">2 Critical Compliance Issues</div>
-          <div className="text-xs text-red-600/80 font-medium mt-0.5">Missing TRC · PESEL unverified — immediate action required</div>
+          <div className="text-xs text-red-600/80 font-medium mt-0.5">Missing TRC · PESEL unverified — tap to view</div>
         </div>
         <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
-      </div>
+      </button>
     </motion.div>
   );
 }

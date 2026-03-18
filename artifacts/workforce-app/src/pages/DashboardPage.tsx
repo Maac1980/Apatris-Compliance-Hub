@@ -43,89 +43,59 @@ export function DashboardPage() {
     setLocation("/");
   };
 
+  // T1 and T2 can access every tab — no restrictions on navigation
+  const isT1 = role === "Executive";
+  const isT2 = role === "LegalHead";
+
   const renderContent = () => {
     switch (activeTab) {
 
-      // ── HOME tab ────────────────────────────────────────────────────────
-      // T1 / T2 → role-specific dashboards
-      // T3 / T4 → Professional Directory (default operational view) with FAB
-      // T5      → personal profile
+      // ── HOME ──────────────────────────────────────────────────────────────
       case "home":
-        if (role === "Executive")    return <OwnerHome />;
-        if (role === "LegalHead")    return <ManagerHome />;
-        if (role === "TechOps")      return <WorkersTab />;   // Directory is default for T3
-        if (role === "Coordinator")  return <WorkersTab />;   // Directory is default for T4
+        if (isT1) return <OwnerHome onNavigate={setActiveTab} />;
+        if (isT2) return <ManagerHome onNavigate={setActiveTab} />;
+        if (role === "TechOps")      return <WorkersTab />;
+        if (role === "Coordinator")  return <WorkersTab />;
         if (role === "Professional") return <Tier5Home />;
         return null;
 
-      // ── WORKERS tab ──────────────────────────────────────────────────────
+      // ── DIRECTORY (workers) ───────────────────────────────────────────────
       // T1 / T2 → Professional Directory
-      // T3      → Operational Workspace (Tier3Home modules + pending actions)
-      // T4      → Operational Workspace (Tier4Home modules + compliance alerts)
+      // T3 → Operational Workspace
+      // T4 → Operational Workspace
       case "workers":
         if (role === "TechOps")     return <Tier3Home />;
         if (role === "Coordinator") return <Tier4Home />;
-        // T1 / T2 directory
-        if (!tierConfig.canViewGlobalDirectory) {
-          return (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
-            >
-              <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
-                <LockSvg className="w-8 h-8 text-red-400" />
-              </div>
-              <h2 className="text-base font-bold text-red-700 mb-2">Access Restricted</h2>
-              <p className="text-sm text-muted-foreground max-w-[220px]">
-                The global professional directory is not available at your access tier.
-              </p>
-            </motion.div>
-          );
-        }
         return <WorkersTab />;
 
-      // ── PAYROLL tab (Tier 1 only) ─────────────────────────────────────
+      // ── PAYROLL (T1 only) ─────────────────────────────────────────────────
       case "payroll":
         if (!tierConfig.canViewFinancials) {
-          return (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
-            >
-              <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
-                <LockSvg className="w-8 h-8 text-red-400" />
-              </div>
-              <h2 className="text-base font-bold text-red-700 mb-2">Financial Firewall</h2>
-              <p className="text-sm text-muted-foreground max-w-[220px]">
-                ZUS & Payroll ledgers are restricted to Tier 1 (Executive Board & Partners) only.
-              </p>
-              <div className="mt-4 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
-                TIER 1 ACCESS ONLY
-              </div>
-            </motion.div>
-          );
+          return <AccessDenied title="Financial Firewall" message="ZUS & Payroll ledgers are restricted to Tier 1 (Executive Board & Partners) only." label="TIER 1 ACCESS ONLY" />;
         }
         return <PayrollModule />;
 
-      // ── ALERTS tab (Tier 2) ───────────────────────────────────────────
+      // ── ALERTS (T1 + T2, and inherited by both) ───────────────────────────
       case "alerts":
         return <AlertsModule />;
 
-      // ── SITES tab (Tier 3) ────────────────────────────────────────────
+      // ── WORKSPACE — T3 view, now also accessible by T1 + T2 ──────────────
+      case "workspace":
+        return <Tier3Home />;
+
+      // ── SITES — T3 view, also accessible by T1 + T2 ──────────────────────
       case "sites":
         return <SitesModule />;
 
-      // ── DOCUMENT QUEUE tab (Tier 4) ───────────────────────────────────
+      // ── DOC QUEUE — T4 view, also accessible by T1 + T2 ──────────────────
       case "queue":
         return <Tier4Home />;
 
-      // ── MY DOCS tab (Tier 5) ──────────────────────────────────────────
+      // ── MY DOCS — T5 view, also accessible by T1 + T2 ────────────────────
       case "docs":
         return <Tier5Home />;
 
-      // ── TIMESHEET tab (Tier 5) ────────────────────────────────────────
+      // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":
         return (
           <motion.div
@@ -176,7 +146,7 @@ export function DashboardPage() {
           </motion.div>
         );
 
-      // ── PROFILE tab ───────────────────────────────────────────────────
+      // ── PROFILE ───────────────────────────────────────────────────────────
       case "profile":
         return (
           <motion.div
@@ -251,11 +221,10 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Header — fixed, role-badged */}
+      {/* Header */}
       <header className="h-14 bg-white border-b border-border shadow-sm px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-black text-lg tracking-tight text-foreground shrink-0">APATRIS</span>
-          {/* Badge: text-[10px] + whitespace-nowrap prevents wrapping */}
           <div className={cn(
             "px-2 py-0.5 rounded-full text-[10px] font-black border tracking-wide whitespace-nowrap shrink-0",
             badgeColor
@@ -263,7 +232,6 @@ export function DashboardPage() {
             {tierConfig.shortLabel}
           </div>
         </div>
-
         <button
           onClick={handleLogout}
           className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all shrink-0"
@@ -294,7 +262,26 @@ export function DashboardPage() {
   );
 }
 
-// Inline lock SVG — avoids adding an import just for the firewall screen
+// ── Shared access-denied wall ─────────────────────────────────────────────────
+function AccessDenied({ title, message, label }: { title: string; message: string; label: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
+    >
+      <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
+        <LockSvg className="w-8 h-8 text-red-400" />
+      </div>
+      <h2 className="text-base font-bold text-red-700 mb-2">{title}</h2>
+      <p className="text-sm text-muted-foreground max-w-[220px]">{message}</p>
+      <div className="mt-4 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+        {label}
+      </div>
+    </motion.div>
+  );
+}
+
 function LockSvg({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

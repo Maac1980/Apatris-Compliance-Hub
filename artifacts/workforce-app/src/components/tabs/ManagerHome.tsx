@@ -1,6 +1,7 @@
 import {
   AlertCircle, AlertTriangle, ShieldX, CheckCircle2, Lock,
   Clock, Scale, FileSignature, Stethoscope, Users,
+  LayoutGrid, MapPin, FileText,
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -14,11 +15,13 @@ interface ModuleCardProps {
   iconColor: string;
   accent: string;
   full?: boolean;
+  onClick?: () => void;
 }
 
-function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, full }: ModuleCardProps) {
+function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, full, onClick }: ModuleCardProps) {
   return (
     <button
+      onClick={onClick}
       className={cn(
         "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group",
         accent,
@@ -37,51 +40,95 @@ function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, fu
   );
 }
 
-const LEGAL_MODULES: ModuleCardProps[] = [
-  {
-    icon: Clock,
-    label: "Timesheets & Hours",
-    sublabel: "142 hrs logged this month",
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    accent: "hover:border-blue-200 hover:bg-blue-50/20",
-  },
-  {
-    icon: Scale,
-    label: "PIP / Legal Dossiers",
-    sublabel: "5 active dossiers",
-    iconBg: "bg-violet-50",
-    iconColor: "text-violet-600",
-    accent: "hover:border-violet-200 hover:bg-violet-50/20",
-  },
-  {
-    icon: FileSignature,
-    label: "B2B Contracts",
-    sublabel: "2 active · All signed",
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
-    accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
-  },
-  {
-    icon: Stethoscope,
-    label: "UDT & Badania Lekarskie",
-    sublabel: "Next renewal: Jun 2026",
-    iconBg: "bg-teal-50",
-    iconColor: "text-teal-600",
-    accent: "hover:border-teal-200 hover:bg-teal-50/20",
-  },
-  {
-    icon: Users,
-    label: "Professional Directory",
-    sublabel: "5 deployed · 4 active sites",
-    iconBg: "bg-indigo-50",
-    iconColor: "text-indigo-600",
-    accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
-    full: true,
-  },
-];
+interface ManagerHomeProps {
+  onNavigate: (tab: string) => void;
+}
 
-export function ManagerHome() {
+export function ManagerHome({ onNavigate }: ManagerHomeProps) {
+  const LEGAL_MODULES: ModuleCardProps[] = [
+    {
+      icon: Clock,
+      label: "Timesheets & Hours",
+      sublabel: "142 hrs logged this month",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      accent: "hover:border-blue-200 hover:bg-blue-50/20",
+    },
+    {
+      icon: Scale,
+      label: "PIP / Legal Dossiers",
+      sublabel: "5 active dossiers",
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      accent: "hover:border-violet-200 hover:bg-violet-50/20",
+    },
+    {
+      icon: FileSignature,
+      label: "B2B Contracts",
+      sublabel: "2 active · All signed",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
+    },
+    {
+      icon: Stethoscope,
+      label: "UDT & Badania Lekarskie",
+      sublabel: "Next renewal: Jun 2026",
+      iconBg: "bg-teal-50",
+      iconColor: "text-teal-600",
+      accent: "hover:border-teal-200 hover:bg-teal-50/20",
+    },
+    {
+      icon: Users,
+      label: "Professional Directory",
+      sublabel: "5 deployed · 4 active sites",
+      iconBg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
+      full: true,
+      onClick: () => onNavigate("workers"),
+    },
+  ];
+
+  const OPERATIONAL_MODULES: ModuleCardProps[] = [
+    {
+      icon: LayoutGrid,
+      label: "Workspace",
+      sublabel: "Active ops · Site assignments",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      accent: "hover:border-blue-200 hover:bg-blue-50/20",
+      onClick: () => onNavigate("workspace"),
+    },
+    {
+      icon: MapPin,
+      label: "Site Monitor",
+      sublabel: "4 active sites",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
+      onClick: () => onNavigate("sites"),
+    },
+    {
+      icon: Clock,
+      label: "Timesheets",
+      sublabel: "142 hrs this month",
+      iconBg: "bg-sky-50",
+      iconColor: "text-sky-600",
+      accent: "hover:border-sky-200 hover:bg-sky-50/20",
+      onClick: () => onNavigate("timesheet"),
+    },
+    {
+      icon: FileText,
+      label: "My Docs",
+      sublabel: "Professional documents",
+      iconBg: "bg-gray-50",
+      iconColor: "text-gray-600",
+      accent: "hover:border-gray-200 hover:bg-gray-50/20",
+      onClick: () => onNavigate("docs"),
+    },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -100,7 +147,7 @@ export function ManagerHome() {
         </div>
       </div>
 
-      {/* Platform Modules — NO ZUS/Payroll */}
+      {/* Legal Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Platform Modules</h2>
@@ -108,6 +155,19 @@ export function ManagerHome() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {LEGAL_MODULES.map((mod) => (
+            <ModuleCard key={mod.label} {...mod} />
+          ))}
+        </div>
+      </div>
+
+      {/* Operational access — T3 / T4 / T5 inherited */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between ml-1">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Operational Access</h2>
+          <span className="text-[9px] font-black bg-gray-700 text-white px-2 py-0.5 rounded-full tracking-wide">T3–T5</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {OPERATIONAL_MODULES.map((mod) => (
             <ModuleCard key={mod.label} {...mod} />
           ))}
         </div>
