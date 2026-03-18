@@ -1,4 +1,4 @@
-const CACHE_NAME = "apatris-workforce-v1";
+const CACHE_NAME = "apatris-workforce-v3";
 
 // Assets to cache on install (shell)
 const SHELL_ASSETS = [
