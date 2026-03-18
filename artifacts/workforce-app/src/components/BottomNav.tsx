@@ -2,6 +2,7 @@ import { useAuth } from "@/lib/auth";
 import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
+import { MOCK_WORKERS } from "@/data/mockWorkers";
 
 interface Tab {
   id: string;
@@ -64,6 +65,14 @@ const ACTIVE_COLORS: Record<Role, string> = {
   Professional: "text-amber-600",
 };
 
+const BADGE_BG: Record<Role, string> = {
+  Executive:    "bg-indigo-600",
+  LegalHead:    "bg-violet-600",
+  TechOps:      "bg-blue-600",
+  Coordinator:  "bg-emerald-600",
+  Professional: "bg-amber-600",
+};
+
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
   if (!role) return null;
@@ -71,12 +80,24 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const tabs = getTabsForRole(role);
   const activeColor = ACTIVE_COLORS[role];
 
+  const alertCount = MOCK_WORKERS.filter(
+    w => w.status === "Non-Compliant" || w.status === "Missing Docs"
+  ).length;
+  const docQueueCount = MOCK_WORKERS.flatMap(w => w.documents).filter(d => d.status === "Under Review").length;
+
+  function getBadge(tabId: string): number {
+    if (tabId === "alerts") return alertCount;
+    if (tabId === "queue")  return docQueueCount;
+    return 0;
+  }
+
   return (
     <div className="shrink-0 bg-white border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)] relative z-50">
       <div className="flex items-center justify-around h-16 px-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const badge = getBadge(tab.id);
           return (
             <button
               key={tab.id}
@@ -90,6 +111,14 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 <Icon className={cn("w-6 h-6 transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
                 {isActive && (
                   <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />
+                )}
+                {badge > 0 && !isActive && (
+                  <span className={cn(
+                    "absolute -top-1.5 -right-2 min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center text-[9px] font-black text-white",
+                    "bg-red-500"
+                  )}>
+                    {badge}
+                  </span>
                 )}
               </div>
               <span className={cn(

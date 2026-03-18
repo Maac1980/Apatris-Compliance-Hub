@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, CheckCircle2, XCircle, FileText, MapPin, Clock, AlertTriangle,
   ShieldX, FileQuestion, Upload, User, DollarSign, Pencil, Save,
-  Phone, Mail, CreditCard, Building2, ChevronRight,
+  Phone, Mail, CreditCard, Building2, Activity,
 } from "lucide-react";
 import { Worker, WorkerDocument, DocumentStatus, WorkerStatus, HoursEntry, AdvanceEntry } from "@/data/mockWorkers";
 import { toast } from "@/hooks/use-toast";
@@ -11,14 +11,13 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Role } from "@/types";
 
-type ProfileTab = "profile" | "documents" | "hours" | "finance";
+type ProfileTab = "profile" | "documents" | "hours" | "finance" | "activity";
 
 interface WorkerDetailProps {
   worker: Worker;
   onClose: () => void;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 function getStatusColors(status: WorkerStatus) {
   switch (status) {
     case "Compliant":     return "bg-emerald-50 text-emerald-700 border-emerald-200";
@@ -42,6 +41,15 @@ const UPLOADER_STYLE: Record<string, string> = {
   "Coordinator": "bg-emerald-50 text-emerald-700 border-emerald-200",
   "Professional":"bg-amber-50 text-amber-700 border-amber-200",
 };
+
+const ACTIVITY_TYPE_STYLE: Record<string, { dot: string; label: string }> = {
+  document:    { dot: "bg-blue-500",   label: "text-blue-700" },
+  hours:       { dot: "bg-amber-500",  label: "text-amber-700" },
+  profile:     { dot: "bg-violet-500", label: "text-violet-700" },
+  finance:     { dot: "bg-indigo-500", label: "text-indigo-700" },
+  compliance:  { dot: "bg-red-500",    label: "text-red-700" },
+};
+
 function Field({ label, value, editing, inputValue, onInput }: { label: string; value: string; editing: boolean; inputValue?: string; onInput?: (v: string) => void }) {
   return (
     <div className="space-y-1">
@@ -78,7 +86,6 @@ function SelectField({ label, value, options, editing, onChange }: { label: stri
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
 export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
@@ -88,10 +95,10 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
   const [editing, setEditing]     = useState(false);
   const [editData, setEditData]   = useState({ ...worker });
 
-  const canEdit      = role === "Executive" || role === "LegalHead";
-  const canApprove   = role === "Executive" || role === "LegalHead" || role === "TechOps" || role === "Coordinator";
-  const showFinancial = role === "Executive";      // IBAN, hourly rate
-  const showZUS      = role === "Executive";        // ZUS + salary detail (T2 cannot see)
+  const canEdit       = role === "Executive" || role === "LegalHead";
+  const canApprove    = role === "Executive" || role === "LegalHead" || role === "TechOps" || role === "Coordinator";
+  const showFinancial = role === "Executive";
+  const showZUS       = role === "Executive";
 
   const initials = worker.name.split(" ").map(n => n[0]).join("");
   const avatarColor = {
@@ -109,6 +116,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
     { id: "documents", label: "Docs",      icon: FileText, badge: pendingDocs || undefined },
     { id: "hours",     label: "Hours",     icon: Clock },
     { id: "finance",   label: "Finance",   icon: DollarSign },
+    { id: "activity",  label: "Activity",  icon: Activity },
   ];
 
   const handleApprove = (docId: string, docType: string) => {
@@ -120,7 +128,13 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
     toast({ title: "Re-upload Requested", description: `${docType} rejected. Professional notified.`, variant: "destructive" });
   };
   const handleUpload = (docId: string, docType: string) => {
-    setDocuments(prev => prev.map(d => d.id === docId ? { ...d, status: "Under Review" as DocumentStatus, uploadedAt: new Date().toISOString().slice(0, 10), fileName: `${worker.name.split(" ")[1]?.toLowerCase() ?? "worker"}_${docType.replace(/\s+/g, "_").toLowerCase()}_new.pdf`, uploadedBy: (role === "TechOps" ? "Tech Ops" : role === "Coordinator" ? "Coordinator" : "Tech Ops") as any } : d));
+    setDocuments(prev => prev.map(d => d.id === docId ? {
+      ...d,
+      status: "Under Review" as DocumentStatus,
+      uploadedAt: new Date().toISOString().slice(0, 10),
+      fileName: `${worker.name.split(" ")[1]?.toLowerCase() ?? "worker"}_${docType.replace(/\s+/g, "_").toLowerCase()}_new.pdf`,
+      uploadedBy: (role === "TechOps" ? "Tech Ops" : role === "Coordinator" ? "Coordinator" : "Tech Ops") as any,
+    } : d));
     toast({ title: "Document Uploaded", description: `${docType} submitted for review.` });
   };
   const handleSave = () => {
@@ -136,6 +150,14 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
     Professional: "bg-amber-600",
   };
   const activeTabColor = role ? accentByRole[role as Role] : "bg-indigo-600";
+  const activeTextColor: Record<Role, string> = {
+    Executive:    "text-indigo-600",
+    LegalHead:    "text-violet-600",
+    TechOps:      "text-blue-600",
+    Coordinator:  "text-emerald-600",
+    Professional: "text-amber-600",
+  };
+  const activeText = role ? activeTextColor[role as Role] : "text-indigo-600";
 
   return (
     <motion.div
@@ -145,9 +167,8 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
       transition={{ type: "spring", damping: 28, stiffness: 300 }}
       className="absolute inset-0 z-50 flex flex-col bg-gray-50"
     >
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="bg-white border-b border-border shadow-sm px-4 pt-3 pb-0 shrink-0 sticky top-0 z-20">
-        {/* Top row */}
         <div className="flex items-center gap-3 mb-3">
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all shrink-0">
             <X className="w-5 h-5" strokeWidth={2} />
@@ -194,23 +215,17 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 transition-all relative shrink-0",
                   isActive
-                    ? "border-current text-indigo-600"
+                    ? `border-current ${activeText}`
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
-                style={isActive ? { color: undefined, borderColor: undefined } : undefined}
               >
-                <span className={cn(
-                  "flex items-center gap-1.5",
-                  isActive ? (role === "Executive" ? "text-indigo-600" : role === "LegalHead" ? "text-violet-600" : role === "TechOps" ? "text-blue-600" : role === "Coordinator" ? "text-emerald-600" : "text-amber-600") : ""
-                )}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                  {tab.badge ? (
-                    <span className="ml-0.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
-                      {tab.badge}
-                    </span>
-                  ) : null}
-                </span>
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+                {tab.badge ? (
+                  <span className="ml-0.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                ) : null}
                 {isActive && (
                   <span className={cn("absolute bottom-0 left-0 right-0 h-0.5 rounded-full", activeTabColor)} />
                 )}
@@ -220,7 +235,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
         </div>
       </header>
 
-      {/* ── Tab Content ───────────────────────────────────────────────────── */}
+      {/* ── Tab Content ─────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div
@@ -242,7 +257,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </div>
                 )}
 
-                {/* Personal Info */}
                 <SectionCard title="Personal Information" icon={User}>
                   <div className="grid grid-cols-1 gap-3">
                     <Field label="Full Name"  value={editData.name}  editing={editing} inputValue={editData.name}  onInput={v => setEditData(p => ({ ...p, name: v }))} />
@@ -255,7 +269,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </div>
                 </SectionCard>
 
-                {/* Employment */}
                 <SectionCard title="Employment" icon={Building2}>
                   <div className="grid grid-cols-1 gap-3">
                     <SelectField label="Specialization" value={editData.specialization} editing={editing}
@@ -264,12 +277,11 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                     <SelectField label="Trade" value={editData.trade} editing={editing}
                       options={["Welder","Steel Fixer","Pipe Fitter","Scaffolder"]}
                       onChange={v => setEditData(p => ({ ...p, trade: v as any }))} />
-                    <Field label="Deployment Site" value={editData.workplace} editing={editing} inputValue={editData.workplace} onInput={v => setEditData(p => ({ ...p, workplace: v }))} />
+                    <Field label="Deployment Site"  value={editData.workplace}        editing={editing} inputValue={editData.workplace}        onInput={v => setEditData(p => ({ ...p, workplace: v }))} />
                     <Field label="Contract End Date" value={editData.contractEndDate || ""} editing={editing} inputValue={editData.contractEndDate} onInput={v => setEditData(p => ({ ...p, contractEndDate: v }))} />
                   </div>
                 </SectionCard>
 
-                {/* ZUS & Financial — T1 only */}
                 {showZUS && (
                   <SectionCard title="ZUS & Financial" icon={CreditCard}>
                     <div className="grid grid-cols-1 gap-3">
@@ -291,7 +303,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </SectionCard>
                 )}
 
-                {/* Contact actions */}
                 <SectionCard title="Quick Contact" icon={Phone}>
                   <div className="flex gap-2">
                     <a href={`tel:${worker.phone}`} className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold transition-all active:scale-95">
@@ -308,7 +319,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── DOCUMENTS TAB ───────────────────────────────────────────── */}
             {activeTab === "documents" && (
               <div className="px-4 pt-4 space-y-3">
-                {/* Shared notice */}
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
                     <span className="text-[7px] font-black text-blue-700">T</span>
@@ -344,7 +354,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                                   {doc.status}
                                 </span>
                               </div>
-
                               {doc.fileName && (
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -374,7 +383,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                           </div>
                         </div>
 
-                        {/* Upload button — for missing/rejected/expired */}
                         {isMissing && canApprove && (
                           <div className="border-t border-border">
                             <button
@@ -387,7 +395,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                           </div>
                         )}
 
-                        {/* Approve / Reject — for under review */}
                         {isUnderReview && canApprove && (
                           <div className="flex border-t border-border">
                             <button
@@ -417,7 +424,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── HOURS TAB ───────────────────────────────────────────────── */}
             {activeTab === "hours" && (
               <div className="px-4 pt-4 space-y-4">
-                {/* Summary card */}
                 <div className="bg-white rounded-2xl border shadow-sm p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">March 2026</span>
@@ -436,7 +442,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   <div className="text-[11px] text-muted-foreground mt-1">{totalHours} / 200 expected hours</div>
                 </div>
 
-                {/* Weekly breakdown */}
                 <SectionCard title="Weekly Breakdown" icon={Clock}>
                   <div className="divide-y divide-gray-50">
                     {hours.map((row, i) => (
@@ -458,7 +463,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </div>
                 </SectionCard>
 
-                {/* T1-only: approve hours */}
                 {role === "Executive" && (
                   <button
                     onClick={() => toast({ title: "Hours Approved", description: `All pending hours for ${worker.name} approved.` })}
@@ -474,7 +478,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── FINANCE TAB ─────────────────────────────────────────────── */}
             {activeTab === "finance" && (
               <div className="px-4 pt-4 space-y-4">
-                {/* ZUS / Salary summary — T1 only */}
                 {showFinancial && (
                   <SectionCard title="Salary Overview" icon={DollarSign}>
                     <div className="space-y-2">
@@ -487,7 +490,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </SectionCard>
                 )}
 
-                {/* Advance / Penalty log — all T1–T4 */}
                 <SectionCard title="Advance & Penalty Log" icon={CreditCard}>
                   {finance.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">No records yet.</p>
@@ -510,16 +512,10 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                             <p className="text-xs text-muted-foreground truncate">{entry.note}</p>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className={cn(
-                              "text-sm font-bold",
-                              entry.amount > 0 ? "text-blue-600" : "text-red-600"
-                            )}>
+                            <p className={cn("text-sm font-bold", entry.amount > 0 ? "text-blue-600" : "text-red-600")}>
                               {entry.amount > 0 ? "+" : ""}{entry.amount} PLN
                             </p>
-                            <span className={cn(
-                              "text-[10px] font-bold",
-                              entry.status === "Settled" ? "text-emerald-600" : "text-amber-600"
-                            )}>
+                            <span className={cn("text-[10px] font-bold", entry.status === "Settled" ? "text-emerald-600" : "text-amber-600")}>
                               {entry.status}
                             </span>
                           </div>
@@ -529,7 +525,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   )}
                 </SectionCard>
 
-                {/* Summary */}
                 <div className="bg-white rounded-2xl border shadow-sm p-4">
                   <div className="space-y-2">
                     <FinRow label="Total Advances"
@@ -545,7 +540,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </div>
                 </div>
 
-                {/* T1-only: Add entry */}
                 {role === "Executive" && (
                   <button
                     onClick={() => toast({ title: "Coming Soon", description: "Add advance/penalty entry form — coming in next update." })}
@@ -557,6 +551,70 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
               </div>
             )}
 
+            {/* ── ACTIVITY TAB ─────────────────────────────────────────────── */}
+            {activeTab === "activity" && (
+              <div className="px-4 pt-4 space-y-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Full audit trail for this professional — all actions logged by tier.
+                  </p>
+                </div>
+
+                {worker.activityLog && worker.activityLog.length > 0 ? (
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-[22px] top-3 bottom-3 w-px bg-gray-200" />
+
+                    <div className="space-y-1">
+                      {worker.activityLog.map((entry, i) => {
+                        const typeStyle = ACTIVITY_TYPE_STYLE[entry.type] ?? { dot: "bg-gray-400", label: "text-gray-700" };
+                        return (
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.06, duration: 0.2 }}
+                            className="flex gap-3 pl-1"
+                          >
+                            {/* Timeline dot */}
+                            <div className="flex flex-col items-center shrink-0 pt-3.5">
+                              <div className={cn("w-5 h-5 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 z-10", typeStyle.dot)}>
+                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                              </div>
+                            </div>
+
+                            {/* Card */}
+                            <div className="flex-1 bg-white rounded-2xl border shadow-sm p-3.5 mb-2.5">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <span className="text-sm font-bold text-foreground leading-tight">{entry.action}</span>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{entry.time}</span>
+                              </div>
+                              {entry.detail && (
+                                <p className="text-xs text-muted-foreground leading-relaxed mb-2">{entry.detail}</p>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className={cn("text-[9px] font-black text-white px-1.5 py-0.5 rounded-full tracking-wide", entry.byColor)}>
+                                  {entry.byTier}
+                                </span>
+                                <span className="text-[11px] font-semibold text-foreground">{entry.by}</span>
+                                <span className="text-[10px] text-muted-foreground ml-auto">{entry.date}</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Activity className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground">No activity recorded yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
           </motion.div>
         </AnimatePresence>
       </div>
@@ -564,7 +622,6 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────────
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
