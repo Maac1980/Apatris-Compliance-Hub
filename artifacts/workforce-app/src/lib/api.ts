@@ -167,12 +167,13 @@ export function mapApiWorkerToMobile(w: ApiWorker): Worker {
 // ── Mobile login ───────────────────────────────────────────────────────────
 export async function mobileLogin(
   tier: number,
-  password: string
+  password: string,
+  name?: string          // T1 only: 'akshay' or 'manish'
 ): Promise<{ role: string; name: string; jwt: string }> {
   const res = await fetch(`${API_BASE}/auth/mobile-login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tier, password }),
+    body: JSON.stringify({ tier, password, ...(name ? { name } : {}) }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Login failed");

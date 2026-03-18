@@ -58,6 +58,24 @@ export async function initMobilePinsTable(): Promise<void> {
   console.log("[MobilePins] Table seeded from environment variables.");
 }
 
+// ── Verify a specific user (T1 individual, T2-T5 shared) ─────────────────
+export async function verifyMobilePinForUser(
+  tier: number,
+  userKey: string,   // 'akshay' | 'manish' | 'shared'
+  pin: string
+): Promise<{ name: string; role: string } | null> {
+  const rows = await query<{ pin_hash: string }>(
+    "SELECT pin_hash FROM mobile_pins WHERE tier = $1 AND user_key = $2",
+    [tier, userKey]
+  );
+  if (rows.length === 0) return null;
+  if (!verifyPinHash(pin, rows[0].pin_hash)) return null;
+  const name = userKey === "shared"
+    ? TIER_TO_ROLE[tier] ?? "User"
+    : userKey.charAt(0).toUpperCase() + userKey.slice(1);
+  return { name, role: TIER_TO_ROLE[tier] ?? "" };
+}
+
 // ── Verify (returns user name on success, null on failure) ────────────────
 const ROLE_TO_TIER: Record<string, number> = {
   Executive: 1, LegalHead: 2, TechOps: 3, Coordinator: 4, Professional: 5,

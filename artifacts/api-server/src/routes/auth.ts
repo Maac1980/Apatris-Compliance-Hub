@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/site-coordinators.js";
 import { sendOtpEmail, isMailConfigured } from "../lib/mailer.js";
 import { appendAuditLog } from "../lib/audit-log.js";
-import { verifyMobilePin, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";
+import { verifyMobilePin, verifyMobilePinForUser, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";
 
 const router = Router();
 
@@ -197,7 +197,7 @@ router.get("/auth/verify", (req, res) => {
 // ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
 router.post("/auth/mobile-login", async (req, res) => {
   try {
-    const { tier, password } = req.body as { tier?: unknown; password?: unknown };
+    const { tier, password, name } = req.body as { tier?: unknown; password?: unknown; name?: unknown };
 
     if (typeof tier !== "number" || tier < 1 || tier > 5) {
       return res.status(400).json({ error: "Invalid tier." });
@@ -206,7 +206,14 @@ router.post("/auth/mobile-login", async (req, res) => {
       return res.status(400).json({ error: "Password is required." });
     }
 
-    const result = await verifyMobilePin(tier, password.trim());
+    // For T1, accept an optional name to verify against a specific user record
+    let result: { name: string; role: string } | null;
+    if (tier === 1 && typeof name === "string" && name.trim()) {
+      result = await verifyMobilePinForUser(1, name.trim().toLowerCase(), password.trim());
+    } else {
+      result = await verifyMobilePin(tier, password.trim());
+    }
+
     if (!result) {
       return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
     }

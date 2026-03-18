@@ -6,7 +6,7 @@ import { Role } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Scale, Wrench, ClipboardList, HardHat, ChevronRight,
-  ArrowLeft, Eye, EyeOff, Lock,
+  ArrowLeft, Eye, EyeOff, Lock, User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,11 @@ const ROLES: RoleCard[] = [
   },
 ];
 
+const T1_USERS = [
+  { name: "Akshay", key: "akshay", initials: "AK", color: "border-indigo-500/50 hover:border-indigo-400 text-indigo-300" },
+  { name: "Manish", key: "manish", initials: "MN", color: "border-violet-500/50 hover:border-violet-400 text-violet-300" },
+];
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
@@ -95,21 +100,37 @@ export function LoginPage() {
   const [, setLocation] = useLocation();
 
   const [selectedRole, setSelectedRole] = useState<RoleCard | null>(null);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser]  = useState<typeof T1_USERS[number] | null>(null);
+  const [password, setPassword]          = useState("");
+  const [showPassword, setShowPassword]  = useState(false);
+  const [loading, setLoading]            = useState(false);
+  const [error, setError]                = useState<string | null>(null);
 
   const handleRoleSelect = (card: RoleCard) => {
     setSelectedRole(card);
+    setSelectedUser(null);
+    setPassword("");
+    setError(null);
+  };
+
+  const handleUserSelect = (u: typeof T1_USERS[number]) => {
+    setSelectedUser(u);
     setPassword("");
     setError(null);
   };
 
   const handleBack = () => {
-    setSelectedRole(null);
-    setPassword("");
-    setError(null);
+    if (selectedUser) {
+      // On password screen for T1 → back to name picker
+      setSelectedUser(null);
+      setPassword("");
+      setError(null);
+    } else {
+      // On name picker or T2-T5 password screen → back to role list
+      setSelectedRole(null);
+      setPassword("");
+      setError(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,7 +141,8 @@ export function LoginPage() {
     setError(null);
 
     try {
-      const result = await mobileLogin(selectedRole.tier, password.trim());
+      const nameParam = selectedRole.tier === 1 && selectedUser ? selectedUser.key : undefined;
+      const result = await mobileLogin(selectedRole.tier, password.trim(), nameParam);
       login(selectedRole.role, result.name, result.jwt);
       setLocation("/dashboard");
     } catch (err: unknown) {
@@ -129,6 +151,20 @@ export function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Determine which step we're on
+  const step: "roles" | "name-picker" | "password" =
+    !selectedRole
+      ? "roles"
+      : selectedRole.tier === 1 && !selectedUser
+        ? "name-picker"
+        : "password";
+
+  const passwordLabel = selectedRole?.tier === 1
+    ? `Welcome, ${selectedUser?.name ?? ""}`
+    : selectedRole?.tier === 1
+      ? "Access password"
+      : "Tier PIN";
 
   return (
     <div
@@ -178,8 +214,9 @@ export function LoginPage() {
         <div className="bg-gray-900/80 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-sm flex-1">
 
           <AnimatePresence mode="wait">
-            {!selectedRole ? (
-              /* ── Step 1: Role selector ── */
+
+            {/* ── STEP 1: Role selector ──────────────────────────────────── */}
+            {step === "roles" && (
               <motion.div
                 key="role-select"
                 initial={{ opacity: 0, x: -16 }}
@@ -243,16 +280,17 @@ export function LoginPage() {
                   })}
                 </motion.div>
               </motion.div>
-            ) : (
-              /* ── Step 2: Password / PIN ── */
+            )}
+
+            {/* ── STEP 2: T1 Name picker ─────────────────────────────────── */}
+            {step === "name-picker" && selectedRole && (
               <motion.div
-                key="password-entry"
+                key="name-picker"
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 16 }}
                 transition={{ duration: 0.2 }}
               >
-                {/* Back button */}
                 <button
                   onClick={handleBack}
                   className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors mb-5 text-xs font-medium"
@@ -261,7 +299,7 @@ export function LoginPage() {
                   Change role
                 </button>
 
-                {/* Selected role preview */}
+                {/* Role preview */}
                 <div className={cn(
                   "flex items-center gap-3 p-3.5 rounded-xl mb-6",
                   "bg-gray-800/80 border",
@@ -273,15 +311,97 @@ export function LoginPage() {
                     "bg-white/5 border border-white/10",
                     selectedRole.accent.split(" ")[1]
                   )}>
-                    <selectedRole.icon className="w-4.5 h-4.5" strokeWidth={1.8} />
+                    <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] font-bold text-white truncate">{selectedRole.title}</span>
                       <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0", selectedRole.badge)}>
+                        T1
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
+                  Select your profile
+                </p>
+
+                <div className="space-y-3">
+                  {T1_USERS.map((u) => (
+                    <motion.button
+                      key={u.key}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleUserSelect(u)}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-xl text-left",
+                        "bg-gray-800/60 border transition-all duration-200",
+                        u.color
+                      )}
+                    >
+                      <div className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-black text-white/70">{u.initials}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-white">{u.name}</div>
+                        <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · Partner</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── STEP 3: Password / PIN ─────────────────────────────────── */}
+            {step === "password" && selectedRole && (
+              <motion.div
+                key="password-entry"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+              >
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors mb-5 text-xs font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  {selectedRole.tier === 1 ? "Change profile" : "Change role"}
+                </button>
+
+                {/* Selected identity preview */}
+                <div className={cn(
+                  "flex items-center gap-3 p-3.5 rounded-xl mb-6",
+                  "bg-gray-800/80 border",
+                  selectedRole.borderColor
+                )}>
+                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", selectedRole.accent.split(" ")[0])} />
+                  {selectedUser ? (
+                    <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-black text-white/70">{selectedUser.initials}</span>
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                      "bg-white/5 border border-white/10",
+                      selectedRole.accent.split(" ")[1]
+                    )}>
+                      <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-white truncate">
+                        {selectedUser ? selectedUser.name : selectedRole.title}
+                      </span>
+                      <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0", selectedRole.badge)}>
                         T{selectedRole.tier}
                       </span>
                     </div>
+                    {selectedUser && (
+                      <div className="text-[11px] text-gray-500 mt-0.5">Executive Board · Partner</div>
+                    )}
                   </div>
                 </div>
 
@@ -359,10 +479,11 @@ export function LoginPage() {
                 </form>
 
                 <p className="text-center text-[10px] text-gray-600 mt-5">
-                  Contact your administrator if you don't have access credentials.
+                  Contact your administrator if you don&apos;t have access credentials.
                 </p>
               </motion.div>
             )}
+
           </AnimatePresence>
         </div>
 
