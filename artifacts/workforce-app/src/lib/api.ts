@@ -157,9 +157,12 @@ export function mapApiWorkerToMobile(w: ApiWorker): Worker {
     passportExpiry: w.passportExpiry || "",
     bhpExpiry: w.bhpExpiry || "",
     contractEndDate: w.contractEndDate || "",
+    medicalExpiry: w.medicalExamExpiry || "",
+    peselOk: !!w.pesel,
+    daysUntilExpiry: w.daysUntilNextExpiry ?? 999,
     documents: deriveDocuments(w),
     hoursLog: [],
-    advanceLog: [],
+    financeLog: [],
     activityLog: [],
   };
 }
@@ -197,7 +200,108 @@ export async function changeMobilePin(
   });
   const data = await res.json() as { success?: boolean; message?: string; error?: string };
   if (!res.ok) throw new Error(data.error ?? "Failed to change PIN");
-  return data;
+  return { success: data.success ?? true, message: data.message, error: data.error };
+}
+
+// ── Fetch my worker profile (T5 — looks up by JWT name in Airtable) ──────────
+export interface WorkerProfile {
+  id: string;
+  name: string;
+  specialization: string | null;
+  assignedSite: string | null;
+  complianceStatus: "compliant" | "warning" | "critical" | "non-compliant";
+  trcExpiry: string | null;
+  passportExpiry: string | null;
+  bhpExpiry: string | null;
+  medicalExamExpiry: string | null;
+  udtCertExpiry: string | null;
+  contractEndDate: string | null;
+  workPermitExpiry: string | null;
+  monthlyHours: number | null;
+  phone: string | null;
+  email: string | null;
+}
+
+export async function fetchMyWorkerProfile(jwt: string): Promise<WorkerProfile> {
+  const res = await fetch(`${API_BASE}/workers/me`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? `HTTP ${res.status}`);
+  }
+  return await res.json() as WorkerProfile;
+}
+
+// ── Hours log ─────────────────────────────────────────────────────────────────
+export interface HoursEntry {
+  id: number;
+  worker_name?: string;
+  month: string;
+  hours: number;
+  note: string | null;
+  status: string;
+  submitted_at: string;
+}
+
+export async function fetchMyHours(jwt: string): Promise<HoursEntry[]> {
+  const res = await fetch(`${API_BASE}/hours/my`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json() as { entries: HoursEntry[] };
+  return data.entries;
+}
+
+export async function fetchAllHours(jwt: string, month?: string): Promise<HoursEntry[]> {
+  const url = month ? `${API_BASE}/hours?month=${month}` : `${API_BASE}/hours`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${jwt}` } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json() as { entries: HoursEntry[] };
+  return data.entries;
+}
+
+export async function submitHours(
+  jwt: string,
+  month: string,
+  hours: number,
+  note?: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/hours`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+    body: JSON.stringify({ month, hours, note }),
+  });
+  const data = await res.json() as { success?: boolean; message?: string; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Failed to submit hours");
+  return { success: true, message: data.message ?? "Submitted" };
+}
+
+// ── Create worker in Airtable ─────────────────────────────────────────────────
+export async function createWorkerInAirtable(
+  jwt: string,
+  data: {
+    name: string;
+    specialization?: string;
+    assignedSite?: string;
+    phone?: string;
+    email?: string;
+  }
+): Promise<{ id: string; name: string }> {
+  const res = await fetch(`${API_BASE}/workers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+    body: JSON.stringify({
+      name: data.name,
+      specialization: data.specialization,
+      assignedSite: data.assignedSite,
+      phone: data.phone,
+      email: data.email,
+    }),
+  });
+  const result = await res.json() as { id?: string; name?: string; error?: string };
+  if (!res.ok) throw new Error(result.error ?? "Failed to create worker");
+  return { id: result.id ?? "", name: result.name ?? data.name };
 }
 
 // ── Fetch workers ──────────────────────────────────────────────────────────

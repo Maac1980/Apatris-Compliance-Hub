@@ -9,6 +9,7 @@ import payrollRouter from "./payroll.js";
 import siteCoordinatorsRouter from "./site-coordinators.js";
 import settingsRouter from "./settings.js";
 import historyRouter from "./history.js";
+import hoursRouter from "./hours.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(historyRouter);
 router.use(siteCoordinatorsRouter);
 router.use(settingsRouter);
 router.use(workersRouter);
+router.use(hoursRouter);
 
 export default router;

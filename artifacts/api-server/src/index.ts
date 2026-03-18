@@ -1,6 +1,7 @@
 import app from "./app";
 import { startScheduler } from "./lib/scheduler.js";
 import { initMobilePinsTable } from "./lib/mobile-pins.js";
+import { initHoursTable } from "./routes/hours.js";
 
 const rawPort = process.env["PORT"];
 
@@ -21,5 +22,8 @@ app.listen(port, () => {
   startScheduler();
   initMobilePinsTable().catch((err) =>
     console.error("[MobilePins] Failed to initialise table:", err)
+  );
+  initHoursTable().catch((err) =>
+    console.error("[Hours] Failed to initialise table:", err)
   );
 });

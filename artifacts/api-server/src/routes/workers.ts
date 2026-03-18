@@ -123,6 +123,43 @@ router.get("/workers", async (req, res) => {
   }
 });
 
+// GET /workers/me — returns the Airtable record matching the authenticated user's name (for T5)
+router.get("/workers/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+    let userName: string;
+    try {
+      const { default: jwt } = await import("jsonwebtoken");
+      const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || "") as { name: string };
+      userName = payload.name;
+    } catch {
+      return res.status(401).json({ error: "Invalid token." });
+    }
+
+    const records = await fetchAllRecords();
+    const normalised = userName.trim().toLowerCase();
+
+    // Find by full name match (case-insensitive, also try first-name only)
+    const worker = records
+      .map(mapRecordToWorker)
+      .find(w => {
+        const wn = w.name.trim().toLowerCase();
+        return wn === normalised || wn.startsWith(normalised + " ") || wn.endsWith(" " + normalised);
+      });
+
+    if (!worker) {
+      return res.status(404).json({ error: "Worker profile not found in Airtable.", name: userName });
+    }
+    return res.json(worker);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return res.status(500).json({ error: message });
+  }
+});
+
 // GET /workers/sites — returns all unique ASSIGNED SITE values currently in Airtable
 router.get("/workers/sites", async (_req, res) => {
   try {

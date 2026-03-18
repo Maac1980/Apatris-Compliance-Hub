@@ -58,6 +58,15 @@ The project is structured as a pnpm monorepo, housing both the Apatris Complianc
     *   **Automated Email Alerts:** Sends email alerts for both critical (RED/EXPIRED) and warning (YELLOW, 30-60 days) compliance statuses.
 *   **Worker Profile Panel:** Organized into sections for Core Details, Polish Compliance Documents, Identity & Legal, EN ISO 9606 Welding Cert, and Payroll with advance deduction. Includes a "PIP Inspection Mode" for printable worker cards.
 *   **Session Management:** 30-minute auto-logout via activity tracking.
+*   **Workforce App — Fully Wired Features (March 2026):**
+    *   **GET /api/workers/me:** Finds worker by JWT name in Airtable (case-insensitive, first-name partial match). Used by T5 Home.
+    *   **Hours Tracking (PostgreSQL):** `hours_log` table created on startup. Endpoints: `POST /api/hours` (T5 submit), `GET /api/hours/my` (T5 history), `GET /api/hours` (T1-T4 admin view), `PATCH /api/hours/:id/status` (approve/reject).
+    *   **T5 Home — Fully Live:** Fetches real Airtable data via `/workers/me`. Shows Digital Site Pass (name, site, compliance colour), document expiry rows (TRC, Medical, BHP, Passport, UDT, Contract, Work Permit), compliance stats strip, Submit Hours sheet, hours history, coordinator contact cards.
+    *   **T4 Home — Real Doc Queue:** Uses `useWorkers` hook (live Airtable) instead of MOCK_WORKERS. Shows compliance summary, operational modules grid, "Needs Attention" list from real data.
+    *   **T3 Home — Fully Wired:** Operational modules now clickable — Add Professional opens sheet, Timesheets opens sheet, Site Deployments opens sheet. KPI strip uses live worker counts.
+    *   **AddProfessionalSheet — Calls Real API:** Creates Airtable record via `POST /api/workers`. Shows loading state, success confirmation, error handling.
+    *   **TimesheetsSheet:** Admin sheet for T3/T4 showing all submitted hours by month, with totals and approval status.
+    *   **SiteDeploymentsSheet:** Grouped view of all workers by site with expandable rows showing compliance status per worker.
 *   **PDF Export:** Utilizes `jsPDF` and `jsPDF-autotable` for generating compliance reports and final settlement PDFs.
 
 ## External Dependencies
