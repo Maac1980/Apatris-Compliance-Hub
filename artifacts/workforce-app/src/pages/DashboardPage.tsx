@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,44 @@ export function DashboardPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("home");
 
+  // Tab history stack — so back button walks through previously visited tabs
+  const tabHistoryRef = useRef<string[]>(["home"]);
+
+  // Navigate to a tab, recording it in both our stack and browser history
+  const navigateTab = (tab: string) => {
+    // Don't push duplicates of the current top
+    const history = tabHistoryRef.current;
+    if (history[history.length - 1] === tab) return;
+    tabHistoryRef.current = [...history, tab];
+    setActiveTab(tab);
+    // Push a browser history entry so popstate fires on back press
+    window.history.pushState({ wfTab: tab }, "");
+  };
+
+  // On mount: push an initial guard so the FIRST back press is interceptable
+  useEffect(() => {
+    window.history.pushState({ wfTab: "home" }, "");
+
+    const handlePopState = () => {
+      const stack = tabHistoryRef.current;
+      if (stack.length > 1) {
+        // Pop the current tab and go back to the previous one
+        const next = stack.slice(0, -1);
+        tabHistoryRef.current = next;
+        const prevTab = next[next.length - 1];
+        setActiveTab(prevTab);
+        // Re-push a guard so the next back press is also caught
+        window.history.pushState({ wfTab: prevTab }, "");
+      } else {
+        // Already at root (home) — re-push guard to prevent leaving the app
+        window.history.pushState({ wfTab: "home" }, "");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isReady && !role) setLocation("/");
   }, [role, isReady, setLocation]);
@@ -54,8 +92,8 @@ export function DashboardPage() {
 
       // ── HOME ──────────────────────────────────────────────────────────────
       case "home":
-        if (isT1) return <OwnerHome onNavigate={setActiveTab} />;
-        if (isT2) return <ManagerHome onNavigate={setActiveTab} />;
+        if (isT1) return <OwnerHome onNavigate={navigateTab} />;
+        if (isT2) return <ManagerHome onNavigate={navigateTab} />;
         if (role === "TechOps")      return <WorkersTab />;
         if (role === "Coordinator")  return <WorkersTab />;
         if (role === "Professional") return <Tier5Home />;
@@ -147,7 +185,7 @@ export function DashboardPage() {
         </AnimatePresence>
       </main>
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onTabChange={navigateTab} />
     </div>
   );
 }
