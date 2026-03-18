@@ -1,6 +1,54 @@
-# Apatris Compliance Dashboard
+# Apatris Compliance Dashboard + Workforce App
 
 ## Overview
+
+Two parallel products in one monorepo:
+1. **Apatris Compliance Dashboard** — desktop web app for managing 200+ welders, ZUS/PIT payroll, Airtable backend, JWT auth. Served at `/`.
+2. **Workforce App** — mobile-first staffing platform at `/workforce/`. 5-tier enterprise RBAC, industrial branding matching the dashboard.
+
+---
+
+## Workforce App (artifacts/workforce-app)
+
+### Stack
+- React 19 + Vite + Tailwind CSS, port `18891`, base path `/workforce/`
+- No backend — fully client-side with mock data (`mockWorkers.ts`)
+- Auth: `useAuth` context with role stored in sessionStorage
+
+### 5-Tier RBAC
+| Tier | Role | Color | Bottom Nav (5 tabs) |
+|---|---|---|---|
+| T1 | Executive | Indigo | Home · Directory · Payroll · Alerts · Profile |
+| T2 | Legal Head | Violet | Home · Directory · Alerts · Doc Queue · Profile |
+| T3 | Tech Ops | Blue | Directory · Workspace · Sites · Profile |
+| T4 | Coordinator | Emerald | Directory · Workspace · Doc Queue · Profile |
+| T5 | Professional | Amber | Home · My Docs · Timesheet · Profile |
+
+### Access Inheritance
+- **T1** has all access from T2 + T3 + T4 + T5. Home screen has "Operational Access" shortcut cards for every lower-tier screen.
+- **T2** has all access from T3 + T4 + T5. Home screen has "Operational Access" shortcut cards for T3/T4/T5 screens.
+- T3, T4, T5 see only their own screens.
+
+### Worker Dossier (4-tab overlay)
+Opens when any T1–T4 taps a worker card in the directory:
+- **Profile** — editable personal info, employment, ZUS/IBAN (T1 only)
+- **Documents** — TRC/Passport/BHP/UDT/Medical/Contract/Oświadczenie with upload + approve/reject
+- **Hours** — monthly total, weekly breakdown, T1 approve-all button
+- **Finance** — advance/penalty log (all T1–T4); salary overview + IBAN (T1 only)
+
+### Key RBAC flags
+- `canEdit` = T1 + T2 (profile fields)
+- `showFinancial` = T1 only (IBAN, hourly rate, salary overview)
+- `showZUS` = T1 only
+- `canApprove` = T1–T4 (documents + hours)
+- `canAddProfessional` = T1 only (FAB in Directory)
+
+### Filter Pills Fix
+All 5 status filter pills (All · Compliant · Expiring Soon · Missing Docs · Non-Compliant) use `flex-wrap` so they always display on 2 rows without clipping.
+
+---
+
+## Apatris Compliance Dashboard (artifacts/apatris-dashboard)
 
 Full-stack compliance portal for managing 200+ welders. Built as a pnpm workspace monorepo with TypeScript.
 
