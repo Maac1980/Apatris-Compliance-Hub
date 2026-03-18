@@ -1,7 +1,8 @@
 import {
   HardHat, Wrench, ShieldAlert, ShieldCheck,
   FileCheck, UploadCloud, Clock, FileText,
-  CheckCircle2, AlertCircle, Stethoscope, ChevronRight,
+  CheckCircle2, AlertCircle, Stethoscope,
+  ChevronRight, Phone, Mail, User,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -14,16 +15,46 @@ interface DocStatus {
 }
 
 const MY_DOCS: DocStatus[] = [
-  { label: "TRC Certificate", status: "Valid", expiry: "Nov 20, 2026", icon: ShieldCheck },
-  { label: "Badania Lekarskie", status: "Valid", expiry: "Jun 15, 2026", icon: Stethoscope },
-  { label: "Passport", status: "Valid", expiry: "Jan 10, 2030", icon: FileCheck },
+  { label: "TRC Certificate",      status: "Valid",    expiry: "Nov 20, 2026", icon: ShieldCheck },
+  { label: "Badania Lekarskie",    status: "Valid",    expiry: "Jun 15, 2026", icon: Stethoscope },
+  { label: "Passport",             status: "Valid",    expiry: "Jan 10, 2030", icon: FileCheck },
 ];
 
-const statusStyle = {
+const docStatusStyle = {
   Valid:    { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: "text-emerald-500" },
   Expiring: { pill: "bg-amber-50 text-amber-700 border-amber-200",       icon: "text-amber-500" },
   Missing:  { pill: "bg-red-50 text-red-700 border-red-200",             icon: "text-red-500" },
 };
+
+// Assigned coordinator contacts — strictly only T3/T4 persons for this professional
+const MY_COORDINATORS = [
+  {
+    id: "coord-t3",
+    tier: 3,
+    tierLabel: "Tech Ops",
+    tierColor: "bg-blue-600",
+    name: "Andrzej Kowalczyk",
+    role: "Key Account & Technical Operations",
+    phone: "+48 601 234 567",
+    email: "a.kowalczyk@apatris.pl",
+    initials: "AK",
+    avatarBg: "bg-blue-100",
+    avatarText: "text-blue-700",
+  },
+  {
+    id: "coord-t4",
+    tier: 4,
+    tierLabel: "Coordinator",
+    tierColor: "bg-emerald-600",
+    name: "Zofia Brzezińska",
+    role: "Compliance Coordinator",
+    phone: "+48 602 345 678",
+    email: "z.brzezinska@apatris.pl",
+    initials: "ZB",
+    avatarBg: "bg-emerald-100",
+    avatarText: "text-emerald-700",
+  },
+];
 
 export function Tier5Home() {
   return (
@@ -53,12 +84,12 @@ export function Tier5Home() {
         </div>
       </div>
 
-      {/* Document status */}
+      {/* My compliance documents — own data only */}
       <div className="space-y-3">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">My Compliance Documents</h2>
         <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
           {MY_DOCS.map((doc) => {
-            const style = statusStyle[doc.status];
+            const style = docStatusStyle[doc.status];
             const Icon = doc.icon;
             return (
               <div key={doc.label} className="p-4 flex items-center gap-3">
@@ -78,53 +109,82 @@ export function Tier5Home() {
         </div>
       </div>
 
-      {/* Industrial quick actions */}
+      {/* Quick actions */}
       <div className="space-y-3">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">My Actions</h2>
         <div className="grid grid-cols-2 gap-3">
-          <button className="bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-all hover:border-amber-200 hover:bg-amber-50/20 hover:shadow-md group">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Clock className="w-6 h-6 text-amber-600" strokeWidth={2} />
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-bold text-foreground">Submit Hours</div>
-              <div className="text-[10px] text-muted-foreground">142 hrs this month</div>
-            </div>
-          </button>
-
-          <button className="bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-all hover:border-blue-200 hover:bg-blue-50/20 hover:shadow-md group">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <UploadCloud className="w-6 h-6 text-blue-600" strokeWidth={2} />
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-bold text-foreground">Upload Document</div>
-              <div className="text-[10px] text-muted-foreground">Badania / Passport</div>
-            </div>
-          </button>
-
-          <button className="bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-all hover:border-violet-200 hover:bg-violet-50/20 hover:shadow-md group">
-            <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Wrench className="w-6 h-6 text-violet-600" strokeWidth={2} />
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-bold text-foreground">UDT Status</div>
-              <div className="text-[10px] text-muted-foreground">Uprawnienia</div>
-            </div>
-          </button>
-
-          <button className="bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-all hover:border-emerald-200 hover:bg-emerald-50/20 hover:shadow-md group">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ShieldAlert className="w-6 h-6 text-emerald-600" strokeWidth={2} />
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-bold text-foreground">Report Issue</div>
-              <div className="text-[10px] text-muted-foreground">Site safety</div>
-            </div>
-          </button>
+          {[
+            { icon: Clock,       label: "Submit Hours",           sub: "142 hrs this month", bg: "bg-amber-50",   col: "text-amber-600",   hov: "hover:border-amber-200 hover:bg-amber-50/20" },
+            { icon: UploadCloud, label: "Upload Document",        sub: "Badania / Passport",  bg: "bg-blue-50",    col: "text-blue-600",    hov: "hover:border-blue-200 hover:bg-blue-50/20" },
+            { icon: Wrench,      label: "UDT Status",             sub: "Uprawnienia",         bg: "bg-violet-50",  col: "text-violet-600",  hov: "hover:border-violet-200 hover:bg-violet-50/20" },
+            { icon: ShieldAlert, label: "Report Site Issue",      sub: "Safety alert",        bg: "bg-emerald-50", col: "text-emerald-600", hov: "hover:border-emerald-200 hover:bg-emerald-50/20" },
+          ].map(({ icon: Icon, label, sub, bg, col, hov }) => (
+            <button
+              key={label}
+              className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-all hover:shadow-md group ${hov}`}
+            >
+              <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                <Icon className={`w-6 h-6 ${col}`} strokeWidth={2} />
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-bold text-foreground leading-tight">{label}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Assignments */}
+      {/* Assigned coordinator contacts — T3 and T4 only, strictly */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 ml-1">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">My Assigned Coordinators</h2>
+        </div>
+        <p className="text-xs text-muted-foreground ml-1 -mt-2">Your designated contacts for site support and compliance queries.</p>
+
+        <div className="space-y-3">
+          {MY_COORDINATORS.map((c) => (
+            <div key={c.id} className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center gap-3">
+                <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-base font-black", c.avatarBg, c.avatarText)}>
+                  {c.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-foreground">{c.name}</div>
+                  <div className="text-xs text-muted-foreground">{c.role}</div>
+                  <span className={cn("inline-block text-[9px] font-black text-white px-1.5 py-0.5 rounded-full mt-1 tracking-wide", c.tierColor)}>
+                    TIER {c.tier} · {c.tierLabel.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t border-gray-50 divide-y divide-gray-50">
+                <a
+                  href={`tel:${c.phone}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 border flex items-center justify-center shrink-0">
+                    <Phone className="w-3.5 h-3.5 text-gray-500" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{c.phone}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
+                </a>
+                <a
+                  href={`mailto:${c.email}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 border flex items-center justify-center shrink-0">
+                    <Mail className="w-3.5 h-3.5 text-gray-500" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground truncate">{c.email}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto shrink-0" />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current assignment */}
       <div className="space-y-3">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Assignment</h2>
         <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">

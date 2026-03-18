@@ -61,7 +61,7 @@ const roleConfig: LoginRoleConfig[] = [
     role: "TechOps",
     tier: 3,
     title: "Key Account & Technical Operations",
-    subtitle: "Add Workers · UDT · Site Deployments",
+    subtitle: "Add Professionals · UDT · Site Deployments",
     icon: Wrench,
     colors: {
       base: "border-blue-100 bg-white",
@@ -75,7 +75,7 @@ const roleConfig: LoginRoleConfig[] = [
     role: "Coordinator",
     tier: 4,
     title: "Compliance Coordinator",
-    subtitle: "Document queue · File processing",
+    subtitle: "Professionals · Doc queue · Operational modules",
     icon: ClipboardList,
     colors: {
       base: "border-emerald-100 bg-white",

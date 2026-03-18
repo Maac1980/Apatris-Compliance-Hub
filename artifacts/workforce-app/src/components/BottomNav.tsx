@@ -18,58 +18,56 @@ function getTabsForRole(role: Role): Tab[] {
   switch (role) {
     case "Executive":
       return [
-        { id: "home", label: "Home", icon: Home },
-        { id: "workers", label: "Workers", icon: Users },
-        { id: "payroll", label: "Payroll", icon: DollarSign },
-        { id: "profile", label: "Profile", icon: User },
+        { id: "home",     label: "Home",        icon: Home },
+        { id: "workers",  label: "Directory",   icon: Users },
+        { id: "payroll",  label: "Payroll",      icon: DollarSign },
+        { id: "profile",  label: "Profile",      icon: User },
       ];
     case "LegalHead":
       return [
-        { id: "home", label: "Home", icon: Home },
-        { id: "workers", label: "Workers", icon: Users },
-        { id: "alerts", label: "Alerts", icon: Bell },
-        { id: "profile", label: "Profile", icon: User },
+        { id: "home",     label: "Home",        icon: Home },
+        { id: "workers",  label: "Directory",   icon: Users },
+        { id: "alerts",   label: "Alerts",       icon: Bell },
+        { id: "profile",  label: "Profile",      icon: User },
       ];
     case "TechOps":
       return [
-        { id: "home", label: "Home", icon: Home },
-        { id: "workers", label: "Workers", icon: Users },
-        { id: "sites", label: "Sites", icon: MapPin },
-        { id: "profile", label: "Profile", icon: User },
+        { id: "home",     label: "Home",        icon: Home },
+        { id: "workers",  label: "Professionals",icon: Users },
+        { id: "sites",    label: "Sites",        icon: MapPin },
+        { id: "profile",  label: "Profile",      icon: User },
       ];
     case "Coordinator":
       return [
-        { id: "home", label: "Home", icon: Home },
-        { id: "queue", label: "Queue", icon: ClipboardList },
-        { id: "profile", label: "Profile", icon: User },
+        { id: "home",     label: "Home",        icon: Home },
+        { id: "workers",  label: "Professionals",icon: Users },
+        { id: "queue",    label: "Doc Queue",    icon: ClipboardList },
+        { id: "profile",  label: "Profile",      icon: User },
       ];
     case "Professional":
       return [
-        { id: "home", label: "Home", icon: Home },
-        { id: "docs", label: "My Docs", icon: FileText },
-        { id: "timesheet", label: "Timesheet", icon: Clock },
-        { id: "profile", label: "Profile", icon: User },
+        { id: "home",      label: "Home",       icon: Home },
+        { id: "docs",      label: "My Docs",    icon: FileText },
+        { id: "timesheet", label: "Timesheet",  icon: Clock },
+        { id: "profile",   label: "Profile",    icon: User },
       ];
   }
 }
 
-function getActiveColorForRole(role: Role): string {
-  switch (role) {
-    case "Executive":   return "text-indigo-600";
-    case "LegalHead":   return "text-violet-600";
-    case "TechOps":     return "text-blue-600";
-    case "Coordinator": return "text-emerald-600";
-    case "Professional":return "text-amber-600";
-  }
-}
+const ACTIVE_COLORS: Record<Role, string> = {
+  Executive:    "text-indigo-600",
+  LegalHead:    "text-violet-600",
+  TechOps:      "text-blue-600",
+  Coordinator:  "text-emerald-600",
+  Professional: "text-amber-600",
+};
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
-
   if (!role) return null;
 
   const tabs = getTabsForRole(role);
-  const activeColor = getActiveColorForRole(role);
+  const activeColor = ACTIVE_COLORS[role];
 
   return (
     <div className="shrink-0 bg-white border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)] relative z-50">
@@ -77,7 +75,6 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-
           return (
             <button
               key={tab.id}
