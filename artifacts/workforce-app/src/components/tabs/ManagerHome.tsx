@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  AlertCircle, AlertTriangle, ShieldX, CheckCircle2, Lock,
+  AlertCircle, AlertTriangle, CheckCircle2, Lock,
   Clock, Scale, FileSignature, Stethoscope, Users,
   LayoutGrid, MapPin, FileText, Loader2,
   ChevronRight,
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useWorkers } from "@/hooks/useWorkers";
 import { TimesheetsSheet } from "@/components/TimesheetsSheet";
 import { SiteDeploymentsSheet } from "@/components/SiteDeploymentsSheet";
+import { LegalDossiersSheet } from "@/components/LegalDossiersSheet";
 
 interface ManagerHomeProps {
   onNavigate: (tab: string) => void;
@@ -26,6 +27,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   const { workers, loading, isLive } = useWorkers();
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
   const [sitesOpen, setSitesOpen]           = useState(false);
+  const [dossiersOpen, setDossiersOpen]     = useState(false);
 
   const compliant    = workers.filter(w => w.status === "Compliant").length;
   const expiring     = workers.filter(w => w.status === "Expiring Soon").length;
@@ -53,7 +55,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
       accent: "hover:border-violet-200 hover:bg-violet-50/20",
-      onClick: () => onNavigate("workers"),
+      onClick: () => setDossiersOpen(true),
     },
     {
       icon: FileSignature,
@@ -289,6 +291,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       {/* Sheets */}
       <TimesheetsSheet isOpen={timesheetsOpen} onClose={() => setTimesheetsOpen(false)} />
       <SiteDeploymentsSheet isOpen={sitesOpen} onClose={() => setSitesOpen(false)} workers={workers} />
+      <LegalDossiersSheet isOpen={dossiersOpen} onClose={() => setDossiersOpen(false)} workers={workers} loading={loading} />
     </motion.div>
   );
 }
