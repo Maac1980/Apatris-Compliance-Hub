@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/site-coordinators.js";
 import { sendOtpEmail, isMailConfigured } from "../lib/mailer.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { verifyMobilePin, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";
 
 const router = Router();
 
@@ -194,67 +195,82 @@ router.get("/auth/verify", (req, res) => {
 });
 
 // ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
-// Validates tier-based credentials for the Workforce mobile app.
-// T1 → checked against APATRIS_PASS_AKSHAY or APATRIS_PASS_MANISH
-// T2–T5 → checked against MOBILE_T2_PIN … MOBILE_T5_PIN environment variables
-const MOBILE_ROLE_NAMES: Record<number, string> = {
-  1: "Executive",
-  2: "LegalHead",
-  3: "TechOps",
-  4: "Coordinator",
-  5: "Professional",
-};
-
-router.post("/auth/mobile-login", (req, res) => {
+router.post("/auth/mobile-login", async (req, res) => {
   try {
     const { tier, password } = req.body as { tier?: unknown; password?: unknown };
 
-    if (typeof tier !== "number" || !MOBILE_ROLE_NAMES[tier]) {
+    if (typeof tier !== "number" || tier < 1 || tier > 5) {
       return res.status(400).json({ error: "Invalid tier." });
     }
     if (typeof password !== "string" || !password.trim()) {
       return res.status(400).json({ error: "Password is required." });
     }
 
-    const roleName = MOBILE_ROLE_NAMES[tier];
-    let authenticated = false;
-    let userName = roleName;
-
-    if (tier === 1) {
-      const passAkshay = process.env["APATRIS_PASS_AKSHAY"];
-      const passManish = process.env["APATRIS_PASS_MANISH"];
-      if (passAkshay && password === passAkshay) {
-        authenticated = true;
-        userName = "Akshay";
-      } else if (passManish && password === passManish) {
-        authenticated = true;
-        userName = "Manish";
-      }
-    } else {
-      const envKey = `MOBILE_T${tier}_PIN`;
-      const pin = process.env[envKey];
-      if (!pin) {
-        // PIN not configured — block access
-        return res.status(503).json({ error: `Tier ${tier} PIN not configured. Contact system administrator.` });
-      }
-      if (password === pin) {
-        authenticated = true;
-      }
-    }
-
-    if (!authenticated) {
+    const result = await verifyMobilePin(tier, password.trim());
+    if (!result) {
       return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
     }
 
     const token = signToken({
-      email: `${userName.toLowerCase()}@apatris.pl`,
-      name: userName,
-      role: roleName,
+      email: `${result.name.toLowerCase()}@apatris.pl`,
+      name: result.name,
+      role: result.role,
     });
 
-    return res.json({ role: roleName, name: userName, jwt: token });
+    return res.json({ role: result.role, name: result.name, jwt: token });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";
+    return res.status(500).json({ error: message });
+  }
+});
+
+// ─── POST /api/auth/mobile-change-pin ────────────────────────────────────────
+// Requires a valid JWT. Changes the PIN for the authenticated tier/user.
+router.post("/auth/mobile-change-pin", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authentication required." });
+    }
+
+    const token = authHeader.slice(7);
+    let payload: { name: string; role: string };
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as { name: string; role: string };
+    } catch {
+      return res.status(401).json({ error: "Session expired. Please log in again." });
+    }
+
+    const { currentPin, newPin, confirmPin } = req.body as {
+      currentPin?: string; newPin?: string; confirmPin?: string;
+    };
+
+    if (!currentPin || !newPin || !confirmPin) {
+      return res.status(400).json({ error: "All three fields are required." });
+    }
+    if (newPin !== confirmPin) {
+      return res.status(400).json({ error: "New PIN and confirmation do not match." });
+    }
+    if (newPin.length < 4) {
+      return res.status(400).json({ error: "New PIN must be at least 4 characters." });
+    }
+
+    const tier = ROLE_TO_TIER[payload.role];
+    if (!tier) {
+      return res.status(400).json({ error: "Unknown role." });
+    }
+
+    // Determine user_key: T1 users have individual keys; T2-T5 share one
+    const userKey = tier === 1 ? payload.name.toLowerCase() : "shared";
+
+    const result = await changeMobilePin(tier, userKey, currentPin, newPin);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.json({ success: true, message: "PIN updated successfully." });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to change PIN";
     return res.status(500).json({ error: message });
   }
 });

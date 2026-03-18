@@ -14,6 +14,7 @@ import { PayrollModule } from "@/components/tabs/PayrollModule";
 import { AlertsModule } from "@/components/tabs/AlertsModule";
 import { SitesModule } from "@/components/tabs/SitesModule";
 import { WorkersTab } from "@/components/tabs/WorkersTab";
+import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -148,71 +149,7 @@ export function DashboardPage() {
 
       // ── PROFILE ───────────────────────────────────────────────────────────
       case "profile":
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-4 py-5 space-y-4 pb-6"
-          >
-            <div className="bg-white rounded-2xl border shadow-sm p-5 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center shrink-0">
-                <span className="text-xl font-black text-gray-500">
-                  {tierConfig.shortLabel.slice(0, 2).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-bold text-foreground leading-tight">{tierConfig.title}</div>
-                <div className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border mt-1.5 whitespace-nowrap", badgeColor)}>
-                  Tier {tierConfig.tier} · {tierConfig.shortLabel}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5 leading-tight">{tierConfig.subtitle}</div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
-              <div className="p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Financial Access</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                  tierConfig.canViewFinancials
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-red-50 text-red-700 border-red-200"
-                )}>
-                  {tierConfig.canViewFinancials ? "Granted" : "Restricted"}
-                </span>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Professional Directory</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                  tierConfig.canViewGlobalDirectory
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-red-50 text-red-700 border-red-200"
-                )}>
-                  {tierConfig.canViewGlobalDirectory ? "Full Access" : "Restricted"}
-                </span>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Document Approval</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                  tierConfig.canApproveDocuments
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-red-50 text-red-700 border-red-200"
-                )}>
-                  {tierConfig.canApproveDocuments ? "Enabled" : "Disabled"}
-                </span>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Operational Modules</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                  tierConfig.canAccessOperationalModules
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-red-50 text-red-700 border-red-200"
-                )}>
-                  {tierConfig.canAccessOperationalModules ? "Enabled" : "Restricted"}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        );
+        return <ProfileTab onLogout={handleLogout} />;
 
       default:
         return null;

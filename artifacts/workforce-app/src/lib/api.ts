@@ -179,6 +179,26 @@ export async function mobileLogin(
   return data as { role: string; name: string; jwt: string };
 }
 
+// ── Change PIN ─────────────────────────────────────────────────────────────
+export async function changeMobilePin(
+  jwt: string,
+  currentPin: string,
+  newPin: string,
+  confirmPin: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/auth/mobile-change-pin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+    },
+    body: JSON.stringify({ currentPin, newPin, confirmPin }),
+  });
+  const data = await res.json() as { success?: boolean; message?: string; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Failed to change PIN");
+  return data;
+}
+
 // ── Fetch workers ──────────────────────────────────────────────────────────
 export async function fetchWorkersFromApi(jwt?: string): Promise<Worker[]> {
   const res = await fetch(`${API_BASE}/workers`, {
