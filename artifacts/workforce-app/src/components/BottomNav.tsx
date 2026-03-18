@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 
@@ -18,38 +18,42 @@ function getTabsForRole(role: Role): Tab[] {
   switch (role) {
     case "Executive":
       return [
-        { id: "home",     label: "Home",        icon: Home },
-        { id: "workers",  label: "Directory",   icon: Users },
-        { id: "payroll",  label: "Payroll",      icon: DollarSign },
-        { id: "profile",  label: "Profile",      icon: User },
+        { id: "home",    label: "Home",      icon: Home },
+        { id: "workers", label: "Directory", icon: Users },
+        { id: "payroll", label: "Payroll",   icon: DollarSign },
+        { id: "profile", label: "Profile",   icon: User },
       ];
     case "LegalHead":
       return [
-        { id: "home",     label: "Home",        icon: Home },
-        { id: "workers",  label: "Directory",   icon: Users },
-        { id: "alerts",   label: "Alerts",       icon: Bell },
-        { id: "profile",  label: "Profile",      icon: User },
+        { id: "home",    label: "Home",      icon: Home },
+        { id: "workers", label: "Directory", icon: Users },
+        { id: "alerts",  label: "Alerts",    icon: Bell },
+        { id: "profile", label: "Profile",   icon: User },
       ];
     case "TechOps":
+      // Home = Professional Directory (default working view)
+      // Workers = Workspace (operational modules + pending actions)
       return [
-        { id: "home",     label: "Home",        icon: Home },
-        { id: "workers",  label: "Professionals",icon: Users },
-        { id: "sites",    label: "Sites",        icon: MapPin },
-        { id: "profile",  label: "Profile",      icon: User },
+        { id: "home",    label: "Directory",  icon: Users },
+        { id: "workers", label: "Workspace",  icon: LayoutGrid },
+        { id: "sites",   label: "Sites",      icon: MapPin },
+        { id: "profile", label: "Profile",    icon: User },
       ];
     case "Coordinator":
+      // Home = Professional Directory (default working view)
+      // Workers = Workspace (operational modules + compliance alerts)
       return [
-        { id: "home",     label: "Home",        icon: Home },
-        { id: "workers",  label: "Professionals",icon: Users },
-        { id: "queue",    label: "Doc Queue",    icon: ClipboardList },
-        { id: "profile",  label: "Profile",      icon: User },
+        { id: "home",    label: "Directory",  icon: Users },
+        { id: "workers", label: "Workspace",  icon: LayoutGrid },
+        { id: "queue",   label: "Doc Queue",  icon: ClipboardList },
+        { id: "profile", label: "Profile",    icon: User },
       ];
     case "Professional":
       return [
-        { id: "home",      label: "Home",       icon: Home },
-        { id: "docs",      label: "My Docs",    icon: FileText },
-        { id: "timesheet", label: "Timesheet",  icon: Clock },
-        { id: "profile",   label: "Profile",    icon: User },
+        { id: "home",      label: "Home",     icon: Home },
+        { id: "docs",      label: "My Docs",  icon: FileText },
+        { id: "timesheet", label: "Timesheet",icon: Clock },
+        { id: "profile",   label: "Profile",  icon: User },
       ];
   }
 }
@@ -90,7 +94,10 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />
                 )}
               </div>
-              <span className={cn("text-[10px] tracking-wide transition-all duration-200", isActive ? "font-bold" : "font-medium")}>
+              <span className={cn(
+                "text-[10px] tracking-wide transition-all duration-200 leading-tight text-center",
+                isActive ? "font-bold" : "font-medium"
+              )}>
                 {tab.label}
               </span>
             </button>

@@ -45,17 +45,27 @@ export function DashboardPage() {
 
   const renderContent = () => {
     switch (activeTab) {
-      // ── HOME tab — role-specific dashboards ──────────────────────────
+
+      // ── HOME tab ────────────────────────────────────────────────────────
+      // T1 / T2 → role-specific dashboards
+      // T3 / T4 → Professional Directory (default operational view) with FAB
+      // T5      → personal profile
       case "home":
         if (role === "Executive")    return <OwnerHome />;
         if (role === "LegalHead")    return <ManagerHome />;
-        if (role === "TechOps")      return <Tier3Home />;
-        if (role === "Coordinator")  return <Tier4Home />;
+        if (role === "TechOps")      return <WorkersTab />;   // Directory is default for T3
+        if (role === "Coordinator")  return <WorkersTab />;   // Directory is default for T4
         if (role === "Professional") return <Tier5Home />;
         return null;
 
-      // ── WORKERS / DIRECTORY tab ───────────────────────────────────────
+      // ── WORKERS tab ──────────────────────────────────────────────────────
+      // T1 / T2 → Professional Directory
+      // T3      → Operational Workspace (Tier3Home modules + pending actions)
+      // T4      → Operational Workspace (Tier4Home modules + compliance alerts)
       case "workers":
+        if (role === "TechOps")     return <Tier3Home />;
+        if (role === "Coordinator") return <Tier4Home />;
+        // T1 / T2 directory
         if (!tierConfig.canViewGlobalDirectory) {
           return (
             <motion.div
@@ -63,12 +73,12 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
             >
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShieldBlock />
+              <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
+                <LockSvg className="w-8 h-8 text-red-400" />
               </div>
               <h2 className="text-base font-bold text-red-700 mb-2">Access Restricted</h2>
               <p className="text-sm text-muted-foreground max-w-[220px]">
-                The global professional directory is restricted to Tiers 1–3 only.
+                The global professional directory is not available at your access tier.
               </p>
             </motion.div>
           );
@@ -85,7 +95,7 @@ export function DashboardPage() {
               className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
             >
               <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
-                <LockIcon className="w-8 h-8 text-red-400" />
+                <LockSvg className="w-8 h-8 text-red-400" />
               </div>
               <h2 className="text-base font-bold text-red-700 mb-2">Financial Firewall</h2>
               <p className="text-sm text-muted-foreground max-w-[220px]">
@@ -99,7 +109,7 @@ export function DashboardPage() {
         }
         return <PayrollModule />;
 
-      // ── ALERTS tab ────────────────────────────────────────────────────
+      // ── ALERTS tab (Tier 2) ───────────────────────────────────────────
       case "alerts":
         return <AlertsModule />;
 
@@ -125,7 +135,7 @@ export function DashboardPage() {
           >
             <div className="flex items-center gap-2 ml-1">
               <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Timesheet — March 2026</h2>
-              <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full">OPEN</span>
+              <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">OPEN</span>
             </div>
             <div className="bg-white rounded-2xl border shadow-sm p-5">
               <div className="text-3xl font-black text-amber-600 leading-none">142 hrs</div>
@@ -142,8 +152,8 @@ export function DashboardPage() {
             </div>
             <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
               {[
-                { week: "Week 1 (Mar 1–7)", hours: 38, status: "Approved" },
-                { week: "Week 2 (Mar 8–14)", hours: 40, status: "Approved" },
+                { week: "Week 1 (Mar 1–7)",   hours: 38, status: "Approved" },
+                { week: "Week 2 (Mar 8–14)",  hours: 40, status: "Approved" },
                 { week: "Week 3 (Mar 15–21)", hours: 36, status: "Approved" },
                 { week: "Week 4 (Mar 22–28)", hours: 28, status: "Pending" },
               ].map(row => (
@@ -153,7 +163,7 @@ export function DashboardPage() {
                     <div className="text-xs text-muted-foreground">{row.hours} hours submitted</div>
                   </div>
                   <span className={cn(
-                    "text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                    "text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
                     row.status === "Approved"
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : "bg-amber-50 text-amber-700 border-amber-200"
@@ -180,19 +190,19 @@ export function DashboardPage() {
                   {tierConfig.shortLabel.slice(0, 2).toUpperCase()}
                 </span>
               </div>
-              <div>
-                <div className="text-base font-bold text-foreground">{tierConfig.title}</div>
-                <div className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border mt-1.5", badgeColor)}>
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-bold text-foreground leading-tight">{tierConfig.title}</div>
+                <div className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border mt-1.5 whitespace-nowrap", badgeColor)}>
                   Tier {tierConfig.tier} · {tierConfig.shortLabel}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1.5">{tierConfig.subtitle}</div>
+                <div className="text-xs text-muted-foreground mt-1.5 leading-tight">{tierConfig.subtitle}</div>
               </div>
             </div>
 
             <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
               <div className="p-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">Financial Access</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
                   tierConfig.canViewFinancials
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                     : "bg-red-50 text-red-700 border-red-200"
@@ -202,7 +212,7 @@ export function DashboardPage() {
               </div>
               <div className="p-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">Professional Directory</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
                   tierConfig.canViewGlobalDirectory
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                     : "bg-red-50 text-red-700 border-red-200"
@@ -212,12 +222,22 @@ export function DashboardPage() {
               </div>
               <div className="p-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">Document Approval</span>
-                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
                   tierConfig.canApproveDocuments
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                     : "bg-red-50 text-red-700 border-red-200"
                 )}>
                   {tierConfig.canApproveDocuments ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Operational Modules</span>
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
+                  tierConfig.canAccessOperationalModules
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                )}>
+                  {tierConfig.canAccessOperationalModules ? "Enabled" : "Restricted"}
                 </span>
               </div>
             </div>
@@ -231,22 +251,29 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
+      {/* Header — fixed, role-badged */}
       <header className="h-14 bg-white border-b border-border shadow-sm px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <span className="font-black text-lg tracking-tight text-foreground">APATRIS</span>
-          <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-black border tracking-wide", badgeColor)}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-black text-lg tracking-tight text-foreground shrink-0">APATRIS</span>
+          {/* Badge: text-[10px] + whitespace-nowrap prevents wrapping */}
+          <div className={cn(
+            "px-2 py-0.5 rounded-full text-[10px] font-black border tracking-wide whitespace-nowrap shrink-0",
+            badgeColor
+          )}>
             {tierConfig.shortLabel}
           </div>
         </div>
+
         <button
           onClick={handleLogout}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all shrink-0"
           title="Sign out"
         >
           <LogOut className="w-4 h-4" strokeWidth={2} />
         </button>
       </header>
 
+      {/* Main content */}
       <main className="flex-1 overflow-y-auto no-scrollbar bg-gray-50 relative">
         <AnimatePresence mode="wait">
           <motion.div
@@ -267,19 +294,11 @@ export function DashboardPage() {
   );
 }
 
-// Inline icon helpers to avoid adding imports just for the firewall screens
-function LockIcon({ className }: { className?: string }) {
+// Inline lock SVG — avoids adding an import just for the firewall screen
+function LockSvg({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-    </svg>
-  );
-}
-
-function ShieldBlock() {
-  return (
-    <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
   );
 }
