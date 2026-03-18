@@ -1,5 +1,94 @@
-import { Users, ShieldCheck, AlertTriangle, FileWarning, ShieldX, CreditCard, BookOpen, Receipt } from "lucide-react";
+import {
+  Users, ShieldCheck, AlertTriangle, FileWarning, ShieldX,
+  Receipt, Clock, Scale, FileSignature, Stethoscope,
+  ChevronRight,
+} from "lucide-react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface ModuleCardProps {
+  icon: React.ElementType;
+  label: string;
+  sublabel?: string;
+  iconBg: string;
+  iconColor: string;
+  accent: string;
+  full?: boolean;
+  badge?: string;
+  badgeColor?: string;
+}
+
+function ModuleCard({ icon: Icon, label, sublabel, iconBg, iconColor, accent, full, badge, badgeColor }: ModuleCardProps) {
+  return (
+    <button
+      className={cn(
+        "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group",
+        accent,
+        full ? "col-span-2" : ""
+      )}
+    >
+      <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", iconBg)}>
+        <Icon className={cn("w-5 h-5", iconColor)} strokeWidth={2} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm text-foreground leading-tight">{label}</div>
+        {sublabel && <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{sublabel}</div>}
+        {badge && (
+          <span className={cn("inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full mt-1 tracking-wide", badgeColor)}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors shrink-0" />
+    </button>
+  );
+}
+
+const TIER1_MODULES: ModuleCardProps[] = [
+  {
+    icon: Receipt,
+    label: "ZUS & Payroll",
+    sublabel: "March 2026 · PLN 42,800",
+    iconBg: "bg-indigo-50",
+    iconColor: "text-indigo-600",
+    accent: "hover:border-indigo-200 hover:bg-indigo-50/20",
+    badge: "TIER 1 ONLY",
+    badgeColor: "bg-indigo-600 text-white",
+  },
+  {
+    icon: Clock,
+    label: "Timesheets & Hours",
+    sublabel: "142 hrs logged this month",
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-600",
+    accent: "hover:border-blue-200 hover:bg-blue-50/20",
+  },
+  {
+    icon: Scale,
+    label: "PIP / Legal Dossiers",
+    sublabel: "5 active dossiers",
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
+    accent: "hover:border-violet-200 hover:bg-violet-50/20",
+  },
+  {
+    icon: FileSignature,
+    label: "B2B Contracts",
+    sublabel: "2 active · All signed",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+    accent: "hover:border-emerald-200 hover:bg-emerald-50/20",
+  },
+  {
+    icon: Stethoscope,
+    label: "UDT & Badania Lekarskie",
+    sublabel: "Next renewal: Jun 2026",
+    iconBg: "bg-teal-50",
+    iconColor: "text-teal-600",
+    accent: "hover:border-teal-200 hover:bg-teal-50/20",
+    full: true,
+  },
+];
 
 export function OwnerHome() {
   return (
@@ -9,119 +98,91 @@ export function OwnerHome() {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-6 pb-6"
     >
+      {/* Kpi strip */}
       <div className="space-y-3">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Overview</h2>
 
-        <div className="bg-white rounded-2xl shadow-sm border p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6 text-indigo-600" />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
+            <div className="text-xl font-black text-foreground">5</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Deployed<br/>Professionals</div>
           </div>
-          <div className="flex-1">
-            <div className="text-2xl font-bold text-foreground leading-none">5</div>
-            <div className="text-xs text-muted-foreground font-medium mt-1">Total Workers</div>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="text-[11px] text-muted-foreground">4 Active Sites</span>
-            </div>
+          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
+            <div className="text-xl font-black text-emerald-600">60%</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Compliance<br/>Rate</div>
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-6 h-6 text-emerald-600" />
-          </div>
-          <div className="flex-1">
-            <div className="text-2xl font-bold text-emerald-600 leading-none">60%</div>
-            <div className="text-xs text-muted-foreground font-medium mt-1">Compliance Rate</div>
-            <div className="h-1.5 w-full bg-gray-100 rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: "60%" }} />
-            </div>
-            <div className="text-[11px] text-muted-foreground mt-1.5">3 fully compliant · 2 need attention</div>
+          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
+            <div className="text-xl font-black text-red-600">2</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Docs<br/>Missing</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
-          </div>
-          <div className="flex-1">
-            <div className="text-2xl font-bold text-red-600 leading-none">2</div>
-            <div className="text-xs text-muted-foreground font-medium mt-1">Missing Documents</div>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[11px] text-red-600 font-medium">Immediate action required</span>
+        <div className="flex gap-2">
+          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             </div>
+            <div className="text-xs font-medium text-foreground leading-tight">3 fully<br/>compliant</div>
+          </div>
+          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+              <FileWarning className="w-3.5 h-3.5 text-amber-600" />
+            </div>
+            <div className="text-xs font-medium text-foreground leading-tight">1 expiring<br/>soon</div>
+          </div>
+          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+              <ShieldX className="w-3.5 h-3.5 text-red-600" />
+            </div>
+            <div className="text-xs font-medium text-foreground leading-tight">1 PESEL<br/>alert</div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Quick Stats</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-xl border p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-              <FileWarning className="w-4 h-4 text-amber-600" />
-            </div>
-            <div className="text-xs font-medium text-foreground leading-tight">1 Expiring<br />Soon</div>
+      {/* Compliance bar */}
+      <div className="bg-white rounded-2xl border shadow-sm p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span className="text-sm font-bold text-foreground">Compliance Rate</span>
           </div>
-          <div className="bg-white rounded-xl border p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-              <ShieldX className="w-4 h-4 text-red-600" />
-            </div>
-            <div className="text-xs font-medium text-foreground leading-tight">1 PESEL<br />Alert</div>
-          </div>
+          <span className="text-sm font-black text-emerald-600">60%</span>
         </div>
+        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: "60%" }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+            className="h-full bg-emerald-500 rounded-full"
+          />
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-1.5">3 of 5 professionals fully compliant · 4 active sites</div>
       </div>
 
+      {/* Platform Modules Grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Payroll & Financials</h2>
-          <span className="text-[9px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-wide">TIER 1 ONLY</span>
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Platform Modules</h2>
+          <span className="text-[9px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-wide">FULL ACCESS</span>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-4 space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <Receipt className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-foreground">ZUS / PIT Payroll</div>
-                <div className="text-[11px] text-muted-foreground">March 2026 · 5 workers</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-indigo-600">PLN 42,800</div>
-              <div className="text-[10px] text-muted-foreground">gross total</div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-foreground">Umowy Zlecenie</div>
-                <div className="text-[11px] text-muted-foreground">5 active contracts</div>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">All signed</span>
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                <CreditCard className="w-4 h-4 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-foreground">B2B Contracts</div>
-                <div className="text-[11px] text-muted-foreground">2 active</div>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">Active</span>
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          {TIER1_MODULES.map((mod) => (
+            <ModuleCard key={mod.label} {...mod} />
+          ))}
         </div>
+      </div>
+
+      {/* Critical alert strip */}
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+          <AlertTriangle className="w-5 h-5 text-red-600" />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-bold text-red-800">2 Critical Compliance Issues</div>
+          <div className="text-xs text-red-600/80 font-medium mt-0.5">Missing TRC · PESEL unverified — immediate action required</div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
       </div>
     </motion.div>
   );

@@ -27,7 +27,7 @@ export function Tier3Home() {
             <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
               <UserPlus className="w-5 h-5 text-blue-600" />
             </div>
-            <span className="text-xs font-bold text-foreground text-center leading-tight">Add Worker</span>
+            <span className="text-xs font-bold text-foreground text-center leading-tight">Add Professional</span>
           </button>
 
           <button className="bg-white rounded-2xl border shadow-sm p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform hover:border-indigo-200 hover:bg-indigo-50/30">

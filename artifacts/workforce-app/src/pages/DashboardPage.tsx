@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { LogOut, Bell, User, FileText, Clock, MapPin, DollarSign, ClipboardList } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Role, TIER_CONFIGS } from "@/types";
@@ -10,25 +10,11 @@ import { ManagerHome } from "@/components/tabs/ManagerHome";
 import { Tier3Home } from "@/components/tabs/Tier3Home";
 import { Tier4Home } from "@/components/tabs/Tier4Home";
 import { Tier5Home } from "@/components/tabs/Tier5Home";
+import { PayrollModule } from "@/components/tabs/PayrollModule";
+import { AlertsModule } from "@/components/tabs/AlertsModule";
+import { SitesModule } from "@/components/tabs/SitesModule";
 import { WorkersTab } from "@/components/tabs/WorkersTab";
 import { BottomNav } from "@/components/BottomNav";
-
-function Placeholder({ icon: Icon, label, color }: { icon: React.ElementType; label: string; color: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
-    >
-      <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", color)}>
-        <Icon className="w-8 h-8 opacity-60" />
-      </div>
-      <h2 className="text-base font-bold text-foreground mb-1">{label}</h2>
-      <p className="text-sm text-muted-foreground">Coming in the next phase.</p>
-    </motion.div>
-  );
-}
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -59,20 +45,37 @@ export function DashboardPage() {
 
   const renderContent = () => {
     switch (activeTab) {
+      // ── HOME tab — role-specific dashboards ──────────────────────────
       case "home":
-        if (role === "Executive") return <OwnerHome />;
-        if (role === "LegalHead") return <ManagerHome />;
-        if (role === "TechOps") return <Tier3Home />;
-        if (role === "Coordinator") return <Tier4Home />;
+        if (role === "Executive")    return <OwnerHome />;
+        if (role === "LegalHead")    return <ManagerHome />;
+        if (role === "TechOps")      return <Tier3Home />;
+        if (role === "Coordinator")  return <Tier4Home />;
         if (role === "Professional") return <Tier5Home />;
         return null;
 
+      // ── WORKERS / DIRECTORY tab ───────────────────────────────────────
       case "workers":
         if (!tierConfig.canViewGlobalDirectory) {
-          return <Placeholder icon={User} label="Access Restricted" color="bg-red-50 text-red-500" />;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldBlock />
+              </div>
+              <h2 className="text-base font-bold text-red-700 mb-2">Access Restricted</h2>
+              <p className="text-sm text-muted-foreground max-w-[220px]">
+                The global professional directory is restricted to Tiers 1–3 only.
+              </p>
+            </motion.div>
+          );
         }
         return <WorkersTab />;
 
+      // ── PAYROLL tab (Tier 1 only) ─────────────────────────────────────
       case "payroll":
         if (!tierConfig.canViewFinancials) {
           return (
@@ -81,48 +84,143 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
             >
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="w-8 h-8 text-red-400" />
+              <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
+                <LockIcon className="w-8 h-8 text-red-400" />
               </div>
               <h2 className="text-base font-bold text-red-700 mb-2">Financial Firewall</h2>
               <p className="text-sm text-muted-foreground max-w-[220px]">
-                Payroll ledgers and ZUS calculators are restricted to Tier 1 (Executive Board) only.
+                ZUS & Payroll ledgers are restricted to Tier 1 (Executive Board & Partners) only.
               </p>
+              <div className="mt-4 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                TIER 1 ACCESS ONLY
+              </div>
             </motion.div>
           );
         }
-        return <Placeholder icon={DollarSign} label="Payroll Ledger" color="bg-indigo-50 text-indigo-500" />;
+        return <PayrollModule />;
 
+      // ── ALERTS tab ────────────────────────────────────────────────────
       case "alerts":
-        return <Placeholder icon={Bell} label="Alerts" color="bg-amber-50 text-amber-500" />;
+        return <AlertsModule />;
 
+      // ── SITES tab (Tier 3) ────────────────────────────────────────────
       case "sites":
-        return <Placeholder icon={MapPin} label="Site Deployments" color="bg-emerald-50 text-emerald-500" />;
+        return <SitesModule />;
 
+      // ── DOCUMENT QUEUE tab (Tier 4) ───────────────────────────────────
       case "queue":
         return <Tier4Home />;
 
+      // ── MY DOCS tab (Tier 5) ──────────────────────────────────────────
       case "docs":
-        return <Placeholder icon={FileText} label="My Documents" color="bg-blue-50 text-blue-500" />;
+        return <Tier5Home />;
 
+      // ── TIMESHEET tab (Tier 5) ────────────────────────────────────────
       case "timesheet":
-        return <Placeholder icon={Clock} label="Timesheet" color="bg-emerald-50 text-emerald-500" />;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-5 space-y-5 pb-6"
+          >
+            <div className="flex items-center gap-2 ml-1">
+              <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Timesheet — March 2026</h2>
+              <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full">OPEN</span>
+            </div>
+            <div className="bg-white rounded-2xl border shadow-sm p-5">
+              <div className="text-3xl font-black text-amber-600 leading-none">142 hrs</div>
+              <div className="text-xs text-muted-foreground font-medium mt-1">Submitted this month</div>
+              <div className="h-2 w-full bg-gray-100 rounded-full mt-3 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "71%" }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                  className="h-full bg-amber-400 rounded-full"
+                />
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-1.5">142 / 200 expected hours</div>
+            </div>
+            <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
+              {[
+                { week: "Week 1 (Mar 1–7)", hours: 38, status: "Approved" },
+                { week: "Week 2 (Mar 8–14)", hours: 40, status: "Approved" },
+                { week: "Week 3 (Mar 15–21)", hours: 36, status: "Approved" },
+                { week: "Week 4 (Mar 22–28)", hours: 28, status: "Pending" },
+              ].map(row => (
+                <div key={row.week} className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">{row.week}</div>
+                    <div className="text-xs text-muted-foreground">{row.hours} hours submitted</div>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                    row.status === "Approved"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  )}>
+                    {row.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        );
 
+      // ── PROFILE tab ───────────────────────────────────────────────────
       case "profile":
         return (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
+            className="px-4 py-5 space-y-4 pb-6"
           >
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-gray-400" />
+            <div className="bg-white rounded-2xl border shadow-sm p-5 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center shrink-0">
+                <span className="text-xl font-black text-gray-500">
+                  {tierConfig.shortLabel.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <div className="text-base font-bold text-foreground">{tierConfig.title}</div>
+                <div className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border mt-1.5", badgeColor)}>
+                  Tier {tierConfig.tier} · {tierConfig.shortLabel}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1.5">{tierConfig.subtitle}</div>
+              </div>
             </div>
-            <h2 className="text-base font-bold text-foreground mb-1">Profile</h2>
-            <div className={cn("inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border mt-2", badgeColor)}>
-              {tierConfig.shortLabel} · Tier {tierConfig.tier}
+
+            <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Financial Access</span>
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                  tierConfig.canViewFinancials
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                )}>
+                  {tierConfig.canViewFinancials ? "Granted" : "Restricted"}
+                </span>
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Professional Directory</span>
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                  tierConfig.canViewGlobalDirectory
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                )}>
+                  {tierConfig.canViewGlobalDirectory ? "Full Access" : "Restricted"}
+                </span>
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Document Approval</span>
+                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                  tierConfig.canApproveDocuments
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                )}>
+                  {tierConfig.canApproveDocuments ? "Enabled" : "Disabled"}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3 max-w-[220px]">{tierConfig.title}</p>
           </motion.div>
         );
 
@@ -140,7 +238,6 @@ export function DashboardPage() {
             {tierConfig.shortLabel}
           </div>
         </div>
-
         <button
           onClick={handleLogout}
           className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all"
@@ -167,5 +264,22 @@ export function DashboardPage() {
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
+  );
+}
+
+// Inline icon helpers to avoid adding imports just for the firewall screens
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+  );
+}
+
+function ShieldBlock() {
+  return (
+    <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
   );
 }

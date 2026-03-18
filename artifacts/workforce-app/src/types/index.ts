@@ -33,7 +33,7 @@ export const TIER_CONFIGS: Record<Role, TierConfig> = {
     role: "LegalHead",
     tier: 2,
     title: "Head of Legal & Compliance",
-    subtitle: "Worker directory · PIP dossiers · Legality alerts",
+    subtitle: "Professional directory · PIP dossiers · Legality alerts",
     shortLabel: "Legal Head",
     canViewFinancials: false,
     canViewGlobalDirectory: true,

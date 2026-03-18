@@ -47,7 +47,7 @@ const roleConfig: LoginRoleConfig[] = [
     role: "LegalHead",
     tier: 2,
     title: "Head of Legal & Compliance",
-    subtitle: "Worker directory · PIP dossiers · Alerts",
+    subtitle: "Professional directory · PIP dossiers · Alerts",
     icon: Scale,
     colors: {
       base: "border-violet-100 bg-white",

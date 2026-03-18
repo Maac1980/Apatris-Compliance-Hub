@@ -58,7 +58,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
     );
     toast({
       title: "Re-upload Requested",
-      description: `${docType} for ${worker.name} was rejected. Worker notified to re-upload.`,
+      description: `${docType} for ${worker.name} was rejected. Professional notified to re-upload.`,
       variant: "destructive",
     });
   };
@@ -77,7 +77,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
         >
           <X className="w-5 h-5" strokeWidth={2} />
         </button>
-        <h1 className="font-bold text-base text-foreground truncate">Worker Dossier</h1>
+        <h1 className="font-bold text-base text-foreground truncate">Professional Dossier</h1>
       </header>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
