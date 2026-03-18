@@ -16,6 +16,7 @@ import { SitesModule } from "@/components/tabs/SitesModule";
 import { WorkersTab } from "@/components/tabs/WorkersTab";
 import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
+import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -98,55 +99,7 @@ export function DashboardPage() {
 
       // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-4 py-5 space-y-5 pb-6"
-          >
-            <div className="flex items-center gap-2 ml-1">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Timesheet — March 2026</h2>
-              <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">OPEN</span>
-            </div>
-            <div className="bg-white rounded-2xl border shadow-sm p-5">
-              <div className="text-3xl font-black text-amber-600 leading-none">142 hrs</div>
-              <div className="text-xs text-muted-foreground font-medium mt-1">Submitted this month</div>
-              <div className="h-2 w-full bg-gray-100 rounded-full mt-3 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "71%" }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                  className="h-full bg-amber-400 rounded-full"
-                />
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-1.5">142 / 200 expected hours</div>
-            </div>
-            <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
-              {[
-                { week: "Week 1 (Mar 1–7)",   hours: 38, status: "Approved" },
-                { week: "Week 2 (Mar 8–14)",  hours: 40, status: "Approved" },
-                { week: "Week 3 (Mar 15–21)", hours: 36, status: "Approved" },
-                { week: "Week 4 (Mar 22–28)", hours: 28, status: "Pending" },
-              ].map(row => (
-                <div key={row.week} className="p-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{row.week}</div>
-                    <div className="text-xs text-muted-foreground">{row.hours} hours submitted</div>
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                    row.status === "Approved"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  )}>
-                    {row.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        );
-
+        return <TimesheetTab />;
       // ── PROFILE ───────────────────────────────────────────────────────────
       case "profile":
         return <ProfileTab onLogout={handleLogout} />;
