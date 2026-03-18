@@ -89,7 +89,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
 };
 
 export function LoginPage() {
@@ -113,8 +113,11 @@ export function LoginPage() {
         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
           <Briefcase className="w-8 h-8 text-primary" strokeWidth={2.5} />
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">WorkForce</h1>
-        <p className="text-muted-foreground text-sm font-medium">Staffing Management Platform</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 flex flex-col items-center gap-1 sm:flex-row sm:gap-2">
+          <span className="font-black tracking-tight">APATRIS</span>
+          <span className="text-muted-foreground font-light text-xl"> | Certified Welders</span>
+        </h1>
+        <p className="text-muted-foreground text-sm font-medium mt-1">Workforce & Compliance Management</p>
       </motion.div>
 
       {/* Content Area */}

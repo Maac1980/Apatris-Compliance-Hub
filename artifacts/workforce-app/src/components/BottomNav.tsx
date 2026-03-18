@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Home, Users, Bell, User, FileText, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,9 +8,13 @@ interface Tab {
   icon: React.ElementType;
 }
 
-export function BottomNav() {
+interface BottomNavProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
-  const [activeTab, setActiveTab] = useState("home");
 
   if (!role) return null;
 
@@ -52,7 +55,7 @@ export function BottomNav() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => onTabChange(tab.id)}
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 active:scale-95",
                 isActive ? activeColor : "text-muted-foreground hover:text-foreground"

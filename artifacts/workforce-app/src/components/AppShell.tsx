@@ -1,9 +1,8 @@
 import { ReactNode } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/lib/auth";
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { role, isReady } = useAuth();
+  const { isReady } = useAuth();
 
   if (!isReady) return null; // Avoid hydration flash
 
@@ -17,7 +16,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative bg-background">
           {children}
         </div>
-        {role && <BottomNav />}
       </div>
     </div>
   );
