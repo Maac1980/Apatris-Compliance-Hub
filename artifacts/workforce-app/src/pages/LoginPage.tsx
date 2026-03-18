@@ -1,47 +1,33 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Role, TIER_CONFIGS } from "@/types";
+import { Role } from "@/types";
 import { motion } from "framer-motion";
 import {
-  Briefcase,
-  Crown,
-  Scale,
-  Wrench,
-  ClipboardList,
-  HardHat,
-  ChevronRight,
+  Crown, Scale, Wrench, ClipboardList, HardHat, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface LoginRoleConfig {
+interface RoleCard {
   role: Role;
   tier: number;
   title: string;
   subtitle: string;
   icon: React.ElementType;
-  colors: {
-    base: string;
-    hover: string;
-    border: string;
-    icon: string;
-    tierBadge: string;
-  };
+  accent: string;
+  badge: string;
+  glow: string;
 }
 
-const roleConfig: LoginRoleConfig[] = [
+const ROLES: RoleCard[] = [
   {
     role: "Executive",
     tier: 1,
     title: "Executive Board & Partners",
     subtitle: "Full platform access · Payroll · Financials",
     icon: Crown,
-    colors: {
-      base: "border-indigo-100 bg-white",
-      hover: "hover:border-indigo-300 hover:bg-indigo-50/40 hover:shadow-indigo-100/50",
-      border: "bg-indigo-600",
-      icon: "text-indigo-600 bg-indigo-100",
-      tierBadge: "bg-indigo-600 text-white",
-    },
+    accent: "border-indigo-500 text-indigo-400",
+    badge: "bg-indigo-600 text-white",
+    glow: "hover:shadow-indigo-900/40",
   },
   {
     role: "LegalHead",
@@ -49,27 +35,19 @@ const roleConfig: LoginRoleConfig[] = [
     title: "Head of Legal & Compliance",
     subtitle: "Professional directory · PIP dossiers · Alerts",
     icon: Scale,
-    colors: {
-      base: "border-violet-100 bg-white",
-      hover: "hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-violet-100/50",
-      border: "bg-violet-600",
-      icon: "text-violet-600 bg-violet-100",
-      tierBadge: "bg-violet-600 text-white",
-    },
+    accent: "border-violet-500 text-violet-400",
+    badge: "bg-violet-600 text-white",
+    glow: "hover:shadow-violet-900/40",
   },
   {
     role: "TechOps",
     tier: 3,
-    title: "Key Account & Technical Operations",
+    title: "Key Account & Technical Ops",
     subtitle: "Add Professionals · UDT · Site Deployments",
     icon: Wrench,
-    colors: {
-      base: "border-blue-100 bg-white",
-      hover: "hover:border-blue-300 hover:bg-blue-50/40 hover:shadow-blue-100/50",
-      border: "bg-blue-600",
-      icon: "text-blue-600 bg-blue-100",
-      tierBadge: "bg-blue-600 text-white",
-    },
+    accent: "border-blue-500 text-blue-400",
+    badge: "bg-blue-600 text-white",
+    glow: "hover:shadow-blue-900/40",
   },
   {
     role: "Coordinator",
@@ -77,13 +55,9 @@ const roleConfig: LoginRoleConfig[] = [
     title: "Compliance Coordinator",
     subtitle: "Professionals · Doc queue · Operational modules",
     icon: ClipboardList,
-    colors: {
-      base: "border-emerald-100 bg-white",
-      hover: "hover:border-emerald-300 hover:bg-emerald-50/40 hover:shadow-emerald-100/50",
-      border: "bg-emerald-600",
-      icon: "text-emerald-600 bg-emerald-100",
-      tierBadge: "bg-emerald-600 text-white",
-    },
+    accent: "border-emerald-500 text-emerald-400",
+    badge: "bg-emerald-600 text-white",
+    glow: "hover:shadow-emerald-900/40",
   },
   {
     role: "Professional",
@@ -91,27 +65,20 @@ const roleConfig: LoginRoleConfig[] = [
     title: "Deployed Professional",
     subtitle: "My profile · Submit hours · Upload documents",
     icon: HardHat,
-    colors: {
-      base: "border-amber-100 bg-white",
-      hover: "hover:border-amber-300 hover:bg-amber-50/40 hover:shadow-amber-100/50",
-      border: "bg-amber-500",
-      icon: "text-amber-600 bg-amber-100",
-      tierBadge: "bg-amber-500 text-white",
-    },
+    accent: "border-amber-500 text-amber-400",
+    badge: "bg-amber-500 text-white",
+    glow: "hover:shadow-amber-900/40",
   },
 ];
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.15 },
-  },
+  show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 280, damping: 26 } },
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 260, damping: 24 } },
 };
 
 export function LoginPage() {
@@ -124,95 +91,134 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-full pb-6">
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: "easeOut" }}
-        className="pt-14 pb-8 px-6 flex flex-col items-center text-center bg-white border-b border-border shadow-sm"
-      >
-        <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
-          <Briefcase className="w-7 h-7 text-indigo-600" strokeWidth={2.5} />
-        </div>
-        <h1 className="text-2xl font-black tracking-tight text-foreground leading-none mb-1">
-          APATRIS
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium">
-          | Certified Welders
-        </p>
-        <p className="text-muted-foreground/70 text-xs font-medium mt-2">
-          Workforce & Compliance Management
-        </p>
-      </motion.div>
+    <div
+      className="flex flex-col min-h-full relative overflow-hidden"
+      style={{ background: "#0d0d0d" }}
+    >
+      {/* Dot-grid overlay — matches Apatris dashboard */}
+      <div
+        className="absolute inset-0 opacity-[0.12] pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
 
-      <div className="flex-1 px-4 pt-6 bg-gray-50/60">
+      {/* Subtle top vignette */}
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+      {/* Subtle bottom vignette */}
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col min-h-full px-6 py-10">
+
+        {/* Brand header — identical style to Apatris dashboard */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="text-center mb-8 pt-4"
+        >
+          <div className="w-12 h-1 bg-red-600 mx-auto mb-6 rounded-full" />
+          <h1 className="text-4xl font-bold text-white tracking-[0.2em] uppercase leading-none">
+            APATRIS
+          </h1>
+          <p className="text-gray-400 text-xs tracking-wider uppercase mt-3 leading-snug">
+            Precision Welding Outsourcing.&nbsp;Your vision, expertly welded.
+          </p>
+        </motion.div>
+
+        {/* Divider — "WORKFORCE DEPLOYMENT TERMINAL" */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-3 mb-6"
+        >
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+          <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase whitespace-nowrap">
+            Workforce Deployment Terminal
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+        </motion.div>
+
+        {/* Role selector panel */}
+        <div className="bg-gray-900/80 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-sm flex-1">
+          <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
+            Select your designation
+          </p>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="space-y-2.5"
+          >
+            {ROLES.map((cfg) => {
+              const Icon = cfg.icon;
+              return (
+                <motion.button
+                  key={cfg.role}
+                  variants={itemVariants}
+                  whileTap={{ scale: 0.975 }}
+                  onClick={() => handleLogin(cfg.role)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3.5 rounded-xl text-left",
+                    "bg-gray-800/60 border border-white/[0.07]",
+                    "hover:bg-gray-700/60 hover:border-white/15",
+                    "active:bg-gray-700/80 transition-all duration-200 shadow-md",
+                    cfg.glow
+                  )}
+                >
+                  {/* Colored left accent stripe */}
+                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", cfg.accent.split(" ")[0])} />
+
+                  {/* Icon */}
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                    "bg-white/5 border border-white/10",
+                    cfg.accent.split(" ")[1]
+                  )}>
+                    <Icon className="w-5 h-5" strokeWidth={1.8} />
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[13px] font-bold text-white leading-tight truncate">
+                        {cfg.title}
+                      </span>
+                      <span className={cn(
+                        "text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 tracking-wide",
+                        cfg.badge
+                      )}>
+                        T{cfg.tier}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 font-medium leading-tight truncate">
+                      {cfg.subtitle}
+                    </p>
+                  </div>
+
+                  <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        </div>
+
+        {/* Footer */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1"
+          transition={{ delay: 0.9, duration: 0.5 }}
+          className="text-center text-[10px] font-mono text-gray-600 mt-6"
         >
-          Select your designation
+          UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED
         </motion.p>
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="space-y-3"
-        >
-          {roleConfig.map((config) => {
-            const Icon = config.icon;
-            return (
-              <motion.button
-                key={config.role}
-                variants={itemVariants}
-                whileHover={{ scale: 1.012 }}
-                whileTap={{ scale: 0.988 }}
-                onClick={() => handleLogin(config.role)}
-                className={cn(
-                  "w-full flex items-center p-3.5 text-left rounded-2xl border transition-all duration-250 shadow-sm relative overflow-hidden group",
-                  config.colors.base,
-                  config.colors.hover
-                )}
-              >
-                <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl", config.colors.border)} />
-
-                <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mr-3 ml-1 transition-transform group-hover:scale-105", config.colors.icon)}>
-                  <Icon className="w-5 h-5" strokeWidth={2} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className="text-sm font-bold text-foreground leading-tight truncate">
-                      {config.title}
-                    </h3>
-                    <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 tracking-wide", config.colors.tierBadge)}>
-                      T{config.tier}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground font-medium leading-tight truncate">
-                    {config.subtitle}
-                  </p>
-                </div>
-
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors shrink-0 ml-2" />
-              </motion.button>
-            );
-          })}
-        </motion.div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.5 }}
-        className="pt-6 pb-2 text-center"
-      >
-        <p className="text-[10px] text-muted-foreground/50 font-medium">
-          APATRIS SP. Z O.O. · NIP: 5252828706 · v2.0
+        <p className="text-center text-[10px] font-mono text-gray-700 mt-1">
+          APATRIS SP. Z O.O. · NIP: 5252828706
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }
