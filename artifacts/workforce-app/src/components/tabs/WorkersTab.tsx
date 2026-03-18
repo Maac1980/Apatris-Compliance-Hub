@@ -87,13 +87,13 @@ export function WorkersTab() {
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          <div className="flex flex-wrap gap-2">
             {pills.map(p => (
               <button
                 key={p}
                 onClick={() => setFilter(p)}
                 className={cn(
-                  "whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors border shrink-0",
+                  "whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                   filter === p
                     ? `${activePill} text-white border-transparent`
                     : "bg-white text-muted-foreground border-border hover:bg-gray-50"
