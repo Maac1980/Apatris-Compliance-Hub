@@ -422,27 +422,26 @@ export default function Dashboard() {
         {/* ── Page content ─────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8">
 
-        {/* ── Section Navigation Grid (desktop square cards) ───────────────── */}
+        {/* ── Section Navigation Grid ───────────────────────────────────────── */}
         <div className="hidden md:grid grid-cols-4 gap-4">
           {([
-            { path: "/",                  label: "Workers",             icon: Users,         iconCls: "text-red-400",    hoverBorder: "hover:border-red-500/70",    hoverGlow: "hover:shadow-[0_8px_28px_rgba(196,30,24,0.30)]",   hoverBg: "hover:bg-red-950/25"   },
-            { path: "/payroll",           label: "Payroll Ledger",      icon: Calculator,    iconCls: "text-green-400",  hoverBorder: "hover:border-green-500/70",  hoverGlow: "hover:shadow-[0_8px_28px_rgba(34,197,94,0.25)]",   hoverBg: "hover:bg-green-950/25" },
-            { path: "/compliance-alerts", label: "Compliance Alerts",   icon: AlertTriangle, iconCls: "text-orange-400", hoverBorder: "hover:border-orange-500/70", hoverGlow: "hover:shadow-[0_8px_28px_rgba(249,115,22,0.25)]",  hoverBg: "hover:bg-orange-950/25"},
-            { path: "/history",           label: "History & Analytics", icon: History,       iconCls: "text-purple-400", hoverBorder: "hover:border-purple-500/70", hoverGlow: "hover:shadow-[0_8px_28px_rgba(168,85,247,0.25)]",  hoverBg: "hover:bg-purple-950/25"},
-          ] as const).map(({ path, label, icon: Icon, iconCls, hoverBorder, hoverGlow, hoverBg }) => (
+            { path: "/",                  label: "Workers",             icon: Users,         solidBg: "bg-red-700",    border: "border-red-600",    shadow: "hover:shadow-[0_6px_24px_rgba(196,30,24,0.45)]"  },
+            { path: "/payroll",           label: "Payroll Ledger",      icon: Calculator,    solidBg: "bg-green-700",  border: "border-green-600",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
+            { path: "/compliance-alerts", label: "Compliance Alerts",   icon: AlertTriangle, solidBg: "bg-orange-600", border: "border-orange-500", shadow: "hover:shadow-[0_6px_24px_rgba(249,115,22,0.40)]" },
+            { path: "/history",           label: "History & Analytics", icon: History,       solidBg: "bg-purple-700", border: "border-purple-600", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
+          ] as const).map(({ path, label, icon: Icon, solidBg, border, shadow }) => (
             <button
               key={path}
               onClick={() => setLocation(path)}
               className={[
-                "group aspect-square flex flex-col items-center justify-center gap-3 rounded-2xl",
-                "border border-slate-700/60 bg-slate-800/40 backdrop-blur",
-                "transition-all duration-200 cursor-pointer",
-                "-translate-y-0 hover:-translate-y-1.5",
-                hoverBorder, hoverGlow, hoverBg,
+                "group flex flex-col items-center justify-center gap-3 rounded-2xl py-6",
+                solidBg, border, "border",
+                "transition-all duration-200 cursor-pointer hover:-translate-y-1",
+                shadow,
               ].join(" ")}
             >
-              <Icon className={`w-12 h-12 transition-transform duration-200 group-hover:scale-110 ${iconCls}`} strokeWidth={1.5} />
-              <span className="text-[11px] font-display font-bold uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors text-center leading-tight px-3">
+              <Icon className="w-10 h-10 text-white transition-transform duration-200 group-hover:scale-110" strokeWidth={1.8} />
+              <span className="text-sm font-bold uppercase tracking-widest text-white/90 group-hover:text-white transition-colors text-center leading-tight px-3">
                 {label}
               </span>
             </button>
