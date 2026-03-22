@@ -1,9 +1,8 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, createRecordsBatch, deleteRecord, initializeFields } from "../lib/airtable.js";
+import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, initializeFields } from "../lib/airtable.js";
 import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
-import { appendAuditLog } from "../lib/audit-log.js";
 
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -37,7 +36,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
 
     if (docType === "passport") {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-mini",
         max_completion_tokens: 512,
         messages: [
           {
@@ -69,7 +68,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
       return { type: "passport", ...parsed };
     } else {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-mini",
         max_completion_tokens: 256,
         messages: [
           {
@@ -110,53 +109,16 @@ const router: IRouter = Router();
 // GET /workers
 router.get("/workers", async (req, res) => {
   try {
-    const { search, specialization, status, site, showArchived } = req.query as Record<string, string>;
+    const { search, specialization, status, site } = req.query as Record<string, string>;
     const records = await fetchAllRecords();
     const allWorkers = records.map(mapRecordToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
-    const filtered = filterWorkers(allWorkers, search, specialization, status, site, showArchived === "true");
+    const filtered = filterWorkers(allWorkers, search, specialization, status, site);
     res.json({ workers: filtered, total: filtered.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
-  }
-});
-
-// GET /workers/me — returns the Airtable record matching the authenticated user's name (for T5)
-router.get("/workers/me", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authentication required." });
-    }
-    let userName: string;
-    try {
-      const { default: jwt } = await import("jsonwebtoken");
-      const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || "") as { name: string };
-      userName = payload.name;
-    } catch {
-      return res.status(401).json({ error: "Invalid token." });
-    }
-
-    const records = await fetchAllRecords();
-    const normalised = userName.trim().toLowerCase();
-
-    // Find by full name match (case-insensitive, also try first-name only)
-    const worker = records
-      .map(mapRecordToWorker)
-      .find(w => {
-        const wn = w.name.trim().toLowerCase();
-        return wn === normalised || wn.startsWith(normalised + " ") || wn.endsWith(" " + normalised);
-      });
-
-    if (!worker) {
-      return res.status(404).json({ error: "Worker profile not found in Airtable.", name: userName });
-    }
-    return res.json(worker);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: message });
   }
 });
 
@@ -300,7 +262,7 @@ const bulkUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize:
 async function scanBulkDocument(
   fileBuffer: Buffer,
   mimeType: string,
-  category: "passport" | "bhp" | "certificate" | "contract" | "cv"
+  category: "passport" | "bhp" | "certificate" | "contract"
 ): Promise<Record<string, string | null>> {
   const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (!imageTypes.includes(mimeType)) return {};
@@ -353,21 +315,20 @@ router.post("/workers/bulk-create", bulkUpload.fields([
   try {
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
-    const emptyDoc: Record<string, string | null> = {};
     // Scan all uploaded files in parallel
     const scans = await Promise.all([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve(emptyDoc),
+        : Promise.resolve({}),
       files?.bhp?.[0]
         ? scanBulkDocument(files.bhp[0].buffer, files.bhp[0].mimetype, "bhp")
-        : Promise.resolve(emptyDoc),
+        : Promise.resolve({}),
       files?.certificate?.[0]
         ? scanBulkDocument(files.certificate[0].buffer, files.certificate[0].mimetype, "certificate")
-        : Promise.resolve(emptyDoc),
+        : Promise.resolve({}),
       files?.contract?.[0]
         ? scanBulkDocument(files.contract[0].buffer, files.contract[0].mimetype, "contract")
-        : Promise.resolve(emptyDoc),
+        : Promise.resolve({}),
     ]);
 
     const [passportData, bhpData, certData, contractData] = scans;
@@ -440,160 +401,6 @@ router.post("/workers/bulk-create", bulkUpload.fields([
   }
 });
 
-// POST /workers — manual worker creation by admin
-router.post("/workers", async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
-      res.status(400).json({ error: "Name is required" });
-      return;
-    }
-    const fields: Record<string, unknown> = {
-      "Full Name": String(body.name).trim(),
-    };
-    if (body.specialization) fields["SPEC"] = body.specialization;
-    if (body.assignedSite) fields["SITE"] = String(body.assignedSite).trim();
-    if (body.email) fields["EMAIL"] = body.email;
-    if (body.phone) fields["PHONE"] = body.phone;
-    if (body.trcExpiry) fields["TRC_EXPIRY"] = body.trcExpiry;
-    if (body.passportExpiry) fields["PASSPORT_EXPIRY"] = body.passportExpiry;
-    if (body.bhpExpiry) fields["BHP EXPIRY"] = body.bhpExpiry;
-    if (body.contractEndDate) fields["Contract End Date"] = body.contractEndDate;
-    if (body.workPermitExpiry) fields["Work Permit Expiry"] = body.workPermitExpiry;
-    if (body.medicalExamExpiry) fields["Medical Exam Expiry"] = body.medicalExamExpiry;
-    if (body.oswiadczenieExpiry) fields["Oswiadczenie Expiry"] = body.oswiadczenieExpiry;
-    if (body.udtCertExpiry) fields["UDT Cert Expiry"] = body.udtCertExpiry;
-    if (body.pesel) fields["PESEL"] = body.pesel;
-    if (body.nip) fields["NIP"] = body.nip;
-    if (body.visaType) fields["Visa Type"] = body.visaType;
-    if (body.zusStatus) fields["ZUS Status"] = body.zusStatus;
-    if (body.iban) fields["IBAN"] = String(body.iban).toUpperCase().replace(/\s/g, "");
-
-    const record = await createRecord(fields);
-    const worker = mapRecordToWorker(record);
-
-    try {
-      const actor = (req as any).user;
-      appendAuditLog({
-        timestamp: new Date().toISOString(),
-        actor: actor?.name || "Unknown",
-        actorEmail: actor?.email || "unknown",
-        action: "CREATE_WORKER",
-        workerId: record.id,
-        workerName: worker.name,
-        note: `Worker manually created with ${Object.keys(fields).length} fields`,
-      });
-    } catch { /* non-blocking */ }
-
-    res.status(201).json(worker);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
-  }
-});
-
-// POST /workers/bulk-import — create multiple workers from CSV data
-router.post("/workers/bulk-import", async (req, res) => {
-  try {
-    const { workers } = req.body as { workers: Array<Record<string, unknown>> };
-    if (!Array.isArray(workers) || workers.length === 0) {
-      res.status(400).json({ error: "workers array is required and must not be empty" });
-      return;
-    }
-
-    const airtableRecords: Array<Record<string, unknown>> = [];
-    let skipped = 0;
-
-    for (const w of workers) {
-      const name = typeof w.name === "string" ? w.name.trim() : "";
-      if (!name) { skipped++; continue; }
-
-      const fields: Record<string, unknown> = { "Full Name": name };
-      if (w.phone)               fields["PHONE"]               = w.phone;
-      if (w.email)               fields["EMAIL"]               = w.email;
-      if (w.specialization)      fields["SPEC"]                = w.specialization;
-      if (w.assignedSite)        fields["SITE"]                = String(w.assignedSite).trim();
-      if (w.iban)                fields["IBAN"]                = String(w.iban).toUpperCase().replace(/\s/g, "");
-      if (w.pesel)               fields["PESEL"]               = w.pesel;
-      if (w.nip)                 fields["NIP"]                 = w.nip;
-      if (w.visaType)            fields["Visa Type"]           = w.visaType;
-      if (w.zusStatus)           fields["ZUS Status"]          = w.zusStatus;
-      if (w.trcExpiry)           fields["TRC_EXPIRY"]          = w.trcExpiry;
-      if (w.passportExpiry)      fields["PASSPORT_EXPIRY"]     = w.passportExpiry;
-      if (w.bhpExpiry)           fields["BHP EXPIRY"]          = w.bhpExpiry;
-      if (w.contractEndDate)     fields["Contract End Date"]   = w.contractEndDate;
-      if (w.workPermitExpiry)    fields["Work Permit Expiry"]  = w.workPermitExpiry;
-      if (w.medicalExamExpiry)   fields["Medical Exam Expiry"] = w.medicalExamExpiry;
-      if (w.oswiadczenieExpiry)  fields["Oswiadczenie Expiry"] = w.oswiadczenieExpiry;
-      if (w.udtCertExpiry)       fields["UDT Cert Expiry"]     = w.udtCertExpiry;
-      airtableRecords.push(fields);
-    }
-
-    const { created, errors } = await createRecordsBatch(airtableRecords);
-
-    try {
-      const actor = (req as any).user;
-      appendAuditLog({
-        timestamp: new Date().toISOString(),
-        actor: actor?.name || "Unknown",
-        actorEmail: actor?.email || "unknown",
-        action: "BULK_IMPORT",
-        workerId: "—",
-        workerName: `${created.length} workers`,
-        note: `CSV bulk import: ${created.length} created, ${skipped} skipped, ${errors.length} errors`,
-      });
-    } catch { /* non-blocking */ }
-
-    res.status(201).json({ imported: created.length, skipped, errors });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
-  }
-});
-
-// DELETE /workers/:id
-router.delete("/workers/:id", async (req, res) => {
-  try {
-    const record = await fetchRecord(req.params.id);
-    const worker = mapRecordToWorker(record);
-    await deleteRecord(req.params.id);
-
-    try {
-      const actor = (req as any).user;
-      appendAuditLog({
-        timestamp: new Date().toISOString(),
-        actor: actor?.name || "Unknown",
-        actorEmail: actor?.email || "unknown",
-        action: "DELETE_WORKER",
-        workerId: req.params.id,
-        workerName: worker.name,
-        note: "Worker record permanently deleted",
-      });
-    } catch { /* non-blocking */ }
-
-    res.json({ success: true, deleted: req.params.id });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
-  }
-});
-
-// GET /workers/:id/public — unauthenticated, returns only name (for public upload link)
-router.get("/workers/:id/public", async (req, res) => {
-  try {
-    const record = await fetchRecord(req.params.id);
-    const worker = mapRecordToWorker(record);
-    res.json({ id: worker.id, name: worker.name });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    if (message.includes("404") || message.includes("NOT_FOUND")) {
-      res.status(404).json({ error: "Worker not found" });
-    } else {
-      res.status(500).json({ error: message });
-    }
-  }
-});
-
 // GET /workers/:id
 router.get("/workers/:id", async (req, res) => {
   try {
@@ -617,73 +424,23 @@ router.patch("/workers/:id", async (req, res) => {
     // Map our schema field names to Airtable field names
     const airtableFields: Record<string, unknown> = {};
 
-    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry || null;
-    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry || null;
-    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry || null;
-    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus || null;
-    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry || null;
-    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate || null;
+    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry;
+    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry;
+    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry;
+    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus;
+    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
+    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate;
     if (body.email !== undefined) airtableFields["EMAIL"] = body.email;
     if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
     if (body.specialization !== undefined) airtableFields["SPEC"] = body.specialization;
     if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
-    if (body.assignedSite !== undefined) airtableFields["SITE"] = String(body.assignedSite).trim() || null;
-    // Polish compliance
-    if (body.medicalExamExpiry !== undefined) airtableFields["Medical Exam Expiry"] = body.medicalExamExpiry || null;
-    if (body.oswiadczenieExpiry !== undefined) airtableFields["Oswiadczenie Expiry"] = body.oswiadczenieExpiry || null;
-    if (body.udtCertExpiry !== undefined) airtableFields["UDT Cert Expiry"] = body.udtCertExpiry || null;
-    if (body.rodoConsentDate !== undefined) airtableFields["RODO Consent Date"] = body.rodoConsentDate || null;
-    if (body.pupFiledDate !== undefined) airtableFields["PUP Filed Date"] = body.pupFiledDate || null;
-    // Identity
-    if (body.pesel !== undefined) airtableFields["PESEL"] = body.pesel || null;
-    if (body.nip !== undefined) airtableFields["NIP"] = body.nip || null;
-    if (body.visaType !== undefined) airtableFields["Visa Type"] = body.visaType || null;
-    if (body.zusStatus !== undefined) airtableFields["ZUS Status"] = body.zusStatus || null;
-    // Bank
-    if (body.iban !== undefined) airtableFields["IBAN"] = body.iban ? String(body.iban).toUpperCase().replace(/\s/g, "") : null;
-    // PIT-2 declaration (checkbox)
-    if (body.pit2 !== undefined) airtableFields["PIT2"] = body.pit2 === true || body.pit2 === "true";
-    // EN ISO 9606
-    if (body.weldingProcess !== undefined) airtableFields["Welding Process"] = body.weldingProcess || null;
-    if (body.weldingMaterialGroup !== undefined) airtableFields["Welding Material Group"] = body.weldingMaterialGroup || null;
-    if (body.weldingThickness !== undefined) airtableFields["Welding Thickness"] = body.weldingThickness || null;
-    if (body.weldingPosition !== undefined) airtableFields["Welding Position"] = body.weldingPosition || null;
-    if (body.workerStatus !== undefined) airtableFields["WORKER_STATUS"] = body.workerStatus || null;
-
-    await updateRecord(req.params.id, airtableFields);
-
-    // Save financial fields separately — graceful fallback if columns don't exist yet in Airtable
-    const financialFields: Record<string, unknown> = {};
-    if (body.hourlyRate !== undefined) financialFields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
-    if (body.monthlyHours !== undefined) financialFields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
-    if (body.advance !== undefined) financialFields["Advance"] = body.advance === "" ? null : Number(body.advance);
-    if (body.penalties !== undefined) financialFields["Penalties"] = body.penalties === "" ? null : Number(body.penalties);
-    if (Object.keys(financialFields).length > 0) {
-      try {
-        await updateRecord(req.params.id, financialFields);
-      } catch (financialErr) {
-        console.warn("[workers PATCH] Financial fields not saved:", financialErr instanceof Error ? financialErr.message : financialErr);
-      }
+    if (body.assignedSite !== undefined) {
+      // Write to SITE (singleLineText) — accepts any company/project name freely
+      airtableFields["SITE"] = String(body.assignedSite).trim() || null;
     }
 
-    const finalRecord = await fetchRecord(req.params.id);
-    const updatedWorker = mapRecordToWorker(finalRecord);
-
-    // Audit log
-    try {
-      const actor = (req as any).user;
-      appendAuditLog({
-        timestamp: new Date().toISOString(),
-        actor: actor?.name || "Unknown",
-        actorEmail: actor?.email || "unknown",
-        action: "UPDATE_WORKER",
-        workerId: req.params.id,
-        workerName: updatedWorker.name,
-        note: `Fields updated: ${Object.keys(airtableFields).join(", ")}`,
-      });
-    } catch { /* non-blocking */ }
-
-    res.json(updatedWorker);
+    const updated = await updateRecord(req.params.id, airtableFields);
+    res.json(mapRecordToWorker(updated));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -722,7 +479,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
     // 2. Upload the attachment to Airtable
     await uploadAttachmentToRecord(
-      req.params.id as string,
+      req.params.id,
       fieldName,
       req.file.buffer,
       req.file.originalname,
@@ -755,7 +512,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
       if (Object.keys(airtableUpdates).length > 0) {
         try {
-          await updateRecord(req.params.id as string, airtableUpdates);
+          await updateRecord(req.params.id, airtableUpdates);
         } catch (updateErr) {
           // Log but don't fail — some fields may not exist in the user's Airtable
           console.warn("[upload] Auto-fill partial failure:", updateErr instanceof Error ? updateErr.message : updateErr);
@@ -764,7 +521,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     }
 
     // 4. Return updated worker + what was auto-filled
-    const record = await fetchRecord(req.params.id as string);
+    const record = await fetchRecord(req.params.id);
     res.json({ worker: mapRecordToWorker(record), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -796,17 +553,16 @@ router.post("/workers/apply", applyUpload.fields([
 
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
-    const empty: Record<string, string | null> = {};
     const [passportData, trcData, cvData] = await Promise.all([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve(empty),
+        : Promise.resolve({}),
       files?.trc?.[0]
         ? scanBulkDocument(files.trc[0].buffer, files.trc[0].mimetype, "certificate")
-        : Promise.resolve(empty),
+        : Promise.resolve({}),
       files?.cv?.[0]
         ? scanBulkDocument(files.cv[0].buffer, files.cv[0].mimetype, "cv")
-        : Promise.resolve(empty),
+        : Promise.resolve({}),
     ]);
 
     const airtableFields: Record<string, unknown> = {

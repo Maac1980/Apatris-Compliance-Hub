@@ -89,16 +89,6 @@ export async function updateRecord(id: string, fields: Record<string, unknown>):
   return (await res.json()) as AirtableRecord;
 }
 
-export async function deleteRecord(id: string): Promise<void> {
-  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
-  const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}/${id}`;
-  const res = await fetch(url, { method: "DELETE", headers: headers() });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Airtable error ${res.status}: ${text}`);
-  }
-}
-
 export async function createRecord(fields: Record<string, unknown>): Promise<AirtableRecord> {
   if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID environment variable is not set");
 
@@ -113,33 +103,6 @@ export async function createRecord(fields: Record<string, unknown>): Promise<Air
     throw new Error(`Airtable error ${res.status}: ${text}`);
   }
   return (await res.json()) as AirtableRecord;
-}
-
-export async function createRecordsBatch(
-  records: Array<Record<string, unknown>>
-): Promise<{ created: AirtableRecord[]; errors: string[] }> {
-  if (!AIRTABLE_BASE_ID) throw new Error("AIRTABLE_BASE_ID is not set");
-
-  const created: AirtableRecord[] = [];
-  const errors: string[] = [];
-  const url = `${BASE_URL}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
-
-  for (let i = 0; i < records.length; i += 10) {
-    const batch = records.slice(i, i + 10);
-    const res = await fetch(url, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({ records: batch.map((fields) => ({ fields })) }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      errors.push(`Batch ${Math.floor(i / 10) + 1}: Airtable error ${res.status}: ${text}`);
-    } else {
-      const data = (await res.json()) as { records: AirtableRecord[] };
-      created.push(...data.records);
-    }
-  }
-  return { created, errors };
 }
 
 export async function initializeFields(): Promise<{ created: string[]; skipped: string[]; errors: string[] }> {
@@ -167,38 +130,12 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
   const fieldsToCreate = [
     { name: "SPEC", type: "singleLineText" },
     { name: "SITE", type: "singleLineText" },
-    { name: "EMAIL", type: "email" },
-    { name: "PHONE", type: "phoneNumber" },
-    { name: "EXPERIENCE", type: "singleLineText" },
     { name: "TRC_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "PASSPORT_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "BHP_EXPIRY", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "Work Permit Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "Contract End Date", type: "date", options: { dateFormat: { name: "iso" } } },
     { name: "TRC Certificate", type: "multipleAttachments" },
     { name: "BHP Certificate", type: "multipleAttachments" },
     { name: "CONTRACT", type: "multipleAttachments" },
-    { name: "PASSPORT DOCCUMENT", type: "multipleAttachments" },
-    { name: "HOURLY_RATE", type: "number", options: { precision: 2 } },
-    { name: "MONTHLY_HOURS", type: "number", options: { precision: 0 } },
-    // Polish compliance fields
-    { name: "Medical Exam Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "Oswiadczenie Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "UDT Cert Expiry", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "RODO Consent Date", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "PUP Filed Date", type: "date", options: { dateFormat: { name: "iso" } } },
-    { name: "PESEL", type: "singleLineText" },
-    { name: "NIP", type: "singleLineText" },
-    { name: "Visa Type", type: "singleLineText" },
-    { name: "Welding Process", type: "singleLineText" },
-    { name: "Welding Material Group", type: "singleLineText" },
-    { name: "Welding Thickness", type: "singleLineText" },
-    { name: "Welding Position", type: "singleLineText" },
-    { name: "ZUS Status", type: "singleSelect", options: { choices: [{ name: "Registered", color: "greenBright" }, { name: "Unregistered", color: "redBright" }, { name: "Unknown", color: "grayBright" }] } },
-    { name: "Advance", type: "number", options: { precision: 2 } },
-    { name: "Penalties", type: "number", options: { precision: 2 } },
-    { name: "IBAN", type: "singleLineText" },
-    { name: "PIT2", type: "checkbox" },
   ];
 
   const created: string[] = [];
@@ -220,25 +157,6 @@ export async function initializeFields(): Promise<{ created: string[]; skipped: 
   }
 
   return { created, skipped, errors };
-}
-
-/**
- * Finds a user in the USERS table by email address (case-insensitive).
- */
-export async function fetchUserByEmail(email: string): Promise<AirtableRecord | null> {
-  if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) throw new Error("Airtable credentials are not set");
-
-  const url = new URL(`${BASE_URL}/${AIRTABLE_BASE_ID}/USERS`);
-  url.searchParams.set("filterByFormula", `LOWER({Email})="${email.toLowerCase()}"`);
-  url.searchParams.set("maxRecords", "1");
-
-  const res = await fetch(url.toString(), { headers: headers() });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Airtable error ${res.status}: ${text}`);
-  }
-  const data = (await res.json()) as AirtableResponse;
-  return data.records[0] ?? null;
 }
 
 /**
@@ -302,7 +220,7 @@ export async function uploadAttachmentToRecord(
   const contentUrl = `https://content.airtable.com/v0/${AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(fieldName)}/uploadAttachment`;
 
   const form = new FormData();
-  form.append("file", new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), filename);
+  form.append("file", new Blob([fileBuffer], { type: mimeType }), filename);
   form.append("filename", filename);
   form.append("contentType", mimeType);
 
