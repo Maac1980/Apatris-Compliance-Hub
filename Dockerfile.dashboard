@@ -2,5 +2,4 @@ FROM node:20-slim
 RUN npm install -g serve
 WORKDIR /app
 COPY artifacts/apatris-dashboard/dist/public ./dist
-EXPOSE 3000
 CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]
