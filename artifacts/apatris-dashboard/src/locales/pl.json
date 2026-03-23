@@ -3,7 +3,7 @@
     "title": "Apatris",
     "subtitle": "Zgodność",
     "terminal": "BEZPIECZNY TERMINAL ZGODNOŚCI",
-    "operatorId": "ID Operatora",
+    "operatorId": "ID Pracownika",
     "passcode": "Hasło dostępu",
     "submit": "Inicjuj sesję",
     "defaultCredentials": "Domyślne dane logowania",
@@ -14,7 +14,10 @@
     "title": "Apatris",
     "subtitle": "Zgodność",
     "generateReport": "Generuj Raport",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "compliance": "Alerty",
+    "admin": "Admin",
+    "aiUpload": "Szybki Upload AI"
   },
   "stats": {
     "totalWorkforce": "Całkowita liczba pracowników",
@@ -23,7 +26,7 @@
     "nonCompliant": "Niezgodny"
   },
   "table": {
-    "searchPlaceholder": "Szukaj według nazwy operatora...",
+    "searchPlaceholder": "Szukaj według nazwy pracownika...",
     "allSpecs": "Wszystkie specjalizacje",
     "tigWelders": "Spawacze TIG",
     "migWelders": "Spawacze MIG",
@@ -33,18 +36,31 @@
     "warning": "Ostrzeżenie",
     "critical": "Krytyczny",
     "nonCompliant": "Niezgodny",
-    "operator": "Operator",
-    "spec": "Spec.",
+    "operator": "Pracownik",
+    "spec": "Zawód",
+    "assignedSite": "Firma",
     "trcExpiry": "Ważność TRC",
+    "passportExp": "Wygaśnięcie paszportu",
+    "hs": "BHP",
+    "docs": "Dokumenty",
+    "allClientsProjects": "Wszyscy klienci / Projekty",
     "workPermit": "Zezwolenie",
     "bhp": "BHP",
     "status": "Status",
     "actions": "Akcje",
-    "noResults": "Nie znaleziono operatorów spełniających kryteria.",
+    "viewEdit": "Podgląd / Edycja",
+    "noResults": "Nie znaleziono pracowników spełniających kryteria.",
     "notifyWorker": "Powiadom pracownika",
     "renewDocument": "Odnów dokument",
     "uploadDocuments": "Prześlij dokumenty",
     "viewProfile": "Zobacz profil"
+  },
+  "comm": {
+    "call": "Zadzwoń",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "urgentAlert": "PILNY",
+    "urgentTitle": "Dokument wygasa — wyślij alert WhatsApp"
   },
   "status": {
     "critical": "KRYTYCZNY",
@@ -66,7 +82,14 @@
     "notify": "Powiadom",
     "renewDoc": "Odnów dok.",
     "passport": "Paszport",
-    "contract": "Umowa"
+    "contract": "Umowa",
+    "contact": "Kontakt",
+    "payroll": "Wynagrodzenie",
+    "hourlyRate": "Stawka netto za godzinę (PLN)",
+    "monthlyHours": "Łączna liczba godzin miesięcznie",
+    "estPayout": "Szacunkowa wypłata miesięczna",
+    "monthlyHoursLabel": "Godziny miesięcznie",
+    "estPayoutLabel": "Szac. wypłata miesięczna"
   },
   "notify": {
     "title": "Powiadom pracownika",

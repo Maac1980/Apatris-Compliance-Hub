@@ -3,8 +3,14 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { mobileLogin } from "@/lib/api";
 import {
-  isBiometricAvailable, registerBiometric, authenticateBiometric,
-  savePin, getSavedPin, hasSavedPin, hasBiometric, clearSavedPin,
+  isBiometricAvailable,
+  registerBiometric,
+  authenticateBiometric,
+  savePin,
+  getSavedPin,
+  hasSavedPin,
+  hasBiometric,
+  clearSavedPin,
 } from "@/lib/biometric";
 import { Role } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,31 +21,87 @@ import {
 import { cn } from "@/lib/utils";
 
 interface RoleCard {
-  role: Role; tier: number; title: string; subtitle: string;
+  role: Role;
+  tier: number;
+  title: string;
+  subtitle: string;
   icon: React.ElementType;
-  accent: string; badge: string; borderColor: string;
+  accent: string;
+  badge: string;
+  glow: string;
+  borderColor: string;
 }
 
 const ROLES: RoleCard[] = [
-  { role: "Executive",    tier: 1, title: "Executive Board & Partners",  subtitle: "Full platform · Payroll · Financials",        icon: Crown,         accent: "text-indigo-400",  badge: "bg-indigo-600 text-white",  borderColor: "border-indigo-500/30" },
-  { role: "LegalHead",    tier: 2, title: "Head of Legal & Compliance",  subtitle: "PIP dossiers · Directory · Alerts",           icon: Scale,         accent: "text-violet-400",  badge: "bg-violet-600 text-white",  borderColor: "border-violet-500/30" },
-  { role: "TechOps",      tier: 3, title: "Key Account & Technical Ops", subtitle: "Add Professionals · UDT · Site Deployments",  icon: Wrench,        accent: "text-blue-400",    badge: "bg-blue-600 text-white",    borderColor: "border-blue-500/30" },
-  { role: "Coordinator",  tier: 4, title: "Compliance Coordinator",      subtitle: "Professionals · Doc queue · Operations",      icon: ClipboardList, accent: "text-emerald-400", badge: "bg-emerald-600 text-white", borderColor: "border-emerald-500/30" },
-  { role: "Professional", tier: 5, title: "Deployed Professional",       subtitle: "My profile · Submit hours · Documents",       icon: HardHat,       accent: "text-amber-400",   badge: "bg-amber-500 text-white",   borderColor: "border-amber-500/30" },
+  {
+    role: "Executive",
+    tier: 1,
+    title: "Executive Board & Partners",
+    subtitle: "Full platform access · Payroll · Financials",
+    icon: Crown,
+    accent: "border-indigo-500 text-indigo-400",
+    badge: "bg-indigo-600 text-white",
+    glow: "hover:shadow-indigo-900/40",
+    borderColor: "border-indigo-500/40",
+  },
+  {
+    role: "LegalHead",
+    tier: 2,
+    title: "Head of Legal & Compliance",
+    subtitle: "Professional directory · PIP dossiers · Alerts",
+    icon: Scale,
+    accent: "border-violet-500 text-violet-400",
+    badge: "bg-violet-600 text-white",
+    glow: "hover:shadow-violet-900/40",
+    borderColor: "border-violet-500/40",
+  },
+  {
+    role: "TechOps",
+    tier: 3,
+    title: "Key Account & Technical Ops",
+    subtitle: "Add Professionals · UDT · Site Deployments",
+    icon: Wrench,
+    accent: "border-blue-500 text-blue-400",
+    badge: "bg-blue-600 text-white",
+    glow: "hover:shadow-blue-900/40",
+    borderColor: "border-blue-500/40",
+  },
+  {
+    role: "Coordinator",
+    tier: 4,
+    title: "Compliance Coordinator",
+    subtitle: "Professionals · Doc queue · Operational modules",
+    icon: ClipboardList,
+    accent: "border-emerald-500 text-emerald-400",
+    badge: "bg-emerald-600 text-white",
+    glow: "hover:shadow-emerald-900/40",
+    borderColor: "border-emerald-500/40",
+  },
+  {
+    role: "Professional",
+    tier: 5,
+    title: "Deployed Professional",
+    subtitle: "My profile · Submit hours · Upload documents",
+    icon: HardHat,
+    accent: "border-amber-500 text-amber-400",
+    badge: "bg-amber-500 text-white",
+    glow: "hover:shadow-amber-900/40",
+    borderColor: "border-amber-500/40",
+  },
 ];
 
 const T1_USERS = [
-  { name: "Manish", key: "manish", initials: "MN", role: "Founder & CEO", accent: "text-indigo-300", border: "border-indigo-500/30 hover:border-indigo-400/60" },
-  { name: "Akshay", key: "akshay", initials: "AK", role: "Partner",       accent: "text-violet-300", border: "border-violet-500/30 hover:border-violet-400/60" },
+  { name: "Akshay", key: "akshay", initials: "AK", color: "border-indigo-500/50 hover:border-indigo-400 text-indigo-300" },
+  { name: "Manish", key: "manish", initials: "MN", color: "border-violet-500/50 hover:border-violet-400 text-violet-300" },
 ];
 
-const listVariants = {
+const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.055, delayChildren: 0.05 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
 };
-const rowVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 28 } },
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 260, damping: 24 } },
 };
 
 export function LoginPage() {
@@ -59,8 +121,12 @@ export function LoginPage() {
   const [pinSaved, setPinSaved]          = useState(false);
   const [bioSuccess, setBioSuccess]      = useState(false);
 
-  useEffect(() => { isBiometricAvailable().then(setBioAvailable); }, []);
+  // Check biometric support on mount
+  useEffect(() => {
+    isBiometricAvailable().then(setBioAvailable);
+  }, []);
 
+  // When role+user selection changes, check saved state
   const updateSavedState = useCallback((tier: number, userKey?: string) => {
     setPinSaved(hasSavedPin(tier, userKey));
     setBioRegistered(hasBiometric(tier, userKey));
@@ -69,40 +135,73 @@ export function LoginPage() {
   useEffect(() => {
     if (!selectedRole) return;
     const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
-    if (selectedRole.tier !== 1 || selectedUser) updateSavedState(selectedRole.tier, uKey);
+    if (selectedRole.tier !== 1 || selectedUser) {
+      updateSavedState(selectedRole.tier, uKey);
+    }
   }, [selectedRole, selectedUser, updateSavedState]);
 
-  const resetStep = () => {
-    setPassword(""); setError(null); setBioSuccess(false);
-    setPinSaved(false); setBioRegistered(false);
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleRoleSelect = (card: RoleCard) => {
+    setSelectedRole(card);
+    setSelectedUser(null);
+    setPassword("");
+    setError(null);
+    setBioSuccess(false);
+    setPinSaved(false);
+    setBioRegistered(false);
   };
 
-  const handleRoleSelect = (card: RoleCard) => { setSelectedRole(card); setSelectedUser(null); resetStep(); };
   const handleUserSelect = (u: typeof T1_USERS[number]) => {
-    setSelectedUser(u); setPassword(""); setError(null); setBioSuccess(false);
+    setSelectedUser(u);
+    setPassword("");
+    setError(null);
+    setBioSuccess(false);
     updateSavedState(1, u.key);
   };
+
   const handleBack = () => {
-    if (selectedUser) { setSelectedUser(null); resetStep(); }
-    else { setSelectedRole(null); resetStep(); }
+    if (selectedUser) {
+      setSelectedUser(null);
+      setPassword("");
+      setError(null);
+      setBioSuccess(false);
+      setPinSaved(false);
+      setBioRegistered(false);
+    } else {
+      setSelectedRole(null);
+      setPassword("");
+      setError(null);
+      setBioSuccess(false);
+      setPinSaved(false);
+      setBioRegistered(false);
+    }
   };
 
   const doLogin = async (pass: string) => {
     if (!selectedRole) return;
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const nameParam = selectedRole.tier === 1 && selectedUser ? selectedUser.key : undefined;
       const result = await mobileLogin(selectedRole.tier, pass, nameParam);
       login(selectedRole.role, result.name, result.jwt);
+
+      // Save credentials if "remember device" is checked
       if (rememberDevice) {
         const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
         savePin(selectedRole.tier, pass, uKey);
-        if (bioAvailable) await registerBiometric(selectedRole.tier, uKey);
+        if (bioAvailable) {
+          await registerBiometric(selectedRole.tier, uKey);
+        }
       }
+
       setLocation("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,376 +213,488 @@ export function LoginPage() {
   const handleBiometric = async () => {
     if (!selectedRole) return;
     const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
-    setBioLoading(true); setError(null);
+    setBioLoading(true);
+    setError(null);
     try {
       const passed = await authenticateBiometric(selectedRole.tier, uKey);
-      if (!passed) { setError("Biometric failed. Enter your PIN manually."); return; }
+      if (!passed) {
+        setError("Biometric authentication failed. Enter your PIN manually.");
+        return;
+      }
       const savedPass = getSavedPin(selectedRole.tier, uKey);
-      if (!savedPass) { setError("Saved credentials not found."); return; }
+      if (!savedPass) {
+        setError("Saved credentials not found. Enter your PIN manually.");
+        return;
+      }
       setBioSuccess(true);
+      // Small delay to show the success state
       await new Promise(r => setTimeout(r, 500));
       const nameParam = selectedRole.tier === 1 && selectedUser ? selectedUser.key : undefined;
       const result = await mobileLogin(selectedRole.tier, savedPass, nameParam);
       login(selectedRole.role, result.name, result.jwt);
       setLocation("/dashboard");
-    } catch { setError("Biometric failed. Enter your PIN manually."); }
-    finally { setBioLoading(false); }
+    } catch {
+      setError("Biometric authentication failed. Enter your PIN manually.");
+    } finally {
+      setBioLoading(false);
+    }
   };
 
   const handleForgetDevice = () => {
     if (!selectedRole) return;
-    clearSavedPin(selectedRole.tier, selectedRole.tier === 1 ? selectedUser?.key : undefined);
-    setPinSaved(false); setBioRegistered(false); setPassword("");
+    const uKey = selectedRole.tier === 1 ? selectedUser?.key : undefined;
+    clearSavedPin(selectedRole.tier, uKey);
+    setPinSaved(false);
+    setBioRegistered(false);
+    setPassword("");
   };
 
+  // ── Step logic ──────────────────────────────────────────────────────────────
+
   const step: "roles" | "name-picker" | "password" =
-    !selectedRole ? "roles" : selectedRole.tier === 1 && !selectedUser ? "name-picker" : "password";
+    !selectedRole
+      ? "roles"
+      : selectedRole.tier === 1 && !selectedUser
+        ? "name-picker"
+        : "password";
 
   const canShowBiometric = bioRegistered && pinSaved && bioAvailable;
 
   return (
-    <div className="min-h-full flex flex-col" style={{ background: "#0c0c0e" }}>
-      {/* Subtle top glow */}
-      <div className="absolute inset-x-0 top-0 h-64 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(153,27,27,0.18) 0%, transparent 100%)" }} />
+    <div
+      className="flex flex-col min-h-full relative overflow-hidden"
+      style={{ background: "#0d0d0d" }}
+    >
+      <div
+        className="absolute inset-0 opacity-[0.12] pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col flex-1 px-5 py-10 max-w-sm mx-auto w-full">
+      <div className="relative z-10 flex flex-col min-h-full px-6 py-10">
 
-        {/* ── Logo & Header ───────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: -16 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="flex flex-col items-center text-center mb-10"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="text-center mb-8 pt-4"
         >
-          {/* Badge */}
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2a2a2a] to-[#111] border border-white/10 flex items-center justify-center mb-5 shadow-xl">
-            <span className="text-red-600 font-black text-4xl leading-none" style={{ fontFamily: "Impact, sans-serif" }}>A</span>
-          </div>
-
-          <h1 className="text-[32px] font-black text-white tracking-[0.18em] leading-none mb-2">
+          <div className="w-12 h-1 bg-red-600 mx-auto mb-6 rounded-full" />
+          <h1 className="text-4xl font-bold text-white tracking-[0.2em] uppercase leading-none">
             APATRIS
           </h1>
-          <p className="text-[11px] text-red-500 font-semibold tracking-[0.22em] uppercase mb-1">
-            Specialist Welding
-          </p>
-          <p className="text-[10px] text-white/20 font-mono tracking-wider">
-            Workforce Deployment Terminal
+          <p className="text-gray-400 text-xs tracking-wider uppercase mt-3 leading-snug">
+            Precision Welding Outsourcing.&nbsp;Your vision, expertly welded.
           </p>
         </motion.div>
 
-        {/* ── Auth card ───────────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="flex-1 bg-[#141416] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-3 mb-6"
         >
-          {/* Red top line */}
-          <div className="h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+          <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase whitespace-nowrap">
+            Workforce Deployment Terminal
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+        </motion.div>
 
-          <div className="p-5">
-            {/* Step label */}
-            <p className="text-[10px] font-semibold text-white/25 tracking-[0.2em] uppercase mb-4">
-              {step === "roles" ? "Select your designation" : step === "name-picker" ? "Select profile" : "Authenticate"}
-            </p>
+        <div className="bg-gray-900/80 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-sm flex-1">
+          <AnimatePresence mode="wait">
 
-            <AnimatePresence mode="wait">
-
-              {/* ── STEP 1: Role list ────────────────────────────────────── */}
-              {step === "roles" && (
+            {/* ── STEP 1: Role selector ──────────────────────────────────── */}
+            {step === "roles" && (
+              <motion.div
+                key="role-select"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
+                  Select your designation
+                </p>
                 <motion.div
-                  key="roles"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.15 }}
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="space-y-2.5"
                 >
-                  <motion.div variants={listVariants} initial="hidden" animate="show" className="space-y-2.5">
-                    {ROLES.map((cfg) => {
-                      const Icon = cfg.icon;
-                      const hasSaved = hasSavedPin(cfg.tier) ||
-                        (cfg.tier === 1 && T1_USERS.some(u => hasSavedPin(1, u.key)));
-                      return (
-                        <motion.button
-                          key={cfg.role}
-                          variants={rowVariants}
-                          whileTap={{ scale: 0.975 }}
-                          onClick={() => handleRoleSelect(cfg)}
-                          className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/10 active:bg-white/[0.09] transition-all duration-150 text-left"
-                        >
-                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-white/5", cfg.accent)}>
-                            <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[13px] font-bold text-white leading-tight truncate">{cfg.title}</span>
-                              <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md shrink-0 tracking-widest", cfg.badge)}>
-                                T{cfg.tier}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-white/35 truncate">{cfg.subtitle}</p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {hasSaved && <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />}
-                            <ChevronRight className="w-4 h-4 text-white/20" />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </motion.div>
-                </motion.div>
-              )}
-
-              {/* ── STEP 2: T1 Name picker ───────────────────────────────── */}
-              {step === "name-picker" && selectedRole && (
-                <motion.div
-                  key="name-picker"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <button onClick={handleBack} className="flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors mb-5 text-xs">
-                    <ArrowLeft className="w-3.5 h-3.5" /> Change role
-                  </button>
-
-                  {/* Selected role chip */}
-                  <div className={cn("flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.03] border mb-5", selectedRole.borderColor)}>
-                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white/5", selectedRole.accent)}>
-                      <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[12px] font-bold text-white/80 truncate block">{selectedRole.title}</span>
-                    </div>
-                    <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md tracking-widest shrink-0", selectedRole.badge)}>
-                      T1
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {T1_USERS.map((u) => {
-                      const bio = hasBiometric(1, u.key);
-                      const saved = hasSavedPin(1, u.key);
-                      return (
-                        <motion.button
-                          key={u.key}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleUserSelect(u)}
-                          className={cn(
-                            "w-full flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border transition-all duration-150 text-left",
-                            u.border
-                          )}
-                        >
-                          <div className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
-                            <span className={cn("text-sm font-black", u.accent)}>{u.initials}</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm font-bold text-white">{u.name}</div>
-                            <div className="text-[11px] text-white/35 mt-0.5">{u.role} · Executive Board</div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {bio && bioAvailable && <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />}
-                            {saved && !bio && <Lock className="w-3.5 h-3.5 text-white/30" />}
-                            <ChevronRight className="w-4 h-4 text-white/20" />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── STEP 3: PIN / Password ───────────────────────────────── */}
-              {step === "password" && selectedRole && (
-                <motion.div
-                  key="password"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <button onClick={handleBack} className="flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors mb-5 text-xs">
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    {selectedRole.tier === 1 ? "Change profile" : "Change role"}
-                  </button>
-
-                  {/* Identity chip */}
-                  <div className={cn("flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.03] border mb-5", selectedRole.borderColor)}>
-                    {selectedUser ? (
-                      <div className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
-                        <span className={cn("text-xs font-black", selectedRole.accent)}>{selectedUser.initials}</span>
-                      </div>
-                    ) : (
-                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-white/5", selectedRole.accent)}>
-                        <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-bold text-white/90 truncate">
-                        {selectedUser ? selectedUser.name : selectedRole.title}
-                      </div>
-                      {selectedUser && (
-                        <div className="text-[11px] text-white/30 mt-0.5">{selectedUser.role} · Executive Board</div>
-                      )}
-                    </div>
-                    <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md tracking-widest shrink-0", selectedRole.badge)}>
-                      T{selectedRole.tier}
-                    </span>
-                  </div>
-
-                  {/* Biometric button */}
-                  <AnimatePresence>
-                    {canShowBiometric && (
-                      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-4">
-                        <button
-                          type="button"
-                          onClick={handleBiometric}
-                          disabled={bioLoading}
-                          className={cn(
-                            "w-full flex flex-col items-center gap-2 py-6 rounded-2xl border transition-all duration-200",
-                            bioSuccess
-                              ? "bg-emerald-500/10 border-emerald-500/30"
-                              : "bg-white/[0.04] border-white/[0.07] hover:bg-white/[0.07] hover:border-white/10 active:scale-[0.98]"
-                          )}
-                        >
-                          {bioSuccess ? (
-                            <><CheckCircle2 className="w-8 h-8 text-emerald-400" /><span className="text-xs font-bold text-emerald-400 tracking-wider">Verified</span></>
-                          ) : bioLoading ? (
-                            <><div className="w-7 h-7 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" /><span className="text-xs text-white/30">Scanning…</span></>
-                          ) : (
-                            <>
-                              <Fingerprint className="w-9 h-9 text-white/50" strokeWidth={1.4} />
-                              <span className="text-sm font-semibold text-white/70">Sign in with biometrics</span>
-                              <span className="text-[10px] text-white/25">Touch ID · Face ID</span>
-                            </>
-                          )}
-                        </button>
-                        <div className="flex items-center gap-3 my-4">
-                          <div className="h-px flex-1 bg-white/[0.06]" />
-                          <span className="text-[10px] text-white/20 tracking-wider">or enter PIN</span>
-                          <div className="h-px flex-1 bg-white/[0.06]" />
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* PIN form */}
-                  <form onSubmit={handleSubmit} className="space-y-3">
-                    <div>
-                      <label className="text-[10px] font-semibold text-white/30 tracking-[0.15em] uppercase block mb-2">
-                        {selectedRole.tier === 1 ? "Access Password" : "Tier PIN"}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                          placeholder={selectedRole.tier === 1 ? "Enter your password" : "Enter tier PIN"}
-                          autoFocus={!canShowBiometric}
-                          className={cn(
-                            "w-full bg-white/[0.05] border rounded-2xl px-4 py-3.5 pr-12",
-                            "text-white text-sm placeholder:text-white/20",
-                            "outline-none focus:ring-1 transition-all",
-                            error
-                              ? "border-red-500/50 focus:ring-red-500/20"
-                              : "border-white/[0.08] focus:border-white/20 focus:ring-white/10"
-                          )}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(v => !v)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <AnimatePresence>
-                        {error && (
-                          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                            className="text-red-400 text-xs mt-2"
-                          >
-                            {error}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Remember device */}
-                    {!pinSaved && (
-                      <button
-                        type="button"
-                        onClick={() => setRememberDevice(v => !v)}
+                  {ROLES.map((cfg) => {
+                    const Icon = cfg.icon;
+                    const hasSaved = hasSavedPin(cfg.tier, undefined) || (cfg.tier === 1 && T1_USERS.some(u => hasSavedPin(1, u.key)));
+                    return (
+                      <motion.button
+                        key={cfg.role}
+                        variants={itemVariants}
+                        whileTap={{ scale: 0.975 }}
+                        onClick={() => handleRoleSelect(cfg)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all text-left",
-                          rememberDevice
-                            ? "bg-emerald-500/[0.08] border-emerald-500/20"
-                            : "bg-white/[0.03] border-white/[0.06] hover:border-white/10"
+                          "w-full flex items-center gap-3 p-3.5 rounded-xl text-left",
+                          "bg-gray-800/60 border border-white/[0.07]",
+                          "hover:bg-gray-700/60 hover:border-white/15",
+                          "active:bg-gray-700/80 transition-all duration-200 shadow-md",
+                          cfg.glow
                         )}
                       >
+                        <div className={cn("w-0.5 self-stretch rounded-full border-l-2", cfg.accent.split(" ")[0])} />
                         <div className={cn(
-                          "w-4.5 w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
-                          rememberDevice ? "bg-emerald-500 border-emerald-500" : "border-white/20"
+                          "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                          "bg-white/5 border border-white/10",
+                          cfg.accent.split(" ")[1]
                         )}>
-                          {rememberDevice && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          <Icon className="w-5 h-5" strokeWidth={1.8} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[13px] font-bold text-white leading-tight truncate">
+                              {cfg.title}
+                            </span>
+                            <span className={cn(
+                              "text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 tracking-wide",
+                              cfg.badge
+                            )}>
+                              T{cfg.tier}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 font-medium leading-tight truncate">
+                            {cfg.subtitle}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {hasSaved && (
+                            <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />
+                          )}
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ── STEP 2: T1 Name picker ─────────────────────────────────── */}
+            {step === "name-picker" && selectedRole && (
+              <motion.div
+                key="name-picker"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+              >
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors mb-5 text-xs font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Change role
+                </button>
+
+                <div className={cn(
+                  "flex items-center gap-3 p-3.5 rounded-xl mb-6",
+                  "bg-gray-800/80 border",
+                  selectedRole.borderColor
+                )}>
+                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", selectedRole.accent.split(" ")[0])} />
+                  <div className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                    "bg-white/5 border border-white/10",
+                    selectedRole.accent.split(" ")[1]
+                  )}>
+                    <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-white truncate">{selectedRole.title}</span>
+                      <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0", selectedRole.badge)}>
+                        T1
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase mb-4">
+                  Select your profile
+                </p>
+
+                <div className="space-y-3">
+                  {T1_USERS.map((u) => {
+                    const saved = hasSavedPin(1, u.key);
+                    const bio = hasBiometric(1, u.key);
+                    return (
+                      <motion.button
+                        key={u.key}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleUserSelect(u)}
+                        className={cn(
+                          "w-full flex items-center gap-4 p-4 rounded-xl text-left",
+                          "bg-gray-800/60 border transition-all duration-200",
+                          u.color
+                        )}
+                      >
+                        <div className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-black text-white/70">{u.initials}</span>
                         </div>
                         <div className="flex-1">
-                          <div className="text-[12px] font-semibold text-white/60">Remember this device</div>
-                          <div className="text-[10px] text-white/25 mt-0.5">
-                            {bioAvailable ? "Enable biometric sign-in next time" : "Save credentials locally"}
-                          </div>
+                          <div className="text-sm font-bold text-white">{u.name}</div>
+                          <div className="text-[11px] text-gray-500 font-medium mt-0.5">Executive Board · Partner</div>
                         </div>
-                        {bioAvailable && rememberDevice && <Fingerprint className="w-4 h-4 text-emerald-400 shrink-0" />}
-                      </button>
-                    )}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {bio && bioAvailable && (
+                            <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />
+                          )}
+                          {saved && !bio && (
+                            <Lock className="w-3.5 h-3.5 text-blue-400" />
+                          )}
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
 
-                    {/* Forget device */}
-                    {pinSaved && (
+            {/* ── STEP 3: Password / PIN ─────────────────────────────────── */}
+            {step === "password" && selectedRole && (
+              <motion.div
+                key="password-entry"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+              >
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors mb-5 text-xs font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  {selectedRole.tier === 1 ? "Change profile" : "Change role"}
+                </button>
+
+                {/* Identity preview */}
+                <div className={cn(
+                  "flex items-center gap-3 p-3.5 rounded-xl mb-5",
+                  "bg-gray-800/80 border",
+                  selectedRole.borderColor
+                )}>
+                  <div className={cn("w-0.5 self-stretch rounded-full border-l-2", selectedRole.accent.split(" ")[0])} />
+                  {selectedUser ? (
+                    <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-black text-white/70">{selectedUser.initials}</span>
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                      "bg-white/5 border border-white/10",
+                      selectedRole.accent.split(" ")[1]
+                    )}>
+                      <selectedRole.icon className="w-4 h-4" strokeWidth={1.8} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-white truncate">
+                        {selectedUser ? selectedUser.name : selectedRole.title}
+                      </span>
+                      <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0", selectedRole.badge)}>
+                        T{selectedRole.tier}
+                      </span>
+                    </div>
+                    {selectedUser && (
+                      <div className="text-[11px] text-gray-500 mt-0.5">Executive Board · Partner</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Biometric quick-sign-in ── */}
+                <AnimatePresence>
+                  {canShowBiometric && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      className="mb-5"
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={handleBiometric}
+                        disabled={bioLoading}
+                        whileTap={{ scale: 0.97 }}
+                        className={cn(
+                          "w-full flex flex-col items-center gap-2.5 py-5 rounded-2xl border transition-all duration-200",
+                          bioSuccess
+                            ? "bg-emerald-500/20 border-emerald-500/50"
+                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-[0.98]"
+                        )}
+                      >
+                        {bioSuccess ? (
+                          <>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                            <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Verified</span>
+                          </>
+                        ) : bioLoading ? (
+                          <>
+                            <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            <span className="text-[11px] font-bold text-gray-400 tracking-wide">Scanning…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Fingerprint className="w-9 h-9 text-white/70" strokeWidth={1.5} />
+                            <span className="text-[12px] font-bold text-white/80 tracking-wide">
+                              Sign in with biometrics
+                            </span>
+                            <span className="text-[10px] text-gray-500">Touch sensor or Face ID</span>
+                          </>
+                        )}
+                      </motion.button>
+
+                      <div className="flex items-center gap-3 my-4">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-[10px] text-gray-600 font-mono">or enter PIN</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Password form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono text-gray-500 tracking-widest uppercase block mb-2">
+                      <Lock className="w-3 h-3 inline mr-1.5 mb-0.5" />
+                      {selectedRole.tier === 1 ? "Access password" : "Tier PIN"}
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setError(null);
+                        }}
+                        placeholder={selectedRole.tier === 1 ? "Enter your password" : "Enter tier PIN"}
+                        autoFocus={!canShowBiometric}
+                        className={cn(
+                          "w-full bg-gray-800/60 border rounded-xl px-4 py-3.5 pr-12",
+                          "text-white text-sm font-mono placeholder:text-gray-600",
+                          "outline-none focus:ring-2 transition-all",
+                          error
+                            ? "border-red-500/60 focus:ring-red-500/30"
+                            : "border-white/10 focus:border-white/20 focus:ring-white/10"
+                        )}
+                      />
                       <button
                         type="button"
-                        onClick={handleForgetDevice}
-                        className="w-full flex items-center gap-2.5 p-3 rounded-xl border border-white/[0.04] hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all text-left"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-white/25" />
-                        <span className="text-[11px] text-white/25">Forget saved login on this device</span>
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
-                    )}
+                    </div>
 
-                    <motion.button
-                      type="submit"
-                      disabled={!password.trim() || loading}
-                      whileTap={{ scale: 0.98 }}
+                    <AnimatePresence>
+                      {error && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="text-red-400 text-[11px] mt-2 font-medium"
+                        >
+                          {error}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Remember device checkbox */}
+                  {!pinSaved && (
+                    <button
+                      type="button"
+                      onClick={() => setRememberDevice(v => !v)}
                       className={cn(
-                        "w-full py-4 rounded-2xl text-sm font-bold tracking-wide transition-all duration-200",
-                        !password.trim() || loading
-                          ? "bg-white/[0.05] text-white/20 cursor-not-allowed"
-                          : "bg-red-600 hover:bg-red-500 active:bg-red-700 text-white shadow-[0_4px_16px_rgba(220,38,38,0.3)]"
+                        "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                        rememberDevice
+                          ? "bg-emerald-500/10 border-emerald-500/30"
+                          : "bg-white/[0.03] border-white/8 hover:bg-white/[0.06]"
                       )}
                     >
-                      {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Verifying…
-                        </span>
-                      ) : "Authenticate"}
-                    </motion.button>
-                  </form>
+                      <div className={cn(
+                        "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
+                        rememberDevice ? "bg-emerald-500 border-emerald-500" : "border-white/20"
+                      )}>
+                        {rememberDevice && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="text-xs font-bold text-white/80">Remember this device</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          {bioAvailable ? "Enable biometric sign-in for next time" : "Save credentials for quick access"}
+                        </div>
+                      </div>
+                      {bioAvailable && rememberDevice && <Fingerprint className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    </button>
+                  )}
 
-                  <p className="text-center text-[10px] text-white/15 mt-5">
-                    Contact your administrator if you need access credentials.
-                  </p>
-                </motion.div>
-              )}
+                  {/* Forget saved device */}
+                  {pinSaved && (
+                    <button
+                      type="button"
+                      onClick={handleForgetDevice}
+                      className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-white/6 bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/20 transition-all text-left"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-gray-600 hover:text-red-400" />
+                      <span className="text-[11px] text-gray-600">Forget saved login for this device</span>
+                    </button>
+                  )}
 
-            </AnimatePresence>
-          </div>
-        </motion.div>
+                  <motion.button
+                    type="submit"
+                    disabled={!password.trim() || loading}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      "w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-200",
+                      "border border-white/10",
+                      !password.trim() || loading
+                        ? "bg-gray-800/40 text-gray-600 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-100 active:bg-gray-200 shadow-lg"
+                    )}
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        Verifying...
+                      </span>
+                    ) : "Authenticate"}
+                  </motion.button>
+                </form>
 
-        {/* Footer */}
-        <p className="text-center text-[9px] text-white/10 mt-6 tracking-widest uppercase">
-          Apatris Sp. z o.o. · NIP 5252828706
+                <p className="text-center text-[10px] text-gray-600 mt-5">
+                  Contact your administrator if you don&apos;t have access credentials.
+                </p>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9, duration: 0.5 }}
+          className="text-center text-[10px] font-mono text-gray-600 mt-6"
+        >
+          UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED
+        </motion.p>
+        <p className="text-center text-[10px] font-mono text-gray-700 mt-1">
+          APATRIS SP. Z O.O. · NIP: 5252828706
         </p>
       </div>
     </div>
