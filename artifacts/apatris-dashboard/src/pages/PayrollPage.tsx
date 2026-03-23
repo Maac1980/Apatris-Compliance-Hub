@@ -631,7 +631,10 @@ export default function PayrollPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-[1800px] mx-auto w-full space-y-5">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 p-3 sm:p-4 max-w-[1800px] mx-auto w-full">
+
+        {/* ── Top controls (non-scrolling) ─────────────────────────────── */}
+        <div className="flex-shrink-0 flex flex-col gap-3">
 
         {/* ── Outdated Rates Alert ─────────────────────────────────────── */}
         {isAdmin && ratesOutdated && (
@@ -652,7 +655,7 @@ export default function PayrollPage() {
         )}
 
         {/* ── Summary Cards ────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
           {[
             { label: "Active Workers", value: workers.length.toString(), icon: Users, color: "text-blue-400" },
             { label: "Total Hours", value: fmt(totals.hours), icon: Calculator, color: "text-purple-400" },
@@ -660,12 +663,12 @@ export default function PayrollPage() {
             { label: "Deductions", value: `${fmt(totals.advances + totals.penalties)} PLN`, icon: TrendingDown, color: "text-orange-400" },
             { label: "Total Net Pay", value: `${fmt(totals.netto)} PLN`, icon: CheckCircle2, color: "text-green-400" },
           ].map((c) => (
-            <div key={c.label} className="bg-slate-800 border border-slate-700 rounded-xl p-3 sm:p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <c.icon className={`w-4 h-4 ${c.color} flex-shrink-0`} />
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-tight">{c.label}</p>
+            <div key={c.label} className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 flex items-center gap-2.5">
+              <c.icon className={`w-4 h-4 ${c.color} flex-shrink-0`} />
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 leading-none mb-0.5">{c.label}</p>
+                <p className={`text-sm font-mono font-bold ${c.color} truncate leading-none`}>{c.value}</p>
               </div>
-              <p className={`text-base sm:text-xl font-mono font-bold ${c.color} truncate`}>{c.value}</p>
             </div>
           ))}
         </div>
@@ -742,10 +745,12 @@ export default function PayrollPage() {
           </div>
         )}
 
-        {/* ── Payroll Grid ─────────────────────────────────────────────── */}
-        <div className="table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+        </div>{/* end flex-shrink-0 top controls */}
+
+        {/* ── Payroll Grid (flex-1: fills remaining height) ────────────── */}
+        <div className="flex-1 min-h-0 flex flex-col table-responsive-container bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           {/* ── Top bar: title + search ── */}
-          <div className="px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-shrink-0 px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex-shrink-0">
               {isAdmin ? (showZUS ? "Payroll Grid — ZUS Breakdown" : "Payroll Grid — Click any value to edit") : "Hours Grid — Click Hours to update"}
             </p>
@@ -1000,9 +1005,9 @@ export default function PayrollPage() {
             </div>
           )}
 
-          <div className="app-table-scroll" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+          <div className="app-table-scroll flex-1 min-h-0" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             <table className="w-full border-collapse" style={{ minWidth: showZUS && showSplit && isAdmin ? "2050px" : showZUS && isAdmin ? "1650px" : "1060px" }}>
-              <thead className="bg-slate-900/60 border-b border-slate-700">
+              <thead className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
                 <tr>
                   <th className={`${thCls} text-left`} style={{ minWidth: "180px" }}>Worker</th>
                   <th className={`${thCls} text-left`} style={{ minWidth: "140px" }}>Spec / Site</th>
@@ -1245,9 +1250,9 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* ── Close Month ──────────────────────────────────────────────── */}
+        {/* ── Close Month (pinned at bottom) ───────────────────────────── */}
         {isAdmin && (
-          <div className="border border-red-500/30 bg-red-950/20 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex-shrink-0 border border-red-500/30 bg-red-950/20 rounded-xl p-3 sm:p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-red-400" /> Close Month & Save to Ledger

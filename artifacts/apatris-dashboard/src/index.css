@@ -508,9 +508,11 @@ body.has-app-shell .app-shell-nav-btns {
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 .table-responsive::-webkit-scrollbar,
-.app-table-scroll::-webkit-scrollbar  { height: 4px; }
+.app-table-scroll::-webkit-scrollbar  { height: 4px; width: 4px; }
 .table-responsive::-webkit-scrollbar-thumb,
 .app-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+.table-responsive::-webkit-scrollbar-corner,
+.app-table-scroll::-webkit-scrollbar-corner { background: transparent; }
 
 /* Parent wrapper — must have these to force scrollbar to appear.
    CRITICAL: width + max-width cap the BFC so it never expands to match
@@ -521,6 +523,14 @@ body.has-app-shell .app-shell-nav-btns {
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+/* When the table card is used as a flex-1 fill container (Payroll page),
+   the inner scroll area must also stretch to fill. */
+.table-responsive-container.flex-1 > .app-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* Invisible-scrollbar utility (used on header button bar) */

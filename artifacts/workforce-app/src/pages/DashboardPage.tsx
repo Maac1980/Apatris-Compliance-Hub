@@ -17,6 +17,7 @@ import { WorkersTab } from "@/components/tabs/WorkersTab";
 import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
 import { TimesheetTab } from "@/components/tabs/TimesheetTab";
+import { DocsTab } from "@/components/tabs/DocsTab";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -131,9 +132,9 @@ export function DashboardPage() {
       case "queue":
         return <Tier4Home />;
 
-      // ── MY DOCS — T5 view, also accessible by T1 + T2 ────────────────────
+      // ── MY DOCS — focused document status view ────────────────────────────
       case "docs":
-        return <Tier5Home />;
+        return <DocsTab />;
 
       // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":

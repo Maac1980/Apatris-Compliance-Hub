@@ -56,8 +56,8 @@ export async function isBiometricAvailable(): Promise<boolean> {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function randomBytes(len: number): Uint8Array {
-  return crypto.getRandomValues(new Uint8Array(len));
+function randomBytes(len: number): Uint8Array<ArrayBuffer> {
+  return crypto.getRandomValues(new Uint8Array(new ArrayBuffer(len)));
 }
 
 function base64urlDecode(str: string): ArrayBuffer {
