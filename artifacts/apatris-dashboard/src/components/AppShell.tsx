@@ -43,8 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell-root">
       {/* ─── Top Navigation Bar ───────────────────────────────────────── */}
       <header className="app-top-bar">
-        {/* Brand — click to go home */}
-        <div className="app-top-brand cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLocation("/")}>
+        {/* Brand */}
+        <div className="app-top-brand">
           <div
             className="w-8 h-8 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
             style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 10px rgba(196,30,24,0.2)" }}
