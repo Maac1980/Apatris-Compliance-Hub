@@ -2,28 +2,10 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health.js";
 import workersRouter from "./workers.js";
 import aiRouter from "./ai.js";
-import authRouter from "./auth.js";
-import hoursRouter from "./hours.js";
-import payrollRouter from "./payroll.js";
-import documentsRouter from "./documents.js";
-import adminsRouter from "./admins.js";
-import historyRouter from "./history.js";
-import logsRouter from "./logs.js";
-import settingsRouter from "./settings.js";
-import siteCoordinatorsRouter from "./site-coordinators.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
-router.use(authRouter);
 router.use(workersRouter);
-router.use(hoursRouter);
-router.use(payrollRouter);
-router.use(documentsRouter);
-router.use(adminsRouter);
-router.use(historyRouter);
-router.use(logsRouter);
-router.use(settingsRouter);
-router.use(siteCoordinatorsRouter);
 router.use(aiRouter);
 
 export default router;
