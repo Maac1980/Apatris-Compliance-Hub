@@ -136,3 +136,62 @@
     "failedToLoad": "Nie udało się załadować raportu."
   }
 }
+  },
+  "payroll": {
+    "title": "Lista płac",
+    "month": "Miesiąc",
+    "employee": "Pracownik",
+    "hours": "Godziny",
+    "rate": "Stawka",
+    "brutto": "Brutto",
+    "netto": "Netto",
+    "zus": "ZUS",
+    "pit": "PIT",
+    "advance": "Zaliczka",
+    "penalty": "Kara",
+    "total": "Razem",
+    "closeMonth": "Zamknij miesiąc",
+    "exportBank": "Eksport bankowy",
+    "exportCsv": "Eksport CSV",
+    "exportPdf": "Eksport PDF",
+    "bulkHours": "Masowe godziny",
+    "site": "Firma",
+    "allSites": "Wszystkie firmy",
+    "calculator": "Kalkulator Brutto/Netto",
+    "employerZus": "ZUS pracodawcy",
+    "twoJobs": "Dwa miejsca pracy"
+  },
+  "history": {
+    "title": "Historia i Analityka",
+    "payroll": "Lista płac",
+    "analytics": "Analityka",
+    "activity": "Aktywność",
+    "messages": "Wiadomości",
+    "export": "Eksportuj",
+    "topEarners": "Najwyższe zarobki",
+    "trends": "Trendy",
+    "auditLog": "Dziennik audytu",
+    "notifications": "Powiadomienia"
+  },
+  "compliance": {
+    "title": "Alerty zgodności",
+    "critical": "Krytyczny",
+    "warning": "Ostrzeżenie",
+    "compliant": "Zgodny",
+    "scanNow": "Skanuj teraz",
+    "lastScan": "Ostatnie skanowanie",
+    "daysLeft": "Dni pozostało",
+    "expired": "Wygasło",
+    "sendAlert": "Wyślij alert"
+  },
+  "admin": {
+    "title": "Ustawienia administratora",
+    "users": "Użytkownicy",
+    "addUser": "Dodaj użytkownika",
+    "deleteUser": "Usuń użytkownika",
+    "password": "Hasło",
+    "changePassword": "Zmień hasło",
+    "systemStatus": "Status systemu",
+    "airtableSync": "Synchronizacja Airtable"
+  }
+}
