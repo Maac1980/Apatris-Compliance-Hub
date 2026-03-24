@@ -30,13 +30,5 @@
     "warning": 0,
     "critical": 0,
     "expired": 0
-  },
-  {
-    "date": "2026-03-24",
-    "total": 22,
-    "compliant": 22,
-    "warning": 0,
-    "critical": 0,
-    "expired": 0
   }
 ]
