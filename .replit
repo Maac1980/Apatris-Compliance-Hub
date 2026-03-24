@@ -1,7 +1,10 @@
-modules = ["nodejs-24", "postgresql-16", "python-3.11"]
+modules = ["nodejs-24", "python-3.11"]
 
 [[artifacts]]
 id = "artifacts/api-server"
+
+[[artifacts]]
+id = "artifacts/workforce-app"
 
 [[artifacts]]
 id = "artifacts/mockup-sandbox"
@@ -24,11 +27,3 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
-
-[userenv]
-
-[userenv.shared]
-JWT_SECRET = "1b6c81ad7b3bba2b0018673adbcc1a3343f32edfd6eb08752ba9594263e19ab473d0d0a96897e3bc63c052ab8a9213ea"
-
-[nix]
-channel = "stable-25_05"
