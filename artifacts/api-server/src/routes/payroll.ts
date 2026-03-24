@@ -11,6 +11,21 @@ import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
 import { queryOne, execute } from "../lib/db.js";
 
+
+// ─── Polish ZUS/PIT Net Calculation ──────────────────────────────────────────
+function calculatePolishNet(gross: number, pit2: boolean = false): number {
+  if (gross <= 0) return 0;
+  const zusEmployee = gross * 0.1371; // ZUS employee: 13.71%
+  const healthInsurance = gross * 0.09; // Health: 9%
+  const taxBase = Math.max(0, gross - zusEmployee);
+  const taxFreeAmount = pit2 ? 300 : 0; // PIT-2: 300 PLN/month
+  const pit = Math.max(0, taxBase * 0.12 - taxFreeAmount); // PIT 12%
+  return Math.round((gross - zusEmployee - healthInsurance - pit) * 100) / 100;
+}
+
+
+// ─── Polish ZUS/PIT Net Calculation ──────────────────────────────────────────
+
 const router = Router();
 
 // ─── GET /payroll/current ─────────────────────────────────────────────────────
@@ -30,7 +45,7 @@ router.get("/payroll/current", async (_req, res) => {
       advance: w.advance ?? 0,
       penalties: w.penalties ?? 0,
       grossPayout: ((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0)),
-      finalNetto: ((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0)) - (w.advance ?? 0) - (w.penalties ?? 0),
+      finalNetto: calculatePolishNet((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0), w.pit2 ?? false) - (w.advance ?? 0) - (w.penalties ?? 0),
       complianceStatus: w.complianceStatus,
     }));
     res.json({ workers });
@@ -89,7 +104,7 @@ router.post("/payroll/commit", async (req, res) => {
       const advancesDeducted = w.advance ?? 0;
       const penaltiesDeducted = w.penalties ?? 0;
       const grossPayout = hourlyRate * totalHours;
-      const finalNettoPayout = grossPayout - advancesDeducted - penaltiesDeducted;
+      const finalNettoPayout = calculatePolishNet(grossPayout, snap.pit2 ?? false) - advancesDeducted - penaltiesDeducted;
 
       if (totalHours > 0 || advancesDeducted > 0) {
         const snap = appendPayrollRecord({
