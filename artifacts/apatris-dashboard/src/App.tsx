@@ -71,7 +71,7 @@ function Router() {
         {() => <ProtectedRoute component={HistoryPage} />}
       </Route>
       <Route path="/calculator">
-        {() => <ProtectedRoute component={() => <div style={{padding:"24px",background:"#0f172a",minHeight:"100vh"}}><KnowledgeCenter /></div>} />}
+        {() => <ProtectedRoute component={() => <div style={{padding:"24px",background:"#0f172a",minHeight:"100vh",overflowY:"auto",paddingBottom:"80px"}}><KnowledgeCenter /></div>} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
