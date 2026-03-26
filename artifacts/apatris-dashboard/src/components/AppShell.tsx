@@ -10,6 +10,7 @@ const BOTTOM_NAV = [
   { path: "/payroll",            label: "Ledger",  icon: Calculator },
   { path: "/compliance-alerts",  label: "Alerts",  icon: AlertTriangle },
   { path: "/history",            label: "History", icon: History },
+  { path: "/calculator",          label: "Calculator", icon: Calculator },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

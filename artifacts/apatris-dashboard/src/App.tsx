@@ -15,6 +15,7 @@ import Apply from "@/pages/Apply";
 import AdminSettings from "@/pages/AdminSettings";
 import ComplianceAlerts from "@/pages/ComplianceAlerts";
 import PayrollPage from "@/pages/PayrollPage";
+import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import HistoryPage from "@/pages/HistoryPage";
 import WorkerUpload from "@/pages/WorkerUpload";
 import NotFound from "@/pages/not-found";
@@ -68,6 +69,9 @@ function Router() {
       </Route>
       <Route path="/history">
         {() => <ProtectedRoute component={HistoryPage} />}
+      </Route>
+      <Route path="/calculator">
+        {() => <ProtectedRoute component={() => <div style={{padding:"24px",background:"#0f172a",minHeight:"100vh"}}><KnowledgeCenter /></div>} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
