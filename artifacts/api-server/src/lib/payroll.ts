@@ -17,14 +17,14 @@ export function calculatePayroll(
   const sickness = includeSickness ? Math.round((gross * 0.0245) * 100) / 100 : 0;
   const employeeSocial = pension + disability + sickness;
   const healthBase = Math.round((gross - employeeSocial) * 100) / 100;
-  const health = Math.round((healthBase * 0.09) * 100) / 100;
+  const health = Math.round((gross * 0.079866) * 100) / 100;
   const kup = Math.round((healthBase * 0.20) * 100) / 100;
   const taxBase = Math.round(healthBase - kup);
   const basePit = Math.round(taxBase * 0.12);
   const allowance = applyPit2 ? 300 : 0;
   const pit = Math.max(0, basePit - allowance);
   const net = Math.round((gross - employeeSocial - health - pit) * 100) / 100;
-  const employerZus = Math.round((gross * 0.2048) * 100) / 100;
+  const employerZus = Math.round((gross * 0.1881) * 100) / 100;
   const totalEmployerCost = Math.round((gross + employerZus) * 100) / 100;
   return {
     input: inputAmount, isHours, gross, net, totalEmployerCost, employerZus,
