@@ -320,7 +320,7 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
           {field("Rentowe (Disability)", "rentoweEmployee", "Employee disability contribution")}
           {field("Chorobowe (Sickness)", "chorobowe", "Employee sickness insurance — 2.45% standard")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Health & Tax</p>
-          {field("Zdrowotne (Health)", "zdrowotne", "Applied on (Gross − ZUS)")}
+          {field("Zdrowotne (Health)", "zdrowotne", "Applied on Gross directly")}
           {field("KUP (Cost of Work)", "kup", "Cost of obtaining income — applied on Health Base (Gross − ZUS)")}
           {field("PIT (Income Tax)", "pit", "Flat tax rate before PIT-2 reduction")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">PIT-2 Declaration</p>
