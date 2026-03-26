@@ -172,7 +172,8 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const healthBase = gross - employeeZUS;
   const healthInsurance = gross * (rates.zdrowotne / 100);
   // KUP is 20% of Health Base (not gross) — per 2026 Umowa Zlecenie rules
-  const taxBase = Math.max(0, Math.round(healthBase * (1 - rates.kup / 100)));
+  const kup = Math.round(healthBase * (rates.kup / 100) * 100) / 100;
+  const taxBase = Math.max(0, Math.round(healthBase - kup));
   const grossTax = taxBase * (rates.pit / 100);
   // Income tax advance is rounded to nearest integer
   const estimatedTax = Math.max(0, Math.round(grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0)));
