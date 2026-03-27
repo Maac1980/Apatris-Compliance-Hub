@@ -58,6 +58,20 @@ function getTabsForRole(role: Role): Tab[] {
   }
 }
 
+const TAB_COLORS: Record<string, string> = {
+  home: "#3b82f6",
+  workers: "#22c55e",
+  payroll: "#f59e0b",
+  alerts: "#ef4444",
+  calculator: "#a855f7",
+  profile: "#64748b",
+  queue: "#06b6d4",
+  sites: "#f97316",
+  workspace: "#8b5cf6",
+  docs: "#10b981",
+  timesheet: "#6366f1",
+};
+
 const ACTIVE_COLORS: Record<Role, string> = {
   Executive:    "text-indigo-600",
   LegalHead:    "text-violet-600",
@@ -106,12 +120,12 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 active:scale-95",
-                isActive ? activeColor : "text-muted-foreground hover:text-foreground"
+                isActive ? "" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <div className="relative">
-                <Icon className={cn("w-6 h-6 transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
-                {isActive && (
+                <Icon className={cn("w-6 h-6 transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} style={{ color: isActive ? (TAB_COLORS[tab.id] || activeColor) : undefined }} />
+                {isActive && (<span style={{ background: TAB_COLORS[tab.id] || activeColor }} className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full" />)} {isActive && (
                   <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />
                 )}
                 {badge > 0 && !isActive && (

@@ -1,5 +1,4 @@
 import React from "react";
-import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import { Receipt, TrendingUp, Users, ChevronRight, CreditCard, BookOpen, Download, Calculator } from "lucide-react";
 import { motion } from "framer-motion";
 import { MOCK_WORKERS } from "@/data/mockWorkers";
@@ -26,7 +25,6 @@ function calcNetto(gross: number) {
 }
 
 export function PayrollModule() {
-  const [showCalc, setShowCalc] = React.useState(false);
   const rows = MOCK_WORKERS.map(w => ({
     worker: w,
     ...calcNetto(GROSS_RATES[w.id] ?? 8500),
@@ -111,7 +109,7 @@ export function PayrollModule() {
         <div className="grid grid-cols-2 gap-3">
           {[
             { icon: Download, label: "Export CSV", sub: "Full payroll ledger", bg: "bg-indigo-50", col: "text-indigo-600", border: "hover:border-indigo-200" },
-            { icon: Calculator, label: "ZUS Calculator", sub: "Manual entry", bg: "bg-blue-50", col: "text-blue-600", border: "hover:border-blue-200", action: () => setShowCalc(true) },
+
             { icon: BookOpen, label: "Umowy Zlecenie", sub: "5 contracts active", bg: "bg-emerald-50", col: "text-emerald-600", border: "hover:border-emerald-200" },
             { icon: CreditCard, label: "B2B Contracts", sub: "2 active", bg: "bg-teal-50", col: "text-teal-600", border: "hover:border-teal-200" },
           ].map(({ icon: Icon, label, sub, bg, col, border, action }: any) => (
@@ -128,17 +126,7 @@ export function PayrollModule() {
         </div>
       </div>
     </motion.div>
-    {showCalc && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, overflowY: "auto" }}>
-        <div style={{ background: "#0f172a", minHeight: "100vh", paddingBottom: "80px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px" }}>
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>ZUS Calculator</span>
-            <button onClick={() => setShowCalc(false)} style={{ color: "#fff", background: "none", border: "none", fontSize: 24, cursor: "pointer" }}>✕</button>
-          </div>
-          <KnowledgeCenter />
-        </div>
-      </div>
-    )}
+
     </>
   );
 }
