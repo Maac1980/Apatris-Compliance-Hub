@@ -236,8 +236,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                 className={cn(
                   "rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 group",
                   (mod as any).full ? "col-span-2" : ""
-                  style={{ background: "#1e293b", border: "1px solid #334155" }}
                 )}
+                style={{ background: "#1e293b", border: "1px solid #334155" }}
               >
                 <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", mod.iconBg)}>
                   <Icon className={cn("w-5 h-5", mod.iconColor)} strokeWidth={2} />
