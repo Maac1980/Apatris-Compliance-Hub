@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -21,9 +21,10 @@ function getTabsForRole(role: Role): Tab[] {
       return [
         { id: "home",    label: "Home",      icon: Home },
         { id: "workers", label: "Directory", icon: Users },
-        { id: "payroll", label: "Payroll",   icon: DollarSign },
-        { id: "alerts",  label: "Alerts",    icon: Bell },
-        { id: "profile", label: "Profile",   icon: User },
+        { id: "payroll",     label: "Payroll",    icon: DollarSign },
+        { id: "alerts",      label: "Alerts",     icon: Bell },
+        { id: "calculator",  label: "Calculator", icon: Calculator },
+        { id: "profile",     label: "Profile",    icon: User },
       ];
     case "LegalHead":
       return [

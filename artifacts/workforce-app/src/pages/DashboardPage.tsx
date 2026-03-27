@@ -1,3 +1,4 @@
+import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useRef, useState } from "react";
