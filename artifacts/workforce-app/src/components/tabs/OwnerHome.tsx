@@ -145,7 +145,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="px-4 py-5 space-y-6 pb-28 relative"
+      className="px-4 py-5 space-y-6 pb-28 relative" style={{ background: "#0f172a", minHeight: "100vh" }} style={{ background: "#0f172a", minHeight: "100vh" }}
     >
       {/* KPI strip — live */}
       <div className="space-y-3">
@@ -156,42 +156,42 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-            <div className="text-xl font-black text-foreground">{loading ? "…" : workers.length}</div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "#1e293b", border: "1px solid #334155" }}>
+            <div className="text-xl font-black" style={{ color: "#f8fafc" }}>{loading ? "…" : workers.length}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Deployed<br/>Professionals</div>
           </div>
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
+          <div className="rounded-xl p-3 text-center" style={{ background: "#1e293b", border: "1px solid #334155" }}>
             <div className="text-xl font-black text-emerald-600">{loading ? "…" : `${complianceRate}%`}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Compliance<br/>Rate</div>
           </div>
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
+          <div className="rounded-xl p-3 text-center" style={{ background: "#1e293b", border: "1px solid #334155" }}>
             <div className="text-xl font-black text-red-600">{loading ? "…" : missingDocs}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Docs<br/>Missing</div>
           </div>
         </div>
 
         <div className="flex gap-2">
-          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+          <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#1e293b", border: "1px solid #334155" }}>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : compliant} fully<br/>compliant
             </div>
           </div>
-          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+          <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#1e293b", border: "1px solid #334155" }}>
             <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
               <FileWarning className="w-3.5 h-3.5 text-amber-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : expiring} expiring<br/>soon
             </div>
           </div>
-          <div className="flex-1 bg-white rounded-xl border p-3 flex items-center gap-2">
+          <div className="flex-1 rounded-xl p-3 flex items-center gap-2" style={{ background: "#1e293b", border: "1px solid #334155" }}>
             <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
               <ShieldX className="w-3.5 h-3.5 text-red-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : nonCompliant} non-<br/>compliant
             </div>
           </div>
@@ -199,7 +199,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       </div>
 
       {/* Compliance bar — live */}
-      <div className="bg-white rounded-2xl border shadow-sm p-4">
+      <div className="rounded-2xl p-4" style={{ background: "#1e293b", border: "1px solid #334155" }}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -234,16 +234,16 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                 key={mod.label}
                 onClick={mod.onClick}
                 className={cn(
-                  "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group",
-                  mod.accent,
+                  "rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 group",
                   (mod as any).full ? "col-span-2" : ""
+                  style={{ background: "#1e293b", border: "1px solid #334155" }}
                 )}
               >
                 <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", mod.iconBg)}>
                   <Icon className={cn("w-5 h-5", mod.iconColor)} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
+                  <div className="font-bold text-sm text-white leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{mod.sublabel}</div>
                   {(mod as any).badge && (
                     <span className={cn("inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full mt-1 tracking-wide", (mod as any).badgeColor)}>
@@ -272,7 +272,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                 key={mod.label}
                 onClick={mod.onClick}
                 className={cn(
-                  "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group",
+                  "rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 group" style={{ background: "#1e293b", border: "1px solid #334155" }},
                   mod.accent
                 )}
               >
@@ -280,7 +280,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                   <Icon className={cn("w-5 h-5", mod.iconColor)} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
+                  <div className="font-bold text-sm text-white leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{mod.sublabel}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors shrink-0" />
