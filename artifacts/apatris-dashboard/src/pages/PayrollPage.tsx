@@ -132,7 +132,7 @@ const DEFAULT_RATES_2026: ZUSRates = {
   emerytalneEmployee: 9.76,
   rentoweEmployee: 1.5,
   chorobowe: 0,   // voluntary for umowa zlecenie — not included per 2026 standard
-  zdrowotne: 9.0,
+  zdrowotne: 7.9866,
   kup: 20.0,
   pit: 12.0,
   pit2Reduction: 300,
@@ -170,9 +170,10 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 0)) / 100;
   const employeeZUS = gross * zusRate;
   const healthBase = gross - employeeZUS;
-  const healthInsurance = healthBase * (rates.zdrowotne / 100);
+  const healthInsurance = gross * (rates.zdrowotne / 100);
   // KUP is 20% of Health Base (not gross) — per 2026 Umowa Zlecenie rules
-  const taxBase = Math.max(0, Math.round(healthBase * (1 - rates.kup / 100)));
+  const kup = Math.round(healthBase * (rates.kup / 100) * 100) / 100;
+  const taxBase = Math.max(0, Math.round(healthBase - kup));
   const grossTax = taxBase * (rates.pit / 100);
   // Income tax advance is rounded to nearest integer
   const estimatedTax = Math.max(0, Math.round(grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0)));
@@ -203,7 +204,7 @@ function calcSplit(
   // ZUS saved = what WOULD have been deducted if these hours were at Apatris
   const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
   const wouldBeZUS = otherGross * zusRate;
-  const wouldBeHealth = (otherGross - wouldBeZUS) * (rates.zdrowotne / 100);
+  const wouldBeHealth = otherGross * (rates.zdrowotne / 100);
   const zusSaved = wouldBeZUS + wouldBeHealth;
   const totalNet = mainTakeHome + otherNet;
   return { otherGross, otherPIT, otherNet, zusSaved, totalNet };
@@ -320,7 +321,7 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
           {field("Rentowe (Disability)", "rentoweEmployee", "Employee disability contribution")}
           {field("Chorobowe (Sickness)", "chorobowe", "Employee sickness insurance — 2.45% standard")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Health & Tax</p>
-          {field("Zdrowotne (Health)", "zdrowotne", "Applied on (Gross − ZUS)")}
+          {field("Zdrowotne (Health)", "zdrowotne", "Applied on Gross directly")}
           {field("KUP (Cost of Work)", "kup", "Cost of obtaining income — applied on Health Base (Gross − ZUS)")}
           {field("PIT (Income Tax)", "pit", "Flat tax rate before PIT-2 reduction")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">PIT-2 Declaration</p>
@@ -816,7 +817,7 @@ export default function PayrollPage() {
             const sickness = 0;                                       // Step 4 — unchecked
             const workerZUS = pension + disab + sickness;            // Step 5
             const healthBase = gross - workerZUS;                    // Step 6
-            const healthTax  = healthBase * 0.09;                    // Step 7
+            const healthTax  = gross * 0.079866;                    // Step 7 - health on GROSS
             const kup        = healthBase * 0.20;                    // Step 8
             const taxBase    = Math.round(healthBase - kup);         // Step 9
             const grossTax   = taxBase * 0.12;                       // Step 10

@@ -1,3 +1,4 @@
+import React from "react";
 import { Receipt, TrendingUp, Users, ChevronRight, CreditCard, BookOpen, Download, Calculator } from "lucide-react";
 import { motion } from "framer-motion";
 import { MOCK_WORKERS } from "@/data/mockWorkers";
@@ -11,12 +12,15 @@ const GROSS_RATES: Record<string, number> = {
 };
 
 function calcNetto(gross: number) {
-  const zus = Math.round(gross * 0.1126);
+  const pension = Math.round(gross * 0.0976 * 100) / 100;
+  const disability = Math.round(gross * 0.015 * 100) / 100;
+  const zus = pension + disability;
+  const health = Math.round(gross * 0.079866 * 100) / 100;
   const healthBase = gross - zus;
-  const healthTax = Math.round(healthBase * 0.09);
-  const taxBase = Math.round(healthBase * 0.8);
-  const pit = Math.max(0, Math.round(taxBase * 0.12 - 300));
-  const netto = gross - zus - healthTax - pit;
+  const kup = Math.round(healthBase * 0.20 * 100) / 100;
+  const taxBase = Math.round(healthBase - kup);
+  const pit = Math.max(0, Math.round(taxBase * 0.12) - 300);
+  const netto = Math.round((gross - zus - health - pit) * 100) / 100;
   return { gross, zus, pit, netto };
 }
 
@@ -31,6 +35,7 @@ export function PayrollModule() {
   const totalZus = rows.reduce((s, r) => s + r.zus, 0);
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -121,5 +126,7 @@ export function PayrollModule() {
         </div>
       </div>
     </motion.div>
+
+    </>
   );
 }

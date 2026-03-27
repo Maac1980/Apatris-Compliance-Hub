@@ -3,9 +3,69 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useGetComplianceReport } from "@workspace/api-client-react";
 import { Download, FileWarning, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+function exportPDF(report: any) {
+  const doc = new jsPDF({ orientation: "landscape" });
+  const red: [number, number, number] = [196, 30, 24];
+  const dark: [number, number, number] = [15, 23, 42];
+  const slate: [number, number, number] = [30, 41, 59];
+
+  doc.setFillColor(...dark);
+  doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, "F");
+
+  doc.setFillColor(...red);
+  doc.rect(0, 0, doc.internal.pageSize.width, 22, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("APATRIS — COMPLIANCE MASTER REPORT", 14, 14);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generated: ${format(new Date(), "MMM d, yyyy HH:mm")}`, doc.internal.pageSize.width - 14, 14, { align: "right" });
+
+  doc.setTextColor(148, 163, 184);
+  doc.setFontSize(9);
+  doc.text(`Total Workers: ${report.totalWorkers}   Critical: ${report.critical.length}   Warnings: ${report.warning?.length ?? 0}`, 14, 30);
+
+  const allDocs = [
+    ...(report.critical || []).map((d: any) => ({ ...d, _status: "CRITICAL" })),
+    ...(report.warning || []).map((d: any) => ({ ...d, _status: "WARNING" })),
+  ];
+
+  autoTable(doc, {
+    startY: 36,
+    head: [["Worker", "Document Type", "Expiry Date", "Days Left", "Status"]],
+    body: allDocs.map((d) => [
+      d.workerName,
+      d.documentType,
+      d.expiryDate ? format(parseISO(d.expiryDate), "MMM d, yyyy") : "—",
+      d.daysUntilExpiry ?? "—",
+      d._status,
+    ]),
+    styles: { fillColor: slate, textColor: [241, 245, 249], fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: red, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
+    alternateRowStyles: { fillColor: dark },
+    didParseCell: (data) => {
+      if (data.column.index === 4) {
+        if (data.cell.raw === "CRITICAL") data.cell.styles.textColor = [239, 68, 68];
+        else if (data.cell.raw === "WARNING") data.cell.styles.textColor = [234, 179, 8];
+      }
+    },
+  });
+
+  const filename = `apatris-compliance-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+  const blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.target = "_blank"; a.rel = "noopener noreferrer";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
 
 export function ComplianceReportModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { data: report, isLoading } = useGetComplianceReport({ query: { enabled: isOpen } });
+  const { data: report, isLoading } = useGetComplianceReport({ query: { enabled: isOpen } as any });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -21,9 +81,13 @@ export function ComplianceReportModal({ isOpen, onClose }: { isOpen: boolean, on
                 Generated: {report?.generatedAt ? format(parseISO(report.generatedAt), "MMM d, yyyy HH:mm") : "..."}
               </DialogDescription>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm font-display uppercase tracking-wider transition-colors">
+            <button
+              onClick={() => report && exportPDF(report)}
+              disabled={!report}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-white border border-primary/50 rounded-lg text-sm font-display uppercase tracking-wider transition-colors"
+            >
               <Download className="w-4 h-4" />
-              Export CSV
+              Export PDF
             </button>
           </div>
         </DialogHeader>
@@ -69,7 +133,7 @@ export function ComplianceReportModal({ isOpen, onClose }: { isOpen: boolean, on
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-mono">
-                      {report.critical.map((doc, i) => (
+                      {report.critical.map((doc: any, i: number) => (
                         <tr key={i} className="hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3 font-sans text-white">{doc.workerName}</td>
                           <td className="px-4 py-3 text-muted-foreground">{doc.documentType}</td>

@@ -3,7 +3,7 @@
     "title": "Apatris",
     "subtitle": "Zgodność",
     "terminal": "BEZPIECZNY TERMINAL ZGODNOŚCI",
-    "operatorId": "ID Operatora",
+    "operatorId": "ID Pracownika",
     "passcode": "Hasło dostępu",
     "submit": "Inicjuj sesję",
     "defaultCredentials": "Domyślne dane logowania",
@@ -14,7 +14,10 @@
     "title": "Apatris",
     "subtitle": "Zgodność",
     "generateReport": "Generuj Raport",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "compliance": "Alerty",
+    "admin": "Admin",
+    "aiUpload": "Szybki Upload AI"
   },
   "stats": {
     "totalWorkforce": "Całkowita liczba pracowników",
@@ -23,7 +26,7 @@
     "nonCompliant": "Niezgodny"
   },
   "table": {
-    "searchPlaceholder": "Szukaj według nazwy operatora...",
+    "searchPlaceholder": "Szukaj według nazwy pracownika...",
     "allSpecs": "Wszystkie specjalizacje",
     "tigWelders": "Spawacze TIG",
     "migWelders": "Spawacze MIG",
@@ -33,18 +36,31 @@
     "warning": "Ostrzeżenie",
     "critical": "Krytyczny",
     "nonCompliant": "Niezgodny",
-    "operator": "Operator",
-    "spec": "Spec.",
+    "operator": "Pracownik",
+    "spec": "Zawód",
+    "assignedSite": "Firma",
     "trcExpiry": "Ważność TRC",
+    "passportExp": "Wygaśnięcie paszportu",
+    "hs": "BHP",
+    "docs": "Dokumenty",
+    "allClientsProjects": "Wszyscy klienci / Projekty",
     "workPermit": "Zezwolenie",
     "bhp": "BHP",
     "status": "Status",
     "actions": "Akcje",
-    "noResults": "Nie znaleziono operatorów spełniających kryteria.",
+    "viewEdit": "Podgląd / Edycja",
+    "noResults": "Nie znaleziono pracowników spełniających kryteria.",
     "notifyWorker": "Powiadom pracownika",
     "renewDocument": "Odnów dokument",
     "uploadDocuments": "Prześlij dokumenty",
     "viewProfile": "Zobacz profil"
+  },
+  "comm": {
+    "call": "Zadzwoń",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "urgentAlert": "PILNY",
+    "urgentTitle": "Dokument wygasa — wyślij alert WhatsApp"
   },
   "status": {
     "critical": "KRYTYCZNY",
@@ -66,7 +82,14 @@
     "notify": "Powiadom",
     "renewDoc": "Odnów dok.",
     "passport": "Paszport",
-    "contract": "Umowa"
+    "contract": "Umowa",
+    "contact": "Kontakt",
+    "payroll": "Wynagrodzenie",
+    "hourlyRate": "Stawka netto za godzinę (PLN)",
+    "monthlyHours": "Łączna liczba godzin miesięcznie",
+    "estPayout": "Szacunkowa wypłata miesięczna",
+    "monthlyHoursLabel": "Godziny miesięcznie",
+    "estPayoutLabel": "Szac. wypłata miesięczna"
   },
   "notify": {
     "title": "Powiadom pracownika",
@@ -111,5 +134,62 @@
     "expiryDate": "Data ważności",
     "daysLeft": "Dni pozostało",
     "failedToLoad": "Nie udało się załadować raportu."
+  },
+  "payroll": {
+    "title": "Lista płac",
+    "month": "Miesiąc",
+    "employee": "Pracownik",
+    "hours": "Godziny",
+    "rate": "Stawka",
+    "brutto": "Brutto",
+    "netto": "Netto",
+    "zus": "ZUS",
+    "pit": "PIT",
+    "advance": "Zaliczka",
+    "penalty": "Kara",
+    "total": "Razem",
+    "closeMonth": "Zamknij miesiąc",
+    "exportBank": "Eksport bankowy",
+    "exportCsv": "Eksport CSV",
+    "exportPdf": "Eksport PDF",
+    "bulkHours": "Masowe godziny",
+    "site": "Firma",
+    "allSites": "Wszystkie firmy",
+    "calculator": "Kalkulator Brutto/Netto",
+    "employerZus": "ZUS pracodawcy",
+    "twoJobs": "Dwa miejsca pracy"
+  },
+  "history": {
+    "title": "Historia i Analityka",
+    "payroll": "Lista płac",
+    "analytics": "Analityka",
+    "activity": "Aktywność",
+    "messages": "Wiadomości",
+    "export": "Eksportuj",
+    "topEarners": "Najwyższe zarobki",
+    "trends": "Trendy",
+    "auditLog": "Dziennik audytu",
+    "notifications": "Powiadomienia"
+  },
+  "compliance": {
+    "title": "Alerty zgodności",
+    "critical": "Krytyczny",
+    "warning": "Ostrzeżenie",
+    "compliant": "Zgodny",
+    "scanNow": "Skanuj teraz",
+    "lastScan": "Ostatnie skanowanie",
+    "daysLeft": "Dni pozostało",
+    "expired": "Wygasło",
+    "sendAlert": "Wyślij alert"
+  },
+  "admin": {
+    "title": "Ustawienia administratora",
+    "users": "Użytkownicy",
+    "addUser": "Dodaj użytkownika",
+    "deleteUser": "Usuń użytkownika",
+    "password": "Hasło",
+    "changePassword": "Zmień hasło",
+    "systemStatus": "Status systemu",
+    "airtableSync": "Synchronizacja Airtable"
   }
 }

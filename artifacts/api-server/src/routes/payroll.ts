@@ -10,6 +10,11 @@ import {
 import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
 import { queryOne, execute } from "../lib/db.js";
+import { calculateNet } from "../lib/payroll.js";
+
+
+
+// ─── Polish ZUS/PIT Net Calculation ──────────────────────────────────────────
 
 const router = Router();
 
@@ -30,7 +35,7 @@ router.get("/payroll/current", async (_req, res) => {
       advance: w.advance ?? 0,
       penalties: w.penalties ?? 0,
       grossPayout: ((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0)),
-      finalNetto: ((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0)) - (w.advance ?? 0) - (w.penalties ?? 0),
+      finalNetto: calculateNet((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0)).net - (w.advance ?? 0) - (w.penalties ?? 0),
       complianceStatus: w.complianceStatus,
     }));
     res.json({ workers });
@@ -89,7 +94,7 @@ router.post("/payroll/commit", async (req, res) => {
       const advancesDeducted = w.advance ?? 0;
       const penaltiesDeducted = w.penalties ?? 0;
       const grossPayout = hourlyRate * totalHours;
-      const finalNettoPayout = grossPayout - advancesDeducted - penaltiesDeducted;
+      const finalNettoPayout = calculateNet(grossPayout).net - advancesDeducted - penaltiesDeducted;
 
       if (totalHours > 0 || advancesDeducted > 0) {
         const snap = appendPayrollRecord({

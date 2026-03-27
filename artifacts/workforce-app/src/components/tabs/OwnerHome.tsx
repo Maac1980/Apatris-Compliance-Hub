@@ -145,7 +145,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="px-4 py-5 space-y-6 pb-28 relative"
+      className="px-4 py-5 space-y-6 pb-28 relative" style={{ background: "#0f172a", minHeight: "100vh" }} style={{ background: "#0f172a", minHeight: "100vh" }}
     >
       {/* KPI strip — live */}
       <div className="space-y-3">
@@ -175,7 +175,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : compliant} fully<br/>compliant
             </div>
           </div>
@@ -183,7 +183,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
             <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
               <FileWarning className="w-3.5 h-3.5 text-amber-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : expiring} expiring<br/>soon
             </div>
           </div>
@@ -191,7 +191,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
             <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
               <ShieldX className="w-3.5 h-3.5 text-red-600" />
             </div>
-            <div className="text-xs font-medium text-foreground leading-tight">
+            <div className="text-xs font-medium text-slate-300 leading-tight">
               {loading ? "…" : nonCompliant} non-<br/>compliant
             </div>
           </div>
@@ -238,12 +238,13 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                   mod.accent,
                   (mod as any).full ? "col-span-2" : ""
                 )}
+                style={{ background: "#1e293b", border: "1px solid #334155" }}
               >
                 <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", mod.iconBg)}>
                   <Icon className={cn("w-5 h-5", mod.iconColor)} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
+                  <div className="font-bold text-sm text-white leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{mod.sublabel}</div>
                   {(mod as any).badge && (
                     <span className={cn("inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full mt-1 tracking-wide", (mod as any).badgeColor)}>
@@ -275,12 +276,13 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
                   "premium-card rounded-2xl p-4 hover:scale-[1.01] flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-200 hover:shadow-md group",
                   mod.accent
                 )}
+                style={{ background: "#1e293b", border: "1px solid #334155" }}
               >
                 <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", mod.iconBg)}>
                   <Icon className={cn("w-5 h-5", mod.iconColor)} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
+                  <div className="font-bold text-sm text-white leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{mod.sublabel}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/30 transition-colors shrink-0" />
