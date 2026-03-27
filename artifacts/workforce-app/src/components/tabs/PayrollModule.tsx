@@ -111,7 +111,7 @@ export function PayrollModule() {
             { icon: BookOpen, label: "Umowy Zlecenie", sub: "5 contracts active", bg: "bg-emerald-50", col: "text-emerald-600", border: "hover:border-emerald-200" },
             { icon: CreditCard, label: "B2B Contracts", sub: "2 active", bg: "bg-teal-50", col: "text-teal-600", border: "hover:border-teal-200" },
           ].map(({ icon: Icon, label, sub, bg, col, border }) => (
-            <button key={label} onClick={(action as any)?.()} className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-2 active:scale-95 transition-all ${border} hover:shadow-md`}>
+            <button key={label} onClick={() => (action as any)?.() } className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-2 active:scale-95 transition-all ${border} hover:shadow-md`}>
               <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
                 <Icon className={`w-5 h-5 ${col}`} />
               </div>
