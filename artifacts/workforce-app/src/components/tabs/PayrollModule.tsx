@@ -1,3 +1,4 @@
+import React from "react";
 import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import { Receipt, TrendingUp, Users, ChevronRight, CreditCard, BookOpen, Download, Calculator } from "lucide-react";
 import { motion } from "framer-motion";
@@ -12,12 +13,15 @@ const GROSS_RATES: Record<string, number> = {
 };
 
 function calcNetto(gross: number) {
-  const zus = Math.round(gross * 0.1126);
+  const pension = Math.round(gross * 0.0976 * 100) / 100;
+  const disability = Math.round(gross * 0.015 * 100) / 100;
+  const zus = pension + disability;
+  const health = Math.round(gross * 0.079866 * 100) / 100;
   const healthBase = gross - zus;
-  const healthTax = Math.round(healthBase * 0.09);
-  const taxBase = Math.round(healthBase * 0.8);
-  const pit = Math.max(0, Math.round(taxBase * 0.12 - 300));
-  const netto = gross - zus - healthTax - pit;
+  const kup = Math.round(healthBase * 0.20 * 100) / 100;
+  const taxBase = Math.round(healthBase - kup);
+  const pit = Math.max(0, Math.round(taxBase * 0.12) - 300);
+  const netto = Math.round((gross - zus - health - pit) * 100) / 100;
   return { gross, zus, pit, netto };
 }
 
@@ -110,7 +114,7 @@ export function PayrollModule() {
             { icon: Calculator, label: "ZUS Calculator", sub: "Manual entry", bg: "bg-blue-50", col: "text-blue-600", border: "hover:border-blue-200", action: () => setShowCalc(true) },
             { icon: BookOpen, label: "Umowy Zlecenie", sub: "5 contracts active", bg: "bg-emerald-50", col: "text-emerald-600", border: "hover:border-emerald-200" },
             { icon: CreditCard, label: "B2B Contracts", sub: "2 active", bg: "bg-teal-50", col: "text-teal-600", border: "hover:border-teal-200" },
-          ].map(({ icon: Icon, label, sub, bg, col, border }) => (
+          ].map(({ icon: Icon, label, sub, bg, col, border, action }: any) => (
             <button key={label} onClick={() => (action as any)?.() } className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-2 active:scale-95 transition-all ${border} hover:shadow-md`}>
               <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
                 <Icon className={`w-5 h-5 ${col}`} />
