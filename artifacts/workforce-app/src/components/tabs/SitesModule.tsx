@@ -18,9 +18,9 @@ const SITES: Site[] = [
 ];
 
 const statusStyle: Record<string, { pill: string; border: string; dot: string }> = {
-  "Fully Compliant": { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", border: "border-l-emerald-400", dot: "bg-emerald-400" },
-  "Issues Present":  { pill: "bg-amber-50 text-amber-700 border-amber-200",   border: "border-l-amber-400",  dot: "bg-amber-400" },
-  "Critical":        { pill: "bg-red-50 text-red-700 border-red-200",          border: "border-l-red-500",    dot: "bg-red-500" },
+  "Fully Compliant": { pill: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25", border: "border-l-emerald-400", dot: "bg-emerald-400" },
+  "Issues Present":  { pill: "bg-amber-500/10 text-amber-400 border-amber-500/25",   border: "border-l-amber-400",  dot: "bg-amber-400" },
+  "Critical":        { pill: "bg-red-500/10 text-red-400 border-red-500/25",          border: "border-l-red-500",    dot: "bg-red-500" },
 };
 
 export function SitesModule() {
@@ -36,34 +36,34 @@ export function SitesModule() {
     >
       <div className="flex items-center gap-2 ml-1">
         <MapPin className="w-4 h-4 text-blue-600" />
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Active Deployments</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Active Deployments</h2>
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-foreground">{SITES.length}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-xl font-heading font-black text-foreground">{SITES.length}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Active<br/>Sites</div>
         </div>
-        <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-blue-600">{total}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-xl font-heading font-black text-blue-600">{total}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Deployed<br/>Pros</div>
         </div>
-        <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-emerald-600">{compliantAll}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-xl font-heading font-black text-emerald-600">{compliantAll}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Fully<br/>Compliant</div>
         </div>
       </div>
 
       {/* Site cards */}
       <div className="space-y-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Sites Overview</h3>
+        <h3 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Sites Overview</h3>
         {SITES.map(site => {
           const style = statusStyle[site.status];
           return (
-            <div key={site.id} className={cn("bg-white rounded-2xl border border-l-4 shadow-sm p-4 cursor-pointer active:scale-[0.98] transition-transform", style.border)}>
+            <div key={site.id} className={cn("premium-card rounded-2xl border-l-4 p-4 cursor-pointer active:scale-[0.98] transition-transform", style.border)}>
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                   <Building2 className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -90,7 +90,7 @@ export function SitesModule() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 self-center" />
+                <ChevronRight className="w-4 h-4 text-white/20 shrink-0 self-center" />
               </div>
             </div>
           );
@@ -98,8 +98,8 @@ export function SitesModule() {
       </div>
 
       {/* Map placeholder */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 h-36 flex items-center justify-center">
+      <div className="premium-card rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 h-36 flex items-center justify-center">
           <div className="text-center">
             <MapPin className="w-8 h-8 text-blue-400 mx-auto mb-2" />
             <p className="text-sm font-bold text-blue-600">Interactive Map</p>

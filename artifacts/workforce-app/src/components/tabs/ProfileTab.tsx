@@ -7,19 +7,19 @@ import { TIER_CONFIGS, Role } from "@/types";
 import { cn } from "@/lib/utils";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
-  Executive:    "bg-indigo-100 text-indigo-700 border-indigo-200",
-  LegalHead:    "bg-violet-100 text-violet-700 border-violet-200",
-  TechOps:      "bg-blue-100 text-blue-700 border-blue-200",
-  Coordinator:  "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Professional: "bg-amber-100 text-amber-700 border-amber-200",
+  Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
+  LegalHead:    "bg-violet-500/15 text-violet-400 border-violet-500/25",
+  TechOps:      "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  Coordinator:  "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  Professional: "bg-amber-500/15 text-amber-400 border-amber-500/25",
 };
 
 const AVATAR_COLORS: Record<Role, string> = {
-  Executive:    "bg-indigo-100 text-indigo-600 border-indigo-200",
-  LegalHead:    "bg-violet-100 text-violet-600 border-violet-200",
-  TechOps:      "bg-blue-100 text-blue-600 border-blue-200",
-  Coordinator:  "bg-emerald-100 text-emerald-600 border-emerald-200",
-  Professional: "bg-amber-100 text-amber-600 border-amber-200",
+  Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
+  LegalHead:    "bg-violet-500/15 text-violet-400 border-violet-500/25",
+  TechOps:      "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  Coordinator:  "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  Professional: "bg-amber-500/15 text-amber-400 border-amber-500/25",
 };
 
 function PinField({
@@ -45,7 +45,7 @@ function PinField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? "••••••••"}
-          className="w-full h-10 bg-gray-50 border border-border rounded-xl px-3.5 pr-10 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
+          className="w-full h-10 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 pr-10 text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
         />
         <button
           type="button"
@@ -128,7 +128,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       className="px-4 py-5 space-y-4 pb-24"
     >
       {/* ── Identity card ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border shadow-sm p-5 flex items-center gap-4">
+      <div className="premium-card rounded-2xl p-5 flex items-center gap-4">
         <div className={cn(
           "w-14 h-14 rounded-full border-2 flex items-center justify-center shrink-0 font-black text-lg",
           avatarColor
@@ -136,7 +136,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-base font-bold text-foreground leading-tight">{displayName}</div>
+          <div className="text-base font-bold text-foreground font-heading leading-tight">{displayName}</div>
           <div className={cn(
             "inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border mt-1.5 whitespace-nowrap",
             badgeColor
@@ -148,9 +148,9 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       </div>
 
       {/* ── Access rights ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
+      <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
         <div className="px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Access Rights</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-heading">Access Rights</p>
         </div>
         {ACCESS_ROWS.map(({ label, granted }) => (
           <div key={label} className="p-4 flex items-center justify-between">
@@ -164,8 +164,8 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
             <span className={cn(
               "text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
               granted
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-red-50 text-red-700 border-red-200"
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                : "bg-red-500/10 text-red-400 border-red-500/25"
             )}>
               {granted ? "Granted" : "Restricted"}
             </span>
@@ -174,10 +174,10 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       </div>
 
       {/* ── Change PIN ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div className="premium-card rounded-2xl overflow-hidden">
         <button
           onClick={() => { setPinOpen((v) => !v); resetForm(); }}
-          className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-4 hover:bg-white/[0.04] transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <KeyRound className="w-4 h-4 text-muted-foreground" />
@@ -186,8 +186,8 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
           <span className={cn(
             "text-[10px] font-bold px-2.5 py-1 rounded-full border transition-colors",
             pinOpen
-              ? "bg-gray-100 text-gray-600 border-gray-200"
-              : "bg-blue-50 text-blue-700 border-blue-200"
+              ? "bg-white/[0.06] text-white/50 border-white/[0.08]"
+              : "bg-blue-500/10 text-blue-400 border-blue-500/25"
           )}>
             {pinOpen ? "Cancel" : "Update"}
           </span>
@@ -202,7 +202,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
               transition={{ duration: 0.22 }}
               className="overflow-hidden"
             >
-              <form onSubmit={handlePinSubmit} className="px-4 pb-5 space-y-3 border-t border-gray-50 pt-4">
+              <form onSubmit={handlePinSubmit} className="px-4 pb-5 space-y-3 border-t border-white/[0.05] pt-4">
 
                 <AnimatePresence mode="wait">
                   {pinSuccess ? (
@@ -213,7 +213,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
                       className="flex flex-col items-center py-4 gap-2"
                     >
                       <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                      <p className="text-sm font-bold text-emerald-700">PIN updated successfully!</p>
+                      <p className="text-sm font-bold text-emerald-400">PIN updated successfully!</p>
                       <p className="text-xs text-muted-foreground">Use your new PIN next time you log in.</p>
                     </motion.div>
                   ) : (
@@ -256,13 +256,13 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
                         className={cn(
                           "w-full h-10 rounded-xl text-sm font-bold transition-all",
                           pinLoading || !currentPin || !newPin || !confirmPin
-                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : "bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]"
+                            ? "bg-white/[0.06] text-white/30 cursor-not-allowed"
+                            : "bg-white text-[#0c0c0e] hover:bg-white/90 active:scale-[0.98]"
                         )}
                       >
                         {pinLoading ? (
                           <span className="flex items-center justify-center gap-2">
-                            <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
                             Updating...
                           </span>
                         ) : "Update PIN"}
@@ -279,7 +279,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       {/* ── Log out ──────────────────────────────────────────────────────── */}
       <button
         onClick={onLogout}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100 transition-colors active:scale-[0.98]"
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-500/25 bg-red-500/10 text-red-400 text-sm font-bold hover:bg-red-500/15 transition-colors active:scale-[0.98]"
       >
         <LogOut className="w-4 h-4" />
         Log Out

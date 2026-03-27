@@ -17,11 +17,11 @@ function daysLeft(d: string | null | undefined): number | null {
 }
 
 function urgencyPill(days: number | null): { label: string; cls: string } {
-  if (days === null) return { label: "Missing", cls: "bg-gray-100 text-gray-600 border-gray-200" };
-  if (days < 0)      return { label: `${Math.abs(days)}d overdue`, cls: "bg-red-50 text-red-700 border-red-200" };
-  if (days < 30)     return { label: `${days}d left`, cls: "bg-red-50 text-red-700 border-red-200" };
-  if (days < 90)     return { label: `${days}d left`, cls: "bg-amber-50 text-amber-700 border-amber-200" };
-  return { label: `${days}d`, cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  if (days === null) return { label: "Missing", cls: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+  if (days < 0)      return { label: `${Math.abs(days)}d overdue`, cls: "bg-red-500/10 text-red-400 border-red-500/25" };
+  if (days < 30)     return { label: `${days}d left`, cls: "bg-red-500/10 text-red-400 border-red-500/25" };
+  if (days < 90)     return { label: `${days}d left`, cls: "bg-amber-500/10 text-amber-400 border-amber-500/25" };
+  return { label: `${days}d`, cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" };
 }
 
 function urgencySort(days: number | null) {
@@ -85,21 +85,21 @@ export function UDTSheet({ isOpen, onClose, workers, loading }: Props) {
             key="sheet"
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="absolute inset-x-0 bottom-0 z-50 bg-gray-50 rounded-t-3xl shadow-2xl flex flex-col"
+            className="absolute inset-x-0 bottom-0 z-50 bg-[#0c0c0e] rounded-t-3xl shadow-2xl flex flex-col"
             style={{ maxHeight: "90vh" }}
           >
             <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-200" />
+              <div className="w-10 h-1 rounded-full bg-white/10" />
             </div>
 
-            <div className="px-5 py-4 bg-white border-b border-border shrink-0 rounded-t-3xl">
+            <div className="px-5 py-4 bg-[#141416] border-b border-border shrink-0 rounded-t-3xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
                     <Stethoscope className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-foreground">UDT & Badania Lekarskie</h3>
+                    <h3 className="text-base font-black font-heading text-foreground">UDT & Badania Lekarskie</h3>
                     <p className="text-xs text-muted-foreground">
                       {loading ? "Loading…" : `${overdueCount + urgentCount} urgent · ${missingCount} missing`}
                     </p>
@@ -107,7 +107,7 @@ export function UDTSheet({ isOpen, onClose, workers, loading }: Props) {
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
+                  className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] active:scale-95 transition-all"
                 >
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -116,16 +116,16 @@ export function UDTSheet({ isOpen, onClose, workers, loading }: Props) {
               {/* Summary strip */}
               {!loading && (
                 <div className="grid grid-cols-3 gap-2 mt-3">
-                  <div className="bg-red-50 rounded-xl border border-red-100 p-2.5 text-center">
-                    <div className="text-lg font-black text-red-600">{overdueCount}</div>
-                    <div className="text-[9px] text-red-700 font-bold leading-tight">Overdue</div>
+                  <div className="bg-red-500/10 rounded-xl border border-red-500/20 p-2.5 text-center">
+                    <div className="text-lg font-black font-heading text-red-400">{overdueCount}</div>
+                    <div className="text-[9px] text-red-400 font-bold leading-tight">Overdue</div>
                   </div>
-                  <div className="bg-amber-50 rounded-xl border border-amber-100 p-2.5 text-center">
-                    <div className="text-lg font-black text-amber-600">{urgentCount}</div>
-                    <div className="text-[9px] text-amber-700 font-bold leading-tight">Urgent (&lt;30d)</div>
+                  <div className="bg-amber-500/10 rounded-xl border border-amber-500/20 p-2.5 text-center">
+                    <div className="text-lg font-black font-heading text-amber-400">{urgentCount}</div>
+                    <div className="text-[9px] text-amber-400 font-bold leading-tight">Urgent (&lt;30d)</div>
                   </div>
-                  <div className="bg-gray-50 rounded-xl border p-2.5 text-center">
-                    <div className="text-lg font-black text-gray-600">{missingCount}</div>
+                  <div className="bg-white/[0.04] rounded-xl border p-2.5 text-center">
+                    <div className="text-lg font-black font-heading text-white/50">{missingCount}</div>
                     <div className="text-[9px] text-muted-foreground font-bold leading-tight">Missing</div>
                   </div>
                 </div>
@@ -152,19 +152,19 @@ export function UDTSheet({ isOpen, onClose, workers, loading }: Props) {
                     <div
                       key={row.workerId + row.type}
                       className={cn(
-                        "bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3",
+                        "premium-card rounded-2xl p-4 flex items-center gap-3",
                         isUrgent ? "border-l-4 border-l-red-400" :
                         isMissing ? "border-l-4 border-l-gray-300" : ""
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
-                        isUrgent ? "bg-red-50 border-red-100" :
-                        isMissing ? "bg-gray-50 border-gray-200" : "bg-teal-50 border-teal-100"
+                        isUrgent ? "bg-red-500/10 border-red-500/20" :
+                        isMissing ? "bg-white/[0.04] border-white/[0.08]" : "bg-teal-500/10 border-teal-500/20"
                       )}>
                         {row.type === "Badania Lekarskie"
-                          ? <Stethoscope className={cn("w-5 h-5", isUrgent ? "text-red-500" : isMissing ? "text-gray-400" : "text-teal-600")} />
-                          : <Clock className={cn("w-5 h-5", isUrgent ? "text-red-500" : isMissing ? "text-gray-400" : "text-teal-600")} />
+                          ? <Stethoscope className={cn("w-5 h-5", isUrgent ? "text-red-500" : isMissing ? "text-white/30" : "text-teal-600")} />
+                          : <Clock className={cn("w-5 h-5", isUrgent ? "text-red-500" : isMissing ? "text-white/30" : "text-teal-600")} />
                         }
                       </div>
                       <div className="flex-1 min-w-0">

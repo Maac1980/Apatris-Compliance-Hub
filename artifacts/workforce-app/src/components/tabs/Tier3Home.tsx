@@ -26,36 +26,36 @@ export function Tier3Home() {
       icon: UserPlus,
       label: "Add Professional",
       sublabel: "Register & onboard",
-      iconBg: "bg-blue-50",
+      iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
-      border: "hover:border-blue-200 hover:bg-blue-50/20",
+      border: "hover:border-blue-500/25 hover:bg-blue-500/10",
       onClick: () => setAddOpen(true),
     },
     {
       icon: Clock,
       label: "Timesheets & Hours",
       sublabel: loading ? "Loading…" : `${workers.length} workers tracked`,
-      iconBg: "bg-amber-50",
+      iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
-      border: "hover:border-amber-200 hover:bg-amber-50/20",
+      border: "hover:border-amber-500/25 hover:bg-amber-500/10",
       onClick: () => setTimesheetsOpen(true),
     },
     {
       icon: Stethoscope,
       label: "UDT & Badania Lekarskie",
       sublabel: loading ? "…" : `${expiringCount} renewals pending`,
-      iconBg: "bg-teal-50",
+      iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
-      border: "hover:border-teal-200 hover:bg-teal-50/20",
+      border: "hover:border-teal-500/25 hover:bg-teal-500/10",
       onClick: () => setUdtOpen(true),
     },
     {
       icon: MapPin,
       label: "Site Deployments",
       sublabel: loading ? "…" : `${activeSites} active sites`,
-      iconBg: "bg-emerald-50",
+      iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
-      border: "hover:border-emerald-200 hover:bg-emerald-50/20",
+      border: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
       onClick: () => setSitesOpen(true),
     },
   ];
@@ -68,9 +68,9 @@ export function Tier3Home() {
   ).slice(0, 5);
 
   const statusColor: Record<string, { bg: string; icon: string; pill: string }> = {
-    "Non-Compliant": { bg: "bg-red-50",    icon: "text-red-500",    pill: "bg-red-50 text-red-700 border-red-200" },
-    "Expiring Soon": { bg: "bg-amber-50",  icon: "text-amber-500",  pill: "bg-amber-50 text-amber-700 border-amber-200" },
-    "Missing Docs":  { bg: "bg-gray-100",  icon: "text-gray-400",   pill: "bg-gray-100 text-gray-600 border-gray-200" },
+    "Non-Compliant": { bg: "bg-red-500/10",    icon: "text-red-500",    pill: "bg-red-500/10 text-red-400 border-red-500/25" },
+    "Expiring Soon": { bg: "bg-amber-500/10",  icon: "text-amber-500",  pill: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+    "Missing Docs":  { bg: "bg-white/[0.06]",  icon: "text-white/30",   pill: "bg-white/[0.06] text-white/50 border-white/[0.06]" },
   };
 
   return (
@@ -81,13 +81,13 @@ export function Tier3Home() {
       className="px-4 py-5 space-y-6 pb-28 relative"
     >
       {/* Shared workspace badge */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-          <Users className="w-4 h-4 text-blue-700" />
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3.5 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+          <Users className="w-4 h-4 text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-blue-900">Shared Operational Workspace</div>
-          <div className="text-[11px] text-blue-700/80 font-medium">
+          <div className="text-xs font-bold text-blue-200">Shared Operational Workspace</div>
+          <div className="text-[11px] text-blue-400/80 font-medium">
             Full read/write access to Deployed Professional profiles &amp; document queues — shared with Compliance Coordinators.
             {!isLive && !loading && <span className="ml-1 text-amber-600">· Using cached data</span>}
           </div>
@@ -98,7 +98,7 @@ export function Tier3Home() {
       {/* Operational modules grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
           <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full tracking-wide">T3 · T4 ACCESS</span>
         </div>
 
@@ -109,7 +109,7 @@ export function Tier3Home() {
               <button
                 key={mod.label}
                 onClick={mod.onClick}
-                className={`bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group ${mod.border}`}
+                className={`premium-card rounded-2xl p-4 hover:scale-[1.01] flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group ${mod.border}`}
               >
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${mod.iconBg}`}>
                   <Icon className={`w-5 h-5 ${mod.iconColor}`} strokeWidth={2} />
@@ -118,7 +118,7 @@ export function Tier3Home() {
                   <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5">{mod.sublabel}</div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/30 shrink-0" />
               </button>
             );
           })}
@@ -127,18 +127,18 @@ export function Tier3Home() {
 
       {/* KPI strip — live data */}
       <div className="space-y-2">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Deployment Overview</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Deployment Overview</h2>
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-            <div className="text-xl font-black text-blue-600">{loading ? "…" : workers.length}</div>
+          <div className="premium-card rounded-2xl p-3.5 text-center">
+            <div className="text-2xl font-black font-heading text-blue-600">{loading ? "…" : workers.length}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Deployed<br/>Pros</div>
           </div>
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-            <div className="text-xl font-black text-emerald-600">{loading ? "…" : activeSites}</div>
+          <div className="premium-card rounded-2xl p-3.5 text-center">
+            <div className="text-2xl font-black font-heading text-emerald-600">{loading ? "…" : activeSites}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Active<br/>Sites</div>
           </div>
-          <div className="bg-white rounded-xl border shadow-sm p-3 text-center">
-            <div className="text-xl font-black text-amber-600">{loading ? "…" : expiringCount}</div>
+          <div className="premium-card rounded-2xl p-3.5 text-center">
+            <div className="text-2xl font-black font-heading text-amber-600">{loading ? "…" : expiringCount}</div>
             <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Renewals<br/>Needed</div>
           </div>
         </div>
@@ -148,11 +148,11 @@ export function Tier3Home() {
       {alertWorkers.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Pending Technical Actions</h2>
-            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{alertWorkers.length}</span>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Pending Technical Actions</h2>
+            <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{alertWorkers.length}</span>
           </div>
 
-          <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50">
+          <div className="premium-card rounded-2xl divide-y divide-white/[0.05]">
             {alertWorkers.map((w) => {
               const style = statusColor[w.status] ?? statusColor["Missing Docs"];
               return (
@@ -177,10 +177,10 @@ export function Tier3Home() {
       {/* UDT check CTA */}
       <button
         onClick={() => setSitesOpen(true)}
-        className="w-full bg-white border border-blue-200 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:bg-blue-50/30 active:scale-[0.98] transition-all"
+        className="w-full premium-card border-blue-500/25 rounded-2xl p-4 flex items-center justify-between hover:bg-blue-500/10 hover:scale-[1.01] active:scale-[0.98] transition-all"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
             <ShieldCheck className="w-5 h-5 text-blue-600" />
           </div>
           <div className="text-left">

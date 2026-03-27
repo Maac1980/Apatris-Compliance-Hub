@@ -20,34 +20,34 @@ interface WorkerDetailProps {
 
 function getStatusColors(status: WorkerStatus) {
   switch (status) {
-    case "Compliant":     return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "Expiring Soon": return "bg-amber-50 text-amber-700 border-amber-200";
+    case "Compliant":     return "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+    case "Expiring Soon": return "bg-amber-500/10 text-amber-400 border-amber-500/25";
     case "Missing Docs":
-    case "Non-Compliant": return "bg-red-50 text-red-700 border-red-200";
+    case "Non-Compliant": return "bg-red-500/10 text-red-400 border-red-500/25";
   }
 }
 function getDocStatusStyle(status: DocumentStatus) {
   switch (status) {
-    case "Approved":     return { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> };
-    case "Under Review": return { pill: "bg-amber-50 text-amber-700 border-amber-200",       icon: <FileQuestion className="w-4 h-4 text-amber-500 shrink-0" /> };
-    case "Missing":      return { pill: "bg-gray-100 text-gray-500 border-gray-200",         icon: <FileText className="w-4 h-4 text-gray-400 shrink-0" /> };
-    case "Rejected":     return { pill: "bg-red-50 text-red-700 border-red-200",             icon: <XCircle className="w-4 h-4 text-red-500 shrink-0" /> };
-    case "Expired":      return { pill: "bg-red-50 text-red-700 border-red-200",             icon: <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> };
-    default:             return { pill: "bg-gray-100 text-gray-500 border-gray-200",         icon: <FileText className="w-4 h-4 text-gray-400 shrink-0" /> };
+    case "Approved":     return { pill: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25", icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> };
+    case "Under Review": return { pill: "bg-amber-500/10 text-amber-400 border-amber-500/25",       icon: <FileQuestion className="w-4 h-4 text-amber-500 shrink-0" /> };
+    case "Missing":      return { pill: "bg-white/[0.06] text-white/40 border-white/[0.08]",         icon: <FileText className="w-4 h-4 text-white/30 shrink-0" /> };
+    case "Rejected":     return { pill: "bg-red-500/10 text-red-400 border-red-500/25",             icon: <XCircle className="w-4 h-4 text-red-500 shrink-0" /> };
+    case "Expired":      return { pill: "bg-red-500/10 text-red-400 border-red-500/25",             icon: <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> };
+    default:             return { pill: "bg-white/[0.06] text-white/40 border-white/[0.08]",         icon: <FileText className="w-4 h-4 text-white/30 shrink-0" /> };
   }
 }
 const UPLOADER_STYLE: Record<string, string> = {
-  "Tech Ops":    "bg-blue-50 text-blue-700 border-blue-200",
-  "Coordinator": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Professional":"bg-amber-50 text-amber-700 border-amber-200",
+  "Tech Ops":    "bg-blue-500/10 text-blue-400 border-blue-500/25",
+  "Coordinator": "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
+  "Professional":"bg-amber-500/10 text-amber-400 border-amber-500/25",
 };
 
 const ACTIVITY_TYPE_STYLE: Record<string, { dot: string; label: string }> = {
-  document:    { dot: "bg-blue-500",   label: "text-blue-700" },
-  hours:       { dot: "bg-amber-500",  label: "text-amber-700" },
-  profile:     { dot: "bg-violet-500", label: "text-violet-700" },
-  finance:     { dot: "bg-indigo-500", label: "text-indigo-700" },
-  compliance:  { dot: "bg-red-500",    label: "text-red-700" },
+  document:    { dot: "bg-blue-500",   label: "text-blue-400" },
+  hours:       { dot: "bg-amber-500",  label: "text-amber-400" },
+  profile:     { dot: "bg-violet-500", label: "text-violet-400" },
+  finance:     { dot: "bg-indigo-500", label: "text-indigo-400" },
+  compliance:  { dot: "bg-red-500",    label: "text-red-400" },
 };
 
 function Field({ label, value, editing, inputValue, onInput }: { label: string; value: string; editing: boolean; inputValue?: string; onInput?: (v: string) => void }) {
@@ -59,7 +59,7 @@ function Field({ label, value, editing, inputValue, onInput }: { label: string; 
           type="text"
           value={inputValue ?? value}
           onChange={e => onInput(e.target.value)}
-          className="w-full h-9 px-3 bg-gray-50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+          className="w-full h-9 px-3 bg-white/[0.04] border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
         />
       ) : (
         <p className="text-sm font-semibold text-foreground">{value || "—"}</p>
@@ -75,7 +75,7 @@ function SelectField({ label, value, options, editing, onChange }: { label: stri
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full h-9 px-3 bg-gray-50 border border-border rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+          className="w-full h-9 px-3 bg-white/[0.04] border border-border rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
         >
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -102,10 +102,10 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
 
   const initials = worker.name.split(" ").map(n => n[0]).join("");
   const avatarColor = {
-    "Compliant":     "bg-emerald-100 text-emerald-700",
-    "Expiring Soon": "bg-amber-100 text-amber-700",
-    "Missing Docs":  "bg-red-100 text-red-700",
-    "Non-Compliant": "bg-red-100 text-red-700",
+    "Compliant":     "bg-emerald-500/15 text-emerald-400",
+    "Expiring Soon": "bg-amber-500/15 text-amber-400",
+    "Missing Docs":  "bg-red-500/15 text-red-400",
+    "Non-Compliant": "bg-red-500/15 text-red-400",
   }[worker.status];
 
   const pendingDocs = documents.filter(d => d.status === "Under Review").length;
@@ -165,19 +165,19 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ type: "spring", damping: 28, stiffness: 300 }}
-      className="absolute inset-0 z-50 flex flex-col bg-gray-50"
+      className="absolute inset-0 z-50 flex flex-col bg-[#0c0c0e]"
     >
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-border shadow-sm px-4 pt-3 pb-0 shrink-0 sticky top-0 z-20">
+      <header className="premium-header shadow-sm px-4 pt-3 pb-0 shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all shrink-0">
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-white/[0.06] active:scale-95 transition-all shrink-0">
             <X className="w-5 h-5" strokeWidth={2} />
           </button>
           <div className={cn("w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0", avatarColor)}>
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-base text-foreground leading-tight truncate">{worker.name}</h1>
+            <h1 className="font-bold font-heading text-base text-foreground leading-tight truncate">{worker.name}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>{worker.trade}</span>
               <span>·</span>
@@ -194,7 +194,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 onClick={() => editing ? handleSave() : setEditing(true)}
                 className={cn(
                   "w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90",
-                  editing ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  editing ? "bg-emerald-500/15 text-emerald-400" : "bg-white/[0.06] text-white/40 hover:bg-white/[0.08]"
                 )}
               >
                 {editing ? <Save className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
@@ -251,9 +251,9 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {activeTab === "profile" && (
               <div className="px-4 pt-4 space-y-4">
                 {editing && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center gap-2">
-                    <Pencil className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <p className="text-[11px] text-blue-700 font-semibold">Editing mode — tap Save when done</p>
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 flex items-center gap-2">
+                    <Pencil className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <p className="text-[11px] text-blue-400 font-semibold">Editing mode — tap Save when done</p>
                   </div>
                 )}
 
@@ -294,7 +294,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                         {editing ? (
                           <input type="number" value={editData.hourlyRate}
                             onChange={e => setEditData(p => ({ ...p, hourlyRate: Number(e.target.value) }))}
-                            className="w-full h-9 px-3 bg-gray-50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                            className="w-full h-9 px-3 bg-white/[0.04] border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" />
                         ) : (
                           <p className="text-sm font-semibold text-foreground">{editData.hourlyRate} PLN/hr</p>
                         )}
@@ -305,10 +305,10 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
 
                 <SectionCard title="Quick Contact" icon={Phone}>
                   <div className="flex gap-2">
-                    <a href={`tel:${worker.phone}`} className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold transition-all active:scale-95">
+                    <a href={`tel:${worker.phone}`} className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-bold transition-all active:scale-95">
                       <Phone className="w-3.5 h-3.5" /> Call
                     </a>
-                    <a href={`mailto:${worker.email}`} className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all active:scale-95">
+                    <a href={`mailto:${worker.email}`} className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-xs font-bold transition-all active:scale-95">
                       <Mail className="w-3.5 h-3.5" /> Email
                     </a>
                   </div>
@@ -319,11 +319,11 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── DOCUMENTS TAB ───────────────────────────────────────────── */}
             {activeTab === "documents" && (
               <div className="px-4 pt-4 space-y-3">
-                <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
-                    <span className="text-[7px] font-black text-blue-700">T</span>
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-500/25 flex items-center justify-center shrink-0">
+                    <span className="text-[7px] font-black text-blue-400">T</span>
                   </div>
-                  <p className="text-[11px] text-blue-700 font-medium leading-tight">
+                  <p className="text-[11px] text-blue-400 font-medium leading-tight">
                     Tech Ops &amp; Coordinators share document visibility. Tap Upload to resubmit.
                   </p>
                 </div>
@@ -342,7 +342,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="bg-white rounded-2xl border shadow-sm overflow-hidden"
+                        className="premium-card rounded-2xl overflow-hidden"
                       >
                         <div className="p-3.5">
                           <div className="flex items-start gap-3">
@@ -387,7 +387,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                           <div className="border-t border-border">
                             <button
                               onClick={() => handleUpload(doc.id, doc.type)}
-                              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-50 active:bg-blue-100 transition-colors"
+                              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/15 transition-colors"
                             >
                               <Upload className="w-4 h-4" />
                               Upload {doc.type}
@@ -399,7 +399,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                           <div className="flex border-t border-border">
                             <button
                               onClick={() => handleApprove(doc.id, doc.type)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 transition-colors"
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/15 transition-colors"
                             >
                               <CheckCircle2 className="w-4 h-4" />
                               Approve
@@ -407,7 +407,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                             <div className="w-px bg-border" />
                             <button
                               onClick={() => handleReject(doc.id, doc.type)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/10 active:bg-red-500/15 transition-colors"
                             >
                               <XCircle className="w-4 h-4" />
                               Reject
@@ -424,14 +424,14 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── HOURS TAB ───────────────────────────────────────────────── */}
             {activeTab === "hours" && (
               <div className="px-4 pt-4 space-y-4">
-                <div className="bg-white rounded-2xl border shadow-sm p-4">
+                <div className="premium-card rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">March 2026</span>
                     <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full">OPEN</span>
                   </div>
-                  <div className="text-3xl font-black text-blue-600 leading-none">{totalHours} hrs</div>
+                  <div className="text-3xl font-black font-heading text-blue-600 leading-none">{totalHours} hrs</div>
                   <div className="text-xs text-muted-foreground font-medium mt-1">Logged this month</div>
-                  <div className="h-1.5 w-full bg-gray-100 rounded-full mt-3 overflow-hidden">
+                  <div className="h-1.5 w-full bg-white/[0.06] rounded-full mt-3 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min((totalHours / 200) * 100, 100)}%` }}
@@ -443,7 +443,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 </div>
 
                 <SectionCard title="Weekly Breakdown" icon={Clock}>
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-white/[0.05]">
                     {hours.map((row, i) => (
                       <div key={i} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                         <div>
@@ -452,9 +452,9 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                         </div>
                         <span className={cn(
                           "text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap",
-                          row.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : row.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
+                          row.status === "Approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                          : row.status === "Rejected" ? "bg-red-500/10 text-red-400 border-red-500/25"
+                          : "bg-amber-500/10 text-amber-400 border-amber-500/25"
                         )}>
                           {row.status}
                         </span>
@@ -466,7 +466,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 {role === "Executive" && (
                   <button
                     onClick={() => toast({ title: "Hours Approved", description: `All pending hours for ${worker.name} approved.` })}
-                    className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md shadow-indigo-200"
+                    className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md shadow-indigo-900/30"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Approve All Pending Hours
@@ -494,16 +494,16 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   {finance.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">No records yet.</p>
                   ) : (
-                    <div className="divide-y divide-gray-50">
+                    <div className="divide-y divide-white/[0.05]">
                       {finance.map(entry => (
                         <div key={entry.id} className="flex items-start justify-between py-3 first:pt-0 last:pb-0 gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <span className={cn(
                                 "text-[10px] font-black px-2 py-0.5 rounded-full border whitespace-nowrap",
-                                entry.type === "Advance"   ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : entry.type === "Penalty" ? "bg-red-50 text-red-700 border-red-200"
-                                :                            "bg-amber-50 text-amber-700 border-amber-200"
+                                entry.type === "Advance"   ? "bg-blue-500/10 text-blue-400 border-blue-500/25"
+                                : entry.type === "Penalty" ? "bg-red-500/10 text-red-400 border-red-500/25"
+                                :                            "bg-amber-500/10 text-amber-400 border-amber-500/25"
                               )}>
                                 {entry.type}
                               </span>
@@ -525,7 +525,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   )}
                 </SectionCard>
 
-                <div className="bg-white rounded-2xl border shadow-sm p-4">
+                <div className="premium-card rounded-2xl p-4">
                   <div className="space-y-2">
                     <FinRow label="Total Advances"
                       value={`+${finance.filter(f => f.type === "Advance").reduce((s, f) => s + f.amount, 0)} PLN`}
@@ -533,7 +533,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                     <FinRow label="Total Penalties / Deductions"
                       value={`${finance.filter(f => f.amount < 0).reduce((s, f) => s + f.amount, 0)} PLN`}
                       accent="red" />
-                    <div className="h-px bg-gray-100 my-1" />
+                    <div className="h-px bg-white/[0.06] my-1" />
                     <FinRow label="Net Balance"
                       value={`${finance.reduce((s, f) => s + f.amount, 0)} PLN`}
                       accent={finance.reduce((s, f) => s + f.amount, 0) >= 0 ? "green" : "red"} />
@@ -543,7 +543,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 {role === "Executive" && (
                   <button
                     onClick={() => toast({ title: "Coming Soon", description: "Add advance/penalty entry form — coming in next update." })}
-                    className="w-full h-11 rounded-xl border-2 border-dashed border-indigo-200 text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 active:scale-[0.98] transition-all"
+                    className="w-full h-11 rounded-xl border-2 border-dashed border-indigo-500/25 text-indigo-400 text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-500/10 active:scale-[0.98] transition-all"
                   >
                     + Add Entry
                   </button>
@@ -554,7 +554,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
             {/* ── ACTIVITY TAB ─────────────────────────────────────────────── */}
             {activeTab === "activity" && (
               <div className="px-4 pt-4 space-y-4">
-                <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 flex items-center gap-2">
                   <Activity className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <p className="text-[11px] text-muted-foreground font-medium">
                     Full audit trail for this professional — all actions logged by tier.
@@ -564,11 +564,11 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                 {worker.activityLog && worker.activityLog.length > 0 ? (
                   <div className="relative">
                     {/* Timeline line */}
-                    <div className="absolute left-[22px] top-3 bottom-3 w-px bg-gray-200" />
+                    <div className="absolute left-[22px] top-3 bottom-3 w-px bg-white/10" />
 
                     <div className="space-y-1">
                       {worker.activityLog.map((entry, i) => {
-                        const typeStyle = ACTIVITY_TYPE_STYLE[entry.type] ?? { dot: "bg-gray-400", label: "text-gray-700" };
+                        const typeStyle = ACTIVITY_TYPE_STYLE[entry.type] ?? { dot: "bg-white/30", label: "text-white/40" };
                         return (
                           <motion.div
                             key={entry.id}
@@ -585,7 +585,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                             </div>
 
                             {/* Card */}
-                            <div className="flex-1 bg-white rounded-2xl border shadow-sm p-3.5 mb-2.5">
+                            <div className="flex-1 premium-card rounded-2xl p-3.5 mb-2.5">
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <span className="text-sm font-bold text-foreground leading-tight">{entry.action}</span>
                                 <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{entry.time}</span>
@@ -608,7 +608,7 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <Activity className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    <Activity className="w-10 h-10 text-white/15 mx-auto mb-3" />
                     <p className="text-sm font-medium text-muted-foreground">No activity recorded yet.</p>
                   </div>
                 )}
@@ -624,10 +624,10 @@ export function WorkerDetail({ worker, onClose }: WorkerDetailProps) {
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-50/80 border-b border-border flex items-center gap-2">
+    <div className="premium-card rounded-2xl overflow-hidden">
+      <div className="px-4 py-2.5 bg-white/[0.02] border-b border-white/[0.05] flex items-center gap-2">
         <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</span>
+        <span className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">{title}</span>
       </div>
       <div className="p-4">
         {children}

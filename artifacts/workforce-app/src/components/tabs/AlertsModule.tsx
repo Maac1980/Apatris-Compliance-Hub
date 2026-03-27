@@ -144,21 +144,21 @@ const INITIAL_ALERTS: AlertItem[] = [
 const severityConfig = {
   critical: {
     border:    "border-l-red-500",
-    badge:     "bg-red-50 text-red-700 border border-red-200",
+    badge:     "bg-red-500/10 text-red-400 border border-red-500/25",
     iconColor: "text-red-500",
-    actionBtn: "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100",
+    actionBtn: "bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/15",
   },
   warning: {
     border:    "border-l-amber-400",
-    badge:     "bg-amber-50 text-amber-700 border border-amber-200",
+    badge:     "bg-amber-500/10 text-amber-400 border border-amber-500/25",
     iconColor: "text-amber-500",
-    actionBtn: "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100",
+    actionBtn: "bg-amber-500/10 text-amber-400 border border-amber-500/25 hover:bg-amber-500/15",
   },
   info: {
     border:    "border-l-blue-400",
-    badge:     "bg-blue-50 text-blue-700 border border-blue-200",
+    badge:     "bg-blue-500/10 text-blue-400 border border-blue-500/25",
     iconColor: "text-blue-500",
-    actionBtn: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100",
+    actionBtn: "bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/15",
   },
 };
 
@@ -191,19 +191,19 @@ export function AlertsModule() {
     >
       {/* Header summary cards */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5 text-center">
-          <div className="text-2xl font-black text-red-600">{critical.length}</div>
-          <div className="text-[10px] font-bold text-red-700 mt-0.5">Critical</div>
+        <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-heading font-black text-red-600">{critical.length}</div>
+          <div className="text-[10px] font-bold text-red-400 mt-0.5">Critical</div>
           <div className="text-[9px] text-red-500 font-medium">Immediate</div>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-center">
-          <div className="text-2xl font-black text-amber-600">{warnings.length}</div>
-          <div className="text-[10px] font-bold text-amber-700 mt-0.5">Warnings</div>
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-heading font-black text-amber-600">{warnings.length}</div>
+          <div className="text-[10px] font-bold text-amber-400 mt-0.5">Warnings</div>
           <div className="text-[9px] text-amber-500 font-medium">30 days</div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-center">
-          <div className="text-2xl font-black text-emerald-600">{dismissed.size}</div>
-          <div className="text-[10px] font-bold text-emerald-700 mt-0.5">Resolved</div>
+        <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-heading font-black text-emerald-600">{dismissed.size}</div>
+          <div className="text-[10px] font-bold text-emerald-400 mt-0.5">Resolved</div>
           <div className="text-[9px] text-emerald-500 font-medium">Actioned</div>
         </div>
       </div>
@@ -212,7 +212,7 @@ export function AlertsModule() {
       {dismissed.size > 0 && (
         <button
           onClick={handleRestore}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-300 text-xs font-semibold text-muted-foreground hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-white/10 text-xs font-semibold text-muted-foreground hover:bg-white/[0.04] transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Restore {dismissed.size} resolved alert{dismissed.size > 1 ? "s" : ""}
@@ -224,8 +224,8 @@ export function AlertsModule() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
             <ShieldAlert className="w-4 h-4 text-red-600" />
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Critical Issues</h2>
-            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{critical.length}</span>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Critical Issues</h2>
+            <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{critical.length}</span>
           </div>
 
           <AnimatePresence>
@@ -240,7 +240,7 @@ export function AlertsModule() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, padding: 0, overflow: "hidden" }}
                   transition={{ duration: 0.22 }}
-                  className={cn("bg-white rounded-2xl border border-l-4 shadow-sm p-4", cfg.border)}
+                  className={cn("premium-card rounded-2xl border-l-4 p-4", cfg.border)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -249,12 +249,12 @@ export function AlertsModule() {
                     </div>
                     <button
                       onClick={() => handleDismiss(alert.id)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-gray-500 hover:bg-gray-100 shrink-0 ml-2 transition-colors"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white/20 hover:text-white/40 hover:bg-white/[0.06] shrink-0 ml-2 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                  <div className="flex items-center justify-between py-2.5 border-t border-white/[0.06]">
                     <div>
                       <div className="text-sm font-semibold">{alert.name}</div>
                       <div className="text-xs text-muted-foreground">{alert.role} · {alert.site}</div>
@@ -270,7 +270,7 @@ export function AlertsModule() {
                       {alert.action}
                     </button>
                     <button
-                      className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-gray-50 border text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors active:scale-95"
+                      className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 text-[11px] font-semibold hover:bg-white/[0.06] transition-colors active:scale-95"
                     >
                       <PhoneCall className="w-3 h-3" />
                       Call
@@ -288,8 +288,8 @@ export function AlertsModule() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
             <AlertCircle className="w-4 h-4 text-amber-600" />
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Warnings</h2>
-            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{warnings.length}</span>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Warnings</h2>
+            <span className="bg-amber-500/15 text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{warnings.length}</span>
           </div>
 
           <AnimatePresence>
@@ -304,7 +304,7 @@ export function AlertsModule() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, padding: 0, overflow: "hidden" }}
                   transition={{ duration: 0.22 }}
-                  className={cn("bg-white rounded-2xl border border-l-4 shadow-sm p-4", cfg.border)}
+                  className={cn("premium-card rounded-2xl border-l-4 p-4", cfg.border)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -313,12 +313,12 @@ export function AlertsModule() {
                     </div>
                     <button
                       onClick={() => handleDismiss(alert.id)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-gray-500 hover:bg-gray-100 shrink-0 ml-2 transition-colors"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white/20 hover:text-white/40 hover:bg-white/[0.06] shrink-0 ml-2 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                  <div className="flex items-center justify-between py-2.5 border-t border-white/[0.06]">
                     <div>
                       <div className="text-sm font-semibold">{alert.name}</div>
                       <div className="text-xs text-muted-foreground">{alert.role} · {alert.site}</div>
@@ -334,7 +334,7 @@ export function AlertsModule() {
                       {alert.action}
                     </button>
                     <button
-                      className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-gray-50 border text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors active:scale-95"
+                      className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 text-[11px] font-semibold hover:bg-white/[0.06] transition-colors active:scale-95"
                     >
                       <PhoneCall className="w-3 h-3" />
                       Call
@@ -354,7 +354,7 @@ export function AlertsModule() {
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center py-16 text-center"
         >
-          <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           </div>
           <h3 className="text-sm font-bold text-foreground mb-1">All Alerts Resolved</h3>
@@ -369,10 +369,10 @@ export function AlertsModule() {
 
       {/* Info strip */}
       {(critical.length > 0 || warnings.length > 0) && (
-        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
-          <Bell className="w-5 h-5 text-gray-400 shrink-0" />
+        <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3">
+          <Bell className="w-5 h-5 text-white/30 shrink-0" />
           <div>
-            <div className="text-sm font-bold text-gray-700">Notifications active</div>
+            <div className="text-sm font-bold text-white/60">Notifications active</div>
             <div className="text-xs text-muted-foreground">Alerts auto-sync from live worker profiles. Dismiss to mark as actioned.</div>
           </div>
         </div>

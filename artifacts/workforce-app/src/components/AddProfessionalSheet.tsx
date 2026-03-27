@@ -73,7 +73,7 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="absolute bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl overflow-hidden"
+            className="absolute bottom-0 left-0 right-0 z-50 bg-[#141416] rounded-t-3xl shadow-2xl overflow-hidden"
             style={{ maxHeight: "90vh" }}
           >
             <AnimatePresence mode="wait">
@@ -83,10 +83,10 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                   className="flex flex-col items-center justify-center py-12 px-6 text-center"
                 >
-                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-emerald-500/15 rounded-full flex items-center justify-center mb-4">
                     <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                   </div>
-                  <h3 className="text-base font-black text-foreground">Profile Created in Airtable</h3>
+                  <h3 className="text-base font-black font-heading text-foreground">Profile Created in Airtable</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     {createdName} has been registered and added to the deployed workforce directory.
                   </p>
@@ -99,12 +99,12 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center py-12 px-6 text-center"
                 >
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center mb-4">
                     <X className="w-8 h-8 text-red-600" />
                   </div>
-                  <h3 className="text-base font-black text-foreground">Creation Failed</h3>
+                  <h3 className="text-base font-black font-heading text-foreground">Creation Failed</h3>
                   <p className="text-sm text-muted-foreground mt-1">{errorMsg}</p>
-                  <button onClick={reset} className="mt-4 px-5 py-2 rounded-xl bg-gray-900 text-white text-sm font-bold">
+                  <button onClick={reset} className="mt-4 px-5 py-2 rounded-xl bg-white text-[#0c0c0e] text-sm font-bold">
                     Try Again
                   </button>
                 </motion.div>
@@ -115,22 +115,22 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                 <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   {/* Handle */}
                   <div className="flex justify-center pt-3 pb-1">
-                    <div className="w-10 h-1 rounded-full bg-gray-200" />
+                    <div className="w-10 h-1 rounded-full bg-white/10" />
                   </div>
 
                   {/* Header */}
-                  <div className="px-5 py-3 flex items-center justify-between border-b border-gray-100">
+                  <div className="px-5 py-3 flex items-center justify-between border-b border-white/[0.06]">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <UserPlus className="w-4 h-4 text-emerald-600" />
                       </div>
                       <div>
-                        <h2 className="font-bold text-sm text-foreground">Add New Professional</h2>
+                        <h2 className="font-bold font-heading text-sm text-foreground">Add New Professional</h2>
                         <p className="text-[10px] text-muted-foreground font-medium">Register &amp; onboard to Airtable directory</p>
                       </div>
                     </div>
                     <button onClick={handleClose} disabled={step === "loading"}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 transition-all disabled:opacity-40">
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-white/[0.06] transition-all disabled:opacity-40">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -147,7 +147,7 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                           <HardHat className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <input type="text" value={name} onChange={e => setName(e.target.value)}
                             placeholder="e.g. Jan Kowalski" disabled={step === "loading"}
-                            className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
+                            className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
                         </div>
                       </div>
 
@@ -159,7 +159,7 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                         <div className="relative">
                           <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                           <select value={trade} onChange={e => setTrade(e.target.value)} disabled={step === "loading"}
-                            className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-border rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60">
+                            className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-border rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60">
                             <option value="">Select trade…</option>
                             {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
@@ -169,39 +169,39 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                       {/* Site */}
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Deployment Site <span className="text-gray-400 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
+                          Deployment Site <span className="text-white/30 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
                         </label>
                         <div className="relative">
                           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <input type="text" value={site} onChange={e => setSite(e.target.value)}
                             placeholder="e.g. Warsaw North" disabled={step === "loading"}
-                            className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
+                            className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
                         </div>
                       </div>
 
                       {/* Phone */}
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Phone <span className="text-gray-400 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
+                          Phone <span className="text-white/30 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
                         </label>
                         <div className="relative">
                           <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                             placeholder="+48 600 000 000" disabled={step === "loading"}
-                            className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
+                            className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
                         </div>
                       </div>
 
                       {/* Email */}
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Email <span className="text-gray-400 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
+                          Email <span className="text-white/30 font-normal text-[10px] normal-case tracking-normal">(optional)</span>
                         </label>
                         <div className="relative">
                           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                             placeholder="jan.kowalski@email.com" disabled={step === "loading"}
-                            className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
+                            className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-60" />
                         </div>
                       </div>
 
@@ -214,8 +214,8 @@ export function AddProfessionalSheet({ isOpen, onClose, accentColor }: AddProfes
                         className={cn(
                           "w-full h-12 rounded-xl font-bold text-sm text-white transition-all duration-200 flex items-center justify-center gap-2 mb-2",
                           isValid && step !== "loading"
-                            ? "bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] shadow-md shadow-emerald-200"
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            ? "bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] shadow-md shadow-emerald-900/30"
+                            : "bg-white/[0.06] text-white/30 cursor-not-allowed"
                         )}>
                         {step === "loading" ? (
                           <><Loader2 className="w-4 h-4 animate-spin" />Creating in Airtable…</>

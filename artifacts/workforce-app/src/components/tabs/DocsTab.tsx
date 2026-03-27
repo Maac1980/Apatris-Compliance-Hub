@@ -28,10 +28,10 @@ function docStatus(days: number | null): DocStatus {
 }
 
 const STATUS_STYLE: Record<DocStatus, { pill: string; icon: string; dot: string; label: string }> = {
-  Valid:    { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: "text-emerald-500", dot: "bg-emerald-400", label: "Valid" },
-  Expiring: { pill: "bg-amber-50  text-amber-700  border-amber-200",    icon: "text-amber-500",   dot: "bg-amber-400",   label: "Expiring" },
-  Expired:  { pill: "bg-red-50    text-red-700    border-red-200",       icon: "text-red-500",     dot: "bg-red-500",     label: "Expired" },
-  Missing:  { pill: "bg-gray-100  text-gray-500   border-gray-200",      icon: "text-gray-400",    dot: "bg-gray-300",    label: "Missing" },
+  Valid:    { pill: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25", icon: "text-emerald-500", dot: "bg-emerald-400", label: "Valid" },
+  Expiring: { pill: "bg-amber-500/10  text-amber-400  border-amber-500/25",    icon: "text-amber-500",   dot: "bg-amber-400",   label: "Expiring" },
+  Expired:  { pill: "bg-red-500/10    text-red-400    border-red-500/25",       icon: "text-red-500",     dot: "bg-red-500",     label: "Expired" },
+  Missing:  { pill: "bg-white/[0.06]  text-white/40   border-white/[0.08]",     icon: "text-white/30",    dot: "bg-white/20",    label: "Missing" },
 };
 
 const STATUS_ICON: Record<DocStatus, React.ElementType> = {
@@ -90,11 +90,11 @@ export function DocsTab() {
       {/* Header summary */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-black text-foreground">My Documents</h1>
+          <h1 className="text-base font-heading font-black text-foreground">My Documents</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Certificate & permit status</p>
         </div>
-        <button onClick={load} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
-          <RefreshCw className={cn("w-3.5 h-3.5 text-gray-500", loading && "animate-spin")} />
+        <button onClick={load} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center active:scale-90 transition-transform">
+          <RefreshCw className={cn("w-3.5 h-3.5 text-white/40", loading && "animate-spin")} />
         </button>
       </div>
 
@@ -105,7 +105,7 @@ export function DocsTab() {
             const st = STATUS_STYLE[s];
             return (
               <div key={s} className={cn("rounded-2xl border py-3 flex flex-col items-center gap-1", st.pill)}>
-                <span className="text-lg font-black">{counts[s]}</span>
+                <span className="text-lg font-heading font-black">{counts[s]}</span>
                 <span className="text-[9px] font-bold uppercase tracking-wider">{s}</span>
               </div>
             );
@@ -115,9 +115,9 @@ export function DocsTab() {
 
       {/* Urgent banner */}
       {!loading && urgent > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5 flex items-center gap-3">
+        <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-3.5 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-          <p className="text-xs text-red-700 font-semibold">
+          <p className="text-xs text-red-400 font-semibold">
             {urgent} document{urgent > 1 ? "s" : ""} need{urgent === 1 ? "s" : ""} immediate attention. Contact your coordinator.
           </p>
         </div>
@@ -125,23 +125,23 @@ export function DocsTab() {
 
       {/* Document list */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Certificate Status</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Certificate Status</h2>
 
         {loading ? (
-          <div className="bg-white rounded-2xl border shadow-sm p-8 flex justify-center">
+          <div className="premium-card rounded-2xl p-8 flex justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center">
+          <div className="premium-card rounded-2xl p-6 text-center">
             <p className="text-sm text-muted-foreground">Could not load document data.</p>
             <button onClick={load} className="mt-3 text-xs font-bold text-blue-600">Retry</button>
           </div>
         ) : docRows.length === 0 ? (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 text-center text-sm text-muted-foreground">
+          <div className="premium-card rounded-2xl p-6 text-center text-sm text-muted-foreground">
             No document records found for your profile.
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="premium-card rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
             {docRows.map((doc, i) => {
               const days = daysUntil(doc.expiry);
               const ds   = docStatus(days);
@@ -156,7 +156,7 @@ export function DocsTab() {
                   transition={{ delay: i * 0.04 }}
                   className="p-3.5 flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gray-50 border flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0">
                     <DocIcon className={cn("w-4 h-4", st.icon)} strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -193,12 +193,12 @@ export function DocsTab() {
 
       {/* Upload action */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Submit Documents</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Submit Documents</h2>
         <a
           href={`mailto:z.brzezinska@apatris.pl?subject=Document Upload – ${displayName}&body=Hi,%0A%0APlease find my documents attached.%0A%0ABest regards,%0A${displayName}`}
-          className="flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+          className="flex items-center gap-4 p-4 premium-card rounded-2xl hover:scale-[1.01] active:scale-[0.98] transition-all"
         >
-          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
             <UploadCloud className="w-5 h-5 text-blue-600" strokeWidth={2} />
           </div>
           <div className="flex-1">

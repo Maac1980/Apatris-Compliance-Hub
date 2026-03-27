@@ -20,11 +20,19 @@ import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
-  Executive:    "bg-indigo-100 text-indigo-700 border-indigo-200",
-  LegalHead:    "bg-violet-100 text-violet-700 border-violet-200",
-  TechOps:      "bg-blue-100 text-blue-700 border-blue-200",
-  Coordinator:  "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Professional: "bg-amber-100 text-amber-700 border-amber-200",
+  Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
+  LegalHead:    "bg-violet-500/15 text-violet-400 border-violet-500/25",
+  TechOps:      "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  Coordinator:  "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  Professional: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+};
+
+const ROLE_ACCENT_GRADIENT: Record<Role, string> = {
+  Executive:    "from-indigo-500/20 via-transparent",
+  LegalHead:    "from-violet-500/20 via-transparent",
+  TechOps:      "from-blue-500/20 via-transparent",
+  Coordinator:  "from-emerald-500/20 via-transparent",
+  Professional: "from-amber-500/20 via-transparent",
 };
 
 export function DashboardPage() {
@@ -148,37 +156,50 @@ export function DashboardPage() {
     }
   };
 
+  const accentGradient = ROLE_ACCENT_GRADIENT[role];
+
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Header */}
-      <header className="h-14 bg-white border-b border-border shadow-sm px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-black text-lg tracking-tight text-foreground shrink-0">APATRIS</span>
-          <div className={cn(
-            "px-2 py-0.5 rounded-full text-[10px] font-black border tracking-wide whitespace-nowrap shrink-0",
-            badgeColor
-          )}>
-            {tierConfig.shortLabel}
+    <div className="flex flex-col h-full bg-[#0c0c0e]">
+      {/* Premium Header */}
+      <header className="premium-header shrink-0 sticky top-0 z-40 relative overflow-hidden">
+        {/* Subtle role-colored accent glow at top */}
+        <div className={cn("absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r", accentGradient, "to-transparent")} />
+        <div className="relative h-14 px-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Premium logo mark */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-900/20">
+                <span className="text-white font-black text-sm leading-none" style={{ fontFamily: "Impact, sans-serif" }}>A</span>
+              </div>
+              <span className="font-heading font-black text-[15px] tracking-[0.08em] text-white shrink-0">APATRIS</span>
+            </div>
+            <div className="w-px h-5 bg-white/[0.08]" />
+            <div className={cn(
+              "px-2.5 py-1 rounded-lg text-[9px] font-black border tracking-widest whitespace-nowrap shrink-0 uppercase",
+              badgeColor
+            )}>
+              {tierConfig.shortLabel}
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] active:scale-90 transition-all shrink-0"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={2} />
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-gray-100 active:scale-95 transition-all shrink-0"
-          title="Sign out"
-        >
-          <LogOut className="w-4 h-4" strokeWidth={2} />
-        </button>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar bg-gray-50 relative">
+      {/* Main content with premium transitions */}
+      <main className="flex-1 overflow-y-auto no-scrollbar bg-[#0c0c0e] relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.14 }}
+            initial={{ opacity: 0, y: 12, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="h-full"
           >
             {renderContent()}
@@ -199,12 +220,12 @@ function AccessDenied({ title, message, label }: { title: string; message: strin
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[300px]"
     >
-      <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100">
+      <div className="w-20 h-20 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-500/20">
         <LockSvg className="w-8 h-8 text-red-400" />
       </div>
-      <h2 className="text-base font-bold text-red-700 mb-2">{title}</h2>
+      <h2 className="text-base font-bold text-red-400 mb-2">{title}</h2>
       <p className="text-sm text-muted-foreground max-w-[220px]">{message}</p>
-      <div className="mt-4 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+      <div className="mt-4 px-3 py-1.5 bg-red-500/10 border border-red-500/25 rounded-xl text-xs font-bold text-red-400">
         {label}
       </div>
     </motion.div>

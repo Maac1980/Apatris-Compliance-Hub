@@ -23,10 +23,10 @@ interface OpModule {
 }
 
 const docStatusStyle = {
-  "Missing":      { icon: FileQuestion, color: "text-gray-400",    bg: "bg-gray-50",    pill: "bg-gray-100 text-gray-600 border-gray-200" },
-  "Expiring Soon":{ icon: AlertCircle,  color: "text-amber-500",   bg: "bg-amber-50",   pill: "bg-amber-50 text-amber-700 border-amber-200" },
-  "Non-Compliant":{ icon: FileX,        color: "text-red-500",      bg: "bg-red-50",     pill: "bg-red-50 text-red-700 border-red-200" },
-  "Compliant":    { icon: FileCheck,    color: "text-emerald-500",  bg: "bg-emerald-50", pill: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  "Missing":      { icon: FileQuestion, color: "text-white/30",    bg: "bg-white/[0.04]",    pill: "bg-white/[0.06] text-white/50 border-white/[0.06]" },
+  "Expiring Soon":{ icon: AlertCircle,  color: "text-amber-500",   bg: "bg-amber-500/10",   pill: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  "Non-Compliant":{ icon: FileX,        color: "text-red-500",      bg: "bg-red-500/10",     pill: "bg-red-500/10 text-red-400 border-red-500/25" },
+  "Compliant":    { icon: FileCheck,    color: "text-emerald-500",  bg: "bg-emerald-500/10", pill: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
 };
 
 export function Tier4Home() {
@@ -41,36 +41,36 @@ export function Tier4Home() {
       icon: UserPlus,
       label: "Add Professional",
       sublabel: "Register & onboard",
-      iconBg: "bg-emerald-50",
+      iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
-      border: "hover:border-emerald-200 hover:bg-emerald-50/20",
+      border: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
       onClick: () => setAddOpen(true),
     },
     {
       icon: Clock,
       label: "Timesheets & Hours",
       sublabel: workers.length > 0 ? `${workers.length} workers tracked` : "Loading…",
-      iconBg: "bg-amber-50",
+      iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
-      border: "hover:border-amber-200 hover:bg-amber-50/20",
+      border: "hover:border-amber-500/25 hover:bg-amber-500/10",
       onClick: () => setTimesheetsOpen(true),
     },
     {
       icon: Stethoscope,
       label: "UDT & Badania Lekarskie",
       sublabel: `${workers.filter(w => w.status === "Expiring Soon").length} renewals pending`,
-      iconBg: "bg-teal-50",
+      iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
-      border: "hover:border-teal-200 hover:bg-teal-50/20",
+      border: "hover:border-teal-500/25 hover:bg-teal-500/10",
       onClick: () => setUdtOpen(true),
     },
     {
       icon: MapPin,
       label: "Site Deployments",
       sublabel: `${new Set(workers.map(w => w.workplace).filter(Boolean)).size} active sites`,
-      iconBg: "bg-blue-50",
+      iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
-      border: "hover:border-blue-200 hover:bg-blue-50/20",
+      border: "hover:border-blue-500/25 hover:bg-blue-500/10",
       onClick: () => setSitesOpen(true),
     },
   ];
@@ -94,13 +94,13 @@ export function Tier4Home() {
       className="px-4 py-5 space-y-6 pb-28 relative"
     >
       {/* Shared workspace badge */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-          <Users className="w-4 h-4 text-emerald-700" />
+      <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
+          <Users className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-emerald-900">Shared Operational Workspace</div>
-          <div className="text-[11px] text-emerald-700/80 font-medium">
+          <div className="text-xs font-bold text-emerald-200">Shared Operational Workspace</div>
+          <div className="text-[11px] text-emerald-400/80 font-medium">
             Full read/write access to Deployed Professional profiles &amp; document queues — shared with Tech Ops.
             {!isLive && <span className="ml-1 text-amber-600">· Using cached data</span>}
           </div>
@@ -110,16 +110,16 @@ export function Tier4Home() {
 
       {/* Compliance summary strip */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white rounded-2xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-red-600">{nonCompliant}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-black font-heading text-red-600">{nonCompliant}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Non-<br/>Compliant</div>
         </div>
-        <div className="bg-white rounded-2xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-amber-600">{expiringCount}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-black font-heading text-amber-600">{expiringCount}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Expiring<br/>Soon</div>
         </div>
-        <div className="bg-white rounded-2xl border shadow-sm p-3 text-center">
-          <div className="text-xl font-black text-gray-600">{missingCount}</div>
+        <div className="premium-card rounded-2xl p-3.5 text-center">
+          <div className="text-2xl font-black font-heading text-white/50">{missingCount}</div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Missing<br/>Docs</div>
         </div>
       </div>
@@ -127,7 +127,7 @@ export function Tier4Home() {
       {/* Operational modules grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
           <span className="text-[9px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full tracking-wide">T3 · T4 ACCESS</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -137,7 +137,7 @@ export function Tier4Home() {
               <button
                 key={mod.label}
                 onClick={mod.onClick}
-                className={`bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group ${mod.border}`}
+                className={`premium-card rounded-2xl p-4 hover:scale-[1.01] flex items-center gap-3 text-left active:scale-[0.97] transition-all duration-150 hover:shadow-md group ${mod.border}`}
               >
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${mod.iconBg}`}>
                   <Icon className={`w-5 h-5 ${mod.iconColor}`} strokeWidth={2} />
@@ -146,7 +146,7 @@ export function Tier4Home() {
                   <div className="font-bold text-sm text-foreground leading-tight">{mod.label}</div>
                   <div className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{mod.sublabel}</div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/30 shrink-0" />
               </button>
             );
           })}
@@ -156,24 +156,24 @@ export function Tier4Home() {
       {/* Document queue — workers needing attention */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Needs Attention</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Needs Attention</h2>
           <span className="text-[9px] font-black bg-red-500 text-white px-2 py-0.5 rounded-full tracking-wide">
             {alertWorkers.length} workers
           </span>
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 flex justify-center">
+          <div className="premium-card rounded-2xl p-6 flex justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : alertWorkers.length === 0 ? (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center">
+          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-5 text-center">
             <FileCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-sm font-bold text-emerald-700">All workers compliant</p>
+            <p className="text-sm font-bold text-emerald-400">All workers compliant</p>
             <p className="text-xs text-emerald-600 mt-0.5">No documents need immediate attention.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border shadow-sm divide-y divide-gray-50 overflow-hidden">
+          <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
             {alertWorkers.map((w) => {
               const style = docStatusStyle[w.status as keyof typeof docStatusStyle] ?? docStatusStyle["Missing"];
               const StatusIcon = style.icon;

@@ -3,6 +3,7 @@ import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, Dollar
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
+import { motion } from "framer-motion";
 
 interface Tab {
   id: string;
@@ -57,12 +58,12 @@ function getTabsForRole(role: Role): Tab[] {
   }
 }
 
-const ACTIVE_COLORS: Record<Role, string> = {
-  Executive:    "text-indigo-600",
-  LegalHead:    "text-violet-600",
-  TechOps:      "text-blue-600",
-  Coordinator:  "text-emerald-600",
-  Professional: "text-amber-600",
+const ACTIVE_COLORS: Record<Role, { text: string; bg: string; glow: string }> = {
+  Executive:    { text: "text-indigo-400",  bg: "bg-indigo-500/15",  glow: "shadow-[0_0_12px_-2px_rgba(99,102,241,0.4)]" },
+  LegalHead:    { text: "text-violet-400",  bg: "bg-violet-500/15",  glow: "shadow-[0_0_12px_-2px_rgba(139,92,246,0.4)]" },
+  TechOps:      { text: "text-blue-400",    bg: "bg-blue-500/15",    glow: "shadow-[0_0_12px_-2px_rgba(59,130,246,0.4)]" },
+  Coordinator:  { text: "text-emerald-400", bg: "bg-emerald-500/15", glow: "shadow-[0_0_12px_-2px_rgba(16,185,129,0.4)]" },
+  Professional: { text: "text-amber-400",   bg: "bg-amber-500/15",   glow: "shadow-[0_0_12px_-2px_rgba(245,158,11,0.4)]" },
 };
 
 const BADGE_BG: Record<Role, string> = {
@@ -79,7 +80,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   if (!role) return null;
 
   const tabs = getTabsForRole(role);
-  const activeColor = ACTIVE_COLORS[role];
+  const activeStyle = ACTIVE_COLORS[role];
 
   const alertCount = workers.filter(
     w => w.status === "Non-Compliant" || w.status === "Missing Docs"
@@ -93,8 +94,10 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   }
 
   return (
-    <div className="shrink-0 bg-white border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)] relative z-50">
-      <div className="flex items-center justify-around h-16 px-1">
+    <div className="shrink-0 premium-nav relative z-50">
+      {/* Top highlight line */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      <div className="flex items-center justify-around h-[68px] px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -104,34 +107,44 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 active:scale-95",
-                isActive ? activeColor : "text-muted-foreground hover:text-foreground"
+                "relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90",
+                isActive ? activeStyle.text : "text-white/30 hover:text-white/50"
               )}
             >
-              <div className="relative">
-                <Icon className={cn("w-6 h-6 transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
-                {isActive && (
-                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />
-                )}
-                {badge > 0 && !isActive && (
-                  <span className={cn(
-                    "absolute -top-1.5 -right-2 min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center text-[9px] font-black text-white",
-                    "bg-red-500"
-                  )}>
-                    {badge}
-                  </span>
-                )}
+              {/* Active pill background */}
+              {isActive && (
+                <motion.div
+                  layoutId="navPill"
+                  className={cn("absolute inset-x-2 top-[8px] bottom-[8px] rounded-2xl", activeStyle.bg, activeStyle.glow)}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+
+              <div className="relative z-10 flex flex-col items-center gap-0.5">
+                <div className="relative">
+                  <Icon className={cn(
+                    "w-[22px] h-[22px] transition-all duration-200",
+                    isActive ? "stroke-[2.5px]" : "stroke-[1.5px]"
+                  )} />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white bg-red-500 shadow-lg shadow-red-500/30">
+                      {badge}
+                    </span>
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase",
+                  isActive ? "font-black" : "font-semibold"
+                )}>
+                  {tab.label}
+                </span>
               </div>
-              <span className={cn(
-                "text-[10px] tracking-wide transition-all duration-200 leading-tight text-center",
-                isActive ? "font-bold" : "font-medium"
-              )}>
-                {tab.label}
-              </span>
             </button>
           );
         })}
       </div>
+      {/* Safe area padding for notched devices */}
+      <div className="h-[env(safe-area-inset-bottom)]" />
     </div>
   );
 }

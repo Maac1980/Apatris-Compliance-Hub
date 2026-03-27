@@ -21,41 +21,41 @@ function getActivePillColor(role: Role): string {
   }
 }
 
-function getFabColor(role: Role): { bg: string; shadow: string } {
+function getFabColor(role: Role): { bg: string; shadow: string; text: string } {
   switch (role) {
-    case "TechOps":     return { bg: "bg-blue-600 hover:bg-blue-700",       shadow: "shadow-blue-300" };
-    case "Coordinator": return { bg: "bg-emerald-600 hover:bg-emerald-700", shadow: "shadow-emerald-300" };
-    default:            return { bg: "bg-gray-700 hover:bg-gray-800",       shadow: "shadow-gray-300" };
+    case "TechOps":     return { bg: "bg-blue-600 hover:bg-blue-700",       shadow: "shadow-blue-900/30", text: "text-white" };
+    case "Coordinator": return { bg: "bg-emerald-600 hover:bg-emerald-700", shadow: "shadow-emerald-900/30", text: "text-white" };
+    default:            return { bg: "bg-white hover:bg-white/90",          shadow: "shadow-black/30", text: "text-[#0c0c0e]" };
   }
 }
 
 function getStatusColors(status: WorkerStatus) {
   switch (status) {
-    case "Compliant":     return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "Expiring Soon": return "bg-amber-50 text-amber-700 border-amber-200";
+    case "Compliant":     return "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+    case "Expiring Soon": return "bg-amber-500/10 text-amber-400 border-amber-500/25";
     case "Missing Docs":
-    case "Non-Compliant": return "bg-red-50 text-red-700 border-red-200";
+    case "Non-Compliant": return "bg-red-500/10 text-red-400 border-red-500/25";
   }
 }
 
 function getAvatarColor(status: WorkerStatus) {
   switch (status) {
-    case "Compliant":     return "bg-emerald-100 text-emerald-700";
-    case "Expiring Soon": return "bg-amber-100 text-amber-700";
+    case "Compliant":     return "bg-emerald-500/15 text-emerald-400";
+    case "Expiring Soon": return "bg-amber-500/15 text-amber-400";
     case "Missing Docs":
-    case "Non-Compliant": return "bg-red-100 text-red-700";
+    case "Non-Compliant": return "bg-red-500/15 text-red-400";
   }
 }
 
 function getUrgentDetail(worker: Worker): { icon: React.ElementType; text: string; color: string } | null {
   if (worker.status === "Expiring Soon") {
     const missingDocs = worker.documents.filter(d => d.status === "Expired" || d.status === "Missing");
-    if (missingDocs.length) return { icon: Clock, text: `${missingDocs[0].type} expiring in ${worker.daysUntilExpiry} days`, color: "text-amber-700" };
-    return { icon: Clock, text: `Expiring in ${worker.daysUntilExpiry} days`, color: "text-amber-700" };
+    if (missingDocs.length) return { icon: Clock, text: `${missingDocs[0].type} expiring in ${worker.daysUntilExpiry} days`, color: "text-amber-400" };
+    return { icon: Clock, text: `Expiring in ${worker.daysUntilExpiry} days`, color: "text-amber-400" };
   }
   if (worker.status === "Missing Docs") {
     const missing = worker.documents.filter(d => d.status === "Missing");
-    return { icon: AlertTriangle, text: missing.length ? `${missing[0].type} missing` : "Documents required", color: "text-red-700" };
+    return { icon: AlertTriangle, text: missing.length ? `${missing[0].type} missing` : "Documents required", color: "text-red-400" };
   }
   if (worker.status === "Non-Compliant") {
     const issues = [];
@@ -63,7 +63,7 @@ function getUrgentDetail(worker: Worker): { icon: React.ElementType; text: strin
     if (worker.zusStatus === "Unregistered") issues.push("ZUS unregistered");
     const expired = worker.documents.filter(d => d.status === "Expired");
     if (expired.length) issues.push(`${expired[0].type} expired`);
-    return { icon: ShieldX, text: issues.slice(0, 2).join(" · ") || "Non-compliant", color: "text-red-700" };
+    return { icon: ShieldX, text: issues.slice(0, 2).join(" · ") || "Non-compliant", color: "text-red-400" };
   }
   return null;
 }
@@ -109,7 +109,7 @@ export function WorkersTab() {
         className="flex flex-col h-full"
       >
         {/* Sticky search + filters */}
-        <div className="sticky top-0 z-10 bg-gray-50 pt-4 pb-3 px-4 space-y-2.5">
+        <div className="sticky top-0 z-10 bg-[#0c0c0e] pt-4 pb-3 px-4 space-y-2.5">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -118,7 +118,7 @@ export function WorkersTab() {
               placeholder="Search by name, trade, specialization…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
+              className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:border-white/15 focus:ring-2 focus:ring-primary/20 transition-shadow"
             />
           </div>
 
@@ -132,7 +132,7 @@ export function WorkersTab() {
                   "whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                   filter === p
                     ? `${activePill} text-white border-transparent`
-                    : "bg-white text-muted-foreground border-border hover:bg-gray-50"
+                    : "bg-[#141416] text-muted-foreground border-white/[0.08] hover:bg-white/[0.04]"
                 )}
               >
                 {p}
@@ -152,8 +152,8 @@ export function WorkersTab() {
                 className={cn(
                   "whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-semibold transition-colors border shrink-0",
                   siteFilter === s
-                    ? "bg-gray-800 text-white border-transparent"
-                    : "bg-white text-muted-foreground border-border hover:bg-gray-50"
+                    ? "bg-white/15 text-white border-transparent"
+                    : "bg-[#141416] text-muted-foreground border-white/[0.08] hover:bg-white/[0.04]"
                 )}
               >
                 {s === "All Sites" ? "All Sites" : s.split("–")[1]?.trim() ?? s}
@@ -165,10 +165,10 @@ export function WorkersTab() {
         {/* Stats strip */}
         <div className="px-4 mb-3 grid grid-cols-4 gap-2">
           {[
-            { label: "OK",      count: counts.compliant,    color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
-            { label: "Expiring", count: counts.expiring,    color: "text-amber-600",   bg: "bg-amber-50",   border: "border-amber-200" },
-            { label: "Missing",  count: counts.missing,     color: "text-red-600",     bg: "bg-red-50",     border: "border-red-200" },
-            { label: "Non-Comp", count: counts.nonCompliant, color: "text-red-700",    bg: "bg-red-50",     border: "border-red-200" },
+            { label: "OK",      count: counts.compliant,    color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/25" },
+            { label: "Expiring", count: counts.expiring,    color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/25" },
+            { label: "Missing",  count: counts.missing,     color: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/25" },
+            { label: "Non-Comp", count: counts.nonCompliant, color: "text-red-400",    bg: "bg-red-500/10",     border: "border-red-500/25" },
           ].map(({ label, count, color, bg, border }) => (
             <div key={label} className={cn("rounded-xl border p-2 text-center", bg, border)}>
               <div className={cn("text-lg font-black leading-none", color)}>{count}</div>
@@ -196,13 +196,13 @@ export function WorkersTab() {
         {loading && (
           <div className="px-4 pb-4 space-y-2.5">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border p-4 flex items-center gap-3 animate-pulse">
-                <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+              <div key={i} className="premium-card rounded-2xl p-4 flex items-center gap-3 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-white/10 shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-gray-200 rounded w-2/3" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                  <div className="h-3.5 bg-white/10 rounded w-2/3" />
+                  <div className="h-3 bg-white/[0.06] rounded w-1/2" />
                 </div>
-                <div className="w-16 h-6 bg-gray-100 rounded-full" />
+                <div className="w-16 h-6 bg-white/[0.06] rounded-full" />
               </div>
             ))}
           </div>
@@ -223,7 +223,7 @@ export function WorkersTab() {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.16 }}
                   onClick={() => setSelectedWorker(worker)}
-                  className="bg-white rounded-2xl shadow-sm border p-4 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
+                  className="premium-card rounded-2xl p-4 hover:scale-[1.005] flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
                 >
                   {/* Avatar */}
                   <div className={cn("w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0", getAvatarColor(worker.status))}>
@@ -242,7 +242,7 @@ export function WorkersTab() {
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-0.5">
                       <span className="font-semibold text-foreground/70">{worker.trade}</span>
                       <span className="opacity-50">·</span>
-                      <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-bold">{worker.specialization}</span>
+                      <span className="bg-white/[0.06] text-white/50 px-1.5 py-0.5 rounded text-[10px] font-bold">{worker.specialization}</span>
                     </div>
 
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -258,7 +258,7 @@ export function WorkersTab() {
                     )}
                   </div>
 
-                  <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-white/20 shrink-0" />
                 </motion.div>
               );
             })}
@@ -269,7 +269,7 @@ export function WorkersTab() {
                 animate={{ opacity: 1 }}
                 className="text-center py-16"
               >
-                <Search className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <Search className="w-10 h-10 text-white/15 mx-auto mb-3" />
                 <p className="text-sm font-semibold text-muted-foreground">No professionals found</p>
                 <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
               </motion.div>
@@ -286,8 +286,8 @@ export function WorkersTab() {
           transition={{ type: "spring", damping: 15, stiffness: 300, delay: 0.3 }}
           onClick={() => setAddSheetOpen(true)}
           className={cn(
-            "absolute bottom-5 right-5 z-30 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform",
-            fab.bg, `shadow-lg ${fab.shadow}`
+            "absolute bottom-5 right-5 z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform",
+            fab.bg, fab.text, `shadow-lg ${fab.shadow}`
           )}
         >
           <Plus className="w-6 h-6" strokeWidth={2.5} />

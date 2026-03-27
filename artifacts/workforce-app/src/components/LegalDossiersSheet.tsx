@@ -16,10 +16,10 @@ interface Props {
 }
 
 const STATUS_PILL: Record<WorkerStatus, string> = {
-  "Compliant":       "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Expiring Soon":   "bg-amber-50 text-amber-700 border-amber-200",
-  "Non-Compliant":   "bg-red-50 text-red-700 border-red-200",
-  "Missing Docs":    "bg-gray-100 text-gray-600 border-gray-200",
+  "Compliant":       "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
+  "Expiring Soon":   "bg-amber-500/10 text-amber-400 border-amber-500/25",
+  "Non-Compliant":   "bg-red-500/10 text-red-400 border-red-500/25",
+  "Missing Docs":    "bg-white/[0.06] text-white/50 border-white/[0.08]",
 };
 
 const STATUS_BORDER: Record<WorkerStatus, string> = {
@@ -48,15 +48,15 @@ function expiryBadge(d: string | null | undefined): { label: string; cls: string
   if (!d) return null;
   const dt = new Date(d);
   const days = Math.ceil((dt.getTime() - Date.now()) / 86400000);
-  if (days < 0)   return { label: `${Math.abs(days)}d overdue`, cls: "bg-red-50 text-red-700 border-red-200" };
-  if (days < 30)  return { label: `${days}d left`, cls: "bg-amber-50 text-amber-700 border-amber-200" };
-  if (days < 90)  return { label: `${days}d left`, cls: "bg-yellow-50 text-yellow-700 border-yellow-200" };
+  if (days < 0)   return { label: `${Math.abs(days)}d overdue`, cls: "bg-red-500/10 text-red-400 border-red-500/25" };
+  if (days < 30)  return { label: `${days}d left`, cls: "bg-amber-500/10 text-amber-400 border-amber-500/25" };
+  if (days < 90)  return { label: `${days}d left`, cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/25" };
   return null;
 }
 
 function DocRow({ label, value, badge }: { label: string; value: string; badge?: { label: string; cls: string } | null }) {
   return (
-    <div className="flex items-start justify-between py-2 border-b border-gray-50 last:border-0 gap-2">
+    <div className="flex items-start justify-between py-2 border-b border-white/[0.05] last:border-0 gap-2">
       <div className="text-[11px] text-muted-foreground font-medium min-w-0">{label}</div>
       <div className="flex items-center gap-1.5 shrink-0">
         <div className="text-[11px] font-semibold text-foreground text-right">{value}</div>
@@ -75,19 +75,19 @@ function DossierCard({ worker }: { worker: Worker }) {
 
   return (
     <div className={cn(
-      "bg-white rounded-2xl border-l-4 border border-border shadow-sm overflow-hidden",
+      "premium-card rounded-2xl border-l-4 overflow-hidden",
       STATUS_BORDER[worker.status]
     )}>
       {/* Collapsed header */}
       <button
         onClick={() => setExpanded(x => !x)}
-        className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        className="w-full p-4 flex items-center gap-3 text-left hover:bg-white/[0.04] active:bg-white/[0.08] transition-colors"
       >
         <div className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
-          worker.status === "Compliant" ? "bg-emerald-50 border-emerald-100" :
-          worker.status === "Expiring Soon" ? "bg-amber-50 border-amber-100" :
-          "bg-red-50 border-red-100"
+          worker.status === "Compliant" ? "bg-emerald-500/10 border-emerald-500/20" :
+          worker.status === "Expiring Soon" ? "bg-amber-500/10 border-amber-500/20" :
+          "bg-red-500/10 border-red-500/20"
         )}>
           {worker.status === "Compliant"
             ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
@@ -110,8 +110,8 @@ function DossierCard({ worker }: { worker: Worker }) {
             {worker.status}
           </span>
           {expanded
-            ? <ChevronUp className="w-4 h-4 text-gray-400" />
-            : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            ? <ChevronUp className="w-4 h-4 text-white/30" />
+            : <ChevronDown className="w-4 h-4 text-white/30" />}
         </div>
       </button>
 
@@ -125,7 +125,7 @@ function DossierCard({ worker }: { worker: Worker }) {
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-3">
+            <div className="px-4 pb-4 space-y-4 border-t border-white/[0.06] pt-3">
 
               {/* Identity */}
               <div>
@@ -133,7 +133,7 @@ function DossierCard({ worker }: { worker: Worker }) {
                   <User className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Identity & Legal</span>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 space-y-0">
+                <div className="bg-white/[0.04] rounded-xl p-3 space-y-0">
                   <DocRow label="PESEL"      value={worker.pesel  || "—"} />
                   <DocRow label="ZUS Status" value={worker.zusStatus} />
                   <DocRow label="Visa Type"  value={worker.visaType} />
@@ -148,7 +148,7 @@ function DossierCard({ worker }: { worker: Worker }) {
                   <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Financial</span>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3">
+                <div className="bg-white/[0.04] rounded-xl p-3">
                   <DocRow label="IBAN" value={worker.iban || "—"} />
                 </div>
               </div>
@@ -159,7 +159,7 @@ function DossierCard({ worker }: { worker: Worker }) {
                   <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Documents & Expiries</span>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 space-y-0">
+                <div className="bg-white/[0.04] rounded-xl p-3 space-y-0">
                   <DocRow label="TRC Certificate"     value={formatDate(worker.trcExpiry)}       badge={expiryBadge(worker.trcExpiry)} />
                   <DocRow label="Passport"            value={formatDate(worker.passportExpiry)}  badge={expiryBadge(worker.passportExpiry)} />
                   <DocRow label="BHP Certificate"     value={formatDate(worker.bhpExpiry)}       badge={expiryBadge(worker.bhpExpiry)} />
@@ -175,7 +175,7 @@ function DossierCard({ worker }: { worker: Worker }) {
                   <Shield className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compliance</span>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 space-y-0">
+                <div className="bg-white/[0.04] rounded-xl p-3 space-y-0">
                   <DocRow label="Overall Status"     value={worker.status} />
                   <DocRow label="Days Until Expiry"  value={worker.daysUntilExpiry < 9999 ? `${worker.daysUntilExpiry} days` : "—"} />
                   <DocRow label="PESEL Verified"     value={worker.peselOk ? "Yes" : "Pending"} />
@@ -217,23 +217,23 @@ export function LegalDossiersSheet({ isOpen, onClose, workers, loading }: Props)
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="absolute inset-x-0 bottom-0 z-50 bg-gray-50 rounded-t-3xl shadow-2xl flex flex-col"
+            className="absolute inset-x-0 bottom-0 z-50 bg-[#0c0c0e] rounded-t-3xl shadow-2xl flex flex-col"
             style={{ maxHeight: "92vh" }}
           >
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-200" />
+              <div className="w-10 h-1 rounded-full bg-white/10" />
             </div>
 
             {/* Header */}
-            <div className="px-5 py-4 bg-white border-b border-border shrink-0 rounded-t-3xl">
+            <div className="px-5 py-4 bg-[#141416] border-b border-border shrink-0 rounded-t-3xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-violet-50 border border-violet-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
                     <Scale className="w-5 h-5 text-violet-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-foreground">PIP / Legal Dossiers</h3>
+                    <h3 className="text-base font-black font-heading text-foreground">PIP / Legal Dossiers</h3>
                     <p className="text-xs text-muted-foreground">
                       {loading ? "Loading…" : `${workers.length} professionals · ${issueCount} require attention`}
                     </p>
@@ -241,7 +241,7 @@ export function LegalDossiersSheet({ isOpen, onClose, workers, loading }: Props)
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
+                  className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] active:scale-95 transition-all"
                 >
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -257,7 +257,7 @@ export function LegalDossiersSheet({ isOpen, onClose, workers, loading }: Props)
                       "text-[10px] font-bold px-3 py-1.5 rounded-full border whitespace-nowrap transition-all",
                       filter === opt.value
                         ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-white text-muted-foreground border-gray-200 hover:border-gray-300"
+                        : "bg-[#141416] text-muted-foreground border-white/[0.08] hover:border-white/20"
                     )}
                   >
                     {opt.label}
