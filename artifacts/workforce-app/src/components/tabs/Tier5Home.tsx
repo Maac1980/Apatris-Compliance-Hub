@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   HardHat, Wrench, ShieldAlert, ShieldCheck,
   FileCheck, UploadCloud, Clock, FileText,
@@ -82,13 +83,13 @@ function complianceGradient(status: string) {
   }
 }
 
-function complianceLabel(status: string) {
+function complianceLabel(status: string, t: (key: string) => string) {
   switch (status) {
-    case "compliant":     return "FULLY COMPLIANT";
-    case "warning":       return "RENEWAL PENDING";
-    case "critical":      return "ACTION REQUIRED";
-    case "non-compliant": return "NON-COMPLIANT";
-    default:              return "UNKNOWN";
+    case "compliant":     return t("tier5.fullyCompliant");
+    case "warning":       return t("tier5.renewalPending");
+    case "critical":      return t("tier5.actionRequired");
+    case "non-compliant": return t("tier5.nonCompliant");
+    default:              return t("tier5.unknown");
   }
 }
 
@@ -106,6 +107,7 @@ function SubmitHoursSheet({
   onClose,
   onSuccess,
 }: { jwt: string; onClose: () => void; onSuccess: () => void }) {
+  const { t } = useTranslation();
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [month, setMonth] = useState(defaultMonth);
@@ -143,8 +145,8 @@ function SubmitHoursSheet({
       >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-base font-black text-foreground">Submit Hours</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Record your hours for the selected month</p>
+            <h3 className="text-base font-black text-foreground">{t("tier5.submitHours")}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("tier5.recordHoursDesc")}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center">
             <X className="w-4 h-4" />
@@ -156,23 +158,23 @@ function SubmitHoursSheet({
             <motion.div key="ok" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
               className="flex flex-col items-center py-8 gap-3">
               <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-              <p className="text-sm font-bold text-emerald-400">Hours submitted!</p>
+              <p className="text-sm font-bold text-emerald-400">{t("tier5.hoursSubmitted")}</p>
             </motion.div>
           ) : (
             <motion.form key="form" onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Month</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">{t("tier5.month")}</label>
                 <input type="month" value={month} onChange={e => setMonth(e.target.value)}
                   className="w-full h-10 border border-border rounded-xl px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Hours Worked</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">{t("tier5.hoursWorked")}</label>
                 <input type="number" min="1" max="744" step="0.5" value={hours}
                   onChange={e => setHours(e.target.value)} placeholder="e.g. 168"
                   className="w-full h-10 border border-border rounded-xl px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Note <span className="text-white/30 font-normal">(optional)</span></label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">{t("tier5.note")} <span className="text-white/30 font-normal">({t("tier5.optional")})</span></label>
                 <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Overtime, site change..."
                   className="w-full h-10 border border-border rounded-xl px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
@@ -181,7 +183,7 @@ function SubmitHoursSheet({
                 className={cn("w-full h-11 rounded-xl text-sm font-bold transition-all",
                   loading || !hours ? "bg-white/[0.06] text-white/30" : "bg-white text-[#0c0c0e] hover:bg-gray-200"
                 )}>
-                {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Submitting...</span> : "Submit Hours"}
+                {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{t("tier5.submitting")}</span> : t("tier5.submitHours")}
               </button>
             </motion.form>
           )}
@@ -193,6 +195,7 @@ function SubmitHoursSheet({
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export function Tier5Home() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const jwt = user?.jwt ?? "";
   const displayName = user?.name ?? "Deployed Professional";
@@ -228,7 +231,7 @@ export function Tier5Home() {
   ].filter(d => d.expiry !== null || d.label === "TRC Certificate" || d.label === "Badania Lekarskie") : [];
 
   const cStatus = profile?.complianceStatus ?? "non-compliant";
-  const site    = profile?.assignedSite ?? "Not assigned";
+  const site    = profile?.assignedSite ?? t("tier5.notAssigned");
   const spec    = profile?.specialization ?? "Welder";
 
   const validCount    = docRows.filter(d => docStatus(daysUntil(d.expiry)) === "Valid").length;
@@ -254,12 +257,12 @@ export function Tier5Home() {
         <div className="relative flex items-start justify-between mb-4">
           <div>
             <div className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">Apatris Sp. z o.o.</div>
-            <div className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Digital Site Pass</div>
+            <div className="text-[10px] font-bold text-white/80 uppercase tracking-widest">{t("tier5.digitalSitePass")}</div>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-1.5">
               <span className={cn("w-2 h-2 rounded-full animate-pulse", complianceDot(cStatus))} />
-              <span className="text-[10px] font-black text-white/90 tracking-wider">{complianceLabel(cStatus)}</span>
+              <span className="text-[10px] font-black text-white/90 tracking-wider">{complianceLabel(cStatus, t)}</span>
             </div>
             <Wifi className="w-4 h-4 text-white/40" />
           </div>
@@ -301,29 +304,29 @@ export function Tier5Home() {
             {latestHours ? latestHours.hours : profile?.monthlyHours ?? "—"}
           </div>
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
-            Hours<br />{latestHours ? latestHours.month : "This Month"}
+            {t("tier5.hours")}<br />{latestHours ? latestHours.month : t("tier5.thisMonth")}
           </div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-emerald-600">{profLoading ? "…" : validCount}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Valid<br />Documents</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier5.validDocuments")}</div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-amber-600">{profLoading ? "…" : daysToRenewal ?? "—"}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Days to Next<br />Renewal</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier5.daysToNextRenewal")}</div>
         </div>
       </div>
 
       {/* ── My Documents ───────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">My Documents</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier5.myDocuments")}</h2>
         {profLoading ? (
           <div className="premium-card rounded-2xl p-6 flex justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : docRows.length === 0 ? (
           <div className="premium-card rounded-2xl p-5 text-center text-sm text-muted-foreground">
-            No document records found in Airtable for your profile.
+            {t("tier5.noDocRecords")}
           </div>
         ) : (
           <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
@@ -341,14 +344,14 @@ export function Tier5Home() {
                     <div className="text-sm font-semibold text-foreground">{doc.label}</div>
                     {doc.expiry ? (
                       <div className="text-xs text-muted-foreground">
-                        {ds === "Expired" ? "Expired" : "Expires"} {new Date(doc.expiry).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {ds === "Expired" ? t("tier5.expired") : t("tier5.expires")} {new Date(doc.expiry).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                         {days !== null && days > 0 && days < 120 && (
                           <span className={cn("ml-1.5 font-bold", days < 60 ? "text-amber-600" : "text-muted-foreground")}>
                             ({days}d)
                           </span>
                         )}
                       </div>
-                    ) : <div className="text-xs text-muted-foreground">Not on record</div>}
+                    ) : <div className="text-xs text-muted-foreground">{t("tier5.notOnRecord")}</div>}
                   </div>
                   <span className={cn("text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap shrink-0", style.pill)}>
                     {ds}
@@ -362,7 +365,7 @@ export function Tier5Home() {
 
       {/* ── Quick Actions ───────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">My Actions</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier5.myActions")}</h2>
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setHoursSheetOpen(true)}
@@ -372,9 +375,9 @@ export function Tier5Home() {
               <Clock className="w-6 h-6 text-amber-600" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold text-foreground leading-tight">Submit Hours</div>
+              <div className="text-xs font-bold text-foreground leading-tight">{t("tier5.submitHours")}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">
-                {latestHours ? `Last: ${latestHours.month}` : "Record this month"}
+                {latestHours ? `Last: ${latestHours.month}` : t("tier5.recordThisMonth")}
               </div>
             </div>
           </button>
@@ -387,8 +390,8 @@ export function Tier5Home() {
               <UploadCloud className="w-6 h-6 text-blue-600" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold text-foreground leading-tight">Upload Document</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">Email to coordinator</div>
+              <div className="text-xs font-bold text-foreground leading-tight">{t("tier5.uploadDocument")}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t("tier5.emailToCoordinator")}</div>
             </div>
           </a>
 
@@ -400,8 +403,8 @@ export function Tier5Home() {
               <CalendarCheck className="w-6 h-6 text-violet-600" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold text-foreground leading-tight">Request Leave</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">Annual / sick leave</div>
+              <div className="text-xs font-bold text-foreground leading-tight">{t("tier5.requestLeave")}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t("tier5.annualSickLeave")}</div>
             </div>
           </a>
 
@@ -413,8 +416,8 @@ export function Tier5Home() {
               <ShieldAlert className="w-6 h-6 text-red-600" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold text-foreground leading-tight">Report Site Issue</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">Safety concern</div>
+              <div className="text-xs font-bold text-foreground leading-tight">{t("tier5.reportSiteIssue")}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t("tier5.safetyConcern")}</div>
             </div>
           </a>
         </div>
@@ -423,7 +426,7 @@ export function Tier5Home() {
       {/* ── Hours history ───────────────────────────────────────────────────── */}
       {hoursLog.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Hours History</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier5.hoursHistory")}</h2>
           <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
             {hoursLog.map((entry) => (
               <div key={entry.id} className="p-3.5 flex items-center gap-3">
@@ -452,18 +455,18 @@ export function Tier5Home() {
 
       {/* ── Current Assignment ──────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Assignment</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier5.currentAssignment")}</h2>
         <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
           <div className="p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-foreground">Umowa Zlecenie</div>
+              <div className="text-sm font-semibold text-foreground">{t("tier5.umowaZlecenie")}</div>
               <div className="text-xs text-muted-foreground">
                 {profile?.contractEndDate
-                  ? `Expires ${new Date(profile.contractEndDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
-                  : "Active"}
+                  ? `${t("tier5.expires")} ${new Date(profile.contractEndDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                  : t("tier5.active")}
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
@@ -473,7 +476,7 @@ export function Tier5Home() {
               <MapPin className="w-4 h-4 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-foreground">Assigned Site</div>
+              <div className="text-sm font-semibold text-foreground">{t("tier5.assignedSite")}</div>
               <div className="text-xs text-muted-foreground">{site}</div>
             </div>
           </div>
@@ -483,7 +486,7 @@ export function Tier5Home() {
                 <AlertCircle className="w-4 h-4 text-amber-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-foreground">Next Renewal Due</div>
+                <div className="text-sm font-semibold text-foreground">{t("tier5.nextRenewalDue")}</div>
                 <div className="text-xs text-muted-foreground">{daysToRenewal} days</div>
               </div>
               <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-1 rounded-md shrink-0 border border-amber-500/25">
@@ -496,8 +499,8 @@ export function Tier5Home() {
 
       {/* ── My Coordinators ─────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">My Coordinators</h2>
-        <p className="text-xs text-muted-foreground ml-1 -mt-2">Your designated contacts for site support and compliance queries.</p>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier5.myCoordinators")}</h2>
+        <p className="text-xs text-muted-foreground ml-1 -mt-2">{t("tier5.coordinatorDesc")}</p>
         <div className="space-y-3">
           {MY_COORDINATORS.map((c) => (
             <div key={c.id} className="premium-card rounded-2xl overflow-hidden">

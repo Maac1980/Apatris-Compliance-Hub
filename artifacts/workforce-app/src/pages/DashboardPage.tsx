@@ -19,6 +19,7 @@ import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
 import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
+import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
@@ -40,6 +41,7 @@ export function DashboardPage() {
   const { role, logout, isReady } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("home");
+  const { t } = useTranslation();
 
   // Tab history stack — so back button walks through previously visited tabs
   const tabHistoryRef = useRef<string[]>(["home"]);
@@ -122,7 +124,7 @@ export function DashboardPage() {
       // ── PAYROLL (T1 only) ─────────────────────────────────────────────────
       case "payroll":
         if (!tierConfig.canViewFinancials) {
-          return <AccessDenied title="Financial Firewall" message="ZUS & Payroll ledgers are restricted to Tier 1 (Executive Board & Partners) only." label="TIER 1 ACCESS ONLY" />;
+          return <AccessDenied title={t("common.financialFirewall")} message={t("common.financialFirewallMsg")} label={t("common.tier1Only")} />;
         }
         return <PayrollModule />;
 

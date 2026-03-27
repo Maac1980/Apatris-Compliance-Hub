@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { mobileLogin } from "@/lib/api";
@@ -43,6 +44,7 @@ const rowVariants = {
 };
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -165,10 +167,10 @@ export function LoginPage() {
             APATRIS
           </h1>
           <p className="text-[11px] text-red-500 font-semibold tracking-[0.22em] uppercase mb-1">
-            Specialist Welding
+            {t("login.specialistWelding")}
           </p>
           <p className="text-[10px] text-white/20 font-mono tracking-wider">
-            Workforce Deployment Terminal
+            {t("login.workforceTerminal")}
           </p>
         </motion.div>
 
@@ -185,7 +187,7 @@ export function LoginPage() {
           <div className="p-5">
             {/* Step label */}
             <p className="text-[10px] font-semibold text-white/25 tracking-[0.2em] uppercase mb-4">
-              {step === "roles" ? "Select your designation" : step === "name-picker" ? "Select profile" : "Authenticate"}
+              {step === "roles" ? t("login.selectDesignation") : step === "name-picker" ? t("login.selectProfile") : t("login.authenticate")}
             </p>
 
             <AnimatePresence mode="wait">
@@ -217,12 +219,12 @@ export function LoginPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[13px] font-bold text-white leading-tight truncate">{cfg.title}</span>
+                              <span className="text-[13px] font-bold text-white leading-tight truncate">{t(`roles.${cfg.role}`)}</span>
                               <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md shrink-0 tracking-widest", cfg.badge)}>
                                 T{cfg.tier}
                               </span>
                             </div>
-                            <p className="text-[11px] text-white/35 truncate">{cfg.subtitle}</p>
+                            <p className="text-[11px] text-white/35 truncate">{t(`roleSubtitles.${cfg.role}`)}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {hasSaved && <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />}
@@ -245,7 +247,7 @@ export function LoginPage() {
                   transition={{ duration: 0.15 }}
                 >
                   <button onClick={handleBack} className="flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors mb-5 text-xs">
-                    <ArrowLeft className="w-3.5 h-3.5" /> Change role
+                    <ArrowLeft className="w-3.5 h-3.5" /> {t("login.changeRole")}
                   </button>
 
                   {/* Selected role chip */}
@@ -307,7 +309,7 @@ export function LoginPage() {
                 >
                   <button onClick={handleBack} className="flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors mb-5 text-xs">
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    {selectedRole.tier === 1 ? "Change profile" : "Change role"}
+                    {selectedRole.tier === 1 ? t("login.changeProfile") : t("login.changeRole")}
                   </button>
 
                   {/* Identity chip */}
@@ -350,20 +352,20 @@ export function LoginPage() {
                           )}
                         >
                           {bioSuccess ? (
-                            <><CheckCircle2 className="w-8 h-8 text-emerald-400" /><span className="text-xs font-bold text-emerald-400 tracking-wider">Verified</span></>
+                            <><CheckCircle2 className="w-8 h-8 text-emerald-400" /><span className="text-xs font-bold text-emerald-400 tracking-wider">{t("login.verified")}</span></>
                           ) : bioLoading ? (
-                            <><div className="w-7 h-7 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" /><span className="text-xs text-white/30">Scanning…</span></>
+                            <><div className="w-7 h-7 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" /><span className="text-xs text-white/30">{t("login.scanning")}</span></>
                           ) : (
                             <>
                               <Fingerprint className="w-9 h-9 text-white/50" strokeWidth={1.4} />
-                              <span className="text-sm font-semibold text-white/70">Sign in with biometrics</span>
-                              <span className="text-[10px] text-white/25">Touch ID · Face ID</span>
+                              <span className="text-sm font-semibold text-white/70">{t("login.signInBiometrics")}</span>
+                              <span className="text-[10px] text-white/25">{t("login.touchFaceId")}</span>
                             </>
                           )}
                         </button>
                         <div className="flex items-center gap-3 my-4">
                           <div className="h-px flex-1 bg-white/[0.06]" />
-                          <span className="text-[10px] text-white/20 tracking-wider">or enter PIN</span>
+                          <span className="text-[10px] text-white/20 tracking-wider">{t("login.orEnterPin")}</span>
                           <div className="h-px flex-1 bg-white/[0.06]" />
                         </div>
                       </motion.div>
@@ -374,14 +376,14 @@ export function LoginPage() {
                   <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
                       <label className="text-[10px] font-semibold text-white/30 tracking-[0.15em] uppercase block mb-2">
-                        {selectedRole.tier === 1 ? "Access Password" : "Tier PIN"}
+                        {selectedRole.tier === 1 ? t("login.accessPassword") : t("login.tierPin")}
                       </label>
                       <div className="relative">
                         <input
                           type={showPassword ? "text" : "password"}
                           value={password}
                           onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                          placeholder={selectedRole.tier === 1 ? "Enter your password" : "Enter tier PIN"}
+                          placeholder={selectedRole.tier === 1 ? t("login.enterPassword") : t("login.enterTierPin")}
                           autoFocus={!canShowBiometric}
                           className={cn(
                             "w-full bg-white/[0.05] border rounded-2xl px-4 py-3.5 pr-12",
@@ -430,9 +432,9 @@ export function LoginPage() {
                           {rememberDevice && <CheckCircle2 className="w-3 h-3 text-white" />}
                         </div>
                         <div className="flex-1">
-                          <div className="text-[12px] font-semibold text-white/60">Remember this device</div>
+                          <div className="text-[12px] font-semibold text-white/60">{t("login.rememberDevice")}</div>
                           <div className="text-[10px] text-white/25 mt-0.5">
-                            {bioAvailable ? "Enable biometric sign-in next time" : "Save credentials locally"}
+                            {bioAvailable ? t("login.enableBiometric") : t("login.saveCredentials")}
                           </div>
                         </div>
                         {bioAvailable && rememberDevice && <Fingerprint className="w-4 h-4 text-emerald-400 shrink-0" />}
@@ -447,7 +449,7 @@ export function LoginPage() {
                         className="w-full flex items-center gap-2.5 p-3 rounded-xl border border-white/[0.04] hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all text-left"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-white/25" />
-                        <span className="text-[11px] text-white/25">Forget saved login on this device</span>
+                        <span className="text-[11px] text-white/25">{t("login.forgetDevice")}</span>
                       </button>
                     )}
 
@@ -465,14 +467,14 @@ export function LoginPage() {
                       {loading ? (
                         <span className="flex items-center justify-center gap-2">
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Verifying…
+                          {t("login.verifying")}
                         </span>
-                      ) : "Authenticate"}
+                      ) : t("login.authenticateBtn")}
                     </motion.button>
                   </form>
 
                   <p className="text-center text-[10px] text-white/15 mt-5">
-                    Contact your administrator if you need access credentials.
+                    {t("login.contactAdmin")}
                   </p>
                 </motion.div>
               )}

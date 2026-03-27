@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface Tab {
   id: string;
@@ -20,41 +21,41 @@ function getTabsForRole(role: Role): Tab[] {
   switch (role) {
     case "Executive":
       return [
-        { id: "home",    label: "Home",      icon: Home },
-        { id: "workers", label: "Directory", icon: Users },
-        { id: "payroll",     label: "Payroll",    icon: DollarSign },
-        { id: "alerts",      label: "Alerts",     icon: Bell },
+        { id: "home",    label: "nav.home",      icon: Home },
+        { id: "workers", label: "nav.directory", icon: Users },
+        { id: "payroll",     label: "nav.payroll",    icon: DollarSign },
+        { id: "alerts",      label: "nav.alerts",     icon: Bell },
         { id: "calculator",  label: "Calculator", icon: Calculator },
-        { id: "profile",     label: "Profile",    icon: User },
+        { id: "profile",     label: "nav.profile",    icon: User },
       ];
     case "LegalHead":
       return [
-        { id: "home",    label: "Home",      icon: Home },
-        { id: "workers", label: "Directory", icon: Users },
-        { id: "alerts",  label: "Alerts",    icon: Bell },
-        { id: "queue",   label: "Doc Queue", icon: ClipboardList },
-        { id: "profile", label: "Profile",   icon: User },
+        { id: "home",    label: "nav.home",      icon: Home },
+        { id: "workers", label: "nav.directory", icon: Users },
+        { id: "alerts",  label: "nav.alerts",    icon: Bell },
+        { id: "queue",   label: "nav.docQueue", icon: ClipboardList },
+        { id: "profile", label: "nav.profile",   icon: User },
       ];
     case "TechOps":
       return [
-        { id: "home",    label: "Directory", icon: Users },
-        { id: "workers", label: "Workspace", icon: LayoutGrid },
-        { id: "sites",   label: "Sites",     icon: MapPin },
-        { id: "profile", label: "Profile",   icon: User },
+        { id: "home",    label: "nav.directory", icon: Users },
+        { id: "workers", label: "nav.workspace", icon: LayoutGrid },
+        { id: "sites",   label: "nav.sites",     icon: MapPin },
+        { id: "profile", label: "nav.profile",   icon: User },
       ];
     case "Coordinator":
       return [
-        { id: "home",    label: "Directory", icon: Users },
-        { id: "workers", label: "Workspace", icon: LayoutGrid },
-        { id: "queue",   label: "Doc Queue", icon: ClipboardList },
-        { id: "profile", label: "Profile",   icon: User },
+        { id: "home",    label: "nav.directory", icon: Users },
+        { id: "workers", label: "nav.workspace", icon: LayoutGrid },
+        { id: "queue",   label: "nav.docQueue", icon: ClipboardList },
+        { id: "profile", label: "nav.profile",   icon: User },
       ];
     case "Professional":
       return [
-        { id: "home",      label: "Home",      icon: Home },
-        { id: "docs",      label: "My Docs",   icon: FileText },
-        { id: "timesheet", label: "Timesheet", icon: Clock },
-        { id: "profile",   label: "Profile",   icon: User },
+        { id: "home",      label: "nav.home",      icon: Home },
+        { id: "docs",      label: "nav.myDocs",   icon: FileText },
+        { id: "timesheet", label: "nav.timesheet", icon: Clock },
+        { id: "profile",   label: "nav.profile",   icon: User },
       ];
   }
 }
@@ -78,6 +79,7 @@ const BADGE_BG: Record<Role, string> = {
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
   const { workers } = useWorkers();
+  const { t } = useTranslation();
   if (!role) return null;
 
   const tabs = getTabsForRole(role);
@@ -137,7 +139,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   "text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase",
                   isActive ? "font-black" : "font-semibold"
                 )}>
-                  {tab.label}
+                  {t(tab.label)}
                 </span>
               </div>
             </button>

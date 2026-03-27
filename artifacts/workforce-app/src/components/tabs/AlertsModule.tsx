@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle, AlertTriangle, ShieldX, ShieldAlert,
   CheckCircle2, Clock, FileX, ChevronRight, X, Bell,
@@ -163,6 +164,7 @@ const severityConfig = {
 };
 
 export function AlertsModule() {
+  const { t } = useTranslation();
   const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -193,18 +195,18 @@ export function AlertsModule() {
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-heading font-black text-red-600">{critical.length}</div>
-          <div className="text-[10px] font-bold text-red-400 mt-0.5">Critical</div>
-          <div className="text-[9px] text-red-500 font-medium">Immediate</div>
+          <div className="text-[10px] font-bold text-red-400 mt-0.5">{t("alerts.critical")}</div>
+          <div className="text-[9px] text-red-500 font-medium">{t("alerts.immediate")}</div>
         </div>
         <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-heading font-black text-amber-600">{warnings.length}</div>
-          <div className="text-[10px] font-bold text-amber-400 mt-0.5">Warnings</div>
-          <div className="text-[9px] text-amber-500 font-medium">30 days</div>
+          <div className="text-[10px] font-bold text-amber-400 mt-0.5">{t("alerts.warnings")}</div>
+          <div className="text-[9px] text-amber-500 font-medium">{t("alerts.days30")}</div>
         </div>
         <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-heading font-black text-emerald-600">{dismissed.size}</div>
-          <div className="text-[10px] font-bold text-emerald-400 mt-0.5">Resolved</div>
-          <div className="text-[9px] text-emerald-500 font-medium">Actioned</div>
+          <div className="text-[10px] font-bold text-emerald-400 mt-0.5">{t("alerts.resolved")}</div>
+          <div className="text-[9px] text-emerald-500 font-medium">{t("alerts.actioned")}</div>
         </div>
       </div>
 
@@ -215,7 +217,7 @@ export function AlertsModule() {
           className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-white/10 text-xs font-semibold text-muted-foreground hover:bg-white/[0.04] transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Restore {dismissed.size} resolved alert{dismissed.size > 1 ? "s" : ""}
+          {t("alerts.restoreResolved", { count: dismissed.size })}
         </button>
       )}
 
@@ -224,7 +226,7 @@ export function AlertsModule() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
             <ShieldAlert className="w-4 h-4 text-red-600" />
-            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Critical Issues</h2>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("alerts.criticalIssues")}</h2>
             <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{critical.length}</span>
           </div>
 
@@ -273,7 +275,7 @@ export function AlertsModule() {
                       className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 text-[11px] font-semibold hover:bg-white/[0.06] transition-colors active:scale-95"
                     >
                       <PhoneCall className="w-3 h-3" />
-                      Call
+                      {t("alerts.call")}
                     </button>
                   </div>
                 </motion.div>
@@ -288,7 +290,7 @@ export function AlertsModule() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
             <AlertCircle className="w-4 h-4 text-amber-600" />
-            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Warnings</h2>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("alerts.warnings")}</h2>
             <span className="bg-amber-500/15 text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{warnings.length}</span>
           </div>
 
@@ -337,7 +339,7 @@ export function AlertsModule() {
                       className="flex items-center justify-center gap-1 h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 text-[11px] font-semibold hover:bg-white/[0.06] transition-colors active:scale-95"
                     >
                       <PhoneCall className="w-3 h-3" />
-                      Call
+                      {t("alerts.call")}
                     </button>
                   </div>
                 </motion.div>
@@ -357,11 +359,11 @@ export function AlertsModule() {
           <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           </div>
-          <h3 className="text-sm font-bold text-foreground mb-1">All Alerts Resolved</h3>
-          <p className="text-xs text-muted-foreground">No active issues. Great work keeping the team compliant.</p>
+          <h3 className="text-sm font-bold text-foreground mb-1">{t("alerts.allAlertsResolved")}</h3>
+          <p className="text-xs text-muted-foreground">{t("alerts.noActiveIssues")}</p>
           {dismissed.size > 0 && (
             <button onClick={handleRestore} className="mt-4 text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" /> View {dismissed.size} resolved
+              <RefreshCw className="w-3.5 h-3.5" /> {t("alerts.viewResolved", { count: dismissed.size })}
             </button>
           )}
         </motion.div>
@@ -372,8 +374,8 @@ export function AlertsModule() {
         <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3">
           <Bell className="w-5 h-5 text-white/30 shrink-0" />
           <div>
-            <div className="text-sm font-bold text-white/60">Notifications active</div>
-            <div className="text-xs text-muted-foreground">Alerts auto-sync from live worker profiles. Dismiss to mark as actioned.</div>
+            <div className="text-sm font-bold text-white/60">{t("alerts.notificationsActive")}</div>
+            <div className="text-xs text-muted-foreground">{t("alerts.notificationsDesc")}</div>
           </div>
         </div>
       )}

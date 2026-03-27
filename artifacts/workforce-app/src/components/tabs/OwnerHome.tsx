@@ -6,6 +6,7 @@ import {
   ChevronRight, Bell, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useWorkers } from "@/hooks/useWorkers";
 import { TimesheetsSheet } from "@/components/TimesheetsSheet";
@@ -18,6 +19,7 @@ interface OwnerHomeProps {
 }
 
 export function OwnerHome({ onNavigate }: OwnerHomeProps) {
+  const { t } = useTranslation();
   const { workers, loading, isLive } = useWorkers();
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
   const [sitesOpen, setSitesOpen]           = useState(false);
@@ -35,8 +37,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
   const TIER1_MODULES = [
     {
       icon: Receipt,
-      label: "ZUS & Payroll",
-      sublabel: "March 2026 · Full ledger",
+      label: t("modules.zusPayroll"),
+      sublabel: t("modules.zusPayrollSub"),
       iconBg: "bg-indigo-500/10",
       iconColor: "text-indigo-600",
       accent: "hover:border-indigo-500/25 hover:bg-indigo-500/10",
@@ -46,8 +48,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: Bell,
-      label: "Compliance Alerts",
-      sublabel: loading ? "…" : `${alertCount} active alerts`,
+      label: t("modules.complianceAlerts"),
+      sublabel: loading ? "…" : `${alertCount} ${t("modules.activeAlerts")}`,
       iconBg: "bg-red-500/10",
       iconColor: "text-red-600",
       accent: "hover:border-red-500/25 hover:bg-red-500/10",
@@ -55,8 +57,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: Scale,
-      label: "PIP / Legal Dossiers",
-      sublabel: loading ? "…" : `${nonCompliant + missingDocs} issues active`,
+      label: t("modules.pipLegalDossiers"),
+      sublabel: loading ? "…" : `${nonCompliant + missingDocs} ${t("modules.issuesActive")}`,
       iconBg: "bg-violet-500/10",
       iconColor: "text-violet-600",
       accent: "hover:border-violet-500/25 hover:bg-violet-500/10",
@@ -64,8 +66,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: FileSignature,
-      label: "B2B Contracts",
-      sublabel: loading ? "…" : `${workers.length} workers · Active contracts`,
+      label: t("modules.b2bContracts"),
+      sublabel: loading ? "…" : `${workers.length} workers · ${t("modules.activeContracts")}`,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       accent: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -73,8 +75,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: Stethoscope,
-      label: "UDT & Badania Lekarskie",
-      sublabel: loading ? "…" : `${expiring} renewals pending`,
+      label: t("modules.udtBadania"),
+      sublabel: loading ? "…" : `${expiring} ${t("modules.renewalsPending")}`,
       iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
       accent: "hover:border-teal-500/25 hover:bg-teal-500/10",
@@ -86,8 +88,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
   const OPERATIONAL_MODULES = [
     {
       icon: LayoutGrid,
-      label: "Workspace",
-      sublabel: "Active ops · Site assignments",
+      label: t("modules.workspace"),
+      sublabel: t("modules.activeOps"),
       iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
       accent: "hover:border-blue-500/25 hover:bg-blue-500/10",
@@ -95,8 +97,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: MapPin,
-      label: "Site Monitor",
-      sublabel: loading ? "…" : `${activeSites} active sites`,
+      label: t("modules.siteMonitor"),
+      sublabel: loading ? "…" : `${activeSites} ${t("home.activeSites")}`,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       accent: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -104,8 +106,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: ClipboardList,
-      label: "Doc Queue",
-      sublabel: "Pending approvals",
+      label: t("modules.docQueue"),
+      sublabel: t("modules.pendingApprovals"),
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
       accent: "hover:border-amber-500/25 hover:bg-amber-500/10",
@@ -113,8 +115,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: Clock,
-      label: "Timesheets",
-      sublabel: loading ? "…" : `${workers.length} workers tracked`,
+      label: t("modules.timesheets"),
+      sublabel: loading ? "…" : `${workers.length} ${t("modules.workersTracked")}`,
       iconBg: "bg-sky-500/10",
       iconColor: "text-sky-600",
       accent: "hover:border-sky-500/25 hover:bg-sky-500/10",
@@ -122,8 +124,8 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: FileText,
-      label: "My Docs",
-      sublabel: "Professional documents",
+      label: t("modules.myDocs"),
+      sublabel: t("modules.professionalDocs"),
       iconBg: "bg-white/[0.06]",
       iconColor: "text-gray-600",
       accent: "hover:border-white/[0.1] hover:bg-white/[0.06]",
@@ -131,7 +133,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
     },
     {
       icon: Users,
-      label: "Professional Directory",
+      label: t("modules.professionalDirectory"),
       sublabel: loading ? "…" : `${workers.length} deployed · ${activeSites} sites`,
       iconBg: "bg-indigo-500/10",
       iconColor: "text-indigo-600",
@@ -150,23 +152,23 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       {/* KPI strip — live */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-indigo">Overview</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-indigo">{t("home.overview")}</h2>
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-          {!isLive && !loading && <span className="text-[9px] text-amber-600 font-bold">cached</span>}
+          {!isLive && !loading && <span className="text-[9px] text-amber-600 font-bold">{t("home.cached")}</span>}
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-foreground">{loading ? "…" : workers.length}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Deployed<br/>Professionals</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.deployedProfessionals")}</div>
           </div>
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-emerald-600">{loading ? "…" : `${complianceRate}%`}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Compliance<br/>Rate</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.complianceRate")}</div>
           </div>
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-red-600">{loading ? "…" : missingDocs}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Docs<br/>Missing</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.docsMissing")}</div>
           </div>
         </div>
 
@@ -176,7 +178,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             </div>
             <div className="text-xs font-medium text-slate-300 leading-tight">
-              {loading ? "…" : compliant} fully<br/>compliant
+              {loading ? "…" : compliant} {t("home.fullyCompliant")}
             </div>
           </div>
           <div className="flex-1 premium-card rounded-xl p-3 flex items-center gap-2">
@@ -184,7 +186,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
               <FileWarning className="w-3.5 h-3.5 text-amber-600" />
             </div>
             <div className="text-xs font-medium text-slate-300 leading-tight">
-              {loading ? "…" : expiring} expiring<br/>soon
+              {loading ? "…" : expiring} {t("home.expiringSoon")}
             </div>
           </div>
           <div className="flex-1 premium-card rounded-xl p-3 flex items-center gap-2">
@@ -192,7 +194,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
               <ShieldX className="w-3.5 h-3.5 text-red-600" />
             </div>
             <div className="text-xs font-medium text-slate-300 leading-tight">
-              {loading ? "…" : nonCompliant} non-<br/>compliant
+              {loading ? "…" : nonCompliant} {t("home.nonCompliant")}
             </div>
           </div>
         </div>
@@ -203,7 +205,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span className="text-sm font-bold text-foreground">Compliance Rate</span>
+            <span className="text-sm font-bold text-foreground">{t("home.complianceRate")}</span>
           </div>
           <span className="text-sm font-black text-emerald-600">{loading ? "…" : `${complianceRate}%`}</span>
         </div>
@@ -216,15 +218,15 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
           />
         </div>
         <div className="text-[11px] text-muted-foreground mt-1.5">
-          {loading ? "Loading…" : `${compliant} of ${workers.length} professionals fully compliant · ${activeSites} active sites`}
+          {loading ? "Loading…" : `${compliant} of ${workers.length} professionals fully compliant · ${activeSites} ${t("home.activeSites")}`}
         </div>
       </div>
 
       {/* Tier 1 Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-indigo">Platform Modules</h2>
-          <span className="text-[9px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-wide">FULL ACCESS</span>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-indigo">{t("home.platformModules")}</h2>
+          <span className="text-[9px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-wide">{t("home.fullAccess")}</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {TIER1_MODULES.map((mod) => {
@@ -262,7 +264,7 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       {/* All Tier Access — T2 / T3 / T4 / T5 screens */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-blue">Operational Access</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground section-line section-line-blue">{t("home.operationalAccess")}</h2>
           <span className="text-[9px] font-black bg-gray-700 text-white px-2 py-0.5 rounded-full tracking-wide">T2–T5</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -302,12 +304,12 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
             <AlertTriangle className="w-5 h-5 text-red-600" />
           </div>
           <div className="flex-1">
-            <div className="text-sm font-bold text-red-300">{alertCount} Compliance Issues</div>
+            <div className="text-sm font-bold text-red-300">{alertCount} {t("home.complianceIssues")}</div>
             <div className="text-xs text-red-400/80 font-medium mt-0.5">
               {nonCompliant > 0 && `${nonCompliant} non-compliant`}
               {nonCompliant > 0 && expiring > 0 && " · "}
               {expiring > 0 && `${expiring} expiring soon`}
-              {" — tap to view"}
+              {` — ${t("home.tapToView")}`}
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-red-400/60 shrink-0" />

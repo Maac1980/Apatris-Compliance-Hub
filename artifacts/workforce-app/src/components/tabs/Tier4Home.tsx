@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FileCheck, FileX, FileQuestion, Clock,
   UserPlus, MapPin, Stethoscope, Users,
@@ -30,6 +31,7 @@ const docStatusStyle = {
 };
 
 export function Tier4Home() {
+  const { t } = useTranslation();
   const { workers, loading, isLive } = useWorkers();
   const [addOpen, setAddOpen]               = useState(false);
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
@@ -39,8 +41,8 @@ export function Tier4Home() {
   const OPERATIONAL_MODULES: OpModule[] = [
     {
       icon: UserPlus,
-      label: "Add Professional",
-      sublabel: "Register & onboard",
+      label: t("modules.addProfessional"),
+      sublabel: t("modules.registerOnboard"),
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       border: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -48,8 +50,8 @@ export function Tier4Home() {
     },
     {
       icon: Clock,
-      label: "Timesheets & Hours",
-      sublabel: workers.length > 0 ? `${workers.length} workers tracked` : "Loading…",
+      label: t("modules.timesheetsHours"),
+      sublabel: workers.length > 0 ? `${workers.length} ${t("modules.workersTracked")}` : "Loading…",
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
       border: "hover:border-amber-500/25 hover:bg-amber-500/10",
@@ -57,8 +59,8 @@ export function Tier4Home() {
     },
     {
       icon: Stethoscope,
-      label: "UDT & Badania Lekarskie",
-      sublabel: `${workers.filter(w => w.status === "Expiring Soon").length} renewals pending`,
+      label: t("modules.udtBadania"),
+      sublabel: `${workers.filter(w => w.status === "Expiring Soon").length} ${t("modules.renewalsPending")}`,
       iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
       border: "hover:border-teal-500/25 hover:bg-teal-500/10",
@@ -66,8 +68,8 @@ export function Tier4Home() {
     },
     {
       icon: MapPin,
-      label: "Site Deployments",
-      sublabel: `${new Set(workers.map(w => w.workplace).filter(Boolean)).size} active sites`,
+      label: t("modules.siteDeployments"),
+      sublabel: `${new Set(workers.map(w => w.workplace).filter(Boolean)).size} ${t("home.activeSites")}`,
       iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
       border: "hover:border-blue-500/25 hover:bg-blue-500/10",
@@ -99,9 +101,9 @@ export function Tier4Home() {
           <Users className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-emerald-200">Shared Operational Workspace</div>
+          <div className="text-xs font-bold text-emerald-200">{t("tier3.sharedWorkspace")}</div>
           <div className="text-[11px] text-emerald-400/80 font-medium">
-            Full read/write access to Deployed Professional profiles &amp; document queues — shared with Tech Ops.
+            {t("tier4.sharedWorkspaceDesc")}
             {!isLive && <span className="ml-1 text-amber-600">· Using cached data</span>}
           </div>
         </div>
@@ -112,23 +114,23 @@ export function Tier4Home() {
       <div className="grid grid-cols-3 gap-2">
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-red-600">{nonCompliant}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Non-<br/>Compliant</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier4.nonCompliant")}</div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-amber-600">{expiringCount}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Expiring<br/>Soon</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier4.expiringSoon")}</div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-white/50">{missingCount}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Missing<br/>Docs</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier4.missingDocs")}</div>
         </div>
       </div>
 
       {/* Operational modules grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
-          <span className="text-[9px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full tracking-wide">T3 · T4 ACCESS</span>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("tier3.operationalModules")}</h2>
+          <span className="text-[9px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full tracking-wide">{t("tier3.t3t4Access")}</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {OPERATIONAL_MODULES.map((mod) => {
@@ -156,9 +158,9 @@ export function Tier4Home() {
       {/* Document queue — workers needing attention */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Needs Attention</h2>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("tier4.needsAttention")}</h2>
           <span className="text-[9px] font-black bg-red-500 text-white px-2 py-0.5 rounded-full tracking-wide">
-            {alertWorkers.length} workers
+            {alertWorkers.length} {t("tier4.workers")}
           </span>
         </div>
 
@@ -169,8 +171,8 @@ export function Tier4Home() {
         ) : alertWorkers.length === 0 ? (
           <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-5 text-center">
             <FileCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-sm font-bold text-emerald-400">All workers compliant</p>
-            <p className="text-xs text-emerald-600 mt-0.5">No documents need immediate attention.</p>
+            <p className="text-sm font-bold text-emerald-400">{t("tier4.allCompliant")}</p>
+            <p className="text-xs text-emerald-600 mt-0.5">{t("tier4.noDocsAttention")}</p>
           </div>
         ) : (
           <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">

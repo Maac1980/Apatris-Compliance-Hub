@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   UserPlus, ShieldCheck, MapPin, Wrench,
   AlertCircle, Users, Clock, Stethoscope,
@@ -12,6 +13,7 @@ import { SiteDeploymentsSheet } from "@/components/SiteDeploymentsSheet";
 import { UDTSheet } from "@/components/UDTSheet";
 
 export function Tier3Home() {
+  const { t } = useTranslation();
   const { workers, loading, isLive } = useWorkers();
   const [addOpen, setAddOpen]               = useState(false);
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
@@ -24,8 +26,8 @@ export function Tier3Home() {
   const OPERATIONAL_MODULES = [
     {
       icon: UserPlus,
-      label: "Add Professional",
-      sublabel: "Register & onboard",
+      label: t("modules.addProfessional"),
+      sublabel: t("modules.registerOnboard"),
       iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
       border: "hover:border-blue-500/25 hover:bg-blue-500/10",
@@ -33,8 +35,8 @@ export function Tier3Home() {
     },
     {
       icon: Clock,
-      label: "Timesheets & Hours",
-      sublabel: loading ? "Loading…" : `${workers.length} workers tracked`,
+      label: t("modules.timesheetsHours"),
+      sublabel: loading ? "Loading…" : `${workers.length} ${t("modules.workersTracked")}`,
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600",
       border: "hover:border-amber-500/25 hover:bg-amber-500/10",
@@ -42,8 +44,8 @@ export function Tier3Home() {
     },
     {
       icon: Stethoscope,
-      label: "UDT & Badania Lekarskie",
-      sublabel: loading ? "…" : `${expiringCount} renewals pending`,
+      label: t("modules.udtBadania"),
+      sublabel: loading ? "…" : `${expiringCount} ${t("modules.renewalsPending")}`,
       iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
       border: "hover:border-teal-500/25 hover:bg-teal-500/10",
@@ -51,8 +53,8 @@ export function Tier3Home() {
     },
     {
       icon: MapPin,
-      label: "Site Deployments",
-      sublabel: loading ? "…" : `${activeSites} active sites`,
+      label: t("modules.siteDeployments"),
+      sublabel: loading ? "…" : `${activeSites} ${t("home.activeSites")}`,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       border: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -86,9 +88,9 @@ export function Tier3Home() {
           <Users className="w-4 h-4 text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-blue-200">Shared Operational Workspace</div>
+          <div className="text-xs font-bold text-blue-200">{t("tier3.sharedWorkspace")}</div>
           <div className="text-[11px] text-blue-400/80 font-medium">
-            Full read/write access to Deployed Professional profiles &amp; document queues — shared with Compliance Coordinators.
+            {t("tier3.sharedWorkspaceDesc")}
             {!isLive && !loading && <span className="ml-1 text-amber-600">· Using cached data</span>}
           </div>
         </div>
@@ -98,8 +100,8 @@ export function Tier3Home() {
       {/* Operational modules grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Operational Modules</h2>
-          <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full tracking-wide">T3 · T4 ACCESS</span>
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("tier3.operationalModules")}</h2>
+          <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full tracking-wide">{t("tier3.t3t4Access")}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -127,19 +129,19 @@ export function Tier3Home() {
 
       {/* KPI strip — live data */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Deployment Overview</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("tier3.deploymentOverview")}</h2>
         <div className="grid grid-cols-3 gap-2">
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-blue-600">{loading ? "…" : workers.length}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Deployed<br/>Pros</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier3.deployedPros")}</div>
           </div>
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-emerald-600">{loading ? "…" : activeSites}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Active<br/>Sites</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier3.activeSites")}</div>
           </div>
           <div className="premium-card rounded-2xl p-3.5 text-center">
             <div className="text-2xl font-black font-heading text-amber-600">{loading ? "…" : expiringCount}</div>
-            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Renewals<br/>Needed</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier3.renewalsNeeded")}</div>
           </div>
         </div>
       </div>
@@ -148,7 +150,7 @@ export function Tier3Home() {
       {alertWorkers.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 ml-1">
-            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">Pending Technical Actions</h2>
+            <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground">{t("tier3.pendingTechnicalActions")}</h2>
             <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{alertWorkers.length}</span>
           </div>
 
@@ -184,9 +186,9 @@ export function Tier3Home() {
             <ShieldCheck className="w-5 h-5 text-blue-600" />
           </div>
           <div className="text-left">
-            <div className="text-sm font-bold text-foreground">View Site Deployments</div>
+            <div className="text-sm font-bold text-foreground">{t("modules.viewSiteDeployments")}</div>
             <div className="text-xs text-muted-foreground">
-              {loading ? "Loading…" : `${workers.length} professionals across ${activeSites} sites`}
+              {loading ? "Loading…" : `${workers.length} ${t("tier3.professionalsAcross")} ${activeSites} ${t("tier3.sites")}`}
             </div>
           </div>
         </div>

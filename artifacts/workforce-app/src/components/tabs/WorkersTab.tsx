@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, ChevronRight, MapPin, Clock, AlertTriangle, ShieldX, Plus, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Worker, WorkerStatus, SITES } from "@/data/mockWorkers";
@@ -69,6 +70,7 @@ function getUrgentDetail(worker: Worker): { icon: React.ElementType; text: strin
 }
 
 export function WorkersTab() {
+  const { t } = useTranslation();
   const { role } = useAuth();
   const { workers, loading, isLive } = useWorkers();
   const [search, setSearch]             = useState("");
@@ -115,7 +117,7 @@ export function WorkersTab() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search by name, trade, specialization…"
+              placeholder={t("workers.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full h-11 pl-10 pr-4 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:border-white/15 focus:ring-2 focus:ring-primary/20 transition-shadow"
@@ -156,7 +158,7 @@ export function WorkersTab() {
                     : "bg-[#141416] text-muted-foreground border-white/[0.08] hover:bg-white/[0.04]"
                 )}
               >
-                {s === "All Sites" ? "All Sites" : s.split("–")[1]?.trim() ?? s}
+                {s === "All Sites" ? t("workers.allSites") : s.split("–")[1]?.trim() ?? s}
               </button>
             ))}
           </div>
@@ -180,14 +182,14 @@ export function WorkersTab() {
         {/* Count bar */}
         <div className="px-4 mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
-            {filtered.length} of {workers.length} professionals{isLive ? " · live" : ""}
+            {filtered.length} {t("workers.of")} {workers.length} {t("workers.professionals")}{isLive ? ` · ${t("workers.live")}` : ""}
           </span>
           {(filter !== "All" || siteFilter !== "All Sites") && (
             <button
               onClick={() => { setFilter("All"); setSiteFilter("All Sites"); }}
               className="text-[11px] font-semibold text-blue-600 hover:underline"
             >
-              Clear filters
+              {t("workers.clearFilters")}
             </button>
           )}
         </div>
@@ -270,8 +272,8 @@ export function WorkersTab() {
                 className="text-center py-16"
               >
                 <Search className="w-10 h-10 text-white/15 mx-auto mb-3" />
-                <p className="text-sm font-semibold text-muted-foreground">No professionals found</p>
-                <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t("workers.noProfessionalsFound")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("workers.tryAdjustingFilters")}</p>
               </motion.div>
             )}
           </AnimatePresence>

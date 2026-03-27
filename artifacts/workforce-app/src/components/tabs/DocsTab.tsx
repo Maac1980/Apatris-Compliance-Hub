@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ShieldCheck, FileText, Wrench, Stethoscope, FileCheck,
   UploadCloud, CheckCircle2, AlertCircle, AlertTriangle,
@@ -60,6 +61,7 @@ function buildDocRows(profile: WorkerProfile): DocRow[] {
 }
 
 export function DocsTab() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const jwt = user?.jwt ?? "";
   const displayName = user?.name ?? "Professional";
@@ -90,8 +92,8 @@ export function DocsTab() {
       {/* Header summary */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-heading font-black text-foreground">My Documents</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Certificate & permit status</p>
+          <h1 className="text-base font-heading font-black text-foreground">{t("docs.myDocuments")}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("docs.certStatus")}</p>
         </div>
         <button onClick={load} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center active:scale-90 transition-transform">
           <RefreshCw className={cn("w-3.5 h-3.5 text-white/40", loading && "animate-spin")} />
@@ -106,7 +108,7 @@ export function DocsTab() {
             return (
               <div key={s} className={cn("rounded-2xl border py-3 flex flex-col items-center gap-1", st.pill)}>
                 <span className="text-lg font-heading font-black">{counts[s]}</span>
-                <span className="text-[9px] font-bold uppercase tracking-wider">{s}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider">{t(`docs.${s.toLowerCase()}`)}</span>
               </div>
             );
           })}
@@ -118,14 +120,14 @@ export function DocsTab() {
         <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-3.5 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
           <p className="text-xs text-red-400 font-semibold">
-            {urgent} document{urgent > 1 ? "s" : ""} need{urgent === 1 ? "s" : ""} immediate attention. Contact your coordinator.
+            {t("docs.urgentBanner", { count: urgent })}
           </p>
         </div>
       )}
 
       {/* Document list */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Certificate Status</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("docs.certificateStatus")}</h2>
 
         {loading ? (
           <div className="premium-card rounded-2xl p-8 flex justify-center">
@@ -133,12 +135,12 @@ export function DocsTab() {
           </div>
         ) : error ? (
           <div className="premium-card rounded-2xl p-6 text-center">
-            <p className="text-sm text-muted-foreground">Could not load document data.</p>
-            <button onClick={load} className="mt-3 text-xs font-bold text-blue-600">Retry</button>
+            <p className="text-sm text-muted-foreground">{t("docs.couldNotLoad")}</p>
+            <button onClick={load} className="mt-3 text-xs font-bold text-blue-600">{t("docs.retry")}</button>
           </div>
         ) : docRows.length === 0 ? (
           <div className="premium-card rounded-2xl p-6 text-center text-sm text-muted-foreground">
-            No document records found for your profile.
+            {t("docs.noDocumentRecords")}
           </div>
         ) : (
           <div className="premium-card rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
@@ -175,7 +177,7 @@ export function DocsTab() {
                               <span className="ml-1.5 font-bold text-red-600">({Math.abs(days)}d ago)</span>
                             )}
                           </>
-                        : "Not on record"}
+                        : t("docs.notOnRecord")}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -193,7 +195,7 @@ export function DocsTab() {
 
       {/* Upload action */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">Submit Documents</h2>
+        <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">{t("docs.submitDocuments")}</h2>
         <a
           href={`mailto:z.brzezinska@apatris.pl?subject=Document Upload – ${displayName}&body=Hi,%0A%0APlease find my documents attached.%0A%0ABest regards,%0A${displayName}`}
           className="flex items-center gap-4 p-4 premium-card rounded-2xl hover:scale-[1.01] active:scale-[0.98] transition-all"
@@ -202,8 +204,8 @@ export function DocsTab() {
             <UploadCloud className="w-5 h-5 text-blue-600" strokeWidth={2} />
           </div>
           <div className="flex-1">
-            <div className="text-sm font-bold text-foreground">Upload New Document</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Send to your compliance coordinator</div>
+            <div className="text-sm font-bold text-foreground">{t("docs.uploadNewDocument")}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{t("docs.sendToCoordinator")}</div>
           </div>
         </a>
       </div>

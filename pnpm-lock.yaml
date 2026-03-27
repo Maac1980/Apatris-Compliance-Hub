@@ -601,6 +601,13 @@ importers:
         version: 3.25.76
 
   artifacts/workforce-app:
+    dependencies:
+      i18next:
+        specifier: ^25.10.2
+        version: 25.10.2(typescript@5.9.3)
+      react-i18next:
+        specifier: ^16.6.0
+        version: 16.6.0(i18next@25.10.2(typescript@5.9.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0

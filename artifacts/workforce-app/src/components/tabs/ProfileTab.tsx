@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, KeyRound, ShieldCheck, ShieldX, LogOut, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, KeyRound, ShieldCheck, ShieldX, LogOut, CheckCircle2, Globe } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { changeMobilePin } from "@/lib/api";
 import { TIER_CONFIGS, Role } from "@/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
@@ -65,11 +66,18 @@ interface ProfileTabProps {
 
 export function ProfileTab({ onLogout }: ProfileTabProps) {
   const { role, user } = useAuth();
+  const { t, i18n } = useTranslation();
   if (!role) return null;
 
   const tierConfig = TIER_CONFIGS[role];
   const badgeColor = ROLE_BADGE_COLORS[role];
   const avatarColor = AVATAR_COLORS[role];
+  const currentLang = i18n.language;
+
+  const switchLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem("wf_lang", lang);
+  };
 
   const displayName = user?.name ?? tierConfig.shortLabel;
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -93,9 +101,9 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.jwt) { setPinError("Session expired. Please log in again."); return; }
-    if (newPin !== confirmPin) { setPinError("New PIN and confirmation do not match."); return; }
-    if (newPin.length < 4) { setPinError("New PIN must be at least 4 characters."); return; }
+    if (!user?.jwt) { setPinError(t("profile.sessionExpired")); return; }
+    if (newPin !== confirmPin) { setPinError(t("profile.pinMismatch")); return; }
+    if (newPin.length < 4) { setPinError(t("profile.pinTooShort")); return; }
 
     setPinLoading(true);
     setPinError(null);
@@ -107,18 +115,18 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
         resetForm();
       }, 2000);
     } catch (err: unknown) {
-      setPinError(err instanceof Error ? err.message : "Failed to change PIN.");
+      setPinError(err instanceof Error ? err.message : t("profile.pinChangeFailed"));
     } finally {
       setPinLoading(false);
     }
   };
 
   const ACCESS_ROWS = [
-    { label: "Financial Access",       granted: tierConfig.canViewFinancials },
-    { label: "Professional Directory", granted: tierConfig.canViewGlobalDirectory },
-    { label: "Document Approval",      granted: tierConfig.canApproveDocuments },
-    { label: "Operational Modules",    granted: tierConfig.canAccessOperationalModules },
-    { label: "Legal Dossiers",         granted: tierConfig.canViewLegalDossiers },
+    { label: t("profile.financialAccess"),       granted: tierConfig.canViewFinancials },
+    { label: t("profile.professionalDirectory"), granted: tierConfig.canViewGlobalDirectory },
+    { label: t("profile.documentApproval"),      granted: tierConfig.canApproveDocuments },
+    { label: t("profile.operationalModules"),    granted: tierConfig.canAccessOperationalModules },
+    { label: t("profile.legalDossiers"),         granted: tierConfig.canViewLegalDossiers },
   ];
 
   return (
@@ -150,7 +158,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       {/* ── Access rights ────────────────────────────────────────────────── */}
       <div className="premium-card rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
         <div className="px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-heading">Access Rights</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-heading">{t("profile.accessRights")}</p>
         </div>
         {ACCESS_ROWS.map(({ label, granted }) => (
           <div key={label} className="p-4 flex items-center justify-between">
@@ -167,7 +175,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
                 : "bg-red-500/10 text-red-400 border-red-500/25"
             )}>
-              {granted ? "Granted" : "Restricted"}
+              {granted ? t("profile.granted") : t("profile.restricted")}
             </span>
           </div>
         ))}
@@ -181,7 +189,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
         >
           <div className="flex items-center gap-2.5">
             <KeyRound className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">Change PIN / Password</span>
+            <span className="text-sm font-semibold text-foreground">{t("profile.changePinPassword")}</span>
           </div>
           <span className={cn(
             "text-[10px] font-bold px-2.5 py-1 rounded-full border transition-colors",
@@ -189,7 +197,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
               ? "bg-white/[0.06] text-white/50 border-white/[0.08]"
               : "bg-blue-500/10 text-blue-400 border-blue-500/25"
           )}>
-            {pinOpen ? "Cancel" : "Update"}
+            {pinOpen ? t("profile.cancel") : t("profile.update")}
           </span>
         </button>
 
@@ -213,28 +221,28 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
                       className="flex flex-col items-center py-4 gap-2"
                     >
                       <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                      <p className="text-sm font-bold text-emerald-400">PIN updated successfully!</p>
-                      <p className="text-xs text-muted-foreground">Use your new PIN next time you log in.</p>
+                      <p className="text-sm font-bold text-emerald-400">{t("profile.pinUpdated")}</p>
+                      <p className="text-xs text-muted-foreground">{t("profile.useNewPin")}</p>
                     </motion.div>
                   ) : (
                     <motion.div key="form" className="space-y-3">
                       <PinField
-                        label="Current PIN"
+                        label={t("profile.currentPin")}
                         value={currentPin}
                         onChange={setCurrentPin}
-                        placeholder="Enter current PIN"
+                        placeholder={t("profile.enterCurrentPin")}
                       />
                       <PinField
-                        label="New PIN"
+                        label={t("profile.newPin")}
                         value={newPin}
                         onChange={setNewPin}
-                        placeholder="Enter new PIN (min 4 chars)"
+                        placeholder={t("profile.enterNewPin")}
                       />
                       <PinField
-                        label="Confirm New PIN"
+                        label={t("profile.confirmNewPin")}
                         value={confirmPin}
                         onChange={setConfirmPin}
-                        placeholder="Repeat new PIN"
+                        placeholder={t("profile.repeatNewPin")}
                       />
 
                       <AnimatePresence>
@@ -263,9 +271,9 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
                         {pinLoading ? (
                           <span className="flex items-center justify-center gap-2">
                             <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
-                            Updating...
+                            {t("profile.updating")}
                           </span>
-                        ) : "Update PIN"}
+                        ) : t("profile.updatePin")}
                       </button>
                     </motion.div>
                   )}
@@ -276,13 +284,45 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
         </AnimatePresence>
       </div>
 
+      {/* ── Language toggle ────────────────────────────────────────────── */}
+      <div className="premium-card rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 flex items-center gap-2.5">
+          <Globe className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-foreground">{t("profile.language")}</span>
+        </div>
+        <div className="px-4 pb-4 flex gap-2">
+          <button
+            onClick={() => switchLanguage("en")}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.97]",
+              currentLang === "en"
+                ? "bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 glow-indigo"
+                : "bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.06]"
+            )}
+          >
+            🇬🇧 {t("profile.english")}
+          </button>
+          <button
+            onClick={() => switchLanguage("pl")}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.97]",
+              currentLang === "pl"
+                ? "bg-red-500/15 text-red-400 border border-red-500/25 glow-red"
+                : "bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.06]"
+            )}
+          >
+            🇵🇱 {t("profile.polish")}
+          </button>
+        </div>
+      </div>
+
       {/* ── Log out ──────────────────────────────────────────────────────── */}
       <button
         onClick={onLogout}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-500/25 bg-red-500/10 text-red-400 text-sm font-bold hover:bg-red-500/15 transition-colors active:scale-[0.98]"
       >
         <LogOut className="w-4 h-4" />
-        Log Out
+        {t("profile.logOut")}
       </button>
     </motion.div>
   );

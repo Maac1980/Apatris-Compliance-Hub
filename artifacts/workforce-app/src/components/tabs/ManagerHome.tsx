@@ -6,6 +6,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useWorkers } from "@/hooks/useWorkers";
 import { TimesheetsSheet } from "@/components/TimesheetsSheet";
@@ -24,6 +25,7 @@ const statusPill: Record<string, string> = {
 };
 
 export function ManagerHome({ onNavigate }: ManagerHomeProps) {
+  const { t } = useTranslation();
   const { workers, loading, isLive } = useWorkers();
   const [timesheetsOpen, setTimesheetsOpen] = useState(false);
   const [sitesOpen, setSitesOpen]           = useState(false);
@@ -41,8 +43,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   const LEGAL_MODULES = [
     {
       icon: Clock,
-      label: "Timesheets & Hours",
-      sublabel: loading ? "Loading…" : `${workers.length} workers tracked`,
+      label: t("modules.timesheets"),
+      sublabel: loading ? "Loading…" : `${workers.length} ${t("modules.workersTracked")}`,
       iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
       accent: "hover:border-blue-500/25 hover:bg-blue-500/10",
@@ -50,8 +52,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: Scale,
-      label: "PIP / Legal Dossiers",
-      sublabel: loading ? "…" : `${nonCompliant} issues active`,
+      label: t("modules.pipLegalDossiers"),
+      sublabel: loading ? "…" : `${nonCompliant} ${t("modules.issuesActive")}`,
       iconBg: "bg-violet-500/10",
       iconColor: "text-violet-600",
       accent: "hover:border-violet-500/25 hover:bg-violet-500/10",
@@ -59,8 +61,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: FileSignature,
-      label: "B2B Contracts",
-      sublabel: "View worker contracts",
+      label: t("modules.b2bContracts"),
+      sublabel: t("manager.viewContracts"),
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       accent: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -68,8 +70,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: Stethoscope,
-      label: "UDT & Badania Lekarskie",
-      sublabel: loading ? "…" : `${expiring} renewals pending`,
+      label: t("modules.udtBadania"),
+      sublabel: loading ? "…" : `${expiring} ${t("modules.renewalsPending")}`,
       iconBg: "bg-teal-500/10",
       iconColor: "text-teal-600",
       accent: "hover:border-teal-500/25 hover:bg-teal-500/10",
@@ -77,8 +79,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: Users,
-      label: "Professional Directory",
-      sublabel: loading ? "Loading…" : `${workers.length} deployed · ${activeSites} active sites`,
+      label: t("modules.professionalDirectory"),
+      sublabel: loading ? "Loading…" : `${workers.length} deployed · ${activeSites} ${t("home.activeSites")}`,
       iconBg: "bg-indigo-500/10",
       iconColor: "text-indigo-600",
       accent: "hover:border-indigo-500/25 hover:bg-indigo-500/10",
@@ -90,8 +92,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   const OPERATIONAL_MODULES = [
     {
       icon: LayoutGrid,
-      label: "Workspace",
-      sublabel: "Active ops · Site assignments",
+      label: t("modules.workspace"),
+      sublabel: t("modules.activeOps"),
       iconBg: "bg-blue-500/10",
       iconColor: "text-blue-600",
       accent: "hover:border-blue-500/25 hover:bg-blue-500/10",
@@ -99,8 +101,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: MapPin,
-      label: "Site Monitor",
-      sublabel: loading ? "…" : `${activeSites} active sites`,
+      label: t("modules.siteMonitor"),
+      sublabel: loading ? "…" : `${activeSites} ${t("home.activeSites")}`,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-600",
       accent: "hover:border-emerald-500/25 hover:bg-emerald-500/10",
@@ -108,8 +110,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: Clock,
-      label: "Timesheets",
-      sublabel: "All workforce hours",
+      label: t("modules.timesheets"),
+      sublabel: t("modules.allWorkforceHours"),
       iconBg: "bg-sky-500/10",
       iconColor: "text-sky-600",
       accent: "hover:border-sky-500/25 hover:bg-sky-500/10",
@@ -117,8 +119,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     },
     {
       icon: FileText,
-      label: "Doc Queue",
-      sublabel: "Review & approve docs",
+      label: t("modules.docQueue"),
+      sublabel: t("modules.reviewApproveDocs"),
       iconBg: "bg-white/[0.06]",
       iconColor: "text-gray-600",
       accent: "hover:border-white/[0.1] hover:bg-white/[0.06]",
@@ -139,10 +141,10 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
           <Lock className="w-4 h-4 text-violet-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-violet-300">Financial Firewall Active</div>
+          <div className="text-xs font-bold text-violet-300">{t("manager.financialFirewall")}</div>
           <div className="text-[11px] text-violet-400/80 font-medium">
-            ZUS & Payroll ledgers are restricted to Tier 1 (Executive Board) only.
-            {!isLive && !loading && <span className="ml-1 text-amber-600">· Using cached data</span>}
+            {t("manager.financialFirewallDesc")}
+            {!isLive && !loading && <span className="ml-1 text-amber-600">· {t("manager.usingCachedData")}</span>}
           </div>
         </div>
         {loading && <Loader2 className="w-4 h-4 text-violet-500 animate-spin shrink-0" />}
@@ -152,23 +154,23 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       <div className="grid grid-cols-3 gap-2">
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-emerald-600">{loading ? "…" : compliant}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Fully<br/>Compliant</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.fullyCompliant")}</div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-amber-600">{loading ? "…" : expiring}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Expiring<br/>Soon</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.expiringSoon")}</div>
         </div>
         <div className="premium-card rounded-2xl p-3.5 text-center">
           <div className="text-2xl font-black font-heading text-red-600">{loading ? "…" : nonCompliant}</div>
-          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">Non-<br/>Compliant</div>
+          <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("home.nonCompliant")}</div>
         </div>
       </div>
 
       {/* Legal Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">Platform Modules</h2>
-          <span className="text-[9px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full tracking-wide">LEGAL ACCESS</span>
+          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">{t("home.platformModules")}</h2>
+          <span className="text-[9px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full tracking-wide">{t("manager.legalAccess")}</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {LEGAL_MODULES.map((mod) => {
@@ -200,7 +202,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       {/* Operational access — T3 / T4 / T5 inherited */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">Operational Access</h2>
+          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">{t("home.operationalAccess")}</h2>
           <span className="text-[9px] font-black bg-gray-700 text-white px-2 py-0.5 rounded-full tracking-wide">T3–T5</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -232,12 +234,12 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       {/* Live compliance alerts */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 ml-1">
-          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">Legality Alerts</h2>
+          <h2 className="text-[10px] font-bold font-heading uppercase tracking-widest text-muted-foreground">{t("manager.legalityAlerts")}</h2>
           {urgentWorkers.length > 0 && (
             <span className="bg-red-500/15 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{urgentWorkers.length}</span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground ml-1 -mt-2">Deployed professionals requiring immediate legal attention</p>
+        <p className="text-xs text-muted-foreground ml-1 -mt-2">{t("manager.legalAttention")}</p>
 
         {loading ? (
           <div className="premium-card rounded-2xl p-6 flex justify-center">
@@ -246,8 +248,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
         ) : urgentWorkers.length === 0 ? (
           <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-5 text-center glow-emerald">
             <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-sm font-bold text-emerald-400">All workers compliant</p>
-            <p className="text-xs text-emerald-500/70 mt-0.5">No legal actions required at this time.</p>
+            <p className="text-sm font-bold text-emerald-400">{t("manager.allWorkersCompliant")}</p>
+            <p className="text-xs text-emerald-500/70 mt-0.5">{t("manager.noLegalActions")}</p>
           </div>
         ) : (
           <div className="space-y-3">

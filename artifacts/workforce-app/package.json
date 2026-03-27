@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "i18next": "^25.10.2",
+    "react-i18next": "^16.6.0"
   }
 }
