@@ -1,0 +1,28 @@
+{
+  "name": "Apatris Workforce",
+  "short_name": "Apatris",
+  "description": "Apatris Sp. z o.o. — Workforce Deployment Terminal for deployed professionals and operations team.",
+  "start_url": "/workforce/",
+  "scope": "/workforce/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/workforce/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/workforce/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "prefer_related_applications": false
+}
