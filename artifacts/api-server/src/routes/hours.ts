@@ -1,10 +1,8 @@
 import { Router } from "express";
-import jwt from "jsonwebtoken";
 import { execute, query } from "../lib/db.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
-
-const JWT_SECRET = process.env.JWT_SECRET || "";
 
 export async function initHoursTable(): Promise<void> {
   await execute(`
@@ -22,21 +20,8 @@ export async function initHoursTable(): Promise<void> {
   console.log("[Hours] Table ready.");
 }
 
-function getUser(authHeader: string | undefined): { name: string; role: string } | null {
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  try {
-    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { name: string; role: string };
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
 // POST /hours — T5 submits their hours for a month
-router.post("/hours", async (req, res) => {
-  const user = getUser(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Authentication required." });
-
+router.post("/hours", requireAuth, async (req, res) => {
   const { month, hours, note } = req.body as { month?: string; hours?: unknown; note?: string };
 
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
@@ -50,43 +35,37 @@ router.post("/hours", async (req, res) => {
   // Check if already submitted for that month
   const existing = await query<{ id: number }>(
     "SELECT id FROM hours_log WHERE worker_name = $1 AND month = $2",
-    [user.name, month]
+    [req.user!.name, month]
   );
   if (existing.length > 0) {
     // Update instead of duplicate
     await execute(
       "UPDATE hours_log SET hours = $1, note = $2, status = 'submitted', updated_at = NOW() WHERE worker_name = $3 AND month = $4",
-      [hoursNum, note ?? null, user.name, month]
+      [hoursNum, note ?? null, req.user!.name, month]
     );
     return res.json({ success: true, updated: true, message: "Hours updated." });
   }
 
   await execute(
     "INSERT INTO hours_log (worker_name, month, hours, note, status) VALUES ($1, $2, $3, $4, 'submitted')",
-    [user.name, month, hoursNum, note ?? null]
+    [req.user!.name, month, hoursNum, note ?? null]
   );
   return res.json({ success: true, updated: false, message: "Hours submitted successfully." });
 });
 
 // GET /hours/my — T5 gets their own hours history
-router.get("/hours/my", async (req, res) => {
-  const user = getUser(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Authentication required." });
-
+router.get("/hours/my", requireAuth, async (req, res) => {
   const rows = await query<{
     id: number; month: string; hours: string; note: string | null; status: string; submitted_at: string;
   }>(
     "SELECT id, month, hours, note, status, submitted_at FROM hours_log WHERE worker_name = $1 ORDER BY month DESC LIMIT 12",
-    [user.name]
+    [req.user!.name]
   );
   return res.json({ entries: rows.map(r => ({ ...r, hours: parseFloat(r.hours) })) });
 });
 
 // GET /hours — T1–T4 view all hours
-router.get("/hours", async (req, res) => {
-  const user = getUser(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Authentication required." });
-
+router.get("/hours", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
   const { month, worker } = req.query as { month?: string; worker?: string };
   let sql = "SELECT id, worker_name, month, hours, note, status, submitted_at FROM hours_log WHERE 1=1";
   const params: unknown[] = [];
@@ -101,10 +80,7 @@ router.get("/hours", async (req, res) => {
 });
 
 // PATCH /hours/:id/status — T1–T4 approve/reject
-router.patch("/hours/:id/status", async (req, res) => {
-  const user = getUser(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Authentication required." });
-
+router.patch("/hours/:id/status", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
   const { status } = req.body as { status?: string };
   if (status !== "approved" && status !== "rejected") {
     return res.status(400).json({ error: "status must be 'approved' or 'rejected'." });

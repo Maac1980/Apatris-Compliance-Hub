@@ -6,6 +6,8 @@ import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { calculateNet } from "../lib/payroll.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
+import { sensitiveLimiter } from "../lib/rate-limit.js";
 
 
 
@@ -14,7 +16,7 @@ import { calculateNet } from "../lib/payroll.js";
 const router = Router();
 
 // ─── GET /payroll/current ─────────────────────────────────────────────────────
-router.get("/payroll/current", async (req, res) => {
+router.get("/payroll/current", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).map((w) => ({
@@ -41,7 +43,7 @@ router.get("/payroll/current", async (req, res) => {
 });
 
 // ─── PATCH /payroll/workers/:id ───────────────────────────────────────────────
-router.patch("/payroll/workers/:id", async (req, res) => {
+router.patch("/payroll/workers/:id", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     const fields: Record<string, unknown> = {};
@@ -71,7 +73,7 @@ router.patch("/payroll/workers/:id", async (req, res) => {
 });
 
 // ─── POST /payroll/commit ─────────────────────────────────────────────────────
-router.post("/payroll/commit", async (req, res) => {
+router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), sensitiveLimiter, async (req, res) => {
   try {
     const body = req.body as { monthYear?: string; committedBy?: string };
     const monthYear = body.monthYear || new Date().toISOString().slice(0, 7);
@@ -220,7 +222,7 @@ router.post("/payroll/commit", async (req, res) => {
 });
 
 // ─── GET /payroll/history/:workerId ──────────────────────────────────────────
-router.get("/payroll/history/:workerId", async (req, res) => {
+router.get("/payroll/history/:workerId", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const records = await query(
       `SELECT * FROM payroll_snapshots WHERE worker_id = $1 ORDER BY month DESC`,
@@ -234,7 +236,7 @@ router.get("/payroll/history/:workerId", async (req, res) => {
 });
 
 // ─── GET /payroll/history ─────────────────────────────────────────────────────
-router.get("/payroll/history", async (_req, res) => {
+router.get("/payroll/history", requireAuth, requireRole("Admin", "Executive"), async (_req, res) => {
   try {
     const records = await query(
       `SELECT * FROM payroll_snapshots ORDER BY month DESC, worker_name ASC LIMIT 500`
@@ -247,7 +249,7 @@ router.get("/payroll/history", async (_req, res) => {
 });
 
 // ─── GET /payroll/export/bank-csv ────────────────────────────────────────────
-router.get("/payroll/export/bank-csv", async (req, res) => {
+router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const [year, mon] = month.split("-");
@@ -292,7 +294,7 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
 });
 
 // ─── GET /payroll/export/accounting-csv ──────────────────────────────────────
-router.get("/payroll/export/accounting-csv", async (req, res) => {
+router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
 
@@ -378,7 +380,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
 });
 
 // ─── GET /payroll/export/pdf ──────────────────────────────────────────────────
-router.get("/payroll/export/pdf", async (req, res) => {
+router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const now = new Date();

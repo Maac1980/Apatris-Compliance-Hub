@@ -238,6 +238,27 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // refresh_tokens (for JWT refresh token rotation)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      token_hash TEXT NOT NULL UNIQUE,
+      user_email TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      user_role TEXT NOT NULL,
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      assigned_site TEXT,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      revoked_at TIMESTAMPTZ
+    );
+  `);
+
+  // Clean up expired refresh tokens older than 7 days
+  await execute(`
+    DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days';
+  `);
+
   // Seed admins if the table is empty
   const rows = await query<{ count: string }>(
     "SELECT count(*)::text AS count FROM admins"

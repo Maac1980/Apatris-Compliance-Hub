@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { query, queryOne, execute } from "../lib/db.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
 // GET /api/tenants - list all tenants (admin only in future)
-router.get("/tenants", async (_req, res) => {
+router.get("/tenants", requireAuth, requireRole("Admin", "Executive"), async (_req, res) => {
   try {
     const tenants = await query(
       "SELECT id, name, slug, logo_url, primary_color, domain, is_active, created_at FROM tenants ORDER BY name"
@@ -16,7 +17,7 @@ router.get("/tenants", async (_req, res) => {
 });
 
 // POST /api/tenants - create a new tenant
-router.post("/tenants", async (req, res) => {
+router.post("/tenants", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     const { name, slug, logoUrl, primaryColor, domain } = req.body as {
       name?: string; slug?: string; logoUrl?: string; primaryColor?: string; domain?: string;
@@ -44,7 +45,7 @@ router.post("/tenants", async (req, res) => {
 });
 
 // PATCH /api/tenants/:id - update tenant
-router.patch("/tenants/:id", async (req, res) => {
+router.patch("/tenants/:id", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     const { name, logoUrl, primaryColor, domain, isActive } = req.body as {
       name?: string; logoUrl?: string; primaryColor?: string; domain?: string; isActive?: boolean;

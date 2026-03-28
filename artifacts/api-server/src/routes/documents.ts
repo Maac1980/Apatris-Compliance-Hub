@@ -6,12 +6,13 @@ import {
   deleteDocument,
 } from "../lib/documents-db.js";
 import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
 // GET /api/documents
 // Returns all documents with compliance status. Auto-creates table on first call.
-router.get("/documents", async (req, res) => {
+router.get("/documents", requireAuth, async (req, res) => {
   try {
     const documents = await fetchDocuments(req.tenantId!);
     const summary = {
@@ -30,7 +31,7 @@ router.get("/documents", async (req, res) => {
 
 // GET /api/documents/alerts
 // Returns only documents in YELLOW, RED, or EXPIRED zones.
-router.get("/documents/alerts", async (req, res) => {
+router.get("/documents/alerts", requireAuth, async (req, res) => {
   try {
     const all = await fetchDocuments(req.tenantId!);
     const alerts = all.filter((d) => d.status !== "GREEN");
@@ -43,7 +44,7 @@ router.get("/documents/alerts", async (req, res) => {
 
 // GET /api/documents/scan
 // Manually triggers the daily compliance scan and returns the recent alert log.
-router.get("/documents/scan", async (_req, res) => {
+router.get("/documents/scan", requireAuth, async (_req, res) => {
   try {
     const log = await triggerScanNow();
     return res.json({ triggered: true, recentAlerts: log });
@@ -55,13 +56,13 @@ router.get("/documents/scan", async (_req, res) => {
 
 // GET /api/documents/log
 // Returns the in-memory alert log from all scans this session.
-router.get("/documents/log", (_req, res) => {
+router.get("/documents/log", requireAuth, (_req, res) => {
   return res.json({ log: alertLog });
 });
 
 // POST /api/documents
 // Creates a new document record and immediately fires an alert if it is in warning/critical zone.
-router.post("/documents", async (req, res) => {
+router.post("/documents", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
   try {
     const { workerName, workerId, documentType, issueDate, expiryDate } = req.body as {
       workerName?: string;
@@ -93,7 +94,7 @@ router.post("/documents", async (req, res) => {
 });
 
 // PATCH /api/documents/:id
-router.patch("/documents/:id", async (req, res) => {
+router.patch("/documents/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
   try {
     const { id } = req.params;
     const fields = req.body as {
@@ -121,7 +122,7 @@ router.patch("/documents/:id", async (req, res) => {
 });
 
 // DELETE /api/documents/:id
-router.delete("/documents/:id", async (req, res) => {
+router.delete("/documents/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     await deleteDocument(req.params.id, req.tenantId!);
     return res.json({ deleted: true });

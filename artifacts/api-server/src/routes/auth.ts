@@ -3,8 +3,10 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/coordinators-db.js";
 import { sendOtpEmail, isMailConfigured } from "../lib/mailer.js";
+import { query, queryOne, execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { verifyMobilePin, verifyMobilePinForUser, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";
+import { authLimiter, sensitiveLimiter } from "../lib/rate-limit.js";
 
 const router = Router();
 
@@ -18,7 +20,7 @@ const JWT_SECRET =
     return fallback;
   })();
 
-const JWT_EXPIRES_IN = "72h"; // 3 days
+const JWT_EXPIRES_IN = "15m"; // 15 minutes (short-lived access token)
 
 const ALLOWED_USERS = [
   {
@@ -54,8 +56,29 @@ function signToken(userData: { email: string; name: string; role: string; assign
   return jwt.sign(userData, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
+const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function createRefreshToken(userData: {
+  email: string; name: string; role: string;
+  assignedSite?: string; tenantId?: string;
+}): Promise<string> {
+  const token = crypto.randomBytes(48).toString("hex");
+  const hash = hashToken(token);
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  await execute(
+    `INSERT INTO refresh_tokens (token_hash, user_email, user_name, user_role, tenant_id, assigned_site, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [hash, userData.email, userData.name, userData.role, userData.tenantId ?? null, userData.assignedSite ?? null, expiresAt]
+  );
+  return token;
+}
+
 // ─── POST /api/auth/login ────────────────────────────────────────────────────
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body as { email?: string; password?: string };
 
@@ -88,17 +111,19 @@ router.post("/auth/login", async (req, res) => {
         } catch (e) {
           console.error("[Auth] Failed to send OTP email:", e);
           // On email failure, fall back to direct login so admin is never locked out
-          const token = signToken(userData);
+          const accessToken = signToken(userData);
+          const refreshToken = await createRefreshToken(userData);
           appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed)" });
-          return res.json({ ...userData, jwt: token });
+          return res.json({ ...userData, jwt: accessToken, refreshToken });
         }
         return res.json({ otpRequired: true, session });
       }
 
       // No SMTP: direct login with JWT
-      const token = signToken(userData);
+      const accessToken = signToken(userData);
+      const refreshToken = await createRefreshToken(userData);
       appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (SMTP not configured)" });
-      return res.json({ ...userData, jwt: token });
+      return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
@@ -115,8 +140,9 @@ router.post("/auth/login", async (req, res) => {
         tenantId: req.tenantId,
         tenantSlug: req.tenantSlug,
       };
-      const token = signToken(userData);
-      return res.json({ ...userData, jwt: token });
+      const accessToken = signToken(userData);
+      const refreshToken = await createRefreshToken(userData);
+      return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
 
     return res.status(403).json({ error: "Access Denied: Contact Administrator." });
@@ -127,7 +153,7 @@ router.post("/auth/login", async (req, res) => {
 });
 
 // ─── POST /api/auth/verify-otp ───────────────────────────────────────────────
-router.post("/auth/verify-otp", (req, res) => {
+router.post("/auth/verify-otp", authLimiter, async (req, res) => {
   try {
     const { session, otp } = req.body as { session?: string; otp?: string };
 
@@ -152,7 +178,8 @@ router.post("/auth/verify-otp", (req, res) => {
 
     otpStore.delete(session);
 
-    const token = signToken(entry.userData);
+    const accessToken = signToken(entry.userData);
+    const refreshToken = await createRefreshToken(entry.userData);
 
     appendAuditLog({
       timestamp: new Date().toISOString(),
@@ -164,7 +191,7 @@ router.post("/auth/verify-otp", (req, res) => {
       note: "Login verified via 2FA OTP",
     });
 
-    return res.json({ ...entry.userData, jwt: token });
+    return res.json({ ...entry.userData, jwt: accessToken, refreshToken });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";
     return res.status(500).json({ error: message });
@@ -199,7 +226,7 @@ router.get("/auth/verify", (req, res) => {
 });
 
 // ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
-router.post("/auth/mobile-login", async (req, res) => {
+router.post("/auth/mobile-login", authLimiter, async (req, res) => {
   try {
     const { tier, password, name } = req.body as { tier?: unknown; password?: unknown; name?: unknown };
 
@@ -222,15 +249,17 @@ router.post("/auth/mobile-login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
     }
 
-    const token = signToken({
+    const mobileUserData = {
       email: `${result.name.toLowerCase()}@apatris.pl`,
       name: result.name,
       role: result.role,
       tenantId: req.tenantId,
       tenantSlug: req.tenantSlug,
-    });
+    };
+    const accessToken = signToken(mobileUserData);
+    const refreshToken = await createRefreshToken(mobileUserData);
 
-    return res.json({ role: result.role, name: result.name, jwt: token });
+    return res.json({ role: result.role, name: result.name, jwt: accessToken, refreshToken });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";
     return res.status(500).json({ error: message });
@@ -239,7 +268,7 @@ router.post("/auth/mobile-login", async (req, res) => {
 
 // ─── POST /api/auth/mobile-change-pin ────────────────────────────────────────
 // Requires a valid JWT. Changes the PIN for the authenticated tier/user.
-router.post("/auth/mobile-change-pin", async (req, res) => {
+router.post("/auth/mobile-change-pin", sensitiveLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -285,6 +314,84 @@ router.post("/auth/mobile-change-pin", async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to change PIN";
     return res.status(500).json({ error: message });
+  }
+});
+
+// ─── POST /api/auth/refresh ─────────────────────────────────────────────────
+// Exchange refresh token for new access + refresh tokens (rotation)
+router.post("/auth/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body as { refreshToken?: string };
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required." });
+    }
+
+    const hash = hashToken(refreshToken);
+    const row = await queryOne<{
+      id: string; user_email: string; user_name: string; user_role: string;
+      tenant_id: string; assigned_site: string; expires_at: string; revoked_at: string | null;
+    }>(
+      "SELECT * FROM refresh_tokens WHERE token_hash = $1",
+      [hash]
+    );
+
+    if (!row) {
+      return res.status(401).json({ error: "Invalid refresh token." });
+    }
+
+    if (row.revoked_at) {
+      // Token was already used — possible token theft. Revoke ALL tokens for this user.
+      await execute(
+        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_email = $1 AND revoked_at IS NULL",
+        [row.user_email]
+      );
+      return res.status(401).json({ error: "Refresh token reuse detected. All sessions revoked." });
+    }
+
+    if (new Date(row.expires_at) < new Date()) {
+      return res.status(401).json({ error: "Refresh token expired. Please log in again." });
+    }
+
+    // Rotate: revoke old token, issue new pair
+    await execute(
+      "UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1",
+      [row.id]
+    );
+
+    const userData = {
+      email: row.user_email,
+      name: row.user_name,
+      role: row.user_role,
+      assignedSite: row.assigned_site || undefined,
+      tenantId: row.tenant_id || undefined,
+    };
+
+    const newAccessToken = signToken(userData);
+    const newRefreshToken = await createRefreshToken(userData);
+
+    return res.json({
+      ...userData,
+      jwt: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Token refresh failed";
+    return res.status(500).json({ error: message });
+  }
+});
+
+// ─── POST /api/auth/logout ──────────────────────────────────────────────────
+// Revoke the provided refresh token
+router.post("/auth/logout", async (req, res) => {
+  try {
+    const { refreshToken } = req.body as { refreshToken?: string };
+    if (refreshToken) {
+      const hash = hashToken(refreshToken);
+      await execute("UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1", [hash]);
+    }
+    return res.json({ success: true });
+  } catch {
+    return res.json({ success: true }); // Always succeed on logout
   }
 });
 

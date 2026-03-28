@@ -3,6 +3,8 @@ import multer from "multer";
 import OpenAI from "openai";
 import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
+import { sensitiveLimiter } from "../lib/rate-limit.js";
 
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -107,7 +109,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 const router: IRouter = Router();
 
 // GET /workers
-router.get("/workers", async (req, res) => {
+router.get("/workers", requireAuth, async (req, res) => {
   try {
     const { search, specialization, status, site } = req.query as Record<string, string>;
     const rows = await fetchAllWorkers(req.tenantId!);
@@ -123,7 +125,7 @@ router.get("/workers", async (req, res) => {
 });
 
 // GET /workers/sites — returns all unique ASSIGNED SITE values
-router.get("/workers/sites", async (req, res) => {
+router.get("/workers/sites", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).filter(
@@ -140,7 +142,7 @@ router.get("/workers/sites", async (req, res) => {
 });
 
 // GET /workers/stats
-router.get("/workers/stats", async (req, res) => {
+router.get("/workers/stats", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).filter(
@@ -163,7 +165,7 @@ router.get("/workers/stats", async (req, res) => {
 });
 
 // GET /workers/report
-router.get("/workers/report", async (req, res) => {
+router.get("/workers/report", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker);
@@ -306,7 +308,7 @@ async function scanBulkDocument(
   }
 }
 
-router.post("/workers/bulk-create", bulkUpload.fields([
+router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive", "TechOps", "Coordinator"), sensitiveLimiter, bulkUpload.fields([
   { name: "passport", maxCount: 1 },
   { name: "bhp", maxCount: 1 },
   { name: "certificate", maxCount: 1 },
@@ -383,7 +385,7 @@ router.post("/workers/bulk-create", bulkUpload.fields([
 });
 
 // GET /workers/:id
-router.get("/workers/:id", async (req, res) => {
+router.get("/workers/:id", requireAuth, async (req, res) => {
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
@@ -395,7 +397,7 @@ router.get("/workers/:id", async (req, res) => {
 });
 
 // PATCH /workers/:id
-router.patch("/workers/:id", async (req, res) => {
+router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     const updated = await updateWorker(req.params.id, body, req.tenantId!);
@@ -407,7 +409,7 @@ router.patch("/workers/:id", async (req, res) => {
 });
 
 // POST /workers/:id/upload
-router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
+router.post("/workers/:id/upload", requireAuth, requireRole("Admin", "Executive", "TechOps", "Coordinator"), upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "No file provided" });
@@ -520,7 +522,7 @@ router.post("/workers/apply", applyUpload.fields([
 });
 
 // POST /workers/:id/notify
-router.post("/workers/:id/notify", async (req, res) => {
+router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }

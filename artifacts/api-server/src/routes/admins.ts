@@ -3,12 +3,13 @@ import {
   fetchAdmins,
   updateAdmin,
 } from "../lib/admins-db.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
 // GET /api/admins
 // Returns all admin profiles. Auto-creates and seeds the table on first call.
-router.get("/admins", async (req, res) => {
+router.get("/admins", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const admins = await fetchAdmins(req.tenantId!);
     return res.json({ admins });
@@ -20,7 +21,7 @@ router.get("/admins", async (req, res) => {
 
 // PATCH /api/admins/:id
 // Updates email and/or phone for a specific admin record.
-router.patch("/admins/:id", async (req, res) => {
+router.patch("/admins/:id", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const { id } = req.params;
     const { email, phone } = req.body as { email?: string; phone?: string };
