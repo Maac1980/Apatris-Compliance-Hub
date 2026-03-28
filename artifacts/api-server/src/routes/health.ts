@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+// Health check — must return 200 for Replit autoscale.
+// No auth, no validation, no database — just a fast 200 OK.
 router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 export default router;

@@ -15,6 +15,9 @@ run = ["sh", "-c", "PORT=8080 NODE_ENV=production node artifacts/api-server/dist
 localPort = 8080
 externalPort = 80
 
+[deployment.health]
+path = "/api/healthz"
+
 [workflows]
 runButton = "Project"
 
