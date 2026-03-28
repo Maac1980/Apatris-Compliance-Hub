@@ -18,7 +18,19 @@
   "pnpm": {
     "overrides": {
       "esbuild": "0.27.4"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "sharp",
+      "core-js",
+      "esbuild",
+      "@esbuild/linux-x64",
+      "@esbuild/darwin-arm64",
+      "lightningcss",
+      "lightningcss-linux-x64-gnu",
+      "lightningcss-darwin-arm64",
+      "@rollup/rollup-linux-x64-gnu",
+      "@rollup/rollup-darwin-arm64"
+    ]
   },
   "dependencies": {
     "sharp": "^0.34.5"
