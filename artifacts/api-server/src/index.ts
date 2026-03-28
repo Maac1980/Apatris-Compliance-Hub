@@ -2,6 +2,7 @@ import { createServer } from "http";
 import app from "./app";
 import { initializeDatabase } from "./lib/init-db.js";
 import { initWebSocket } from "./lib/websocket.js";
+import { startWeeklyReport } from "./lib/scheduler.js";
 
 const rawPort = process.env["PORT"];
 
@@ -21,6 +22,7 @@ if (Number.isNaN(port) || port <= 0) {
   await initializeDatabase();
   const server = createServer(app);
   initWebSocket(server);
+  startWeeklyReport();
   server.listen(port, () => {
     console.log(`Server listening on port ${port} (HTTP + WebSocket)`);
   });

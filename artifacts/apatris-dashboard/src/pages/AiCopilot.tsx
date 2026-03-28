@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, Send, Loader2, Sparkles, User } from "lucide-react";
 
 const API = "/api";
@@ -9,17 +10,19 @@ function authHeaders() {
 
 interface Message { role: "user" | "assistant"; content: string; source?: string }
 
-const QUICK_QUESTIONS = [
-  "Jaki jest nasz ogólny wskaźnik zgodności?",
-  "Którym pracownikom wygasają dokumenty w przyszłym miesiącu?",
-  "Który obiekt ma największe ryzyko?",
-  "Ilu pracowników możemy delegować do Niemiec?",
-  "Podaj podsumowanie zgodności",
-];
-
 export default function AiCopilot() {
+  const { t } = useTranslation();
+
+  const QUICK_QUESTIONS = [
+    t("aiCopilot.q1"),
+    t("aiCopilot.q2"),
+    t("aiCopilot.q3"),
+    t("aiCopilot.q4"),
+    t("aiCopilot.q5"),
+  ];
+
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Jestem Twoim asystentem AI ds. zgodności. Zapytaj mnie o zgodność pracowników, wygasające dokumenty, ryzyko na obiektach lub obliczenia płacowe. Mam dostęp do wszystkich aktualnych danych o pracownikach.", source: "system" },
+    { role: "assistant", content: t("aiCopilot.welcome"), source: "system" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,7 +45,7 @@ export default function AiCopilot() {
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.answer ?? data.error ?? "No response", source: data.source }]);
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Nie udało się połączyć z usługą AI. Sprawdź połączenie." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: t("aiCopilot.error") }]);
     } finally {
       setLoading(false);
     }
@@ -53,9 +56,9 @@ export default function AiCopilot() {
       {/* Header */}
       <div className="p-6 pb-3">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-red-500" /> Asystent AI ds. Zgodności
+          <Sparkles className="w-6 h-6 text-red-500" /> {t("aiCopilot.title")}
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Zadawaj pytania w języku naturalnym o zgodność pracowników</p>
+        <p className="text-sm text-slate-400 mt-1">{t("aiCopilot.subtitle")}</p>
       </div>
 
       {/* Quick questions */}
@@ -87,7 +90,7 @@ export default function AiCopilot() {
               {msg.content}
               {msg.source && msg.role === "assistant" && (
                 <div className="text-[9px] text-slate-500 mt-2 uppercase tracking-wider">
-                  {msg.source === "ai" ? "Napędzany przez GPT-4o" : msg.source === "rules" ? "Analiza regułowa" : ""}
+                  {msg.source === "ai" ? t("aiCopilot.poweredBy") : msg.source === "rules" ? t("aiCopilot.rulesBased") : ""}
                 </div>
               )}
             </div>
@@ -118,7 +121,7 @@ export default function AiCopilot() {
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Zapytaj o zgodność, pracowników, dokumenty..."
+            placeholder={t("aiCopilot.placeholder")}
             disabled={loading}
             className="flex-1 bg-slate-800 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500/50 disabled:opacity-50"
           />

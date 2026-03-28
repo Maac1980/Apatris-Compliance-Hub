@@ -299,3 +299,96 @@ export async function triggerScanNow() {
   await runDailyScan();
   return alertLog.slice(-20);
 }
+
+// ── Weekly compliance report email ─────────────────────────────────────────
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function sendWeeklyReport(): Promise<void> {
+  if (!isMailConfigured()) return;
+  const tenantId = getDefaultTenantId();
+
+  try {
+    const rows = await fetchAllWorkers(tenantId);
+    const workers = rows.map(mapRowToWorker);
+    const admins = await fetchAdmins(tenantId);
+
+    const total = workers.length;
+    const compliant = workers.filter(w => w.complianceStatus === "compliant").length;
+    const warning = workers.filter(w => w.complianceStatus === "warning").length;
+    const critical = workers.filter(w => w.complianceStatus === "critical").length;
+    const nonCompliant = workers.filter(w => w.complianceStatus === "non-compliant").length;
+    const rate = total > 0 ? Math.round((compliant / total) * 100) : 0;
+
+    const urgentList = workers
+      .filter(w => w.complianceStatus !== "compliant")
+      .slice(0, 10)
+      .map(w => `• ${w.name} — ${w.assignedSite || "No site"} — ${w.complianceStatus} (${w.daysUntilNextExpiry ?? "?"}d)`)
+      .join("\n");
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#1e293b;padding:20px;border-radius:12px 12px 0 0;">
+          <h1 style="color:#fff;margin:0;font-size:18px;">APATRIS — Weekly Compliance Report</h1>
+          <p style="color:#94a3b8;margin:4px 0 0;font-size:12px;">${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+        </div>
+        <div style="background:#f8fafc;padding:20px;border:1px solid #e2e8f0;">
+          <h2 style="margin:0 0 12px;font-size:14px;color:#334155;">Compliance Summary</h2>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr><td style="padding:6px 0;color:#64748b;">Total Workers</td><td style="text-align:right;font-weight:bold;">${total}</td></tr>
+            <tr><td style="padding:6px 0;color:#22c55e;">✓ Compliant</td><td style="text-align:right;font-weight:bold;color:#22c55e;">${compliant}</td></tr>
+            <tr><td style="padding:6px 0;color:#f59e0b;">⚠ Warning</td><td style="text-align:right;font-weight:bold;color:#f59e0b;">${warning}</td></tr>
+            <tr><td style="padding:6px 0;color:#ef4444;">✗ Critical</td><td style="text-align:right;font-weight:bold;color:#ef4444;">${critical}</td></tr>
+            <tr><td style="padding:6px 0;color:#dc2626;">✗ Non-Compliant</td><td style="text-align:right;font-weight:bold;color:#dc2626;">${nonCompliant}</td></tr>
+            <tr style="border-top:2px solid #e2e8f0;"><td style="padding:10px 0;font-weight:bold;font-size:15px;">Compliance Rate</td><td style="text-align:right;font-weight:bold;font-size:20px;color:${rate >= 80 ? "#22c55e" : rate >= 60 ? "#f59e0b" : "#ef4444"};">${rate}%</td></tr>
+          </table>
+          ${urgentList ? `<h3 style="margin:16px 0 8px;font-size:13px;color:#334155;">Workers Requiring Attention</h3><pre style="background:#fff;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:11px;color:#475569;white-space:pre-wrap;">${urgentList}</pre>` : ""}
+        </div>
+        <div style="padding:12px 20px;background:#f1f5f9;border-radius:0 0 12px 12px;text-align:center;">
+          <p style="margin:0;font-size:10px;color:#94a3b8;">Apatris Sp. z o.o. · ul. Chłodna 51, 00-867 Warszawa · NIP: 5252828706</p>
+        </div>
+      </div>`;
+
+    // Send to all admin emails
+    const recipients = admins.filter(a => a.email).map(a => a.email);
+    if (recipients.length === 0) return;
+
+    const nodemailer = await import("nodemailer");
+    const transport = nodemailer.default.createTransport({
+      host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+
+    await transport.sendMail({
+      from: `"Apatris Compliance" <${process.env.SMTP_USER || "noreply@apatris.pl"}>`,
+      to: recipients.join(", "),
+      subject: `Weekly Compliance Report — ${rate}% · ${total} workers · ${new Date().toLocaleDateString("en-GB")}`,
+      html,
+    });
+
+    console.log(`[Scheduler] Weekly report sent to ${recipients.length} admins (${rate}% compliance).`);
+  } catch (err) {
+    console.error("[Scheduler] Weekly report failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+// Schedule weekly report — every Monday at 07:00
+export function startWeeklyReport(): void {
+  if (!isMailConfigured()) {
+    console.log("[Scheduler] Weekly report disabled — SMTP not configured.");
+    return;
+  }
+  function msUntilNextMonday7am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setDate(now.getDate() + ((8 - now.getDay()) % 7 || 7));
+    next.setHours(7, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 7);
+    return next.getTime() - now.getTime();
+  }
+  const ms = msUntilNextMonday7am();
+  console.log(`[Scheduler] Weekly report scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 07:00).`);
+  setTimeout(function weekly() {
+    sendWeeklyReport().finally(() => setTimeout(weekly, WEEK_MS));
+  }, ms);
+}

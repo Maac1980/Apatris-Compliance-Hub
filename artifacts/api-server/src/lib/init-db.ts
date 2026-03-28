@@ -764,5 +764,29 @@ export async function initializeDatabase(): Promise<void> {
     }
   }
 
+  // ── Performance indexes ──────────────────────────────────────────────────
+  const indexes = [
+    "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_trc ON workers(trc_expiry)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_passport ON workers(passport_expiry)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_bhp ON workers(bhp_expiry)",
+    "CREATE INDEX IF NOT EXISTS idx_workers_contract ON workers(contract_end_date)",
+    "CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents(expiry_date)",
+    "CREATE INDEX IF NOT EXISTS idx_documents_worker ON documents(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_contracts_worker ON contracts(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status)",
+    "CREATE INDEX IF NOT EXISTS idx_doc_workflows_status ON document_workflows(status)",
+    "CREATE INDEX IF NOT EXISTS idx_doc_workflows_worker ON document_workflows(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_gps_checkins_worker ON gps_checkins(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_gps_checkins_site ON gps_checkins(site_name)",
+    "CREATE INDEX IF NOT EXISTS idx_face_encodings_worker ON face_encodings(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_a1_certs_worker ON a1_certificates(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_postings_worker ON posting_assignments(worker_id)",
+  ];
+  for (const idx of indexes) {
+    try { await execute(idx); } catch { /* index may already exist or table missing */ }
+  }
+
   console.log("[init-db] Database initialization complete.");
 }
