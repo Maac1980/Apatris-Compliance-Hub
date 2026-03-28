@@ -7,12 +7,13 @@ id = "artifacts/api-server"
 id = "artifacts/mockup-sandbox"
 
 [deployment]
-router = "application"
 deploymentTarget = "autoscale"
+build = ["sh", "-c", "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/workforce-app run build && pnpm --filter @workspace/apatris-dashboard run build"]
+run = ["node", "artifacts/api-server/dist/index.cjs"]
 
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
+[deployment.env]
+PORT = "8080"
+NODE_ENV = "production"
 
 [workflows]
 runButton = "Project"
