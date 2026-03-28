@@ -426,10 +426,10 @@ export default function Dashboard() {
         {/* ── Section Navigation Grid ───────────────────────────────────────── */}
         <div className="hidden md:grid grid-cols-4 gap-4">
           {([
-            { path: "/",                  label: "Workers",             icon: Users,         solidBg: "bg-red-700",    border: "border-red-600",    shadow: "hover:shadow-[0_6px_24px_rgba(196,30,24,0.45)]"  },
-            { path: "/payroll",           label: "Payroll Ledger",      icon: Calculator,    solidBg: "bg-green-700",  border: "border-green-600",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
-            { path: "/compliance-alerts", label: "Compliance Alerts",   icon: AlertTriangle, solidBg: "bg-orange-600", border: "border-orange-500", shadow: "hover:shadow-[0_6px_24px_rgba(249,115,22,0.40)]" },
-            { path: "/history",           label: "History & Analytics", icon: History,       solidBg: "bg-purple-700", border: "border-purple-600", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
+            { path: "/",                  label: "Pracownicy",           icon: Users,         solidBg: "bg-[#ef4444]",  border: "border-red-500",    shadow: "hover:shadow-[0_6px_24px_rgba(239,68,68,0.45)]"  },
+            { path: "/payroll",           label: "Płace",                icon: Calculator,    solidBg: "bg-[#22c55e]",  border: "border-green-500",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
+            { path: "/compliance-alerts", label: "Alerty Zgodności",     icon: AlertTriangle, solidBg: "bg-[#f59e0b]",  border: "border-amber-500",  shadow: "hover:shadow-[0_6px_24px_rgba(245,158,11,0.40)]" },
+            { path: "/history",           label: "Historia i Analityka", icon: History,       solidBg: "bg-[#a855f7]",  border: "border-purple-500", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
           ] as const).map(({ path, label, icon: Icon, solidBg, border, shadow }) => (
             <button
               key={path}
@@ -496,9 +496,9 @@ export default function Dashboard() {
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#94a3b8" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="compliant" stroke="#22c55e" strokeWidth={2} dot={false} name="Compliant" />
-                <Line type="monotone" dataKey="warning" stroke="#eab308" strokeWidth={2} dot={false} name="Warning" />
-                <Line type="monotone" dataKey="critical" stroke="#C41E18" strokeWidth={2} dot={false} name="Critical" />
+                <Line type="monotone" dataKey="compliant" stroke="#22c55e" strokeWidth={2} dot={false} name="Zgodni" />
+                <Line type="monotone" dataKey="warning" stroke="#eab308" strokeWidth={2} dot={false} name="Ostrzeżenia" />
+                <Line type="monotone" dataKey="critical" stroke="#C41E18" strokeWidth={2} dot={false} name="Krytyczne" />
               </LineChart>
             </ResponsiveContainer>
           </div>

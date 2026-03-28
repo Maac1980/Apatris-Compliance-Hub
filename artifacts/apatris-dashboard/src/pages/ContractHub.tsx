@@ -63,9 +63,9 @@ export default function ContractHub() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <FileSignature className="w-6 h-6 text-red-500" /> Contract & Legal Hub
+            <FileSignature className="w-6 h-6 text-red-500" /> Centrum Umów i Dokumentów Prawnych
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Manage contracts, generate PDFs, assign POA signatories</p>
+          <p className="text-sm text-slate-400 mt-1">Zarządzaj umowami, generuj PDF, przypisuj pełnomocników</p>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export default function ContractHub() {
         {(["contracts", "poa"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === t ? "bg-red-900/40 text-red-400" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-            {t === "contracts" ? `Contracts (${contracts.length})` : `POA Signatories (${poas.length})`}
+            {t === "contracts" ? `Umowy (${contracts.length})` : `Pełnomocnicy (${poas.length})`}
           </button>
         ))}
       </div>
@@ -86,7 +86,7 @@ export default function ContractHub() {
           {contracts.length === 0 ? (
             <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
               <FileText className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No contracts yet. Create one from the Workers page.</p>
+              <p className="text-sm text-slate-400">Brak umów. Utwórz umowę ze strony Pracownicy.</p>
             </div>
           ) : contracts.map(c => (
             <div key={c.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center gap-4 hover:bg-slate-800 transition-colors">
@@ -97,16 +97,16 @@ export default function ContractHub() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-white truncate">{c.worker_name}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor[c.status] ?? "bg-slate-700 text-slate-300"}`}>
-                    {c.status.replace("_", " ").toUpperCase()}
+                    {{ draft: "SZKIC", pending_signature: "OCZEKUJE NA PODPIS", active: "AKTYWNA", terminated: "ROZWIĄZANA", expired: "WYGASŁA" }[c.status] ?? c.status.replace("_", " ").toUpperCase()}
                   </span>
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
                   {typeLabel[c.contract_type] ?? c.contract_type} · {new Date(c.start_date).toLocaleDateString("en-GB")}
-                  {c.end_date ? ` → ${new Date(c.end_date).toLocaleDateString("en-GB")}` : " (indefinite)"}
-                  {c.poa_name ? ` · Signed by ${c.poa_name}` : ""}
+                  {c.end_date ? ` → ${new Date(c.end_date).toLocaleDateString("en-GB")}` : " (czas nieokreślony)"}
+                  {c.poa_name ? ` · Podpisał/a ${c.poa_name}` : ""}
                 </div>
               </div>
-              <button onClick={() => downloadPdf(c.id)} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors" title="Download PDF">
+              <button onClick={() => downloadPdf(c.id)} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors" title="Pobierz PDF">
                 <Download className="w-4 h-4" />
               </button>
             </div>
@@ -117,7 +117,7 @@ export default function ContractHub() {
           {poas.length === 0 ? (
             <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
               <Users className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No POA signatories added yet.</p>
+              <p className="text-sm text-slate-400">Nie dodano jeszcze pełnomocników.</p>
             </div>
           ) : poas.map(p => (
             <div key={p.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center gap-4">
@@ -133,7 +133,7 @@ export default function ContractHub() {
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${p.is_active ? "bg-emerald-900/50 text-emerald-400" : "bg-slate-700 text-slate-400"}`}>
-                {p.is_active ? "ACTIVE" : "INACTIVE"}
+                {p.is_active ? "AKTYWNA" : "NIEAKTYWNA"}
               </span>
             </div>
           ))}

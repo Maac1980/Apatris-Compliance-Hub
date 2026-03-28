@@ -62,13 +62,13 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-red-500" /> Compliance Analytics
+            <BarChart3 className="w-6 h-6 text-red-500" /> Analityka Zgodności
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Site heatmaps, predictive alerts, compliance reports</p>
+          <p className="text-sm text-slate-400 mt-1">Mapy cieplne obiektów, alerty predykcyjne, raporty zgodności</p>
         </div>
         <button onClick={downloadReport}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-900/40 text-red-400 text-sm font-bold hover:bg-red-900/60 transition-colors">
-          <Download className="w-4 h-4" /> PDF Report
+          <Download className="w-4 h-4" /> Raport PDF
         </button>
       </div>
 
@@ -76,11 +76,11 @@ export default function AnalyticsPage() {
       <div className="flex gap-2">
         <button onClick={() => setTab("heatmap")}
           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === "heatmap" ? "bg-red-900/40 text-red-400" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-          Site Heatmap ({heatmap.length})
+          Mapa cieplna ({heatmap.length})
         </button>
         <button onClick={() => setTab("predictive")}
           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === "predictive" ? "bg-red-900/40 text-red-400" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-          Predictive Alerts ({summary.totalAlerts})
+          Alerty predykcyjne ({summary.totalAlerts})
         </button>
       </div>
 
@@ -98,11 +98,11 @@ export default function AnalyticsPage() {
                 <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${site.complianceRate}%` }} />
               </div>
               <div className="flex gap-4 mt-2 text-[11px]">
-                <span className="text-emerald-400">{site.compliant} compliant</span>
-                <span className="text-amber-400">{site.warning} warning</span>
-                <span className="text-red-400">{site.critical} critical</span>
-                <span className="text-red-300">{site.nonCompliant} expired</span>
-                <span className="text-slate-500 ml-auto">{site.total} total</span>
+                <span className="text-emerald-400">{site.compliant} zgodnych</span>
+                <span className="text-amber-400">{site.warning} ostrzeżeń</span>
+                <span className="text-red-400">{site.critical} krytycznych</span>
+                <span className="text-red-300">{site.nonCompliant} wygasłych</span>
+                <span className="text-slate-500 ml-auto">{site.total} łącznie</span>
               </div>
             </div>
           ))}
@@ -113,15 +113,15 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-red-900/30 rounded-xl p-3 border border-red-500/20 text-center">
               <div className="text-2xl font-black text-red-400">{summary.imminent}</div>
-              <div className="text-[10px] text-red-400/60 font-bold uppercase">Imminent (14d or less)</div>
+              <div className="text-[10px] text-red-400/60 font-bold uppercase">Pilne (≤14 dni)</div>
             </div>
             <div className="bg-amber-900/30 rounded-xl p-3 border border-amber-500/20 text-center">
               <div className="text-2xl font-black text-amber-400">{summary.upcoming}</div>
-              <div className="text-[10px] text-amber-400/60 font-bold uppercase">Upcoming (30d or less)</div>
+              <div className="text-[10px] text-amber-400/60 font-bold uppercase">Zbliżające się (≤30 dni)</div>
             </div>
             <div className="bg-blue-900/30 rounded-xl p-3 border border-blue-500/20 text-center">
               <div className="text-2xl font-black text-blue-400">{summary.future}</div>
-              <div className="text-[10px] text-blue-400/60 font-bold uppercase">Future (90d or less)</div>
+              <div className="text-[10px] text-blue-400/60 font-bold uppercase">Przyszłe (≤90 dni)</div>
             </div>
           </div>
 
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
               <AlertTriangle className={`w-4 h-4 shrink-0 ${a.urgency === "imminent" ? "text-red-400" : a.urgency === "upcoming" ? "text-amber-400" : "text-blue-400"}`} />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-bold text-white">{a.workerName}</span>
-                <div className="text-xs text-slate-400">{a.documentType} · {a.site} · Expires {new Date(a.expiryDate).toLocaleDateString("en-GB")}</div>
+                <div className="text-xs text-slate-400">{a.documentType} · {a.site} · Wygasa {new Date(a.expiryDate).toLocaleDateString("en-GB")}</div>
               </div>
               <div className="text-right shrink-0">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${urgencyStyle[a.urgency] ?? ""}`}>

@@ -41,7 +41,7 @@ export default function DocumentWorkflow() {
   };
 
   const reject = async (id: string) => {
-    const reason = prompt("Rejection reason:");
+    const reason = prompt("Powód odrzucenia:");
     if (!reason) return;
     await fetch(`${API}/workflows/${id}/reject`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ reason }) });
     load();
@@ -66,19 +66,19 @@ export default function DocumentWorkflow() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <FileCheck className="w-6 h-6 text-red-500" /> Document Workflow
+          <FileCheck className="w-6 h-6 text-red-500" /> Obieg Dokumentów
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Review, approve, and track compliance documents</p>
+        <p className="text-sm text-slate-400 mt-1">Przeglądaj, zatwierdzaj i śledź dokumenty zgodności</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-5 gap-3">
         {[
-          { label: "Uploaded", count: stats.uploaded, color: "text-blue-400" },
-          { label: "Under Review", count: stats.under_review, color: "text-amber-400" },
-          { label: "Approved", count: stats.approved, color: "text-emerald-400" },
-          { label: "Rejected", count: stats.rejected, color: "text-red-400" },
-          { label: "Resubmit", count: stats.resubmit_requested, color: "text-orange-400" },
+          { label: "Przesłane", count: stats.uploaded, color: "text-blue-400" },
+          { label: "W trakcie weryfikacji", count: stats.under_review, color: "text-amber-400" },
+          { label: "Zatwierdzone", count: stats.approved, color: "text-emerald-400" },
+          { label: "Odrzucone", count: stats.rejected, color: "text-red-400" },
+          { label: "Do ponownego przesłania", count: stats.resubmit_requested, color: "text-orange-400" },
         ].map(s => (
           <div key={s.label} className="bg-slate-800/50 rounded-xl p-3 text-center border border-slate-700/50">
             <div className={`text-2xl font-black ${s.color}`}>{s.count}</div>
@@ -93,8 +93,8 @@ export default function DocumentWorkflow() {
       ) : docs.length === 0 ? (
         <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
           <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-          <p className="text-sm font-bold text-white">All documents reviewed</p>
-          <p className="text-xs text-slate-400 mt-1">No pending reviews in the queue.</p>
+          <p className="text-sm font-bold text-white">Wszystkie dokumenty zweryfikowane</p>
+          <p className="text-xs text-slate-400 mt-1">Brak dokumentów oczekujących na weryfikację.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -108,12 +108,12 @@ export default function DocumentWorkflow() {
                     <span className="text-xs text-slate-500">·</span>
                     <span className="text-xs font-semibold text-slate-300">{doc.documentType}</span>
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ml-auto ${statusColor[doc.status] ?? ""}`}>
-                      {doc.status.replace(/_/g, " ").toUpperCase()}
+                      {{ uploaded: "PRZESŁANE", under_review: "W TRAKCIE WERYFIKACJI", approved: "ZATWIERDZONE", rejected: "ODRZUCONE", resubmit_requested: "DO PONOWNEGO PRZESŁANIA" }[doc.status] ?? doc.status.replace(/_/g, " ").toUpperCase()}
                     </span>
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
-                    {doc.fileName ?? "No file"} · v{doc.version} · Uploaded by {doc.uploadedBy} · {new Date(doc.uploadedAt).toLocaleDateString("en-GB")}
-                    {doc.expiryDate ? ` · Expires ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}` : ""}
+                    {doc.fileName ?? "Brak pliku"} · v{doc.version} · Przesłane przez {doc.uploadedBy} · {new Date(doc.uploadedAt).toLocaleDateString("en-GB")}
+                    {doc.expiryDate ? ` · Wygasa ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}` : ""}
                   </div>
                 </div>
               </div>
@@ -121,11 +121,11 @@ export default function DocumentWorkflow() {
                 <div className="flex gap-2 mt-3 pl-7">
                   <button onClick={() => approve(doc.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-900/40 text-emerald-400 text-xs font-bold hover:bg-emerald-900/60 transition-colors">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Zatwierdź
                   </button>
                   <button onClick={() => reject(doc.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/40 text-red-400 text-xs font-bold hover:bg-red-900/60 transition-colors">
-                    <XCircle className="w-3.5 h-3.5" /> Reject
+                    <XCircle className="w-3.5 h-3.5" /> Odrzuć
                   </button>
                 </div>
               )}

@@ -120,7 +120,7 @@ export function DashboardPage() {
         if (role === "Coordinator") return <Tier4Home />;
         return <WorkersTab />;
 
-      case "calculator": return <div style={{padding:"16px",background:"#0f172a",minHeight:"100%",overflowY:"auto",paddingBottom:"80px"}}><KnowledgeCenter /></div>;
+      case "calculator": return <div className="p-4 min-h-full overflow-y-auto pb-20 bg-[#0c0c0e]"><KnowledgeCenter /></div>;
       // ── PAYROLL (T1 only) ─────────────────────────────────────────────────
       case "payroll":
         if (!tierConfig.canViewFinancials) {

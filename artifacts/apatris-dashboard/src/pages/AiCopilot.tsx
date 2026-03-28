@@ -10,16 +10,16 @@ function authHeaders() {
 interface Message { role: "user" | "assistant"; content: string; source?: string }
 
 const QUICK_QUESTIONS = [
-  "What's our overall compliance rate?",
-  "Which workers expire next month?",
-  "Which site has the most risk?",
-  "How many workers can we send to Germany?",
-  "Give me a compliance summary",
+  "Jaki jest nasz ogólny wskaźnik zgodności?",
+  "Którym pracownikom wygasają dokumenty w przyszłym miesiącu?",
+  "Który obiekt ma największe ryzyko?",
+  "Ilu pracowników możemy delegować do Niemiec?",
+  "Podaj podsumowanie zgodności",
 ];
 
 export default function AiCopilot() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "I'm your AI compliance assistant. Ask me about worker compliance, document expiry, site risk, or payroll calculations. I have access to all your live workforce data.", source: "system" },
+    { role: "assistant", content: "Jestem Twoim asystentem AI ds. zgodności. Zapytaj mnie o zgodność pracowników, wygasające dokumenty, ryzyko na obiektach lub obliczenia płacowe. Mam dostęp do wszystkich aktualnych danych o pracownikach.", source: "system" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function AiCopilot() {
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.answer ?? data.error ?? "No response", source: data.source }]);
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Failed to reach the AI service. Check your connection." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Nie udało się połączyć z usługą AI. Sprawdź połączenie." }]);
     } finally {
       setLoading(false);
     }
@@ -53,9 +53,9 @@ export default function AiCopilot() {
       {/* Header */}
       <div className="p-6 pb-3">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-red-500" /> AI Compliance Copilot
+          <Sparkles className="w-6 h-6 text-red-500" /> Asystent AI ds. Zgodności
         </h1>
-        <p className="text-sm text-slate-400 mt-1">Ask natural language questions about your workforce compliance</p>
+        <p className="text-sm text-slate-400 mt-1">Zadawaj pytania w języku naturalnym o zgodność pracowników</p>
       </div>
 
       {/* Quick questions */}
@@ -87,7 +87,7 @@ export default function AiCopilot() {
               {msg.content}
               {msg.source && msg.role === "assistant" && (
                 <div className="text-[9px] text-slate-500 mt-2 uppercase tracking-wider">
-                  {msg.source === "ai" ? "Powered by GPT-4o" : msg.source === "rules" ? "Rule-based analysis" : ""}
+                  {msg.source === "ai" ? "Napędzany przez GPT-4o" : msg.source === "rules" ? "Analiza regułowa" : ""}
                 </div>
               )}
             </div>
@@ -118,7 +118,7 @@ export default function AiCopilot() {
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Ask about compliance, workers, documents..."
+            placeholder="Zapytaj o zgodność, pracowników, dokumenty..."
             disabled={loading}
             className="flex-1 bg-slate-800 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500/50 disabled:opacity-50"
           />

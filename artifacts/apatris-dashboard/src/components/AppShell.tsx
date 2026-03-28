@@ -7,15 +7,15 @@ import {
 } from "lucide-react";
 
 const BOTTOM_NAV = [
-  { path: "/",                   label: "Workers",   icon: Users },
-  { path: "/payroll",            label: "Ledger",    icon: Calculator },
-  { path: "/compliance-alerts",  label: "Alerts",    icon: AlertTriangle },
-  { path: "/contracts",          label: "Contracts", icon: FileSignature },
-  { path: "/doc-workflow",       label: "Docs",      icon: FileCheck },
-  { path: "/gps-tracking",      label: "GPS",       icon: MapPin },
-  { path: "/analytics",         label: "Analytics", icon: BarChart3 },
-  { path: "/ai-copilot",        label: "AI",        icon: Sparkles },
-  { path: "/history",            label: "History",   icon: History },
+  { path: "/",                   label: "Pracownicy",   icon: Users },
+  { path: "/payroll",            label: "Płace",        icon: Calculator },
+  { path: "/compliance-alerts",  label: "Alerty",       icon: AlertTriangle },
+  { path: "/contracts",          label: "Umowy",        icon: FileSignature },
+  { path: "/doc-workflow",       label: "Dokumenty",    icon: FileCheck },
+  { path: "/gps-tracking",      label: "GPS",          icon: MapPin },
+  { path: "/analytics",         label: "Analityka",    icon: BarChart3 },
+  { path: "/ai-copilot",        label: "Asystent AI",  icon: Sparkles },
+  { path: "/history",            label: "Historia",     icon: History },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

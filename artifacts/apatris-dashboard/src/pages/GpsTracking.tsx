@@ -50,9 +50,9 @@ export default function GpsTracking() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-red-500" /> GPS Site Tracking
+            <MapPin className="w-6 h-6 text-red-500" /> Śledzenie GPS na Obiektach
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Live worker locations, site geofences, anomaly detection</p>
+          <p className="text-sm text-slate-400 mt-1">Lokalizacje pracowników na żywo, geofencing, wykrywanie anomalii</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -63,15 +63,15 @@ export default function GpsTracking() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
           <div className="text-3xl font-black text-emerald-400">{active.length}</div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">On Site Now</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Obecnie na obiekcie</div>
         </div>
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
           <div className="text-3xl font-black text-blue-400">{geofences.filter(g => g.is_active).length}</div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Active Sites</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Aktywne obiekty</div>
         </div>
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
           <div className="text-3xl font-black text-red-400">{anomalies.length}</div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Anomalies</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Anomalie</div>
         </div>
       </div>
 
@@ -80,7 +80,7 @@ export default function GpsTracking() {
         {(["active", "sites", "anomalies"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === t ? "bg-red-900/40 text-red-400" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-            {t === "active" ? `On Site (${active.length})` : t === "sites" ? `Geofences (${geofences.length})` : `Anomalies (${anomalies.length})`}
+            {t === "active" ? `Na obiekcie (${active.length})` : t === "sites" ? `Geofence (${geofences.length})` : `Anomalie (${anomalies.length})`}
           </button>
         ))}
       </div>
@@ -92,15 +92,15 @@ export default function GpsTracking() {
           {active.length === 0 ? (
             <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
               <Users className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No workers currently checked in.</p>
+              <p className="text-sm text-slate-400">Brak pracowników zarejestrowanych na obiekcie.</p>
             </div>
           ) : active.map(c => (
             <div key={c.id} className={`bg-slate-800/50 rounded-xl p-4 border ${c.is_anomaly ? "border-red-500/30" : "border-slate-700/50"} flex items-center gap-3`}>
               <div className={`w-3 h-3 rounded-full ${c.is_anomaly ? "bg-red-500" : "bg-emerald-500"} animate-pulse`} />
               <div className="flex-1">
                 <span className="text-sm font-bold text-white">{c.worker_name}</span>
-                <div className="text-xs text-slate-400">{c.site_name} · On site for {timeSince(c.check_in_at)}</div>
-                {c.is_anomaly && <div className="text-xs text-red-400 mt-0.5">Warning: {c.anomaly_reason}</div>}
+                <div className="text-xs text-slate-400">{c.site_name} · Na obiekcie od {timeSince(c.check_in_at)}</div>
+                {c.is_anomaly && <div className="text-xs text-red-400 mt-0.5">Uwaga: {c.anomaly_reason}</div>}
               </div>
               <Clock className="w-4 h-4 text-slate-500" />
             </div>
@@ -114,11 +114,11 @@ export default function GpsTracking() {
               <div className="flex-1">
                 <span className="text-sm font-bold text-white">{g.site_name}</span>
                 <div className="text-xs text-slate-400">
-                  {g.address ?? `${g.latitude.toFixed(4)}, ${g.longitude.toFixed(4)}`} · Radius: {g.radius_meters}m
+                  {g.address ?? `${g.latitude.toFixed(4)}, ${g.longitude.toFixed(4)}`} · Promień: {g.radius_meters}m
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${g.is_active ? "bg-emerald-900/50 text-emerald-400" : "bg-slate-700 text-slate-400"}`}>
-                {g.is_active ? "ACTIVE" : "INACTIVE"}
+                {g.is_active ? "AKTYWNA" : "NIEAKTYWNA"}
               </span>
             </div>
           ))}
@@ -128,7 +128,7 @@ export default function GpsTracking() {
           {anomalies.length === 0 ? (
             <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
               <AlertTriangle className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No anomalies detected.</p>
+              <p className="text-sm text-slate-400">Nie wykryto anomalii.</p>
             </div>
           ) : anomalies.map((a: any) => (
             <div key={a.id} className="bg-slate-800/50 rounded-xl p-4 border border-red-500/20">
