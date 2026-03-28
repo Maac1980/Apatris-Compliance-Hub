@@ -148,14 +148,18 @@ export function FaceLogin({ onSuccess, onCancel }: FaceLoginProps) {
           }, 1500);
         } else {
           setStatus("error");
-          setMessage("Face not recognized. Try again or use PIN login.");
-          // Restart scanning after a delay
-          setTimeout(() => {
-            setStatus("scanning");
-            setMessage("Looking for your face…");
-            scanIntervalRef.current = window.setInterval(() => {}, 500); // restart in next render
-            startCamera();
-          }, 2500);
+          if (data.noEnrollments) {
+            setMessage("No faces registered yet. Ask your administrator to enroll your face first.");
+            // Don't restart scanning — enrollment is needed
+          } else {
+            setMessage("Face not recognized. Try again or use PIN login.");
+            setTimeout(() => {
+              setStatus("scanning");
+              setMessage("Looking for your face…");
+              scanIntervalRef.current = window.setInterval(() => {}, 500);
+              startCamera();
+            }, 2500);
+          }
         }
       } catch {
         setStatus("error");

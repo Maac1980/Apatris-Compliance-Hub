@@ -744,6 +744,109 @@ export async function initializeDatabase(): Promise<void> {
     }
 
     console.log("[init-db] Seeded geofences, POA, contracts, and document workflows.");
+
+    // ── Seed compliance snapshots (last 14 days) ─────────────────────────
+    const today = new Date();
+    for (let d = 13; d >= 0; d--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - d);
+      const dateStr = date.toISOString().split("T")[0];
+      const compliant = 3 + Math.floor(Math.random() * 2);
+      const warning = Math.floor(Math.random() * 2);
+      const critical = Math.floor(Math.random() * 2);
+      const expired = 6 - compliant - warning - critical;
+      await execute(
+        `INSERT INTO compliance_snapshots (tenant_id, snapshot_date, total, compliant, warning, critical, expired)
+         VALUES ($1,$2,6,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+        [defaultTenantId, dateStr, compliant, warning, critical, Math.max(0, expired)]
+      );
+    }
+
+    // ── Seed audit log entries ───────────────────────────────────────────
+    try {
+      await execute(`CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY, timestamp TIMESTAMPTZ DEFAULT NOW(),
+        actor TEXT, actor_email TEXT, action TEXT, worker_id TEXT,
+        worker_name TEXT, note TEXT, tenant_id UUID
+      )`);
+      const auditEntries = [
+        { actor: "Manish", email: "manish@apatris.pl", action: "ADMIN_LOGIN", note: "Direct login" },
+        { actor: "Manish", email: "manish@apatris.pl", action: "WORKER_UPDATED", worker: "Tomasz Kowalski", note: "Updated TRC expiry date" },
+        { actor: "System", email: "system", action: "COMPLIANCE_SCAN", note: "Daily scan: 2 critical, 1 warning" },
+        { actor: "Akshay", email: "akshay@apatris.pl", action: "CONTRACT_GENERATED", worker: "Piotr Wiśniewski", note: "Umowa Zlecenie generated" },
+        { actor: "Manish", email: "manish@apatris.pl", action: "PAYROLL_COMMIT", note: "March 2026 closed. 6 workers." },
+        { actor: "System", email: "system", action: "WEEKLY_REPORT", note: "Weekly compliance report sent to 2 admins" },
+      ];
+      for (const e of auditEntries) {
+        await execute(
+          `INSERT INTO audit_logs (actor, actor_email, action, worker_name, note, tenant_id)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [e.actor, e.email, e.action, e.worker ?? null, e.note, defaultTenantId]
+        );
+      }
+    } catch { /* table may have different schema */ }
+
+    // ── Seed notification log entries ────────────────────────────────────
+    try {
+      await execute(`CREATE TABLE IF NOT EXISTS notification_log (
+        id SERIAL PRIMARY KEY, channel TEXT, worker_id TEXT, worker_name TEXT,
+        sent_by TEXT, recipient TEXT, message_preview TEXT, status TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(), tenant_id UUID
+      )`);
+      const notifEntries = [
+        { channel: "email", worker: "Andrzej Zieliński", recipient: "a.zielinski@apatris.pl", msg: "BHP certificate expired — immediate action required", status: "sent" },
+        { channel: "email", worker: "Piotr Wiśniewski", recipient: "p.wisniewski@apatris.pl", msg: "TRC expiring in 14 days — schedule renewal", status: "sent" },
+        { channel: "payslip", worker: "Tomasz Kowalski", recipient: "t.kowalski@apatris.pl", msg: "Payslip for 2026-03 — gross 5,460.00 PLN", status: "sent" },
+      ];
+      for (const n of notifEntries) {
+        await execute(
+          `INSERT INTO notification_log (channel, worker_name, recipient, message_preview, status, tenant_id)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [n.channel, n.worker, n.recipient, n.msg, n.status, defaultTenantId]
+        );
+      }
+    } catch { /* table may have different schema */ }
+
+    // ── Seed payroll commit + snapshots ──────────────────────────────────
+    try {
+      await execute(`CREATE TABLE IF NOT EXISTS payroll_commits (
+        id SERIAL PRIMARY KEY, committed_at TIMESTAMPTZ DEFAULT NOW(), committed_by TEXT,
+        month TEXT, worker_count INTEGER, total_gross NUMERIC, total_netto NUMERIC,
+        payslips_sent INTEGER DEFAULT 0, tenant_id UUID
+      )`);
+      await execute(`CREATE TABLE IF NOT EXISTS payroll_snapshots (
+        id SERIAL PRIMARY KEY, commit_id INTEGER, month TEXT, worker_id TEXT, worker_name TEXT,
+        site TEXT, hours NUMERIC, hourly_rate NUMERIC, gross NUMERIC,
+        employee_zus NUMERIC, health_ins NUMERIC, est_pit NUMERIC,
+        advance NUMERIC, penalties NUMERIC, netto NUMERIC, tenant_id UUID
+      )`);
+      const commitRow = await query<{ id: number }>(
+        `INSERT INTO payroll_commits (committed_by, month, worker_count, total_gross, total_netto, payslips_sent, tenant_id)
+         VALUES ('Manish', '2026-03', 6, 31620.00, 23450.00, 4, $1) RETURNING id`,
+        [defaultTenantId]
+      );
+      const commitId = commitRow[0]?.id;
+      if (commitId) {
+        const payrollWorkers = await query<{ id: string; full_name: string; assigned_site: string; hourly_rate: number; monthly_hours: number }>(
+          "SELECT id, full_name, assigned_site, hourly_rate, monthly_hours FROM workers WHERE tenant_id = $1",
+          [defaultTenantId]
+        );
+        for (const w of payrollWorkers) {
+          const gross = Number(w.hourly_rate) * Number(w.monthly_hours);
+          const zus = Math.round(gross * 0.1126 * 100) / 100;
+          const health = Math.round((gross - zus) * 0.09 * 100) / 100;
+          const pit = Math.max(0, Math.round((gross - zus) * 0.8 * 0.12 - 300));
+          const netto = Math.round((gross - zus - health - pit) * 100) / 100;
+          await execute(
+            `INSERT INTO payroll_snapshots (commit_id, month, worker_id, worker_name, site, hours, hourly_rate, gross, employee_zus, health_ins, est_pit, advance, penalties, netto, tenant_id)
+             VALUES ($1,'2026-03',$2,$3,$4,$5,$6,$7,$8,$9,$10,0,0,$11,$12)`,
+            [commitId, w.id, w.full_name, w.assigned_site, w.monthly_hours, w.hourly_rate, gross, zus, health, pit, netto, defaultTenantId]
+          );
+        }
+      }
+    } catch { /* tables may exist with different schema */ }
+
+    console.log("[init-db] Seeded compliance snapshots, audit log, notifications, and payroll history.");
   }
 
   // Assign default tenant to any rows missing a tenant_id

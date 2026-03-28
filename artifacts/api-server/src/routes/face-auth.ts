@@ -144,9 +144,20 @@ router.post("/face/verify", sensitiveLimiter, async (req, res) => {
     const result = await verifyFace(descriptor, tenantId);
 
     if (!result.matched || !result.worker) {
+      // Check if any faces are enrolled at all
+      const { query: dbQuery } = await import("../lib/db.js");
+      const enrollCount = await dbQuery<{ count: string }>(
+        "SELECT count(*)::text as count FROM face_encodings WHERE tenant_id = $1",
+        [tenantId]
+      );
+      const hasEnrollments = parseInt(enrollCount[0]?.count ?? "0", 10) > 0;
+
       return res.status(401).json({
         matched: false,
-        error: "Face not recognized. Please try again or use PIN login.",
+        error: hasEnrollments
+          ? "Face not recognized. Please try again or use PIN login."
+          : "No faces enrolled yet. Ask your administrator to register your face before using Face Login.",
+        noEnrollments: !hasEnrollments,
         confidence: result.confidence,
       });
     }
