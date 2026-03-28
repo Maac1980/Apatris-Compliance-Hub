@@ -135,22 +135,23 @@ const MUTABLE_COLUMNS = new Set([
 // Public API
 // ---------------------------------------------------------------------------
 
-export async function fetchAllWorkers(): Promise<WorkerRow[]> {
-  return query<WorkerRow>("SELECT * FROM workers ORDER BY full_name");
+export async function fetchAllWorkers(tenantId: string): Promise<WorkerRow[]> {
+  return query<WorkerRow>("SELECT * FROM workers WHERE tenant_id = $1 ORDER BY full_name", [tenantId]);
 }
 
-export async function fetchWorkerById(id: string): Promise<WorkerRow | null> {
-  return queryOne<WorkerRow>("SELECT * FROM workers WHERE id = $1", [id]);
+export async function fetchWorkerById(id: string, tenantId: string): Promise<WorkerRow | null> {
+  return queryOne<WorkerRow>("SELECT * FROM workers WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
 }
 
 export async function createWorker(
-  fields: Partial<WorkerRow>
+  fields: Partial<WorkerRow>,
+  tenantId: string
 ): Promise<WorkerRow> {
-  const columns: string[] = [];
-  const placeholders: string[] = [];
-  const values: unknown[] = [];
+  const columns: string[] = ["tenant_id"];
+  const placeholders: string[] = ["$1"];
+  const values: unknown[] = [tenantId];
 
-  let idx = 1;
+  let idx = 2;
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined) continue;
     const col = resolveColumn(key) ?? key;
@@ -161,7 +162,7 @@ export async function createWorker(
     idx++;
   }
 
-  if (columns.length === 0) {
+  if (columns.length === 1) {
     throw new Error("createWorker: no valid fields provided");
   }
 
@@ -177,7 +178,8 @@ export async function createWorker(
 
 export async function updateWorker(
   id: string,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
+  tenantId: string
 ): Promise<WorkerRow> {
   const setClauses: string[] = [];
   const values: unknown[] = [];
@@ -201,10 +203,13 @@ export async function updateWorker(
   }
 
   values.push(id);
+  const idIdx = idx;
+  idx++;
+  values.push(tenantId);
   const sql = `
     UPDATE workers
     SET ${setClauses.join(", ")}
-    WHERE id = $${idx}
+    WHERE id = $${idIdx} AND tenant_id = $${idx}
     RETURNING *
   `;
 
@@ -215,6 +220,6 @@ export async function updateWorker(
   return rows[0]!;
 }
 
-export async function deleteWorker(id: string): Promise<void> {
-  await execute("DELETE FROM workers WHERE id = $1", [id]);
+export async function deleteWorker(id: string, tenantId: string): Promise<void> {
+  await execute("DELETE FROM workers WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
 }

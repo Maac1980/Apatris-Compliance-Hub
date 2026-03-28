@@ -110,7 +110,7 @@ const router: IRouter = Router();
 router.get("/workers", async (req, res) => {
   try {
     const { search, specialization, status, site } = req.query as Record<string, string>;
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const allWorkers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
@@ -123,9 +123,9 @@ router.get("/workers", async (req, res) => {
 });
 
 // GET /workers/sites — returns all unique ASSIGNED SITE values
-router.get("/workers/sites", async (_req, res) => {
+router.get("/workers/sites", async (req, res) => {
   try {
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
@@ -140,9 +140,9 @@ router.get("/workers/sites", async (_req, res) => {
 });
 
 // GET /workers/stats
-router.get("/workers/stats", async (_req, res) => {
+router.get("/workers/stats", async (req, res) => {
   try {
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
@@ -163,9 +163,9 @@ router.get("/workers/stats", async (_req, res) => {
 });
 
 // GET /workers/report
-router.get("/workers/report", async (_req, res) => {
+router.get("/workers/report", async (req, res) => {
   try {
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker);
 
     const now = new Date();
@@ -368,12 +368,12 @@ router.post("/workers/bulk-create", bulkUpload.fields([
     }
 
     // Create the new worker record
-    const newRecord = await createWorker(workerFields);
+    const newRecord = await createWorker(workerFields, req.tenantId!);
     const recordId = newRecord.id;
 
     // TODO: implement file storage migration (previously Airtable attachments)
 
-    const row = await fetchWorkerById(recordId);
+    const row = await fetchWorkerById(recordId, req.tenantId!);
     res.json({ worker: mapRowToWorker(row!), extracted: extractedSummary });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -385,7 +385,7 @@ router.post("/workers/bulk-create", bulkUpload.fields([
 // GET /workers/:id
 router.get("/workers/:id", async (req, res) => {
   try {
-    const row = await fetchWorkerById(req.params.id);
+    const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
     res.json(mapRowToWorker(row));
   } catch (err) {
@@ -398,7 +398,7 @@ router.get("/workers/:id", async (req, res) => {
 router.patch("/workers/:id", async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
-    const updated = await updateWorker(req.params.id, body);
+    const updated = await updateWorker(req.params.id, body, req.tenantId!);
     res.json(mapRowToWorker(updated));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -455,7 +455,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
 
       if (Object.keys(autoFilledFields).length > 0) {
         try {
-          await updateWorker(req.params.id, autoFilledFields);
+          await updateWorker(req.params.id, autoFilledFields, req.tenantId!);
         } catch (updateErr) {
           console.warn("[upload] Auto-fill partial failure:", updateErr instanceof Error ? updateErr.message : updateErr);
         }
@@ -463,7 +463,7 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
     }
 
     // 4. Return updated worker + what was auto-filled
-    const row = await fetchWorkerById(req.params.id);
+    const row = await fetchWorkerById(req.params.id, req.tenantId!);
     res.json({ worker: mapRowToWorker(row!), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -507,7 +507,7 @@ router.post("/workers/apply", applyUpload.fields([
     if (cvData.experience) workerFields.experience = cvData.experience;
     if (cvData.qualification && !workerFields.specialization) workerFields.specialization = cvData.qualification;
 
-    await createWorker(workerFields);
+    await createWorker(workerFields, req.tenantId!);
 
     // TODO: implement file storage migration (previously Airtable attachments)
 
@@ -522,7 +522,7 @@ router.post("/workers/apply", applyUpload.fields([
 // POST /workers/:id/notify
 router.post("/workers/:id/notify", async (req, res) => {
   try {
-    const row = await fetchWorkerById(req.params.id);
+    const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
     const worker = mapRowToWorker(row);
     const body = req.body as { message?: string; channel?: string };

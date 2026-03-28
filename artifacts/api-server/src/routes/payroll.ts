@@ -14,9 +14,9 @@ import { calculateNet } from "../lib/payroll.js";
 const router = Router();
 
 // ─── GET /payroll/current ─────────────────────────────────────────────────────
-router.get("/payroll/current", async (_req, res) => {
+router.get("/payroll/current", async (req, res) => {
   try {
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker).map((w) => ({
       id: w.id,
       name: w.name,
@@ -62,7 +62,7 @@ router.patch("/payroll/workers/:id", async (req, res) => {
       return;
     }
 
-    await updateWorker(req.params.id, fields);
+    await updateWorker(req.params.id, fields, req.tenantId!);
     res.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -77,7 +77,7 @@ router.post("/payroll/commit", async (req, res) => {
     const monthYear = body.monthYear || new Date().toISOString().slice(0, 7);
     const committedBy = body.committedBy || "Unknown";
 
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker);
 
     interface PayrollSnap {
@@ -109,7 +109,7 @@ router.post("/payroll/commit", async (req, res) => {
           "MONTHLY_HOURS": 0,
           "Advance": 0,
           "Penalties": 0,
-        }).catch((e) =>
+        }, req.tenantId!).catch((e) =>
           console.warn(`[payroll/commit] Reset failed for ${w.name}:`, e instanceof Error ? e.message : e)
         )
       );
@@ -258,7 +258,7 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
     };
     const periodPL = `${monthNames[mon] ?? mon} ${year}`;
 
-    const dbRows = await fetchAllWorkers();
+    const dbRows = await fetchAllWorkers(req.tenantId!);
     const workers = dbRows.map(mapRowToWorker);
 
     const headers = ["Imie i Nazwisko", "Miejscowosc / Budowa", "Kwota Netto (PLN)", "Tytul Przelewu", "IBAN"];
@@ -305,7 +305,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
     // Employer ZUS
     const EMPL_ZUS_RATE  = 0.2048; // 9.76+6.5+1.67+2.45+0.10
 
-    const dbRows2 = await fetchAllWorkers();
+    const dbRows2 = await fetchAllWorkers(req.tenantId!);
     const workers = dbRows2.map(mapRowToWorker);
 
     const headers = [
@@ -383,7 +383,7 @@ router.get("/payroll/export/pdf", async (req, res) => {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const now = new Date();
 
-    const dbRows3 = await fetchAllWorkers();
+    const dbRows3 = await fetchAllWorkers(req.tenantId!);
     const workers = dbRows3.map(mapRowToWorker);
 
     const fmtPLN = (n: number) =>

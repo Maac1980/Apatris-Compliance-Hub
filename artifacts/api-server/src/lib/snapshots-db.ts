@@ -20,20 +20,20 @@ function mapRow(row: any): ComplianceSnapshot {
   };
 }
 
-export async function saveSnapshot(snap: ComplianceSnapshot): Promise<void> {
-  // Delete existing snapshot for this date, then insert fresh
-  await execute("DELETE FROM compliance_snapshots WHERE snapshot_date = $1", [snap.date]);
+export async function saveSnapshot(snap: ComplianceSnapshot, tenantId: string): Promise<void> {
+  // Delete existing snapshot for this date and tenant, then insert fresh
+  await execute("DELETE FROM compliance_snapshots WHERE snapshot_date = $1 AND tenant_id = $2", [snap.date, tenantId]);
   await execute(
-    `INSERT INTO compliance_snapshots (snapshot_date, total, compliant, warning, critical, expired)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [snap.date, snap.total, snap.compliant, snap.warning, snap.critical, snap.expired]
+    `INSERT INTO compliance_snapshots (tenant_id, snapshot_date, total, compliant, warning, critical, expired)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [tenantId, snap.date, snap.total, snap.compliant, snap.warning, snap.critical, snap.expired]
   );
 }
 
-export async function getSnapshots(days = 30): Promise<ComplianceSnapshot[]> {
+export async function getSnapshots(tenantId: string, days = 30): Promise<ComplianceSnapshot[]> {
   const rows = await query(
-    "SELECT * FROM compliance_snapshots ORDER BY snapshot_date DESC LIMIT $1",
-    [days]
+    "SELECT * FROM compliance_snapshots WHERE tenant_id = $1 ORDER BY snapshot_date DESC LIMIT $2",
+    [tenantId, days]
   );
   // Reverse so oldest first (matches original behavior)
   return rows.map(mapRow).reverse();

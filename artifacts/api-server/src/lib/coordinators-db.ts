@@ -25,15 +25,15 @@ function mapRow(row: any): SiteCoordinator {
   };
 }
 
-export async function listCoordinators(): Promise<SiteCoordinator[]> {
-  const rows = await query("SELECT * FROM site_coordinators ORDER BY name");
+export async function listCoordinators(tenantId: string): Promise<SiteCoordinator[]> {
+  const rows = await query("SELECT * FROM site_coordinators WHERE tenant_id = $1 ORDER BY name", [tenantId]);
   return rows.map(mapRow);
 }
 
-export async function findCoordinatorByEmail(email: string): Promise<SiteCoordinator | undefined> {
+export async function findCoordinatorByEmail(email: string, tenantId: string): Promise<SiteCoordinator | undefined> {
   const row = await queryOne(
-    "SELECT * FROM site_coordinators WHERE LOWER(email) = LOWER($1)",
-    [email]
+    "SELECT * FROM site_coordinators WHERE LOWER(email) = LOWER($1) AND tenant_id = $2",
+    [email, tenantId]
   );
   return row ? mapRow(row) : undefined;
 }
@@ -42,10 +42,10 @@ export function verifyCoordinatorPassword(coord: SiteCoordinator, password: stri
   return coord.passwordHash === hash(password);
 }
 
-export async function getCoordinatorForSite(site: string): Promise<SiteCoordinator | undefined> {
+export async function getCoordinatorForSite(site: string, tenantId: string): Promise<SiteCoordinator | undefined> {
   const row = await queryOne(
-    "SELECT * FROM site_coordinators WHERE LOWER(assigned_site) = LOWER($1)",
-    [site]
+    "SELECT * FROM site_coordinators WHERE LOWER(assigned_site) = LOWER($1) AND tenant_id = $2",
+    [site, tenantId]
   );
   return row ? mapRow(row) : undefined;
 }
@@ -56,16 +56,17 @@ export async function addCoordinator(data: {
   password: string;
   assignedSite: string;
   alertEmail: string;
-}): Promise<SiteCoordinator> {
+}, tenantId: string): Promise<SiteCoordinator> {
   // Check for duplicate email
-  const existing = await findCoordinatorByEmail(data.email);
+  const existing = await findCoordinatorByEmail(data.email, tenantId);
   if (existing) throw new Error("Coordinator with this email already exists");
 
   const row = await queryOne(
-    `INSERT INTO site_coordinators (name, email, password_hash, assigned_site, alert_email)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO site_coordinators (tenant_id, name, email, password_hash, assigned_site, alert_email)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
     [
+      tenantId,
       data.name.trim(),
       data.email.trim().toLowerCase(),
       hash(data.password),
@@ -78,7 +79,8 @@ export async function addCoordinator(data: {
 
 export async function updateCoordinator(
   id: string,
-  updates: Partial<{ name: string; password: string; assignedSite: string; alertEmail: string }>
+  updates: Partial<{ name: string; password: string; assignedSite: string; alertEmail: string }>,
+  tenantId: string
 ): Promise<SiteCoordinator> {
   const setClauses: string[] = [];
   const params: unknown[] = [];
@@ -90,20 +92,23 @@ export async function updateCoordinator(
   if (updates.password) { setClauses.push(`password_hash = $${idx++}`); params.push(hash(updates.password)); }
 
   if (setClauses.length === 0) {
-    const row = await queryOne("SELECT * FROM site_coordinators WHERE id = $1", [id]);
+    const row = await queryOne("SELECT * FROM site_coordinators WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
     if (!row) throw new Error("Coordinator not found");
     return mapRow(row);
   }
 
   params.push(id);
+  const idIdx = idx;
+  idx++;
+  params.push(tenantId);
   const row = await queryOne(
-    `UPDATE site_coordinators SET ${setClauses.join(", ")} WHERE id = $${idx} RETURNING *`,
+    `UPDATE site_coordinators SET ${setClauses.join(", ")} WHERE id = $${idIdx} AND tenant_id = $${idx} RETURNING *`,
     params
   );
   if (!row) throw new Error("Coordinator not found");
   return mapRow(row);
 }
 
-export async function removeCoordinator(id: string): Promise<void> {
-  await execute("DELETE FROM site_coordinators WHERE id = $1", [id]);
+export async function removeCoordinator(id: string, tenantId: string): Promise<void> {
+  await execute("DELETE FROM site_coordinators WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
 }

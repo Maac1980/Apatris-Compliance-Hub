@@ -39,7 +39,7 @@ const ALLOWED_USERS = [
 const otpStore = new Map<string, {
   otp: string;
   expires: number;
-  userData: { email: string; name: string; role: string; assignedSite?: string };
+  userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string };
 }>();
 
 // Clean up expired OTPs every 10 minutes
@@ -50,7 +50,7 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
-function signToken(userData: { email: string; name: string; role: string; assignedSite?: string }) {
+function signToken(userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string }) {
   return jwt.sign(userData, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
@@ -72,7 +72,7 @@ router.post("/auth/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const userData = { email: user.email, name: user.name, role: user.role };
+      const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
       // 2FA: if SMTP is configured, send OTP and require verification
       if (isMailConfigured()) {
@@ -102,7 +102,7 @@ router.post("/auth/login", async (req, res) => {
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
-    const coordinator = findCoordinatorByEmail(normalizedEmail);
+    const coordinator = findCoordinatorByEmail(normalizedEmail, req.tenantId!);
     if (coordinator) {
       if (!verifyCoordinatorPassword(coordinator, password)) {
         return res.status(401).json({ error: "Invalid credentials" });
@@ -112,6 +112,8 @@ router.post("/auth/login", async (req, res) => {
         name: coordinator.name,
         role: "Coordinator",
         assignedSite: coordinator.assignedSite,
+        tenantId: req.tenantId,
+        tenantSlug: req.tenantSlug,
       };
       const token = signToken(userData);
       return res.json({ ...userData, jwt: token });
@@ -180,13 +182,15 @@ router.get("/auth/verify", (req, res) => {
     }
     const token = authHeader.slice(7);
     const payload = jwt.verify(token, JWT_SECRET) as {
-      email: string; name: string; role: string; assignedSite?: string;
+      email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string;
     };
     return res.json({
       email: payload.email,
       name: payload.name,
       role: payload.role,
       assignedSite: payload.assignedSite,
+      tenantId: payload.tenantId,
+      tenantSlug: payload.tenantSlug,
       jwt: token,
     });
   } catch {
@@ -222,6 +226,8 @@ router.post("/auth/mobile-login", async (req, res) => {
       email: `${result.name.toLowerCase()}@apatris.pl`,
       name: result.name,
       role: result.role,
+      tenantId: req.tenantId,
+      tenantSlug: req.tenantSlug,
     });
 
     return res.json({ role: result.role, name: result.name, jwt: token });

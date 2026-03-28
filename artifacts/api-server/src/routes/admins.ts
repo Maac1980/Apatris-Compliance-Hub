@@ -8,9 +8,9 @@ const router = Router();
 
 // GET /api/admins
 // Returns all admin profiles. Auto-creates and seeds the table on first call.
-router.get("/admins", async (_req, res) => {
+router.get("/admins", async (req, res) => {
   try {
-    const admins = await fetchAdmins();
+    const admins = await fetchAdmins(req.tenantId!);
     return res.json({ admins });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to fetch admins";
@@ -29,7 +29,7 @@ router.patch("/admins/:id", async (req, res) => {
       return res.status(400).json({ error: "Provide at least one field to update" });
     }
 
-    const updated = await updateAdmin(id, { email, phone });
+    const updated = await updateAdmin(id, { email, phone }, req.tenantId!);
     return res.json({ admin: updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update admin";

@@ -26,17 +26,17 @@ router.get("/audit-log", (_req, res) => {
   }
 });
 
-router.get("/compliance/trend", async (_req, res) => {
+router.get("/compliance/trend", async (req, res) => {
   try {
-    res.json({ snapshots: await getSnapshots(30) });
+    res.json({ snapshots: await getSnapshots(req.tenantId!, 30) });
   } catch (err) {
     res.status(500).json({ error: "Failed to load trend data" });
   }
 });
 
-router.post("/compliance/snapshot", async (_req, res) => {
+router.post("/compliance/snapshot", async (req, res) => {
   try {
-    const rows = await fetchAllWorkers();
+    const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker);
     const total = workers.length;
     const critical = workers.filter((w) => w.complianceStatus === "critical").length;
@@ -51,7 +51,7 @@ router.post("/compliance/snapshot", async (_req, res) => {
       critical,
       expired,
     };
-    await saveSnapshot(snap);
+    await saveSnapshot(snap, req.tenantId!);
     res.json({ ok: true, snapshot: snap });
   } catch (err) {
     res.status(500).json({ error: "Failed to save snapshot" });

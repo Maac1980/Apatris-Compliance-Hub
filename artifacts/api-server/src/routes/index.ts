@@ -11,10 +11,12 @@ import historyRouter from "./history.js";
 import logsRouter from "./logs.js";
 import settingsRouter from "./settings.js";
 import siteCoordinatorsRouter from "./site-coordinators.js";
+import tenantsRouter from "./tenants.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
+router.use(tenantsRouter);
 router.use(workersRouter);
 router.use(hoursRouter);
 router.use(payrollRouter);

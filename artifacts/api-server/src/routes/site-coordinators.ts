@@ -6,9 +6,9 @@ import {
 const router = Router();
 
 // GET /api/site-coordinators
-router.get("/site-coordinators", async (_req, res) => {
+router.get("/site-coordinators", async (req, res) => {
   try {
-    const list = (await listCoordinators()).map(({ passwordHash: _, ...c }) => c);
+    const list = (await listCoordinators(req.tenantId!)).map(({ passwordHash: _, ...c }) => c);
     res.json({ coordinators: list });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
@@ -22,7 +22,7 @@ router.post("/site-coordinators", async (req, res) => {
     if (!name || !email || !password || !assignedSite) {
       return res.status(400).json({ error: "name, email, password, assignedSite are required" });
     }
-    const coord = await addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email });
+    const coord = await addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email }, req.tenantId!);
     const { passwordHash: _, ...safe } = coord;
     return res.status(201).json(safe);
   } catch (err) {
@@ -34,7 +34,7 @@ router.post("/site-coordinators", async (req, res) => {
 router.patch("/site-coordinators/:id", async (req, res) => {
   try {
     const updates = req.body as Record<string, string>;
-    const coord = await updateCoordinator(req.params.id, updates);
+    const coord = await updateCoordinator(req.params.id, updates, req.tenantId!);
     const { passwordHash: _, ...safe } = coord;
     res.json(safe);
   } catch (err) {
@@ -45,7 +45,7 @@ router.patch("/site-coordinators/:id", async (req, res) => {
 // DELETE /api/site-coordinators/:id
 router.delete("/site-coordinators/:id", async (req, res) => {
   try {
-    await removeCoordinator(req.params.id);
+    await removeCoordinator(req.params.id, req.tenantId!);
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });

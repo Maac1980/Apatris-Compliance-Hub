@@ -44,8 +44,8 @@ function mapRow(row: any): DocumentRecord {
   };
 }
 
-export async function fetchDocuments(): Promise<DocumentRecord[]> {
-  const rows = await query("SELECT * FROM documents ORDER BY expiry_date ASC");
+export async function fetchDocuments(tenantId: string): Promise<DocumentRecord[]> {
+  const rows = await query("SELECT * FROM documents WHERE tenant_id = $1 ORDER BY expiry_date ASC", [tenantId]);
   return rows.map(mapRow);
 }
 
@@ -55,12 +55,13 @@ export async function createDocument(fields: {
   documentType: string;
   issueDate?: string;
   expiryDate: string;
-}): Promise<DocumentRecord> {
+}, tenantId: string): Promise<DocumentRecord> {
   const row = await queryOne(
-    `INSERT INTO documents (worker_name, worker_id, document_type, issue_date, expiry_date)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO documents (tenant_id, worker_name, worker_id, document_type, issue_date, expiry_date)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
     [
+      tenantId,
       fields.workerName,
       fields.workerId ?? "",
       fields.documentType,
@@ -73,7 +74,8 @@ export async function createDocument(fields: {
 
 export async function updateDocument(
   id: string,
-  fields: Partial<{ workerName: string; workerId: string; documentType: string; issueDate: string; expiryDate: string }>
+  fields: Partial<{ workerName: string; workerId: string; documentType: string; issueDate: string; expiryDate: string }>,
+  tenantId: string
 ): Promise<DocumentRecord> {
   const setClauses: string[] = [];
   const params: unknown[] = [];
@@ -86,20 +88,23 @@ export async function updateDocument(
   if (fields.expiryDate !== undefined) { setClauses.push(`expiry_date = $${idx++}`); params.push(fields.expiryDate); }
 
   if (setClauses.length === 0) {
-    const row = await queryOne("SELECT * FROM documents WHERE id = $1", [id]);
+    const row = await queryOne("SELECT * FROM documents WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
     if (!row) throw new Error("Document not found");
     return mapRow(row);
   }
 
   params.push(id);
+  const idIdx = idx;
+  idx++;
+  params.push(tenantId);
   const row = await queryOne(
-    `UPDATE documents SET ${setClauses.join(", ")} WHERE id = $${idx} RETURNING *`,
+    `UPDATE documents SET ${setClauses.join(", ")} WHERE id = $${idIdx} AND tenant_id = $${idx} RETURNING *`,
     params
   );
   if (!row) throw new Error("Document not found");
   return mapRow(row);
 }
 
-export async function deleteDocument(id: string): Promise<void> {
-  await execute("DELETE FROM documents WHERE id = $1", [id]);
+export async function deleteDocument(id: string, tenantId: string): Promise<void> {
+  await execute("DELETE FROM documents WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
 }

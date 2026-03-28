@@ -11,9 +11,9 @@ const router = Router();
 
 // GET /api/documents
 // Returns all documents with compliance status. Auto-creates table on first call.
-router.get("/documents", async (_req, res) => {
+router.get("/documents", async (req, res) => {
   try {
-    const documents = await fetchDocuments();
+    const documents = await fetchDocuments(req.tenantId!);
     const summary = {
       total: documents.length,
       green: documents.filter((d) => d.status === "GREEN").length,
@@ -30,9 +30,9 @@ router.get("/documents", async (_req, res) => {
 
 // GET /api/documents/alerts
 // Returns only documents in YELLOW, RED, or EXPIRED zones.
-router.get("/documents/alerts", async (_req, res) => {
+router.get("/documents/alerts", async (req, res) => {
   try {
-    const all = await fetchDocuments();
+    const all = await fetchDocuments(req.tenantId!);
     const alerts = all.filter((d) => d.status !== "GREEN");
     return res.json({ alerts, count: alerts.length });
   } catch (err) {
@@ -75,7 +75,7 @@ router.post("/documents", async (req, res) => {
       return res.status(400).json({ error: "workerName, documentType, and expiryDate are required" });
     }
 
-    const doc = await createDocument({ workerName, workerId, documentType, issueDate, expiryDate });
+    const doc = await createDocument({ workerName, workerId, documentType, issueDate, expiryDate }, req.tenantId!);
 
     // Fire alert immediately — don't wait for the daily scan
     const needsAlert = doc.status === "RED" || doc.status === "YELLOW" || doc.status === "EXPIRED";
@@ -103,7 +103,7 @@ router.patch("/documents/:id", async (req, res) => {
       issueDate?: string;
       expiryDate?: string;
     };
-    const doc = await updateDocument(id, fields);
+    const doc = await updateDocument(id, fields, req.tenantId!);
 
     // Fire alert immediately if updated document is now in warning/critical zone
     const needsAlert = doc.status === "RED" || doc.status === "YELLOW" || doc.status === "EXPIRED";
@@ -123,7 +123,7 @@ router.patch("/documents/:id", async (req, res) => {
 // DELETE /api/documents/:id
 router.delete("/documents/:id", async (req, res) => {
   try {
-    await deleteDocument(req.params.id);
+    await deleteDocument(req.params.id, req.tenantId!);
     return res.json({ deleted: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to delete document";
