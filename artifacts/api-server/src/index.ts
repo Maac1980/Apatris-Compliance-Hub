@@ -45,7 +45,7 @@ if (Number.isNaN(port) || port <= 0) {
   const server = createServer(app);
   initWebSocket(server);
   startWeeklyReport();
-  server.listen(port, () => {
-    console.log(`Server listening on port ${port} (HTTP + WebSocket)`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server listening on 0.0.0.0:${port} (HTTP + WebSocket)`);
   });
 })();
