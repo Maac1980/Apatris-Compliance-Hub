@@ -12,6 +12,7 @@ import logsRouter from "./logs.js";
 import settingsRouter from "./settings.js";
 import siteCoordinatorsRouter from "./site-coordinators.js";
 import tenantsRouter from "./tenants.js";
+import gdprRouter from "./gdpr.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -26,6 +27,7 @@ router.use(historyRouter);
 router.use(logsRouter);
 router.use(settingsRouter);
 router.use(siteCoordinatorsRouter);
+router.use(gdprRouter);
 router.use(aiRouter);
 
 export default router;

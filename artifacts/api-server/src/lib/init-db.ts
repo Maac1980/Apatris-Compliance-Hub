@@ -259,6 +259,48 @@ export async function initializeDatabase(): Promise<void> {
     DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days';
   `);
 
+  // GDPR consent records
+  await execute(`
+    CREATE TABLE IF NOT EXISTS consent_records (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      consent_type TEXT NOT NULL,
+      granted BOOLEAN NOT NULL DEFAULT FALSE,
+      granted_at TIMESTAMPTZ,
+      revoked_at TIMESTAMPTZ,
+      ip_address TEXT,
+      user_agent TEXT,
+      version TEXT NOT NULL DEFAULT '1.0',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // GDPR data processing log (tracks access/export/deletion for audit)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS gdpr_log (
+      id SERIAL PRIMARY KEY,
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT,
+      target_name TEXT,
+      performed_by TEXT NOT NULL,
+      details JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // Add data_retention_days to tenants
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tenants' AND column_name='data_retention_days') THEN
+        ALTER TABLE tenants ADD COLUMN data_retention_days INTEGER DEFAULT 2555;
+      END IF;
+    END $$;
+  `);
+
   // Seed admins if the table is empty
   const rows = await query<{ count: string }>(
     "SELECT count(*)::text AS count FROM admins"
