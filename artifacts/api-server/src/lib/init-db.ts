@@ -478,6 +478,21 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // Push notification subscriptions
+  await execute(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      keys_p256dh TEXT,
+      keys_auth TEXT,
+      user_agent TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN

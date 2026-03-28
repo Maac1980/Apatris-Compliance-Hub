@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { getWorkerConsents } from "../lib/gdpr.js";
 
 const router = Router();
 
@@ -114,6 +115,16 @@ router.post("/gps/checkin", requireAuth, async (req, res) => {
     );
     if (openCheckin) {
       return res.status(409).json({ error: `Already checked in at ${(openCheckin as any).site_name}. Check out first.` });
+    }
+
+    // Verify GPS tracking consent (GDPR)
+    const consents = await getWorkerConsents(workerId, req.tenantId!);
+    const gpsConsent = consents.find(c => c.consentType === "gps_tracking" && c.granted && !c.revokedAt);
+    if (!gpsConsent) {
+      return res.status(403).json({
+        error: "GPS tracking consent required. Worker must grant 'gps_tracking' consent before check-in.",
+        consentRequired: "gps_tracking",
+      });
     }
 
     const siteName = matchedGeofence?.site_name ?? "Unknown Site";

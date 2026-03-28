@@ -20,6 +20,7 @@ import signaturesRouter from "./signatures.js";
 import postedWorkersRouter from "./posted-workers.js";
 import countryComplianceRouter from "./country-compliance.js";
 import gpsRouter from "./gps.js";
+import pushRouter from "./push.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -42,6 +43,7 @@ router.use(signaturesRouter);
 router.use(postedWorkersRouter);
 router.use(countryComplianceRouter);
 router.use(gpsRouter);
+router.use(pushRouter);
 router.use(aiRouter);
 
 export default router;
