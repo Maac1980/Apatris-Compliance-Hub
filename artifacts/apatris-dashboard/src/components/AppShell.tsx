@@ -3,14 +3,19 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
+  FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
 } from "lucide-react";
 
 const BOTTOM_NAV = [
-  { path: "/",                   label: "Workers", icon: Users },
-  { path: "/payroll",            label: "Ledger",  icon: Calculator },
-  { path: "/compliance-alerts",  label: "Alerts",  icon: AlertTriangle },
-  { path: "/history",            label: "History", icon: History },
-  { path: "/calculator",          label: "Calculator", icon: Calculator },
+  { path: "/",                   label: "Workers",   icon: Users },
+  { path: "/payroll",            label: "Ledger",    icon: Calculator },
+  { path: "/compliance-alerts",  label: "Alerts",    icon: AlertTriangle },
+  { path: "/contracts",          label: "Contracts", icon: FileSignature },
+  { path: "/doc-workflow",       label: "Docs",      icon: FileCheck },
+  { path: "/gps-tracking",      label: "GPS",       icon: MapPin },
+  { path: "/analytics",         label: "Analytics", icon: BarChart3 },
+  { path: "/ai-copilot",        label: "AI",        icon: Sparkles },
+  { path: "/history",            label: "History",   icon: History },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

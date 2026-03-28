@@ -18,6 +18,11 @@ import PayrollPage from "@/pages/PayrollPage";
 import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import HistoryPage from "@/pages/HistoryPage";
 import WorkerUpload from "@/pages/WorkerUpload";
+import ContractHub from "@/pages/ContractHub";
+import DocumentWorkflow from "@/pages/DocumentWorkflow";
+import GpsTracking from "@/pages/GpsTracking";
+import AnalyticsPage from "@/pages/AnalyticsPage";
+import AiCopilot from "@/pages/AiCopilot";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -69,6 +74,21 @@ function Router() {
       </Route>
       <Route path="/history">
         {() => <ProtectedRoute component={HistoryPage} />}
+      </Route>
+      <Route path="/contracts">
+        {() => <ProtectedRoute component={ContractHub} />}
+      </Route>
+      <Route path="/doc-workflow">
+        {() => <ProtectedRoute component={DocumentWorkflow} />}
+      </Route>
+      <Route path="/gps-tracking">
+        {() => <ProtectedRoute component={GpsTracking} />}
+      </Route>
+      <Route path="/analytics">
+        {() => <ProtectedRoute component={AnalyticsPage} />}
+      </Route>
+      <Route path="/ai-copilot">
+        {() => <ProtectedRoute component={AiCopilot} />}
       </Route>
       <Route path="/calculator">
         {() => <ProtectedRoute component={() => <div style={{padding:"24px",background:"#0f172a",minHeight:"100vh",overflowY:"auto",paddingBottom:"80px"}}><KnowledgeCenter /></div>} />}
