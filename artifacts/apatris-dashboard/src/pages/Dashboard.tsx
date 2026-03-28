@@ -16,6 +16,11 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import { format, parseISO, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth } from "date-fns";
 import { useTranslation } from "react-i18next";
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
+}
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -126,7 +131,7 @@ export default function Dashboard() {
 
   // Seed today's snapshot once on mount so trend chart has data from day 1
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/compliance/snapshot`, { method: "POST" }).catch(() => {});
+    fetch(`${import.meta.env.BASE_URL}api/compliance/snapshot`, { method: "POST", headers: authHeaders() }).catch(() => {});
   }, []);
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
@@ -197,7 +202,7 @@ export default function Dashboard() {
   const { data: sitesData } = useQuery<{ sites: string[] }>({
     queryKey: ["workers-sites"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/sites`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/sites`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch sites");
       return res.json();
     },
@@ -212,7 +217,7 @@ export default function Dashboard() {
   const { data: trendData } = useQuery<{ snapshots: TrendSnapshot[] }>({
     queryKey: ["compliance-trend"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/compliance/trend`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/compliance/trend`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch trend");
       return res.json();
     },

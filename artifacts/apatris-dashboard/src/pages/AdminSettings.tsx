@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+}
 import { Shield, Save, ArrowLeft, User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Bell, ClipboardList, Clock, Users, Trash2, Plus, Building2, Lock, Wifi, WifiOff, KeyRound, Eye, EyeOff, RefreshCcw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -99,7 +104,7 @@ export default function AdminSettings() {
     setLoading(true);
     setFetchError("");
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/admins`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/admins`, { headers: authHeaders() });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json() as { admins: Admin[] };
       setAdmins(data.admins);
@@ -118,7 +123,7 @@ export default function AdminSettings() {
   async function loadNotifLog() {
     setNotifLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/notifications/history`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/notifications/history`, { headers: authHeaders() });
       const data = await res.json() as { entries: NotifEntry[] };
       setNotifLog(data.entries);
     } catch { setNotifLog([]); }
@@ -128,7 +133,7 @@ export default function AdminSettings() {
   async function loadAuditLog() {
     setAuditLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/audit-log`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/audit-log`, { headers: authHeaders() });
       const data = await res.json() as { entries: AuditEntry[] };
       setAuditLog(data.entries);
     } catch { setAuditLog([]); }
@@ -137,7 +142,7 @@ export default function AdminSettings() {
 
   async function loadSysStatus() {
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/settings/status`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/settings/status`, { headers: authHeaders() });
       if (res.ok) setSysStatus(await res.json());
     } catch { /* non-fatal */ }
   }
@@ -146,7 +151,7 @@ export default function AdminSettings() {
     setCoordLoading(true);
     setCoordError("");
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators`, { headers: authHeaders() });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json() as { coordinators: SiteCoordinator[] };
       setCoordinators(data.coordinators);
@@ -176,7 +181,7 @@ export default function AdminSettings() {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ password: s.newPass }),
       });
       if (!res.ok) {
@@ -200,7 +205,7 @@ export default function AdminSettings() {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/site-coordinators`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(addCoordForm),
       });
       if (!res.ok) {
@@ -222,7 +227,7 @@ export default function AdminSettings() {
     if (!confirm("Remove this site coordinator? They will no longer be able to log in.")) return;
     setDeletingId(id);
     try {
-      await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, { method: "DELETE" });
+      await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, { method: "DELETE", headers: authHeaders() });
       await loadCoordinators();
     } catch {
     } finally {
@@ -244,7 +249,7 @@ export default function AdminSettings() {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/admins/${admin.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ email: state.email, phone: state.phone }),
       });
       if (!res.ok) {

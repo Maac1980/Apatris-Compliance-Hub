@@ -12,6 +12,11 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollRowSkeleton } from "@/components/Skeleton";
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
+}
+
 interface PayrollWorker {
   id: string;
   name: string;
@@ -417,7 +422,7 @@ export default function PayrollPage() {
   const { data, isLoading, refetch } = useQuery<{ workers: PayrollWorker[] }>({
     queryKey: ["payroll-current"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/current`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/current`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to load payroll data");
       return res.json();
     },
@@ -427,7 +432,7 @@ export default function PayrollPage() {
   const saveMutation = useMutation({
     mutationFn: async ({ id, field, val }: { id: string; field: string; val: number }) => {
       const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: authHeaders(),
         body: JSON.stringify({ [field]: val }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -447,7 +452,7 @@ export default function PayrollPage() {
 
   const handleSaveIBAN = (id: string, iban: string) => {
     fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: authHeaders(),
       body: JSON.stringify({ iban }),
     }).then(() => queryClient.invalidateQueries({ queryKey: ["payroll-current"] }));
   };
@@ -455,7 +460,7 @@ export default function PayrollPage() {
   const handleTogglePIT2 = (id: string, newVal: boolean) => {
     setPit2Overrides((p) => ({ ...p, [id]: newVal }));
     fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: authHeaders(),
       body: JSON.stringify({ pit2: newVal }),
     }).catch(() => {});
   };
@@ -463,7 +468,7 @@ export default function PayrollPage() {
   const commitMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/commit`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: authHeaders(),
         body: JSON.stringify({ monthYear: selectedMonth, committedBy: user?.name || "Admin" }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Commit failed"); }

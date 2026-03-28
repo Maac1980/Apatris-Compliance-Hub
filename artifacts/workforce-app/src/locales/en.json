@@ -9,7 +9,8 @@
     "sites": "Sites",
     "docQueue": "Doc Queue",
     "myDocs": "My Docs",
-    "timesheet": "Timesheet"
+    "timesheet": "Timesheet",
+    "calculator": "Calculator"
   },
   "login": {
     "selectDesignation": "Select your designation",

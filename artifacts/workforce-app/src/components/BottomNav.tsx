@@ -25,7 +25,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "workers", label: "nav.directory", icon: Users },
         { id: "payroll",     label: "nav.payroll",    icon: DollarSign },
         { id: "alerts",      label: "nav.alerts",     icon: Bell },
-        { id: "calculator",  label: "Calculator", icon: Calculator },
+        { id: "calculator",  label: "nav.calculator", icon: Calculator },
         { id: "profile",     label: "nav.profile",    icon: User },
       ];
     case "LegalHead":

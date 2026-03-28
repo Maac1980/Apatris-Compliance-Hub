@@ -6,16 +6,17 @@ import {
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
 } from "lucide-react";
 
-const BOTTOM_NAV = [
-  { path: "/",                   label: "Pracownicy",   icon: Users },
-  { path: "/payroll",            label: "Płace",        icon: Calculator },
-  { path: "/compliance-alerts",  label: "Alerty",       icon: AlertTriangle },
-  { path: "/contracts",          label: "Umowy",        icon: FileSignature },
-  { path: "/doc-workflow",       label: "Dokumenty",    icon: FileCheck },
-  { path: "/gps-tracking",      label: "GPS",          icon: MapPin },
-  { path: "/analytics",         label: "Analityka",    icon: BarChart3 },
-  { path: "/ai-copilot",        label: "Asystent AI",  icon: Sparkles },
-  { path: "/history",            label: "Historia",     icon: History },
+const NAV_ITEMS = [
+  { path: "/",                   label: "Pracownicy",      icon: Users },
+  { path: "/payroll",            label: "Lista Płac",      icon: Calculator },
+  { path: "/compliance-alerts",  label: "Alerty Compliance", icon: AlertTriangle },
+  { path: "/contracts",          label: "Umowy",           icon: FileSignature },
+  { path: "/doc-workflow",       label: "Dokumenty",       icon: FileCheck },
+  { path: "/gps-tracking",      label: "GPS",             icon: MapPin },
+  { path: "/analytics",         label: "Analityka",       icon: BarChart3 },
+  { path: "/ai-copilot",        label: "Asystent AI",     icon: Sparkles },
+  { path: "/history",            label: "Historia",        icon: History },
+  { path: "/calculator",         label: "Kalkulator",      icon: Calculator },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -68,12 +69,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+        {/* Desktop inline nav tabs */}
+        <nav className="app-top-nav">
+          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+            const active = isActive(path);
+            return (
+              <button
+                key={path}
+                onClick={() => setLocation(path)}
+                className={`app-top-nav-item ${active ? "app-top-nav-item--active" : ""}`}
+                style={{ color: active ? "#C41E18" : "#64748b", borderBottomColor: active ? "#C41E18" : "transparent" }}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden lg:inline">{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         {/* Right: admin settings + user chip */}
         <div className="app-top-right">
           {isAdmin && (
             <button
               onClick={() => setLocation("/admin-settings")}
-              title="Admin Settings"
+              title="Ustawienia"
               className={`p-1.5 rounded-lg transition-colors ${
                 isActive("/admin-settings")
                   ? "text-white bg-slate-700"
@@ -97,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={logout}
               className="p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-white/10 flex-shrink-0"
-              title="Logout"
+              title="Wyloguj"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -110,20 +129,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
 
-      {/* ─── Mobile Bottom Bar ────────────────────────────────────────── */}
+      {/* ─── Mobile Bottom Bar (scrollable for many tabs) ──────────────── */}
       <nav className="app-bottom-bar">
-        {BOTTOM_NAV.map(({ path, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const active = isActive(path);
           return (
             <button
               key={path}
               onClick={() => setLocation(path)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors"
+              className="flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-1 h-full transition-colors flex-shrink-0"
             >
               <div className={`p-1.5 rounded-xl transition-all ${active ? "bg-red-900/40" : ""}`}>
                 <Icon className={`w-5 h-5 ${active ? "text-[#C41E18]" : "text-slate-500"}`} />
               </div>
-              <span className={`text-[10px] font-mono font-bold uppercase tracking-wide leading-none ${
+              <span className={`text-[9px] font-mono font-bold uppercase tracking-wide leading-none whitespace-nowrap ${
                 active ? "text-[#C41E18]" : "text-slate-600"
               }`}>
                 {label}

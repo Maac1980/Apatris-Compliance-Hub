@@ -10,8 +10,13 @@ import { format, parseISO } from "date-fns";
 
 const BASE = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
+}
+
 function api<T>(path: string): Promise<T> {
-  return fetch(`${BASE}${path}`).then((r) => {
+  return fetch(`${BASE}${path}`, { headers: authHeaders() }).then((r) => {
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json() as Promise<T>;
   });

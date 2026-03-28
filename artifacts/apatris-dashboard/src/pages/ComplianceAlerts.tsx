@@ -7,6 +7,11 @@ import {
   Plus, Trash2, RefreshCcw, Loader2, XCircle, X
 } from "lucide-react";
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
+}
+
 type ComplianceStatus = "GREEN" | "YELLOW" | "RED" | "EXPIRED";
 
 interface DocumentRecord {
@@ -91,7 +96,7 @@ function AddDocumentModal({
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/documents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(form),
       });
       if (!res.ok) {
@@ -204,7 +209,7 @@ export default function ComplianceAlerts() {
   const { data, isLoading, error, refetch } = useQuery<{ documents: DocumentRecord[]; summary: Summary }>({
     queryKey: ["documents"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/documents`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/documents`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch documents");
       return res.json();
     },
@@ -213,7 +218,7 @@ export default function ComplianceAlerts() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/documents/${id}`, { method: "DELETE" });
+      const res = await fetch(`${import.meta.env.BASE_URL}api/documents/${id}`, { method: "DELETE", headers: authHeaders() });
       if (!res.ok) throw new Error("Delete failed");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documents"] }),
@@ -223,7 +228,7 @@ export default function ComplianceAlerts() {
     setScanning(true);
     setScanMsg("");
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/documents/scan`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/documents/scan`, { headers: authHeaders() });
       const d = await res.json() as { recentAlerts?: unknown[] };
       setScanMsg(`Scan complete — ${d.recentAlerts?.length ?? 0} alert(s) generated. Check server logs.`);
       refetch();

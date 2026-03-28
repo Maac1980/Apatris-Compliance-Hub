@@ -9,7 +9,8 @@
     "sites": "Obiekty",
     "docQueue": "Dokumenty",
     "myDocs": "Moje dok.",
-    "timesheet": "Godziny"
+    "timesheet": "Godziny",
+    "calculator": "Kalkulator"
   },
   "login": {
     "selectDesignation": "Wybierz stanowisko",
