@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { PageLoader } from "@/components/Skeleton";
 
 import { AppShell } from "@/components/AppShell";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Pages
 import Login from "@/pages/Login";
@@ -112,7 +113,9 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
             <AppShell>
-              <Router />
+              <ErrorBoundary>
+                <Router />
+              </ErrorBoundary>
             </AppShell>
           </AuthProvider>
         </WouterRouter>
