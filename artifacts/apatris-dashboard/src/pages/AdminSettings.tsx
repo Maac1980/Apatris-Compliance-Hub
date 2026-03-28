@@ -95,8 +95,8 @@ export default function AdminSettings() {
   useEffect(() => { loadAdmins(); loadSysStatus(); }, []);
 
   useEffect(() => {
-    if (activeTab === "notifications" && notifLog.length === 0) loadNotifLog();
-    if (activeTab === "audit" && auditLog.length === 0) loadAuditLog();
+    if (activeTab === "notifications") loadNotifLog();
+    if (activeTab === "audit") loadAuditLog();
     if (activeTab === "site-coordinators" && coordinators.length === 0) loadCoordinators();
   }, [activeTab]);
 
@@ -124,8 +124,9 @@ export default function AdminSettings() {
     setNotifLoading(true);
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/notifications/history`, { headers: authHeaders() });
-      const data = await res.json() as { entries: NotifEntry[] };
-      setNotifLog(data.entries);
+      if (!res.ok) { setNotifLog([]); return; }
+      const data = await res.json();
+      setNotifLog(Array.isArray(data.entries) ? data.entries : []);
     } catch { setNotifLog([]); }
     finally { setNotifLoading(false); }
   }
@@ -134,8 +135,9 @@ export default function AdminSettings() {
     setAuditLoading(true);
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/audit-log`, { headers: authHeaders() });
-      const data = await res.json() as { entries: AuditEntry[] };
-      setAuditLog(data.entries);
+      if (!res.ok) { setAuditLog([]); return; }
+      const data = await res.json();
+      setAuditLog(Array.isArray(data.entries) ? data.entries : []);
     } catch { setAuditLog([]); }
     finally { setAuditLoading(false); }
   }
