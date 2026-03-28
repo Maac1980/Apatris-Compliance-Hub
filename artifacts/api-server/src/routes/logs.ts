@@ -1,15 +1,18 @@
 import { Router } from "express";
-import { getNotifLog } from "../lib/notif-log.js";
+import { query } from "../lib/db.js";
 import { getAuditLog } from "../lib/audit-log.js";
-import { getSnapshots, saveSnapshot } from "../lib/snapshot.js";
-import { fetchAllRecords } from "../lib/airtable.js";
-import { mapRecordToWorker } from "../lib/compliance.js";
+import { getSnapshots, saveSnapshot } from "../lib/snapshots-db.js";
+import { fetchAllWorkers } from "../lib/workers-db.js";
+import { mapRowToWorker } from "../lib/compliance.js";
 
 const router = Router();
 
-router.get("/notifications/history", (_req, res) => {
+router.get("/notifications/history", async (_req, res) => {
   try {
-    res.json({ entries: getNotifLog(200) });
+    const entries = await query(
+      `SELECT * FROM notification_log ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ entries });
   } catch (err) {
     res.status(500).json({ error: "Failed to load notification history" });
   }
@@ -23,9 +26,9 @@ router.get("/audit-log", (_req, res) => {
   }
 });
 
-router.get("/compliance/trend", (_req, res) => {
+router.get("/compliance/trend", async (_req, res) => {
   try {
-    res.json({ snapshots: getSnapshots(30) });
+    res.json({ snapshots: await getSnapshots(30) });
   } catch (err) {
     res.status(500).json({ error: "Failed to load trend data" });
   }
@@ -33,8 +36,8 @@ router.get("/compliance/trend", (_req, res) => {
 
 router.post("/compliance/snapshot", async (_req, res) => {
   try {
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker);
     const total = workers.length;
     const critical = workers.filter((w) => w.complianceStatus === "critical").length;
     const warning = workers.filter((w) => w.complianceStatus === "warning").length;
@@ -48,7 +51,7 @@ router.post("/compliance/snapshot", async (_req, res) => {
       critical,
       expired,
     };
-    saveSnapshot(snap);
+    await saveSnapshot(snap);
     res.json({ ok: true, snapshot: snap });
   } catch (err) {
     res.status(500).json({ error: "Failed to save snapshot" });

@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { fetchAllRecords, fetchRecord, updateRecord, uploadAttachmentToRecord, createRecord, initializeFields } from "../lib/airtable.js";
-import { mapRecordToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
+import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
+import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -110,8 +110,8 @@ const router: IRouter = Router();
 router.get("/workers", async (req, res) => {
   try {
     const { search, specialization, status, site } = req.query as Record<string, string>;
-    const records = await fetchAllRecords();
-    const allWorkers = records.map(mapRecordToWorker).filter(
+    const rows = await fetchAllWorkers();
+    const allWorkers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
     const filtered = filterWorkers(allWorkers, search, specialization, status, site);
@@ -122,11 +122,11 @@ router.get("/workers", async (req, res) => {
   }
 });
 
-// GET /workers/sites — returns all unique ASSIGNED SITE values currently in Airtable
+// GET /workers/sites — returns all unique ASSIGNED SITE values
 router.get("/workers/sites", async (_req, res) => {
   try {
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker).filter(
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
     const sites = Array.from(
@@ -142,8 +142,8 @@ router.get("/workers/sites", async (_req, res) => {
 // GET /workers/stats
 router.get("/workers/stats", async (_req, res) => {
   try {
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker).filter(
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
 
@@ -165,8 +165,8 @@ router.get("/workers/stats", async (_req, res) => {
 // GET /workers/report
 router.get("/workers/report", async (_req, res) => {
   try {
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker);
 
     const now = new Date();
     const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -336,25 +336,25 @@ router.post("/workers/bulk-create", bulkUpload.fields([
     // Merge: later keys win, but name priority: passport > certificate > contract > bhp
     const merged = { ...bhpData, ...contractData, ...certData, ...passportData };
 
-    // Build Airtable fields
-    const airtableFields: Record<string, unknown> = {};
+    // Build worker fields
+    const workerFields: Record<string, unknown> = {};
     const extractedSummary: Record<string, string> = {};
 
     const name = merged.name;
     if (name) {
-      airtableFields["Full Name"] = name;
+      workerFields.full_name = name;
       extractedSummary.name = name;
     }
     if (passportData.passportExpiry) {
-      airtableFields["PASSPORT_EXPIRY"] = passportData.passportExpiry;
+      workerFields.passport_expiry = passportData.passportExpiry;
       extractedSummary.passportExpiry = passportData.passportExpiry;
     }
     if (certData.trcExpiry) {
-      airtableFields["TRC_EXPIRY"] = certData.trcExpiry;
+      workerFields.trc_expiry = certData.trcExpiry;
       extractedSummary.trcExpiry = certData.trcExpiry;
     }
     if (bhpData.bhpExpiry) {
-      airtableFields["BHP EXPIRY"] = bhpData.bhpExpiry;
+      workerFields.bhp_expiry = bhpData.bhpExpiry;
       extractedSummary.bhpExpiry = bhpData.bhpExpiry;
     }
 
@@ -363,37 +363,18 @@ router.post("/workers/bulk-create", bulkUpload.fields([
     const aiSpecialization = typeof certData.specialization === "string" ? certData.specialization.trim() : "";
     const finalSpecialization = manualProfession || aiSpecialization;
     if (finalSpecialization) {
-      airtableFields["QUALIFICATION"] = finalSpecialization;
+      workerFields.specialization = finalSpecialization;
       extractedSummary.specialization = finalSpecialization;
     }
 
-    // Create the new Airtable record
-    const newRecord = await createRecord(airtableFields);
+    // Create the new worker record
+    const newRecord = await createWorker(workerFields);
     const recordId = newRecord.id;
 
-    // Upload all attachments in parallel
-    const uploadTasks: Promise<void>[] = [];
-    const attachmentMap: Record<string, string> = {
-      passport: "PASSPORT DOCCUMENT",
-      bhp: "BHP Certificate",
-      certificate: "TRC Certificate",
-      contract: "CONTRACT",
-    };
+    // TODO: implement file storage migration (previously Airtable attachments)
 
-    for (const [category, fieldName] of Object.entries(attachmentMap)) {
-      const file = files?.[category]?.[0];
-      if (file) {
-        uploadTasks.push(
-          uploadAttachmentToRecord(recordId, fieldName, file.buffer, file.originalname, file.mimetype)
-            .catch((e) => console.warn(`[bulk-create] Attachment upload failed for ${fieldName}:`, e))
-        );
-      }
-    }
-
-    await Promise.all(uploadTasks);
-
-    const finalRecord = await fetchRecord(recordId);
-    res.json({ worker: mapRecordToWorker(finalRecord), extracted: extractedSummary });
+    const row = await fetchWorkerById(recordId);
+    res.json({ worker: mapRowToWorker(row!), extracted: extractedSummary });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[bulk-create] Error:", message);
@@ -404,15 +385,12 @@ router.post("/workers/bulk-create", bulkUpload.fields([
 // GET /workers/:id
 router.get("/workers/:id", async (req, res) => {
   try {
-    const record = await fetchRecord(req.params.id);
-    res.json(mapRecordToWorker(record));
+    const row = await fetchWorkerById(req.params.id);
+    if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
+    res.json(mapRowToWorker(row));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    if (message.includes("404") || message.includes("NOT_FOUND")) {
-      res.status(404).json({ error: "Worker not found" });
-    } else {
-      res.status(500).json({ error: message });
-    }
+    res.status(500).json({ error: message });
   }
 });
 
@@ -420,27 +398,8 @@ router.get("/workers/:id", async (req, res) => {
 router.patch("/workers/:id", async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
-
-    // Map our schema field names to Airtable field names
-    const airtableFields: Record<string, unknown> = {};
-
-    if (body.trcExpiry !== undefined) airtableFields["TRC_EXPIRY"] = body.trcExpiry;
-    if (body.passportExpiry !== undefined) airtableFields["PASSPORT_EXPIRY"] = body.passportExpiry;
-    if (body.bhpExpiry !== undefined) airtableFields["BHP EXPIRY"] = body.bhpExpiry;
-    if (body.bhpStatus !== undefined) airtableFields["BHP EXPIRY"] = body.bhpStatus;
-    if (body.workPermitExpiry !== undefined) airtableFields["Work Permit Expiry"] = body.workPermitExpiry;
-    if (body.contractEndDate !== undefined) airtableFields["Contract End Date"] = body.contractEndDate;
-    if (body.email !== undefined) airtableFields["EMAIL"] = body.email;
-    if (body.phone !== undefined) airtableFields["PHONE"] = body.phone;
-    if (body.specialization !== undefined) airtableFields["SPEC"] = body.specialization;
-    if (body.experience !== undefined) airtableFields["EXPERIENCE"] = body.experience;
-    if (body.assignedSite !== undefined) {
-      // Write to SITE (singleLineText) — accepts any company/project name freely
-      airtableFields["SITE"] = String(body.assignedSite).trim() || null;
-    }
-
-    const updated = await updateRecord(req.params.id, airtableFields);
-    res.json(mapRecordToWorker(updated));
+    const updated = await updateWorker(req.params.id, body);
+    res.json(mapRowToWorker(updated));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -462,14 +421,6 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
       return;
     }
 
-    const fieldNameMap: Record<string, string> = {
-      passport: "PASSPORT DOCCUMENT",
-      contract: "CONTRACT",
-      trc: "TRC Certificate",
-      bhp: "BHP Certificate",
-    };
-    const fieldName = fieldNameMap[docType];
-
     // 1. Scan document with AI — map trc/bhp to their bulk scan equivalents
     const bulkScanType = docType === "trc" ? "certificate" : docType === "bhp" ? "bhp" : null;
     const scanPromise = bulkScanType
@@ -477,63 +428,43 @@ router.post("/workers/:id/upload", upload.single("file"), async (req, res) => {
           .then((d) => ({ type: docType as "trc" | "bhp", ...d }))
       : scanDocument(req.file.buffer, req.file.mimetype, docType as "passport" | "contract");
 
-    // 2. Upload the attachment to Airtable
-    await uploadAttachmentToRecord(
-      req.params.id,
-      fieldName,
-      req.file.buffer,
-      req.file.originalname,
-      req.file.mimetype
-    );
+    // TODO: implement file storage (previously Airtable attachments)
 
     // 3. Wait for AI scan result
     const scanned = await scanPromise;
     let autoFilledFields: Record<string, string> = {};
 
     if (scanned) {
-      const airtableUpdates: Record<string, unknown> = {};
       const s = scanned as Record<string, string | null>;
 
       if (s.type === "passport") {
-        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
-        if (s.passportExpiry) { airtableUpdates["PASSPORT_EXPIRY"] = s.passportExpiry; autoFilledFields["passportExpiry"] = s.passportExpiry; }
+        if (s.name) { autoFilledFields["name"] = s.name; }
+        if (s.passportExpiry) { autoFilledFields["passportExpiry"] = s.passportExpiry; }
         if (s.nationality) { autoFilledFields["nationality"] = s.nationality; }
       } else if (s.type === "contract") {
-        if (s.contractEndDate) { airtableUpdates["Contract End Date"] = s.contractEndDate; autoFilledFields["contractEndDate"] = s.contractEndDate; }
-        if (s.workerName) { airtableUpdates["Full Name"] = s.workerName; autoFilledFields["name"] = s.workerName; }
+        if (s.contractEndDate) { autoFilledFields["contractEndDate"] = s.contractEndDate; }
+        if (s.workerName) { autoFilledFields["name"] = s.workerName; }
       } else if (s.type === "trc") {
-        if (s.trcExpiry) { airtableUpdates["TRC_EXPIRY"] = s.trcExpiry; autoFilledFields["trcExpiry"] = s.trcExpiry; }
-        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
-        if (s.specialization) { airtableUpdates["SPEC"] = s.specialization; autoFilledFields["specialization"] = s.specialization; }
+        if (s.trcExpiry) { autoFilledFields["trcExpiry"] = s.trcExpiry; }
+        if (s.name) { autoFilledFields["name"] = s.name; }
+        if (s.specialization) { autoFilledFields["specialization"] = s.specialization; }
       } else if (s.type === "bhp") {
-        if (s.bhpExpiry) { airtableUpdates["BHP EXPIRY"] = s.bhpExpiry; autoFilledFields["bhpExpiry"] = s.bhpExpiry; }
-        if (s.name) { airtableUpdates["Full Name"] = s.name; autoFilledFields["name"] = s.name; }
+        if (s.bhpExpiry) { autoFilledFields["bhpExpiry"] = s.bhpExpiry; }
+        if (s.name) { autoFilledFields["name"] = s.name; }
       }
 
-      if (Object.keys(airtableUpdates).length > 0) {
+      if (Object.keys(autoFilledFields).length > 0) {
         try {
-          await updateRecord(req.params.id, airtableUpdates);
+          await updateWorker(req.params.id, autoFilledFields);
         } catch (updateErr) {
-          // Log but don't fail — some fields may not exist in the user's Airtable
           console.warn("[upload] Auto-fill partial failure:", updateErr instanceof Error ? updateErr.message : updateErr);
         }
       }
     }
 
     // 4. Return updated worker + what was auto-filled
-    const record = await fetchRecord(req.params.id);
-    res.json({ worker: mapRecordToWorker(record), autoFilled: autoFilledFields, scanned: !!scanned });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
-  }
-});
-
-// POST /workers/init-fields — create missing Airtable columns via Metadata API
-router.post("/workers/init-fields", async (_req, res) => {
-  try {
-    const result = await initializeFields();
-    res.json(result);
+    const row = await fetchWorkerById(req.params.id);
+    res.json({ worker: mapRowToWorker(row!), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -565,27 +496,20 @@ router.post("/workers/apply", applyUpload.fields([
         : Promise.resolve({}),
     ]);
 
-    const airtableFields: Record<string, unknown> = {
-      NAME: (passportData.name || name).trim(),
+    const workerFields: Record<string, unknown> = {
+      full_name: (passportData.name || name).trim(),
     };
-    if (email?.trim()) airtableFields["EMAIL"] = email.trim();
-    if (phone?.trim()) airtableFields["PHONE"] = phone.trim();
-    if (passportData.passportExpiry) airtableFields["PASSPORT_EXPIRY"] = passportData.passportExpiry;
-    if (trcData.trcExpiry) airtableFields["TRC_EXPIRY"] = trcData.trcExpiry;
-    if (trcData.specialization) airtableFields["QUALIFICATION"] = trcData.specialization;
-    if (cvData.experience) airtableFields["EXPERIENCE"] = cvData.experience;
-    if (cvData.qualification && !airtableFields["QUALIFICATION"]) airtableFields["QUALIFICATION"] = cvData.qualification;
+    if (email?.trim()) workerFields.email = email.trim();
+    if (phone?.trim()) workerFields.phone = phone.trim();
+    if (passportData.passportExpiry) workerFields.passport_expiry = passportData.passportExpiry;
+    if (trcData.trcExpiry) workerFields.trc_expiry = trcData.trcExpiry;
+    if (trcData.specialization) workerFields.specialization = trcData.specialization;
+    if (cvData.experience) workerFields.experience = cvData.experience;
+    if (cvData.qualification && !workerFields.specialization) workerFields.specialization = cvData.qualification;
 
-    const record = await createRecord(airtableFields);
+    await createWorker(workerFields);
 
-    const uploadTasks: Promise<void>[] = [];
-    if (files?.passport?.[0]) {
-      uploadTasks.push(uploadAttachmentToRecord(record.id, "PASSPORT", files.passport[0].buffer, files.passport[0].originalname, files.passport[0].mimetype).catch((e) => console.warn("[apply] passport upload:", e)));
-    }
-    if (files?.trc?.[0]) {
-      uploadTasks.push(uploadAttachmentToRecord(record.id, "TRC", files.trc[0].buffer, files.trc[0].originalname, files.trc[0].mimetype).catch((e) => console.warn("[apply] trc upload:", e)));
-    }
-    await Promise.all(uploadTasks);
+    // TODO: implement file storage migration (previously Airtable attachments)
 
     res.json({ success: true, message: "Application submitted successfully." });
   } catch (err) {
@@ -598,8 +522,9 @@ router.post("/workers/apply", applyUpload.fields([
 // POST /workers/:id/notify
 router.post("/workers/:id/notify", async (req, res) => {
   try {
-    const record = await fetchRecord(req.params.id);
-    const worker = mapRecordToWorker(record);
+    const row = await fetchWorkerById(req.params.id);
+    if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
+    const worker = mapRowToWorker(row);
     const body = req.body as { message?: string; channel?: string };
 
     // In a production system, this would send an email/SMS

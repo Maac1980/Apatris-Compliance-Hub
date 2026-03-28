@@ -1,4 +1,4 @@
-import type { AirtableRecord } from "./airtable.js";
+import type { WorkerRow } from "./workers-db.js";
 
 export interface Attachment {
   id: string;
@@ -23,6 +23,14 @@ export interface Worker {
   contractEndDate: string | null;
   email: string | null;
   phone: string | null;
+  hourlyRate: number;
+  monthlyHours: number;
+  advance: number;
+  penalties: number;
+  iban: string | null;
+  pesel: string | null;
+  nip: string | null;
+  pit2: boolean;
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
   passportAttachments: Attachment[];
@@ -31,31 +39,21 @@ export interface Worker {
   contractAttachments: Attachment[];
 }
 
-function getString(val: unknown): string | null {
-  if (typeof val === "string" && val.trim() !== "") return val.trim();
-  return null;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-function getDate(val: unknown): string | null {
+function formatDate(val: string | Date | null | undefined): string | null {
+  if (val == null) return null;
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return null;
+    return val.toISOString().split("T")[0];
+  }
   if (typeof val === "string" && val.trim() !== "") {
     const d = new Date(val);
     if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
   }
   return null;
-}
-
-function getAttachments(val: unknown): Attachment[] {
-  if (!Array.isArray(val)) return [];
-  return val
-    .filter((a): a is Record<string, unknown> => typeof a === "object" && a !== null)
-    .map((a) => ({
-      id: String(a.id ?? ""),
-      url: String(a.url ?? ""),
-      filename: String(a.filename ?? "Attachment"),
-      size: typeof a.size === "number" ? a.size : null,
-      type: typeof a.type === "string" ? a.type : null,
-    }))
-    .filter((a) => a.id && a.url);
 }
 
 function daysUntil(dateStr: string | null): number | null {
@@ -90,86 +88,58 @@ function computeStatus(worker: Partial<Worker>): {
   return { status: "compliant", daysUntilNextExpiry: minDays };
 }
 
-function resolveField(fields: Record<string, unknown>, candidates: string[]): unknown {
-  for (const key of candidates) {
-    if (key in fields) return fields[key];
-    const lower = key.toLowerCase();
-    const match = Object.keys(fields).find((k) => k.toLowerCase() === lower);
-    if (match) return fields[match];
-  }
-  return undefined;
-}
+// ---------------------------------------------------------------------------
+// Map a PostgreSQL WorkerRow to the Worker interface
+// ---------------------------------------------------------------------------
 
-function getSingleSelectName(val: unknown): string | null {
-  if (typeof val === "string" && val.trim()) return val.trim();
-  if (typeof val === "object" && val !== null && "name" in val) {
-    return getString((val as Record<string, unknown>).name);
-  }
-  return null;
-}
-
-export function mapRecordToWorker(record: AirtableRecord): Worker {
-  const f = record.fields;
-
-  const name =
-    getString(resolveField(f, ["Full Name", "NAME", "Name", "Worker Name", "Welder Name", "Employee Name", "Welder"])) ??
-    "Unknown";
-
-  const specialization =
-    getString(resolveField(f, ["SPEC", "QUALIFICATION", "Qualification", "Specialization", "Type", "Welding Type", "Skill", "Role"])) ??
-    "";
-
-  const experience = getString(resolveField(f, ["EXPERIENCE", "Experience", "Years Experience", "Work Experience"]));
-  const qualification = getString(resolveField(f, ["QUALIFICATION", "Qualification", "SPEC", "Specialization", "Welding Type"]));
-
-  // SITE is a free-text field; ASSIGNED SITE is a legacy singleSelect (read as fallback)
-  const assignedSite =
-    getString(resolveField(f, ["SITE", "Site"])) ??
-    getSingleSelectName(resolveField(f, ["ASSIGNED SITE", "Assigned Site", "AssignedSite", "Factory", "Location"]));
-
-  const trcExpiry = getDate(resolveField(f, ["TRC Expiry", "TRC_EXPIRY", "TRC_Expiry", "TRCExpiry", "TRC Expiration"]));
-  const passportExpiry = getDate(resolveField(f, ["PASSPORT_EXPIRY", "Passport Expiry", "Passport_Expiry", "PassportExpiry"]));
-
-  const bhpExpiryRaw = getString(resolveField(f, ["BHP EXPIRY", "BHP_EXPIRY", "BHP Expiry", "BHP_Expiry", "BHPExpiry", "BHP Status", "BHP"]));
-  const bhpExpiry = getDate(bhpExpiryRaw) ?? null;
-
-  const workPermitExpiry = getDate(resolveField(f, ["Work Permit Expiry", "Work_Permit_Expiry", "WorkPermitExpiry", "Work Permit", "Permit Expiry"]));
-  const contractEndDate = getDate(resolveField(f, ["Contract End Date", "Contract_End_Date", "ContractEndDate", "Contract End", "Contract Expiry"]));
-
-  const email = getString(resolveField(f, ["EMAIL", "Email", "Email Address", "Contact Email"]));
-  const phone = getString(resolveField(f, ["PHONE", "Phone", "Phone Number", "Mobile", "Contact Number"]));
-
-  const passportAttachments = getAttachments(resolveField(f, ["PASSPORT DOCCUMENT", "PASSPORT", "Passport", "Passport Attachment", "Passport Document"]));
-  const trcAttachments = getAttachments(resolveField(f, ["TRC Certificate", "TRC", "TRC Attachment", "TRC Document"]));
-  const bhpAttachments = getAttachments(resolveField(f, ["BHP Certificate", "BHP_CERTIFICATE", "BHP Cert", "BHP Attachment"]));
-  const contractAttachments = getAttachments(resolveField(f, ["CONTRACT", "Contract", "Contract Attachment", "Contract Document", "Contract File"]));
+export function mapRowToWorker(row: WorkerRow): Worker {
+  const trcExpiry = formatDate(row.trc_expiry);
+  const passportExpiry = formatDate(row.passport_expiry);
+  const bhpExpiry = formatDate(row.bhp_expiry);
+  const workPermitExpiry = formatDate(row.work_permit_expiry);
+  const contractEndDate = formatDate(row.contract_end_date);
 
   const partial: Partial<Worker> = { trcExpiry, passportExpiry, bhpExpiry, workPermitExpiry, contractEndDate };
   const { status: complianceStatus, daysUntilNextExpiry } = computeStatus(partial);
 
   return {
-    id: record.id,
-    name,
-    specialization,
-    experience,
-    qualification,
-    assignedSite,
+    id: row.id,
+    name: row.full_name ?? "Unknown",
+    specialization: row.specialization ?? "",
+    experience: row.experience ?? null,
+    qualification: row.qualification ?? null,
+    assignedSite: row.assigned_site ?? null,
     trcExpiry,
     passportExpiry,
     bhpExpiry,
-    bhpStatus: bhpExpiryRaw,
+    bhpStatus: bhpExpiry,
     workPermitExpiry,
     contractEndDate,
-    email,
-    phone,
+    email: row.email ?? null,
+    phone: row.phone ?? null,
+    hourlyRate: Number(row.hourly_rate) || 0,
+    monthlyHours: Number(row.monthly_hours) || 0,
+    advance: Number(row.advance) || 0,
+    penalties: Number(row.penalties) || 0,
+    iban: row.iban ?? null,
+    pesel: row.pesel ?? null,
+    nip: row.nip ?? null,
+    pit2: !!row.pit2,
     complianceStatus,
     daysUntilNextExpiry,
-    passportAttachments,
-    trcAttachments,
-    bhpAttachments,
-    contractAttachments,
+    passportAttachments: [],
+    trcAttachments: [],
+    bhpAttachments: [],
+    contractAttachments: [],
   };
 }
+
+/** @deprecated Use mapRowToWorker instead. Kept for backwards compatibility. */
+export const mapRecordToWorker = mapRowToWorker as (row: WorkerRow) => Worker;
+
+// ---------------------------------------------------------------------------
+// Filtering
+// ---------------------------------------------------------------------------
 
 export function filterWorkers(
   workers: Worker[],

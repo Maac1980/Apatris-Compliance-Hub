@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { appendNotifLog } from "./notif-log.js";
+import { execute } from "./db.js";
 
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
@@ -121,28 +121,17 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
       html,
     });
     console.log(`[Mailer] Alert email sent → ${toAddresses} (messageId: ${info.messageId})`);
-    appendNotifLog({
-      timestamp: new Date().toISOString(),
-      workerName,
-      documentType,
-      expiryDate,
-      daysUntilExpiry,
-      status,
-      recipients: recipients.map((r) => `${r.name} <${r.email}>`),
-      sent: true,
-    });
+    execute(
+      `INSERT INTO notification_log (channel, worker_name, message_preview, recipient, status)
+       VALUES ('email', $1, $2, $3, 'sent')`,
+      [workerName, `${documentType} expires ${expiryDate} (${daysUntilExpiry}d)`, toAddresses]
+    ).catch(() => {});
   } catch (err) {
-    appendNotifLog({
-      timestamp: new Date().toISOString(),
-      workerName,
-      documentType,
-      expiryDate,
-      daysUntilExpiry,
-      status,
-      recipients: recipients.map((r) => `${r.name} <${r.email}>`),
-      sent: false,
-      error: err instanceof Error ? err.message : String(err),
-    });
+    execute(
+      `INSERT INTO notification_log (channel, worker_name, message_preview, recipient, status)
+       VALUES ('email', $1, $2, $3, 'failed')`,
+      [workerName, `${documentType} expires ${expiryDate} — ERROR: ${err instanceof Error ? err.message : String(err)}`, toAddresses]
+    ).catch(() => {});
     console.error("[Mailer] Failed to send alert email:", err);
     throw err;
   }

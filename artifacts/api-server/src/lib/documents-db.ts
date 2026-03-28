@@ -1,0 +1,105 @@
+import { query, queryOne, execute } from "./db.js";
+
+export type ComplianceStatus = "GREEN" | "YELLOW" | "RED" | "EXPIRED";
+
+export interface DocumentRecord {
+  id: string;
+  workerName: string;
+  workerId: string;
+  documentType: string;
+  issueDate: string;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  status: ComplianceStatus;
+}
+
+function computeStatus(expiryDate: string): { daysUntilExpiry: number; status: ComplianceStatus } {
+  if (!expiryDate) return { daysUntilExpiry: -999, status: "EXPIRED" };
+  const expiry = new Date(expiryDate);
+  if (isNaN(expiry.getTime())) return { daysUntilExpiry: -999, status: "EXPIRED" };
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  expiry.setHours(0, 0, 0, 0);
+  const days = Math.round((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  let status: ComplianceStatus;
+  if (days < 0) status = "EXPIRED";
+  else if (days <= 30) status = "RED";
+  else if (days <= 60) status = "YELLOW";
+  else status = "GREEN";
+  return { daysUntilExpiry: days, status };
+}
+
+function mapRow(row: any): DocumentRecord {
+  const expiryDate = row.expiry_date ? new Date(row.expiry_date).toISOString().split("T")[0] : "";
+  const { daysUntilExpiry, status } = computeStatus(expiryDate);
+  return {
+    id: row.id,
+    workerName: row.worker_name,
+    workerId: row.worker_id ?? "",
+    documentType: row.document_type,
+    issueDate: row.issue_date ? new Date(row.issue_date).toISOString().split("T")[0] : "",
+    expiryDate,
+    daysUntilExpiry,
+    status,
+  };
+}
+
+export async function fetchDocuments(): Promise<DocumentRecord[]> {
+  const rows = await query("SELECT * FROM documents ORDER BY expiry_date ASC");
+  return rows.map(mapRow);
+}
+
+export async function createDocument(fields: {
+  workerName: string;
+  workerId?: string;
+  documentType: string;
+  issueDate?: string;
+  expiryDate: string;
+}): Promise<DocumentRecord> {
+  const row = await queryOne(
+    `INSERT INTO documents (worker_name, worker_id, document_type, issue_date, expiry_date)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [
+      fields.workerName,
+      fields.workerId ?? "",
+      fields.documentType,
+      fields.issueDate ?? null,
+      fields.expiryDate,
+    ]
+  );
+  return mapRow(row);
+}
+
+export async function updateDocument(
+  id: string,
+  fields: Partial<{ workerName: string; workerId: string; documentType: string; issueDate: string; expiryDate: string }>
+): Promise<DocumentRecord> {
+  const setClauses: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  if (fields.workerName !== undefined) { setClauses.push(`worker_name = $${idx++}`); params.push(fields.workerName); }
+  if (fields.workerId !== undefined) { setClauses.push(`worker_id = $${idx++}`); params.push(fields.workerId); }
+  if (fields.documentType !== undefined) { setClauses.push(`document_type = $${idx++}`); params.push(fields.documentType); }
+  if (fields.issueDate !== undefined) { setClauses.push(`issue_date = $${idx++}`); params.push(fields.issueDate || null); }
+  if (fields.expiryDate !== undefined) { setClauses.push(`expiry_date = $${idx++}`); params.push(fields.expiryDate); }
+
+  if (setClauses.length === 0) {
+    const row = await queryOne("SELECT * FROM documents WHERE id = $1", [id]);
+    if (!row) throw new Error("Document not found");
+    return mapRow(row);
+  }
+
+  params.push(id);
+  const row = await queryOne(
+    `UPDATE documents SET ${setClauses.join(", ")} WHERE id = $${idx} RETURNING *`,
+    params
+  );
+  if (!row) throw new Error("Document not found");
+  return mapRow(row);
+}
+
+export async function deleteDocument(id: string): Promise<void> {
+  await execute("DELETE FROM documents WHERE id = $1", [id]);
+}

@@ -1,15 +1,10 @@
 import { Router } from "express";
 import PDFDocument from "pdfkit";
-import { fetchAllRecords, updateRecord } from "../lib/airtable.js";
-import { mapRecordToWorker } from "../lib/compliance.js";
-import {
-  getAllPayrollRecords,
-  getPayrollRecordsByWorker,
-  appendPayrollRecord,
-} from "../lib/payroll-records.js";
+import { fetchAllWorkers, updateWorker } from "../lib/workers-db.js";
+import { mapRowToWorker } from "../lib/compliance.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
-import { queryOne, execute } from "../lib/db.js";
+import { query, queryOne, execute } from "../lib/db.js";
 import { calculateNet } from "../lib/payroll.js";
 
 
@@ -21,8 +16,8 @@ const router = Router();
 // ─── GET /payroll/current ─────────────────────────────────────────────────────
 router.get("/payroll/current", async (_req, res) => {
   try {
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker).map((w) => ({
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker).map((w) => ({
       id: w.id,
       name: w.name,
       email: w.email ?? null,
@@ -67,7 +62,7 @@ router.patch("/payroll/workers/:id", async (req, res) => {
       return;
     }
 
-    await updateRecord(req.params.id, fields);
+    await updateWorker(req.params.id, fields);
     res.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -82,10 +77,15 @@ router.post("/payroll/commit", async (req, res) => {
     const monthYear = body.monthYear || new Date().toISOString().slice(0, 7);
     const committedBy = body.committedBy || "Unknown";
 
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const rows = await fetchAllWorkers();
+    const workers = rows.map(mapRowToWorker);
 
-    const snapshots: ReturnType<typeof appendPayrollRecord>[] = [];
+    interface PayrollSnap {
+      workerId: string; workerName: string; monthYear: string;
+      totalHours: number; hourlyRate: number; grossPayout: number;
+      advancesDeducted: number; penaltiesDeducted: number; finalNettoPayout: number;
+    }
+    const snapshots: PayrollSnap[] = [];
     const resetPromises: Promise<unknown>[] = [];
 
     for (const w of workers) {
@@ -97,25 +97,15 @@ router.post("/payroll/commit", async (req, res) => {
       const finalNettoPayout = calculateNet(grossPayout).net - advancesDeducted - penaltiesDeducted;
 
       if (totalHours > 0 || advancesDeducted > 0) {
-        const snap = appendPayrollRecord({
-          workerId: w.id,
-          workerName: w.name,
-          monthYear,
-          totalHours,
-          hourlyRate,
-          grossPayout,
-          advancesDeducted,
-          penaltiesDeducted,
-          finalNettoPayout,
-          zusBaseSalary: grossPayout,
-          committedAt: new Date().toISOString(),
-          committedBy,
+        snapshots.push({
+          workerId: w.id, workerName: w.name, monthYear,
+          totalHours, hourlyRate, grossPayout,
+          advancesDeducted, penaltiesDeducted, finalNettoPayout,
         });
-        snapshots.push(snap);
       }
 
       resetPromises.push(
-        updateRecord(w.id, {
+        updateWorker(w.id, {
           "MONTHLY_HOURS": 0,
           "Advance": 0,
           "Penalties": 0,
@@ -232,8 +222,10 @@ router.post("/payroll/commit", async (req, res) => {
 // ─── GET /payroll/history/:workerId ──────────────────────────────────────────
 router.get("/payroll/history/:workerId", async (req, res) => {
   try {
-    const records = getPayrollRecordsByWorker(req.params.workerId);
-    records.sort((a, b) => b.monthYear.localeCompare(a.monthYear));
+    const records = await query(
+      `SELECT * FROM payroll_snapshots WHERE worker_id = $1 ORDER BY month DESC`,
+      [req.params.workerId]
+    );
     res.json({ records });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -244,8 +236,9 @@ router.get("/payroll/history/:workerId", async (req, res) => {
 // ─── GET /payroll/history ─────────────────────────────────────────────────────
 router.get("/payroll/history", async (_req, res) => {
   try {
-    const records = getAllPayrollRecords();
-    records.sort((a, b) => b.committedAt.localeCompare(a.committedAt));
+    const records = await query(
+      `SELECT * FROM payroll_snapshots ORDER BY month DESC, worker_name ASC LIMIT 500`
+    );
     res.json({ records });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -265,11 +258,11 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
     };
     const periodPL = `${monthNames[mon] ?? mon} ${year}`;
 
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const dbRows = await fetchAllWorkers();
+    const workers = dbRows.map(mapRowToWorker);
 
     const headers = ["Imie i Nazwisko", "Miejscowosc / Budowa", "Kwota Netto (PLN)", "Tytul Przelewu", "IBAN"];
-    const rows = workers
+    const csvRows = workers
       .filter((w) => (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) - (w.advance ?? 0) - (w.penalties ?? 0) > 0)
       .map((w) => {
         const gross = (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0);
@@ -283,7 +276,7 @@ router.get("/payroll/export/bank-csv", async (req, res) => {
         ];
       });
 
-    const csvContent = [headers, ...rows]
+    const csvContent = [headers, ...csvRows]
       .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\r\n");
 
@@ -312,8 +305,8 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
     // Employer ZUS
     const EMPL_ZUS_RATE  = 0.2048; // 9.76+6.5+1.67+2.45+0.10
 
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const dbRows2 = await fetchAllWorkers();
+    const workers = dbRows2.map(mapRowToWorker);
 
     const headers = [
       "Worker Name", "PESEL", "NIP", "Site",
@@ -324,7 +317,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       "Employer ZUS (PLN)", "Total Employer Cost (PLN)"
     ];
 
-    const rows = workers.map((w) => {
+    const acctRows = workers.map((w) => {
       const rate     = w.hourlyRate ?? 0;
       const hours    = w.monthlyHours ?? 0;
       const advance  = w.advance ?? 0;
@@ -339,6 +332,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       const grossTax   = taxBase * PIT_RATE;
       const pit        = Math.max(0, Math.round(grossTax - (w.pit2 ? PIT2_REDUCTION : 0)));
       const netAfterTax = Math.max(0, gross - empZUS - health - pit);
+      const kup        = healthBase * KUP_RATE;
       const netPay     = netAfterTax - advance - penalties;
 
       const emplZUS    = gross * EMPL_ZUS_RATE;
@@ -368,7 +362,7 @@ router.get("/payroll/export/accounting-csv", async (req, res) => {
       ];
     });
 
-    const csvContent = [headers, ...rows]
+    const csvContent = [headers, ...acctRows]
       .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\r\n");
 
@@ -389,13 +383,13 @@ router.get("/payroll/export/pdf", async (req, res) => {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const now = new Date();
 
-    const records = await fetchAllRecords();
-    const workers = records.map(mapRecordToWorker);
+    const dbRows3 = await fetchAllWorkers();
+    const workers = dbRows3.map(mapRowToWorker);
 
     const fmtPLN = (n: number) =>
       n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const rows = workers.map((w) => {
+    const pdfRows = workers.map((w) => {
       const rate = w.hourlyRate ?? 0;
       const hours = w.monthlyHours ?? 0;
       const advance = w.advance ?? 0;
@@ -405,11 +399,11 @@ router.get("/payroll/export/pdf", async (req, res) => {
       return { name: w.name, spec: w.specialization || "—", site: w.assignedSite || "—", rate, hours, gross, advance, penalties, netto };
     });
 
-    const totalHours  = rows.reduce((s, r) => s + r.hours, 0);
-    const totalGross  = rows.reduce((s, r) => s + r.gross, 0);
-    const totalAdv    = rows.reduce((s, r) => s + r.advance, 0);
-    const totalPen    = rows.reduce((s, r) => s + r.penalties, 0);
-    const totalNetto  = rows.reduce((s, r) => s + r.netto, 0);
+    const totalHours  = pdfRows.reduce((s, r) => s + r.hours, 0);
+    const totalGross  = pdfRows.reduce((s, r) => s + r.gross, 0);
+    const totalAdv    = pdfRows.reduce((s, r) => s + r.advance, 0);
+    const totalPen    = pdfRows.reduce((s, r) => s + r.penalties, 0);
+    const totalNetto  = pdfRows.reduce((s, r) => s + r.netto, 0);
 
     const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
     const filename = `apatris-payroll-${month}.pdf`;
@@ -434,7 +428,7 @@ router.get("/payroll/export/pdf", async (req, res) => {
     headers2.forEach((h, i) => { doc.text(h, x + 3, y + 5, { width: cols[i], align: i >= 3 ? "right" : "left" }); x += cols[i]; });
 
     y += 18;
-    rows.forEach((r, idx) => {
+    pdfRows.forEach((r, idx) => {
       if (y > 530) { doc.addPage(); y = 40; }
       doc.rect(40, y, 762, 16).fill(idx % 2 === 0 ? "#f8fafc" : "#ffffff");
       doc.fontSize(8).fillColor("#1e293b");

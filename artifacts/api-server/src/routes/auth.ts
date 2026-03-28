@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/site-coordinators.js";
+import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/coordinators-db.js";
 import { sendOtpEmail, isMailConfigured } from "../lib/mailer.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { verifyMobilePin, verifyMobilePinForUser, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";

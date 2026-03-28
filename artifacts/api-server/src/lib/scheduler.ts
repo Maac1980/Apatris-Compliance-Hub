@@ -1,10 +1,10 @@
-import { fetchDocuments, ensureDocumentsTable, type DocumentRecord } from "./airtable-documents.js";
-import { fetchAdmins } from "./airtable-admins.js";
+import { fetchDocuments, type DocumentRecord } from "./documents-db.js";
+import { fetchAdmins } from "./admins-db.js";
 import { sendAlertEmail, isMailConfigured } from "./mailer.js";
-import { fetchAllRecords } from "./airtable.js";
-import { mapRecordToWorker, type Worker } from "./compliance.js";
-import { saveSnapshot } from "./snapshot.js";
-import { getCoordinatorForSite } from "./site-coordinators.js";
+import { fetchAllWorkers } from "./workers-db.js";
+import { mapRowToWorker, type Worker } from "./compliance.js";
+import { saveSnapshot } from "./snapshots-db.js";
+import { getCoordinatorForSite } from "./coordinators-db.js";
 
 const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -72,7 +72,7 @@ export async function fireAlertForDocument(doc: DocumentRecord, workerSite?: str
   const coordRecipients: Array<{ name: string; email: string }> = [];
   if (workerSite) {
     try {
-      const coord = getCoordinatorForSite(workerSite);
+      const coord = await getCoordinatorForSite(workerSite);
       if (coord?.alertEmail) coordRecipients.push({ name: coord.name, email: coord.alertEmail });
     } catch { /* non-blocking */ }
   }
@@ -121,13 +121,12 @@ async function runDailyScan(): Promise<void> {
   console.log(`[Scheduler] Daily compliance scan started at ${now}`);
 
   try {
-    await ensureDocumentsTable();
     const documents = await fetchDocuments();
 
     // ── Worker document expiry checks from WELDERS table ──────────────────
     try {
-      const workerRecords = await fetchAllRecords();
-      const workers = workerRecords.map(mapRecordToWorker);
+      const workerRows = await fetchAllWorkers();
+      const workers = workerRows.map(mapRowToWorker);
       const today = Date.now();
 
       const workerDocFields: Array<{ key: keyof Worker; label: string }> = [
@@ -176,14 +175,14 @@ async function runDailyScan(): Promise<void> {
 
     // ── Save daily compliance snapshot ────────────────────────────────────
     try {
-      const allWorkerRecords = await fetchAllRecords();
-      const allWorkers = allWorkerRecords.map(mapRecordToWorker);
+      const allWorkerRows = await fetchAllWorkers();
+      const allWorkers = allWorkerRows.map(mapRowToWorker);
       const total = allWorkers.length;
       const critical = allWorkers.filter((w) => w.complianceStatus === "critical").length;
       const warning = allWorkers.filter((w) => w.complianceStatus === "warning").length;
       const expired = allWorkers.filter((w) => w.complianceStatus === "non-compliant").length;
       const compliant = total - critical - warning - expired;
-      saveSnapshot({
+      await saveSnapshot({
         date: new Date().toISOString().slice(0, 10),
         total,
         compliant: compliant < 0 ? 0 : compliant,
@@ -213,9 +212,9 @@ async function runDailyScan(): Promise<void> {
     // Build workerId → assignedSite map for coordinator lookup
     const workerSiteMap = new Map<string, string>();
     try {
-      const allRecs = await fetchAllRecords();
+      const allRecs = await fetchAllWorkers();
       for (const r of allRecs) {
-        const w = mapRecordToWorker(r);
+        const w = mapRowToWorker(r);
         if (w.assignedSite) workerSiteMap.set(w.id, w.assignedSite);
       }
     } catch { /* non-blocking */ }
@@ -226,7 +225,7 @@ async function runDailyScan(): Promise<void> {
       const coordRecips: Array<{ name: string; email: string }> = [];
       if (workerSite) {
         try {
-          const coord = getCoordinatorForSite(workerSite);
+          const coord = await getCoordinatorForSite(workerSite);
           if (coord?.alertEmail) coordRecips.push({ name: coord.name, email: coord.alertEmail });
         } catch { /* non-blocking */ }
       }

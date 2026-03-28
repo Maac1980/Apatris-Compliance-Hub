@@ -1,14 +1,14 @@
 import { Router } from "express";
 import {
   listCoordinators, addCoordinator, updateCoordinator, removeCoordinator
-} from "../lib/site-coordinators.js";
+} from "../lib/coordinators-db.js";
 
 const router = Router();
 
 // GET /api/site-coordinators
-router.get("/site-coordinators", (_req, res) => {
+router.get("/site-coordinators", async (_req, res) => {
   try {
-    const list = listCoordinators().map(({ passwordHash: _, ...c }) => c);
+    const list = (await listCoordinators()).map(({ passwordHash: _, ...c }) => c);
     res.json({ coordinators: list });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
@@ -16,13 +16,13 @@ router.get("/site-coordinators", (_req, res) => {
 });
 
 // POST /api/site-coordinators
-router.post("/site-coordinators", (req, res) => {
+router.post("/site-coordinators", async (req, res) => {
   try {
     const { name, email, password, assignedSite, alertEmail } = req.body as Record<string, string>;
     if (!name || !email || !password || !assignedSite) {
       return res.status(400).json({ error: "name, email, password, assignedSite are required" });
     }
-    const coord = addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email });
+    const coord = await addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email });
     const { passwordHash: _, ...safe } = coord;
     return res.status(201).json(safe);
   } catch (err) {
@@ -31,10 +31,10 @@ router.post("/site-coordinators", (req, res) => {
 });
 
 // PATCH /api/site-coordinators/:id
-router.patch("/site-coordinators/:id", (req, res) => {
+router.patch("/site-coordinators/:id", async (req, res) => {
   try {
     const updates = req.body as Record<string, string>;
-    const coord = updateCoordinator(req.params.id, updates);
+    const coord = await updateCoordinator(req.params.id, updates);
     const { passwordHash: _, ...safe } = coord;
     res.json(safe);
   } catch (err) {
@@ -43,9 +43,9 @@ router.patch("/site-coordinators/:id", (req, res) => {
 });
 
 // DELETE /api/site-coordinators/:id
-router.delete("/site-coordinators/:id", (req, res) => {
+router.delete("/site-coordinators/:id", async (req, res) => {
   try {
-    removeCoordinator(req.params.id);
+    await removeCoordinator(req.params.id);
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });

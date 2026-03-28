@@ -1,11 +1,10 @@
 import { Router } from "express";
 import {
-  ensureDocumentsTable,
   fetchDocuments,
   createDocument,
   updateDocument,
   deleteDocument,
-} from "../lib/airtable-documents.js";
+} from "../lib/documents-db.js";
 import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler.js";
 
 const router = Router();
@@ -14,7 +13,6 @@ const router = Router();
 // Returns all documents with compliance status. Auto-creates table on first call.
 router.get("/documents", async (_req, res) => {
   try {
-    await ensureDocumentsTable();
     const documents = await fetchDocuments();
     const summary = {
       total: documents.length,
@@ -34,7 +32,6 @@ router.get("/documents", async (_req, res) => {
 // Returns only documents in YELLOW, RED, or EXPIRED zones.
 router.get("/documents/alerts", async (_req, res) => {
   try {
-    await ensureDocumentsTable();
     const all = await fetchDocuments();
     const alerts = all.filter((d) => d.status !== "GREEN");
     return res.json({ alerts, count: alerts.length });

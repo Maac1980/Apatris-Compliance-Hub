@@ -1,9 +1,8 @@
 import { Router } from "express";
 import {
-  ensureAdminsTable,
   fetchAdmins,
   updateAdmin,
-} from "../lib/airtable-admins.js";
+} from "../lib/admins-db.js";
 
 const router = Router();
 
@@ -11,7 +10,6 @@ const router = Router();
 // Returns all admin profiles. Auto-creates and seeds the table on first call.
 router.get("/admins", async (_req, res) => {
   try {
-    await ensureAdminsTable();
     const admins = await fetchAdmins();
     return res.json({ admins });
   } catch (err) {
