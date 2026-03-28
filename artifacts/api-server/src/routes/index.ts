@@ -17,6 +17,7 @@ import faceAuthRouter from "./face-auth.js";
 import documentWorkflowRouter from "./document-workflow.js";
 import contractsRouter from "./contracts.js";
 import signaturesRouter from "./signatures.js";
+import postedWorkersRouter from "./posted-workers.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -36,6 +37,7 @@ router.use(faceAuthRouter);
 router.use(documentWorkflowRouter);
 router.use(contractsRouter);
 router.use(signaturesRouter);
+router.use(postedWorkersRouter);
 router.use(aiRouter);
 
 export default router;

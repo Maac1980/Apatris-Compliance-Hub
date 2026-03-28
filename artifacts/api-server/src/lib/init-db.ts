@@ -399,6 +399,47 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // A1 certificates (proves home-country social security coverage for posted workers)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS a1_certificates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      home_country TEXT NOT NULL DEFAULT 'PL',
+      host_country TEXT NOT NULL,
+      certificate_number TEXT,
+      issued_by TEXT,
+      valid_from DATE NOT NULL,
+      valid_to DATE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // Posting assignments (tracks where workers are posted and for how long)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS posting_assignments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      home_country TEXT NOT NULL DEFAULT 'PL',
+      host_country TEXT NOT NULL,
+      host_city TEXT,
+      client_company TEXT,
+      site_name TEXT,
+      start_date DATE NOT NULL,
+      end_date DATE,
+      a1_certificate_id UUID REFERENCES a1_certificates(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
