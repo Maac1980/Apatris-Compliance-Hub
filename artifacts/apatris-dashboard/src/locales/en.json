@@ -11,6 +11,17 @@
     "history": "History",
     "settings": "Settings"
   },
+  "cards": {
+    "workers": "Workers",
+    "payroll": "Payroll Ledger",
+    "alerts": "Compliance Alerts",
+    "history": "History & Analytics"
+  },
+  "chart": {
+    "compliant": "Compliant",
+    "warning": "Warning",
+    "critical": "Critical"
+  },
   "login": {
     "title": "Apatris",
     "subtitle": "Compliance",

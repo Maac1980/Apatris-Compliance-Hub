@@ -11,6 +11,17 @@
     "history": "Historia",
     "settings": "Ustawienia"
   },
+  "cards": {
+    "workers": "Pracownicy",
+    "payroll": "Płace",
+    "alerts": "Alerty Zgodności",
+    "history": "Historia i Analityka"
+  },
+  "chart": {
+    "compliant": "Zgodni",
+    "warning": "Ostrzeżenia",
+    "critical": "Krytyczne"
+  },
   "login": {
     "title": "Apatris",
     "subtitle": "Zgodność",

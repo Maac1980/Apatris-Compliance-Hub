@@ -431,11 +431,11 @@ export default function Dashboard() {
         {/* ── Section Navigation Grid ───────────────────────────────────────── */}
         <div className="hidden md:grid grid-cols-4 gap-4">
           {([
-            { path: "/",                  label: "Pracownicy",           icon: Users,         solidBg: "bg-[#ef4444]",  border: "border-red-500",    shadow: "hover:shadow-[0_6px_24px_rgba(239,68,68,0.45)]"  },
-            { path: "/payroll",           label: "Płace",                icon: Calculator,    solidBg: "bg-[#22c55e]",  border: "border-green-500",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
-            { path: "/compliance-alerts", label: "Alerty Zgodności",     icon: AlertTriangle, solidBg: "bg-[#f59e0b]",  border: "border-amber-500",  shadow: "hover:shadow-[0_6px_24px_rgba(245,158,11,0.40)]" },
-            { path: "/history",           label: "Historia i Analityka", icon: History,       solidBg: "bg-[#a855f7]",  border: "border-purple-500", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
-          ] as const).map(({ path, label, icon: Icon, solidBg, border, shadow }) => (
+            { path: "/",                  labelKey: "cards.workers",     icon: Users,         solidBg: "bg-[#ef4444]",  border: "border-red-500",    shadow: "hover:shadow-[0_6px_24px_rgba(239,68,68,0.45)]"  },
+            { path: "/payroll",           labelKey: "cards.payroll",     icon: Calculator,    solidBg: "bg-[#22c55e]",  border: "border-green-500",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
+            { path: "/compliance-alerts", labelKey: "cards.alerts",      icon: AlertTriangle, solidBg: "bg-[#f59e0b]",  border: "border-amber-500",  shadow: "hover:shadow-[0_6px_24px_rgba(245,158,11,0.40)]" },
+            { path: "/history",           labelKey: "cards.history",     icon: History,       solidBg: "bg-[#a855f7]",  border: "border-purple-500", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
+          ] as const).map(({ path, labelKey, icon: Icon, solidBg, border, shadow }) => (
             <button
               key={path}
               onClick={() => setLocation(path)}
@@ -448,7 +448,7 @@ export default function Dashboard() {
             >
               <Icon className="w-10 h-10 text-white transition-transform duration-200 group-hover:scale-110" strokeWidth={1.8} />
               <span className="text-sm font-bold uppercase tracking-widest text-white/90 group-hover:text-white transition-colors text-center leading-tight px-3">
-                {label}
+                {t(labelKey)}
               </span>
             </button>
           ))}
@@ -501,9 +501,9 @@ export default function Dashboard() {
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#94a3b8" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="compliant" stroke="#22c55e" strokeWidth={2} dot={false} name="Zgodni" />
-                <Line type="monotone" dataKey="warning" stroke="#eab308" strokeWidth={2} dot={false} name="Ostrzeżenia" />
-                <Line type="monotone" dataKey="critical" stroke="#C41E18" strokeWidth={2} dot={false} name="Krytyczne" />
+                <Line type="monotone" dataKey="compliant" stroke="#22c55e" strokeWidth={2} dot={false} name={t("chart.compliant")} />
+                <Line type="monotone" dataKey="warning" stroke="#eab308" strokeWidth={2} dot={false} name={t("chart.warning")} />
+                <Line type="monotone" dataKey="critical" stroke="#C41E18" strokeWidth={2} dot={false} name={t("chart.critical")} />
               </LineChart>
             </ResponsiveContainer>
           </div>
