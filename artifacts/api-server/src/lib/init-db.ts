@@ -306,6 +306,34 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // document_workflows (upload → review → approve/reject pipeline)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS document_workflows (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      document_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'uploaded',
+      file_path TEXT,
+      file_name TEXT,
+      file_size INTEGER,
+      mime_type TEXT,
+      expiry_date DATE,
+      uploaded_by TEXT NOT NULL,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      reviewer_id TEXT,
+      reviewer_name TEXT,
+      reviewed_at TIMESTAMPTZ,
+      review_comment TEXT,
+      rejection_reason TEXT,
+      version INTEGER DEFAULT 1,
+      previous_version_id UUID,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
