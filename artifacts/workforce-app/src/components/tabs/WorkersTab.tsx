@@ -81,7 +81,7 @@ export function WorkersTab() {
 
   const canAddProfessional = role === "Executive";
   const statusPills: ("All" | WorkerStatus)[] = ["All", "Compliant", "Expiring Soon", "Missing Docs", "Non-Compliant"];
-  const sitePills: SiteFilter[] = ["All Sites", ...SITES];
+  // SITES imported from mockWorkers for dropdown options
   const activePill = getActivePillColor(role as Role);
   const fab = getFabColor(role as Role);
 
@@ -142,25 +142,19 @@ export function WorkersTab() {
             ))}
           </div>
 
-          {/* Site pills */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-            <div className="flex items-center shrink-0">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            </div>
-            {sitePills.map(s => (
-              <button
-                key={s}
-                onClick={() => setSiteFilter(s)}
-                className={cn(
-                  "whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-semibold transition-colors border shrink-0",
-                  siteFilter === s
-                    ? "bg-white/15 text-white border-transparent"
-                    : "bg-[#141416] text-muted-foreground border-white/[0.08] hover:bg-white/[0.04]"
-                )}
-              >
-                {s === "All Sites" ? t("workers.allSites") : s.split("–")[1]?.trim() ?? s}
-              </button>
-            ))}
+          {/* Site dropdown */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <select
+              value={siteFilter}
+              onChange={(e) => setSiteFilter(e.target.value as SiteFilter)}
+              className="w-full h-9 pl-8 pr-4 bg-white/[0.04] border border-white/[0.08] rounded-xl text-xs text-foreground appearance-none focus:outline-none focus:border-white/15 transition-all"
+            >
+              <option value="All Sites">{t("workers.allSites")}</option>
+              {SITES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
 
