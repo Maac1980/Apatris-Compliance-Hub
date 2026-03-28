@@ -6,10 +6,10 @@ import fs from "fs";
 
 const router = Router();
 
-// GET /api/files/:key(*) — serve a stored file (local mode)
-router.get("/files/*", requireAuth, async (req, res) => {
+// GET /api/files/:path — serve a stored file (local mode)
+router.get("/files/*path", requireAuth, async (req, res) => {
   try {
-    const key = decodeURIComponent(req.params[0] || "");
+    const key = decodeURIComponent(req.params.path || "");
     if (!key) return res.status(400).json({ error: "File key required" });
 
     // Security: prevent path traversal
