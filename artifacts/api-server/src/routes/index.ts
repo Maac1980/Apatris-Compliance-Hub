@@ -15,6 +15,7 @@ import tenantsRouter from "./tenants.js";
 import gdprRouter from "./gdpr.js";
 import faceAuthRouter from "./face-auth.js";
 import documentWorkflowRouter from "./document-workflow.js";
+import contractsRouter from "./contracts.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -32,6 +33,7 @@ router.use(siteCoordinatorsRouter);
 router.use(gdprRouter);
 router.use(faceAuthRouter);
 router.use(documentWorkflowRouter);
+router.use(contractsRouter);
 router.use(aiRouter);
 
 export default router;

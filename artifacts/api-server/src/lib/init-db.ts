@@ -334,6 +334,55 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // contracts
+  await execute(`
+    CREATE TABLE IF NOT EXISTS contracts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      contract_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      start_date DATE NOT NULL,
+      end_date DATE,
+      hourly_rate NUMERIC(8,2),
+      monthly_salary NUMERIC(10,2),
+      work_location TEXT,
+      job_description TEXT,
+      poa_id UUID,
+      poa_name TEXT,
+      language TEXT NOT NULL DEFAULT 'pl',
+      pdf_path TEXT,
+      signed_at TIMESTAMPTZ,
+      signed_by_worker BOOLEAN DEFAULT FALSE,
+      signed_by_company BOOLEAN DEFAULT FALSE,
+      metadata JSONB DEFAULT '{}',
+      created_by TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // power_of_attorney
+  await execute(`
+    CREATE TABLE IF NOT EXISTS power_of_attorney (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      full_name TEXT NOT NULL,
+      position TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      pesel TEXT,
+      is_active BOOLEAN DEFAULT TRUE,
+      can_sign_zlecenie BOOLEAN DEFAULT TRUE,
+      can_sign_o_prace BOOLEAN DEFAULT TRUE,
+      can_sign_b2b BOOLEAN DEFAULT TRUE,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
