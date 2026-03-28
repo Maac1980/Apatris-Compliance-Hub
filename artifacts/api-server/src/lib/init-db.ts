@@ -493,6 +493,20 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // Client portal tokens (read-only access for end-clients)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS client_portal_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      client_name TEXT NOT NULL,
+      client_email TEXT,
+      site_name TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
