@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -21,12 +21,13 @@ function getTabsForRole(role: Role): Tab[] {
   switch (role) {
     case "Executive":
       return [
-        { id: "home",    label: "nav.home",      icon: Home },
-        { id: "workers", label: "nav.directory", icon: Users },
-        { id: "payroll",     label: "nav.payroll",    icon: DollarSign },
-        { id: "alerts",      label: "nav.alerts",     icon: Bell },
-        { id: "calculator",  label: "nav.calculator", icon: Calculator },
-        { id: "profile",     label: "nav.profile",    icon: User },
+        { id: "home",       label: "nav.home",       icon: Home },
+        { id: "workers",    label: "nav.directory",  icon: Users },
+        { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
+        { id: "alerts",     label: "nav.alerts",     icon: Bell },
+        { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
+        { id: "gps",        label: "nav.gps",        icon: Navigation },
+        { id: "profile",    label: "nav.profile",    icon: User },
       ];
     case "LegalHead":
       return [
@@ -52,10 +53,12 @@ function getTabsForRole(role: Role): Tab[] {
       ];
     case "Professional":
       return [
-        { id: "home",      label: "nav.home",      icon: Home },
-        { id: "docs",      label: "nav.myDocs",   icon: FileText },
-        { id: "timesheet", label: "nav.timesheet", icon: Clock },
-        { id: "profile",   label: "nav.profile",   icon: User },
+        { id: "home",      label: "nav.home",       icon: Home },
+        { id: "docs",      label: "nav.myDocs",     icon: FileText },
+        { id: "gps",       label: "nav.gps",        icon: Navigation },
+        { id: "contracts",  label: "nav.contracts", icon: FileSignature },
+        { id: "timesheet", label: "nav.timesheet",  icon: Clock },
+        { id: "profile",   label: "nav.profile",    icon: User },
       ];
   }
 }

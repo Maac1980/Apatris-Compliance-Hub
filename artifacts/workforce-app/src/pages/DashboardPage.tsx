@@ -19,6 +19,8 @@ import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
 import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
+import { GpsCheckinTab } from "@/components/tabs/GpsCheckinTab";
+import { ContractTab } from "@/components/tabs/ContractTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -151,6 +153,15 @@ export function DashboardPage() {
       // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":
         return <TimesheetTab />;
+
+      // ── GPS CHECK-IN ─────────────────────────────────────────────────────
+      case "gps":
+        return <GpsCheckinTab />;
+
+      // ── CONTRACTS ─────────────────────────────────────────────────────────
+      case "contracts":
+        return <ContractTab />;
+
       // ── PROFILE ───────────────────────────────────────────────────────────
       case "profile":
         return <ProfileTab onLogout={handleLogout} />;

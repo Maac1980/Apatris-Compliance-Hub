@@ -10,7 +10,9 @@
     "docQueue": "Dokumenty",
     "myDocs": "Moje dok.",
     "timesheet": "Godziny",
-    "calculator": "Kalkulator"
+    "calculator": "Kalkulator",
+    "contracts": "Umowy",
+    "gps": "GPS"
   },
   "login": {
     "selectDesignation": "Wybierz stanowisko",

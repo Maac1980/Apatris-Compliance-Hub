@@ -10,7 +10,9 @@
     "docQueue": "Doc Queue",
     "myDocs": "My Docs",
     "timesheet": "Timesheet",
-    "calculator": "Calculator"
+    "calculator": "Calculator",
+    "contracts": "Contracts",
+    "gps": "GPS"
   },
   "login": {
     "selectDesignation": "Select your designation",
