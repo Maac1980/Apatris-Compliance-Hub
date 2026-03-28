@@ -12,8 +12,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Scale, Wrench, ClipboardList, HardHat, ChevronRight,
   ArrowLeft, Eye, EyeOff, Lock, Fingerprint, Trash2, CheckCircle2,
+  ScanFace,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FaceLogin } from "@/components/FaceLogin";
 
 interface RoleCard {
   role: Role; tier: number; title: string; subtitle: string;
@@ -60,6 +62,7 @@ export function LoginPage() {
   const [bioRegistered, setBioRegistered] = useState(false);
   const [pinSaved, setPinSaved]          = useState(false);
   const [bioSuccess, setBioSuccess]      = useState(false);
+  const [faceLoginOpen, setFaceLoginOpen] = useState(false);
 
   useEffect(() => { isBiometricAvailable().then(setBioAvailable); }, []);
 
@@ -142,6 +145,11 @@ export function LoginPage() {
     !selectedRole ? "roles" : selectedRole.tier === 1 && !selectedUser ? "name-picker" : "password";
 
   const canShowBiometric = bioRegistered && pinSaved && bioAvailable;
+
+  const handleFaceLoginSuccess = (data: { name: string; role: string; jwt: string }) => {
+    login("Professional" as Role, data.name, data.jwt);
+    setLocation("/dashboard");
+  };
 
   return (
     <div className="min-h-full flex flex-col" style={{ background: "#0c0c0e" }}>
@@ -483,11 +491,33 @@ export function LoginPage() {
           </div>
         </motion.div>
 
+        {/* Face Login button */}
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          onClick={() => setFaceLoginOpen(true)}
+          className="mt-5 w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] text-cyan-400 text-sm font-bold hover:bg-cyan-500/10 transition-all active:scale-[0.98]"
+        >
+          <ScanFace className="w-5 h-5" />
+          Face Login
+        </motion.button>
+
         {/* Footer */}
         <p className="text-center text-[9px] text-white/10 mt-6 tracking-widest uppercase">
           Apatris Sp. z o.o. · NIP 5252828706
         </p>
       </div>
+
+      {/* Face Login overlay */}
+      <AnimatePresence>
+        {faceLoginOpen && (
+          <FaceLogin
+            onSuccess={handleFaceLoginSuccess}
+            onCancel={() => setFaceLoginOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
