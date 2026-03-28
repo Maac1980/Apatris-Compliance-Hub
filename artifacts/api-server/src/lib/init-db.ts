@@ -530,6 +530,155 @@ export async function initializeDatabase(): Promise<void> {
     );
   }
 
+  // ── Seed demo workers if table is empty ────────────────────────────────
+  const workerCount = parseInt(
+    (await query<{ count: string }>("SELECT count(*)::text AS count FROM workers"))[0]?.count ?? "0", 10
+  );
+
+  if (workerCount === 0 && defaultTenantId) {
+    console.log("[init-db] Seeding demo workers…");
+    const workers = [
+      {
+        name: "Tomasz Kowalski",
+        spec: "TIG",
+        site: "Site A – Dublin Docklands",
+        email: "t.kowalski@apatris.pl",
+        phone: "+48 601 234 567",
+        trc: "2026-08-15",
+        passport: "2028-03-22",
+        bhp: "2026-11-30",
+        workPermit: "2027-01-10",
+        contract: "2026-12-31",
+        rate: 32.50,
+        hours: 168,
+        pesel: "85042312345",
+        iban: "PL61 1090 1014 0000 0712 1981 2874",
+      },
+      {
+        name: "Piotr Wiśniewski",
+        spec: "MIG",
+        site: "Site B – Cork Harbour",
+        email: "p.wisniewski@apatris.pl",
+        phone: "+48 602 345 678",
+        trc: "2026-04-10",
+        passport: "2029-07-14",
+        bhp: "2026-05-20",
+        workPermit: "2026-06-01",
+        contract: "2026-09-30",
+        rate: 30.00,
+        hours: 176,
+        pesel: "90071598765",
+        iban: "PL27 1140 2004 0000 3002 0135 5387",
+      },
+      {
+        name: "Krzysztof Nowak",
+        spec: "MAG",
+        site: "Site A – Dublin Docklands",
+        email: "k.nowak@apatris.pl",
+        phone: "+48 603 456 789",
+        trc: "2026-12-01",
+        passport: "2030-01-05",
+        bhp: "2027-03-15",
+        workPermit: "2027-06-30",
+        contract: "2027-03-31",
+        rate: 35.00,
+        hours: 160,
+        pesel: "88110254321",
+        iban: "PL10 1050 0099 7200 9000 0096 4177",
+      },
+      {
+        name: "Andrzej Zieliński",
+        spec: "FABRICATOR",
+        site: "Site C – Galway Industrial",
+        email: "a.zielinski@apatris.pl",
+        phone: "+48 604 567 890",
+        trc: "2026-02-28",
+        passport: "2027-11-20",
+        bhp: "2025-12-15",
+        workPermit: "2026-04-15",
+        contract: "2026-06-30",
+        rate: 28.00,
+        hours: 184,
+        pesel: "92030187654",
+        iban: "PL83 1020 1026 0000 0702 0178 9154",
+      },
+      {
+        name: "Marek Lewandowski",
+        spec: "ARC",
+        site: "Site B – Cork Harbour",
+        email: "m.lewandowski@apatris.pl",
+        phone: "+48 605 678 901",
+        trc: "2027-05-20",
+        passport: "2031-02-10",
+        bhp: "2027-08-01",
+        workPermit: "2027-09-30",
+        contract: "2027-06-30",
+        rate: 33.00,
+        hours: 172,
+        pesel: "87052043210",
+        iban: "PL65 1160 2202 0000 0002 1786 3249",
+      },
+      {
+        name: "Szymon Kamiński",
+        spec: "MMA",
+        site: "Site C – Galway Industrial",
+        email: "s.kaminski@apatris.pl",
+        phone: "+48 606 789 012",
+        trc: "2026-06-10",
+        passport: "2028-09-30",
+        bhp: "2026-07-25",
+        workPermit: null,
+        contract: "2026-10-31",
+        rate: 29.50,
+        hours: 164,
+        pesel: "95081276543",
+        iban: "PL51 1240 6960 1111 0010 4351 4920",
+      },
+    ];
+
+    for (const w of workers) {
+      await execute(
+        `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, email, phone,
+          trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date,
+          hourly_rate, monthly_hours, pesel, iban)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [
+          defaultTenantId, w.name, w.spec, w.site, w.email, w.phone,
+          w.trc, w.passport, w.bhp, w.workPermit, w.contract,
+          w.rate, w.hours, w.pesel, w.iban,
+        ]
+      );
+    }
+
+    // Seed compliance documents from the workers
+    for (const w of workers) {
+      const workerRow = await query<{ id: string }>(
+        "SELECT id FROM workers WHERE full_name = $1 AND tenant_id = $2",
+        [w.name, defaultTenantId]
+      );
+      const wId = workerRow[0]?.id;
+      if (!wId) continue;
+
+      const docs = [
+        { type: "TRC", expiry: w.trc },
+        { type: "Passport", expiry: w.passport },
+        { type: "BHP", expiry: w.bhp },
+        { type: "Work Permit", expiry: w.workPermit },
+        { type: "Contract", expiry: w.contract },
+      ];
+      for (const d of docs) {
+        if (!d.expiry) continue;
+        await execute(
+          `INSERT INTO documents (tenant_id, worker_id, worker_name, document_type, expiry_date)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [defaultTenantId, wId, w.name, d.type, d.expiry]
+        );
+      }
+    }
+
+    console.log("[init-db] Seeded 6 demo workers with compliance documents.");
+  }
+
   // Assign default tenant to any rows missing a tenant_id
   if (defaultTenantId) {
     await execute("UPDATE admins SET tenant_id = $1 WHERE tenant_id IS NULL", [defaultTenantId]);
