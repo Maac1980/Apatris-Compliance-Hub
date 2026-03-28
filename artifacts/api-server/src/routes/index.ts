@@ -23,6 +23,7 @@ import gpsRouter from "./gps.js";
 import pushRouter from "./push.js";
 import analyticsRouter from "./analytics.js";
 import platformRouter from "./platform.js";
+import filesRouter from "./files.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -48,6 +49,7 @@ router.use(gpsRouter);
 router.use(pushRouter);
 router.use(analyticsRouter);
 router.use(platformRouter);
+router.use(filesRouter);
 router.use(aiRouter);
 
 export default router;
