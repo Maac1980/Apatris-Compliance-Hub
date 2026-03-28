@@ -55,7 +55,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!isAuthenticated) return null;
 
-  return <Component />;
+  return (
+    <ErrorBoundary>
+      <Component />
+    </ErrorBoundary>
+  );
 }
 
 function Router() {

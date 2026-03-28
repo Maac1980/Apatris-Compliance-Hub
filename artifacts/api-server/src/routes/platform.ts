@@ -199,7 +199,51 @@ router.patch("/branding", requireAuth, requireRole("Admin", "Executive"), async 
 // TASK 21: MULTI-CURRENCY PAYROLL
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Exchange rates (updated manually or via API in production)
+// Live FX rates cache (refreshes every 4 hours)
+let cachedRates: Record<string, number> = {};
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+async function fetchLiveRates(): Promise<Record<string, number>> {
+  // Return cache if fresh
+  if (Date.now() - cacheTimestamp < CACHE_TTL_MS && Object.keys(cachedRates).length > 0) {
+    return cachedRates;
+  }
+
+  try {
+    // Free API — no key needed
+    const res = await fetch("https://api.frankfurter.app/latest?from=PLN&to=EUR,CZK,RON,USD,GBP");
+    if (!res.ok) throw new Error(`FX API ${res.status}`);
+    const data = await res.json() as { rates: Record<string, number> };
+
+    // Build bidirectional rate map
+    const rates: Record<string, number> = {};
+    for (const [currency, rate] of Object.entries(data.rates)) {
+      rates[`PLN_${currency}`] = Math.round(rate * 10000) / 10000;
+      rates[`${currency}_PLN`] = Math.round((1 / rate) * 10000) / 10000;
+    }
+
+    // Cross rates
+    const currencies = Object.keys(data.rates);
+    for (const a of currencies) {
+      for (const b of currencies) {
+        if (a !== b) {
+          rates[`${a}_${b}`] = Math.round((data.rates[b] / data.rates[a]) * 10000) / 10000;
+        }
+      }
+    }
+
+    cachedRates = rates;
+    cacheTimestamp = Date.now();
+    console.log(`[FX] Live rates updated: ${Object.keys(rates).length} pairs`);
+    return rates;
+  } catch (err) {
+    console.warn("[FX] Failed to fetch live rates, using fallback:", err instanceof Error ? err.message : err);
+    return FX_RATES; // fallback to hardcoded
+  }
+}
+
+// Exchange rates (hardcoded fallback)
 const FX_RATES: Record<string, number> = {
   PLN_EUR: 0.23,   PLN_CZK: 5.40,  PLN_RON: 1.08,  PLN_USD: 0.25,  PLN_GBP: 0.20,
   EUR_PLN: 4.35,   EUR_CZK: 23.50, EUR_RON: 4.70,  EUR_USD: 1.08,  EUR_GBP: 0.86,
@@ -207,26 +251,33 @@ const FX_RATES: Record<string, number> = {
   RON_PLN: 0.925,  RON_EUR: 0.213, RON_CZK: 5.00,  RON_USD: 0.23,  RON_GBP: 0.184,
 };
 
-function convert(amount: number, from: string, to: string): number {
+async function convert(amount: number, from: string, to: string): Promise<number> {
   if (from === to) return amount;
+  const rates = await fetchLiveRates();
   const key = `${from}_${to}`;
-  const rate = FX_RATES[key];
+  const rate = rates[key] ?? FX_RATES[key];
   if (!rate) throw new Error(`No exchange rate for ${from} → ${to}`);
   return Math.round(amount * rate * 100) / 100;
 }
 
 // GET /api/payroll/fx-rates — current exchange rates
-router.get("/payroll/fx-rates", requireAuth, (_req, res) => {
-  res.json({ rates: FX_RATES, baseCurrency: "PLN", updatedAt: new Date().toISOString() });
+router.get("/payroll/fx-rates", requireAuth, async (_req, res) => {
+  try {
+    const rates = await fetchLiveRates();
+    res.json({ rates, baseCurrency: "PLN", updatedAt: new Date().toISOString(), live: cacheTimestamp > 0 });
+  } catch {
+    res.json({ rates: FX_RATES, baseCurrency: "PLN", updatedAt: new Date().toISOString(), live: false });
+  }
 });
 
 // POST /api/payroll/convert — convert amount between currencies
-router.post("/payroll/convert", requireAuth, (req, res) => {
+router.post("/payroll/convert", requireAuth, async (req, res) => {
   try {
     const { amount, from, to } = req.body as { amount?: number; from?: string; to?: string };
     if (!amount || !from || !to) return res.status(400).json({ error: "amount, from, to are required" });
-    const converted = convert(amount, from.toUpperCase(), to.toUpperCase());
-    const rate = FX_RATES[`${from.toUpperCase()}_${to.toUpperCase()}`] ?? null;
+    const converted = await convert(amount, from.toUpperCase(), to.toUpperCase());
+    const rates = await fetchLiveRates();
+    const rate = rates[`${from.toUpperCase()}_${to.toUpperCase()}`] ?? FX_RATES[`${from.toUpperCase()}_${to.toUpperCase()}`] ?? null;
     res.json({ original: { amount, currency: from.toUpperCase() }, converted: { amount: converted, currency: to.toUpperCase() }, rate });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Conversion failed" });
@@ -241,7 +292,7 @@ router.post("/payroll/multi-currency", requireAuth, requireRole("Admin", "Execut
     const target = targetCurrency.toUpperCase();
 
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker).map(w => {
+    const workers = await Promise.all(rows.map(mapRowToWorker).map(async w => {
       const grossPLN = (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0);
       const nettoPLN = grossPLN - (w.advance ?? 0) - (w.penalties ?? 0);
       return {
@@ -250,24 +301,25 @@ router.post("/payroll/multi-currency", requireAuth, requireRole("Admin", "Execut
         site: w.assignedSite,
         grossPLN,
         nettoPLN,
-        grossConverted: convert(grossPLN, "PLN", target),
-        nettoConverted: convert(nettoPLN, "PLN", target),
+        grossConverted: await convert(grossPLN, "PLN", target),
+        nettoConverted: await convert(nettoPLN, "PLN", target),
         targetCurrency: target,
       };
-    });
+    }));
 
     const totalGrossPLN = workers.reduce((s, w) => s + w.grossPLN, 0);
     const totalNettoPLN = workers.reduce((s, w) => s + w.nettoPLN, 0);
 
+    const liveRates = await fetchLiveRates();
     res.json({
       workers,
       totals: {
         grossPLN: totalGrossPLN,
         nettoPLN: totalNettoPLN,
-        grossConverted: convert(totalGrossPLN, "PLN", target),
-        nettoConverted: convert(totalNettoPLN, "PLN", target),
+        grossConverted: await convert(totalGrossPLN, "PLN", target),
+        nettoConverted: await convert(totalNettoPLN, "PLN", target),
         targetCurrency: target,
-        fxRate: FX_RATES[`PLN_${target}`] ?? null,
+        fxRate: liveRates[`PLN_${target}`] ?? FX_RATES[`PLN_${target}`] ?? null,
       },
     });
   } catch (err) {

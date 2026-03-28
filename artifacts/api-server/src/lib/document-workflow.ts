@@ -1,7 +1,6 @@
 import { query, queryOne, execute } from "./db.js";
 import { logGdprAction } from "./gdpr.js";
-import path from "path";
-import fs from "fs";
+import { storeFile, getFileUrl } from "./file-storage.js";
 
 export type WorkflowStatus = "uploaded" | "under_review" | "approved" | "rejected" | "expired" | "resubmit_requested";
 
@@ -26,13 +25,6 @@ export interface DocumentWorkflow {
   version: number;
   createdAt: string;
   updatedAt: string;
-}
-
-// Upload directory
-const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "documents");
-
-function ensureUploadDir(): void {
-  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
 function mapRow(row: any): DocumentWorkflow {
@@ -73,22 +65,15 @@ export async function uploadDocument(params: {
   fileName: string;
   mimeType: string;
 }): Promise<DocumentWorkflow> {
-  ensureUploadDir();
-
-  // Generate unique file path
-  const ext = path.extname(params.fileName) || ".pdf";
-  const safeWorker = params.workerName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-  const safeType = params.documentType.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-  const timestamp = Date.now();
-  const storedName = `${safeWorker}_${safeType}_${timestamp}${ext}`;
-  const filePath = path.join(UPLOAD_DIR, params.tenantId, storedName);
-
-  // Ensure tenant subdirectory
-  const tenantDir = path.join(UPLOAD_DIR, params.tenantId);
-  if (!fs.existsSync(tenantDir)) fs.mkdirSync(tenantDir, { recursive: true });
-
-  // Write file
-  fs.writeFileSync(filePath, params.fileBuffer);
+  // Store file via S3/local abstraction
+  const stored = await storeFile({
+    tenantId: params.tenantId,
+    category: "documents",
+    fileName: params.fileName,
+    buffer: params.fileBuffer,
+    mimeType: params.mimeType,
+  });
+  const filePath = stored.key;
 
   // Check if there's a previous version
   const existing = await queryOne<{ id: string; version: number }>(

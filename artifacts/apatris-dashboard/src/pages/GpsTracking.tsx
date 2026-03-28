@@ -25,6 +25,7 @@ export default function GpsTracking() {
   const [anomalies, setAnomalies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"active" | "sites" | "anomalies">("active");
+  const [wsConnected, setWsConnected] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -41,6 +42,50 @@ export default function GpsTracking() {
 
   useEffect(() => { load(); }, []);
 
+  // WebSocket for live GPS updates
+  useEffect(() => {
+    const token = localStorage.getItem("apatris_jwt");
+    if (!token) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+
+    function connect() {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setWsConnected(true);
+        ws?.send(JSON.stringify({ type: "subscribe", channel: "gps" }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.channel === "gps" && msg.data) {
+            // Auto-refresh active workers on any GPS event
+            load();
+          }
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        // Reconnect after 5 seconds
+        reconnectTimer = setTimeout(connect, 5000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      ws?.close();
+      clearTimeout(reconnectTimer);
+    };
+  }, []);
+
   const timeSince = (dateStr: string) => {
     const mins = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
     if (mins < 60) return `${mins}m`;
@@ -56,9 +101,17 @@ export default function GpsTracking() {
           </h1>
           <p className="text-sm text-slate-400 mt-1">{t("gpsTracking.subtitle")}</p>
         </div>
-        <button onClick={load} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {wsConnected && (
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-900/40 text-emerald-400 text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              LIVE
+            </span>
+          )}
+          <button onClick={load} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
