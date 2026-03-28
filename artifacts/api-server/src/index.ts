@@ -4,47 +4,34 @@ import { initializeDatabase } from "./lib/init-db.js";
 import { initWebSocket } from "./lib/websocket.js";
 import { startWeeklyReport } from "./lib/scheduler.js";
 
-// ── Pre-flight checks: crash loudly if critical env vars are missing ────────
-const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET", "PORT"];
-const missing = REQUIRED_ENV.filter(k => !process.env[k]);
-if (missing.length > 0) {
-  console.error("╔══════════════════════════════════════════════════════════╗");
-  console.error("║  FATAL: Missing required environment variables:         ║");
-  for (const k of missing) {
-    console.error(`║    • ${k.padEnd(50)}║`);
-  }
-  console.error("║                                                          ║");
-  console.error("║  Set these in Replit Secrets or .env file.               ║");
-  console.error("╚══════════════════════════════════════════════════════════╝");
-  process.exit(1);
+// ── Pre-flight checks: warn about missing env vars (don't crash — Replit injects some at runtime) ──
+const CRITICAL_ENV = ["DATABASE_URL", "JWT_SECRET"];
+const missingCritical = CRITICAL_ENV.filter(k => !process.env[k]);
+if (missingCritical.length > 0) {
+  console.warn(`[Startup] ⚠ Missing env vars: ${missingCritical.join(", ")} — database features may fail.`);
 }
-
-// Warn about optional but important vars
-const RECOMMENDED_ENV = ["APATRIS_PASS_MANISH", "APATRIS_PASS_AKSHAY", "SMTP_USER", "SMTP_PASS"];
-const missingOpt = RECOMMENDED_ENV.filter(k => !process.env[k]);
+const OPTIONAL_ENV = ["APATRIS_PASS_MANISH", "APATRIS_PASS_AKSHAY", "SMTP_USER", "SMTP_PASS"];
+const missingOpt = OPTIONAL_ENV.filter(k => !process.env[k]);
 if (missingOpt.length > 0) {
-  console.warn(`[Startup] ⚠ Missing recommended env vars: ${missingOpt.join(", ")} — some features will be disabled.`);
+  console.warn(`[Startup] ⚠ Missing optional env vars: ${missingOpt.join(", ")} — some features disabled.`);
 }
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const port = Number(process.env["PORT"] || "8080");
 
 (async () => {
-  await initializeDatabase();
+  try {
+    await initializeDatabase();
+    console.log("[Startup] Database initialized.");
+  } catch (err) {
+    console.error("[Startup] Database init failed:", err instanceof Error ? err.message : err);
+    console.warn("[Startup] Server will start anyway — DB features may be unavailable.");
+  }
+
   const server = createServer(app);
   initWebSocket(server);
-  startWeeklyReport();
+
+  try { startWeeklyReport(); } catch { /* non-fatal */ }
+
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server listening on 0.0.0.0:${port} (HTTP + WebSocket)`);
   });
