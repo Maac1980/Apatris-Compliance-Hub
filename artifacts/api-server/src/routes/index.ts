@@ -13,6 +13,7 @@ import settingsRouter from "./settings.js";
 import siteCoordinatorsRouter from "./site-coordinators.js";
 import tenantsRouter from "./tenants.js";
 import gdprRouter from "./gdpr.js";
+import faceAuthRouter from "./face-auth.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -28,6 +29,7 @@ router.use(logsRouter);
 router.use(settingsRouter);
 router.use(siteCoordinatorsRouter);
 router.use(gdprRouter);
+router.use(faceAuthRouter);
 router.use(aiRouter);
 
 export default router;

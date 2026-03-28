@@ -292,6 +292,20 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // face_encodings (biometric face descriptors for face-login)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS face_encodings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      descriptor FLOAT8[] NOT NULL,
+      quality_score FLOAT8 DEFAULT 0,
+      enrolled_at TIMESTAMPTZ DEFAULT NOW(),
+      enrolled_by TEXT
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
