@@ -4,6 +4,7 @@ import { query, queryOne, execute } from "../lib/db.js";
 import { fetchWorkerById } from "../lib/workers-db.js";
 import { generateContractPDF, streamContractPDF, type ContractData } from "../lib/contract-generator.js";
 import { logGdprAction } from "../lib/gdpr.js";
+import { validateBody, CreateContractSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -140,6 +141,7 @@ router.post(
   "/contracts",
   requireAuth,
   requireRole("Admin", "Executive", "LegalHead"),
+  validateBody(CreateContractSchema),
   async (req, res) => {
     try {
       const body = req.body as {

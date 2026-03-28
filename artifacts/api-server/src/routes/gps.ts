@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { getWorkerConsents } from "../lib/gdpr.js";
+import { validateBody, GpsCheckinSchema, GpsCheckoutSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.patch("/geofences/:id", requireAuth, requireRole("Admin", "Executive", "T
 // ═══ CHECK-IN / CHECK-OUT ══════════════════════════════════════════════════
 
 // POST /api/gps/checkin — worker checks in (auto-detects site from GPS)
-router.post("/gps/checkin", requireAuth, async (req, res) => {
+router.post("/gps/checkin", requireAuth, validateBody(GpsCheckinSchema), async (req, res) => {
   try {
     const { workerId, workerName, latitude, longitude } = req.body as {
       workerId?: string; workerName?: string; latitude?: number; longitude?: number;
@@ -148,7 +149,7 @@ router.post("/gps/checkin", requireAuth, async (req, res) => {
 });
 
 // POST /api/gps/checkout — worker checks out
-router.post("/gps/checkout", requireAuth, async (req, res) => {
+router.post("/gps/checkout", requireAuth, validateBody(GpsCheckoutSchema), async (req, res) => {
   try {
     const { workerId, latitude, longitude } = req.body as {
       workerId?: string; latitude?: number; longitude?: number;

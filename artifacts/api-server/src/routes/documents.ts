@@ -7,6 +7,7 @@ import {
 } from "../lib/documents-db.js";
 import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
+import { validateBody, CreateDocumentSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -62,7 +63,7 @@ router.get("/documents/log", requireAuth, (_req, res) => {
 
 // POST /api/documents
 // Creates a new document record and immediately fires an alert if it is in warning/critical zone.
-router.post("/documents", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
+router.post("/documents", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), validateBody(CreateDocumentSchema), async (req, res) => {
   try {
     const { workerName, workerId, documentType, issueDate, expiryDate } = req.body as {
       workerName?: string;

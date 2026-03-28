@@ -13,6 +13,7 @@ import {
   purgeExpiredData,
 } from "../lib/gdpr.js";
 import { queryOne } from "../lib/db.js";
+import { validateBody, ConsentSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.get("/gdpr/consents/:workerId", requireAuth, async (req, res) => {
 });
 
 // POST /api/gdpr/consents — grant a consent
-router.post("/gdpr/consents", requireAuth, async (req, res) => {
+router.post("/gdpr/consents", requireAuth, validateBody(ConsentSchema), async (req, res) => {
   try {
     const { workerId, workerName, consentType, version } = req.body as {
       workerId?: string; workerName?: string; consentType?: string; version?: string;

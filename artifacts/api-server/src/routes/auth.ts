@@ -7,6 +7,7 @@ import { query, queryOne, execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { verifyMobilePin, verifyMobilePinForUser, changeMobilePin, ROLE_TO_TIER } from "../lib/mobile-pins.js";
 import { authLimiter, sensitiveLimiter } from "../lib/rate-limit.js";
+import { validateBody, LoginSchema, MobileLoginSchema, ChangePinSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -78,7 +79,7 @@ async function createRefreshToken(userData: {
 }
 
 // ─── POST /api/auth/login ────────────────────────────────────────────────────
-router.post("/auth/login", authLimiter, async (req, res) => {
+router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, res) => {
   try {
     const { email, password } = req.body as { email?: string; password?: string };
 
@@ -226,7 +227,7 @@ router.get("/auth/verify", (req, res) => {
 });
 
 // ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
-router.post("/auth/mobile-login", authLimiter, async (req, res) => {
+router.post("/auth/mobile-login", authLimiter, validateBody(MobileLoginSchema), async (req, res) => {
   try {
     const { tier, password, name } = req.body as { tier?: unknown; password?: unknown; name?: unknown };
 
@@ -268,7 +269,7 @@ router.post("/auth/mobile-login", authLimiter, async (req, res) => {
 
 // ─── POST /api/auth/mobile-change-pin ────────────────────────────────────────
 // Requires a valid JWT. Changes the PIN for the authenticated tier/user.
-router.post("/auth/mobile-change-pin", sensitiveLimiter, async (req, res) => {
+router.post("/auth/mobile-change-pin", sensitiveLimiter, validateBody(ChangePinSchema), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {

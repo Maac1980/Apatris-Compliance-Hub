@@ -2,11 +2,12 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { logGdprAction } from "../lib/gdpr.js";
+import { validateBody, SignatureSchema } from "../lib/validate.js";
 
 const router = Router();
 
 // POST /api/signatures — save a signature for a contract
-router.post("/signatures", requireAuth, async (req, res) => {
+router.post("/signatures", requireAuth, validateBody(SignatureSchema), async (req, res) => {
   try {
     const { contractId, workerId, signerName, signerRole, signatureData } = req.body as {
       contractId?: string; workerId?: string; signerName?: string;

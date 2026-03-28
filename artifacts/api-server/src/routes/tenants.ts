@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { query, queryOne, execute } from "../lib/db.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
+import { validateBody, CreateTenantSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.get("/tenants", requireAuth, requireRole("Admin", "Executive"), async (_r
 });
 
 // POST /api/tenants - create a new tenant
-router.post("/tenants", requireAuth, requireRole("Admin"), async (req, res) => {
+router.post("/tenants", requireAuth, requireRole("Admin"), validateBody(CreateTenantSchema), async (req, res) => {
   try {
     const { name, slug, logoUrl, primaryColor, domain } = req.body as {
       name?: string; slug?: string; logoUrl?: string; primaryColor?: string; domain?: string;

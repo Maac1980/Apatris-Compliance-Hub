@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query } from "../lib/db.js";
 import { fetchAllWorkers } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
+import { validateBody, CopilotSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -201,6 +202,7 @@ router.post(
   "/analytics/copilot",
   requireAuth,
   requireRole("Admin", "Executive", "LegalHead"),
+  validateBody(CopilotSchema),
   async (req, res) => {
     try {
       const { question } = req.body as { question?: string };
