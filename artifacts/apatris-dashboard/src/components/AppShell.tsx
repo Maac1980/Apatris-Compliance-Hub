@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
@@ -7,21 +8,21 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { path: "/",                   label: "Pracownicy",      icon: Users },
-  { path: "/payroll",            label: "Lista Płac",      icon: Calculator },
-  { path: "/compliance-alerts",  label: "Alerty Compliance", icon: AlertTriangle },
-  { path: "/contracts",          label: "Umowy",           icon: FileSignature },
-  { path: "/doc-workflow",       label: "Dokumenty",       icon: FileCheck },
-  { path: "/gps-tracking",      label: "GPS",             icon: MapPin },
-  { path: "/analytics",         label: "Analityka",       icon: BarChart3 },
-  { path: "/ai-copilot",        label: "Asystent AI",     icon: Sparkles },
-  { path: "/history",            label: "Historia",        icon: History },
-  { path: "/calculator",         label: "Kalkulator",      icon: Calculator },
+  { path: "/",                   labelKey: "nav.workers",    icon: Users },
+  { path: "/payroll",            labelKey: "nav.payroll",    icon: Calculator },
+  { path: "/compliance-alerts",  labelKey: "nav.alerts",     icon: AlertTriangle },
+  { path: "/contracts",          labelKey: "nav.contracts",  icon: FileSignature },
+  { path: "/doc-workflow",       labelKey: "nav.documents",  icon: FileCheck },
+  { path: "/gps-tracking",      labelKey: "nav.gps",        icon: MapPin },
+  { path: "/analytics",         labelKey: "nav.analytics",  icon: BarChart3 },
+  { path: "/ai-copilot",        labelKey: "nav.ai",         icon: Sparkles },
+  { path: "/history",            labelKey: "nav.history",    icon: History },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   const isPublicRoute =
     location === "/login" ||
@@ -71,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Desktop inline nav tabs */}
         <nav className="app-top-nav">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ path, labelKey, icon: Icon }) => {
             const active = isActive(path);
             return (
               <button
@@ -81,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 style={{ color: active ? "#C41E18" : "#64748b", borderBottomColor: active ? "#C41E18" : "transparent" }}
               >
                 <Icon className="w-4 h-4" />
-                <span className="hidden lg:inline">{label}</span>
+                <span className="hidden lg:inline">{t(labelKey)}</span>
               </button>
             );
           })}
@@ -131,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ─── Mobile Bottom Bar (scrollable for many tabs) ──────────────── */}
       <nav className="app-bottom-bar">
-        {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ path, labelKey, icon: Icon }) => {
           const active = isActive(path);
           return (
             <button
@@ -145,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className={`text-[9px] font-mono font-bold uppercase tracking-wide leading-none whitespace-nowrap ${
                 active ? "text-[#C41E18]" : "text-slate-600"
               }`}>
-                {label}
+                {t(labelKey)}
               </span>
             </button>
           );

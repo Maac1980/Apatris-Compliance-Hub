@@ -1,4 +1,16 @@
 {
+  "nav": {
+    "workers": "Pracownicy",
+    "payroll": "Lista Płac",
+    "alerts": "Alerty Compliance",
+    "contracts": "Umowy",
+    "documents": "Dokumenty",
+    "gps": "GPS",
+    "analytics": "Analityka",
+    "ai": "Asystent AI",
+    "history": "Historia",
+    "settings": "Ustawienia"
+  },
   "login": {
     "title": "Apatris",
     "subtitle": "Zgodność",

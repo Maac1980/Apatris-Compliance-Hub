@@ -1,4 +1,16 @@
 {
+  "nav": {
+    "workers": "Workers",
+    "payroll": "Payroll",
+    "alerts": "Alerts",
+    "contracts": "Contracts",
+    "documents": "Documents",
+    "gps": "GPS",
+    "analytics": "Analytics",
+    "ai": "AI Copilot",
+    "history": "History",
+    "settings": "Settings"
+  },
   "login": {
     "title": "Apatris",
     "subtitle": "Compliance",
