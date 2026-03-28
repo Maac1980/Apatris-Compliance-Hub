@@ -1,11 +1,17 @@
 import pkg from "pg";
 const { Pool } = pkg;
 
-export const pool = new Pool({
-  connectionString: process.env["DATABASE_URL"],
-  ssl: process.env["NODE_ENV"] === "production"
+// Detect if SSL should be used — Replit's built-in PostgreSQL uses sslmode=disable
+const dbUrl = process.env["DATABASE_URL"] ?? "";
+const useSSL = dbUrl.includes("sslmode=disable") || dbUrl.includes("sslmode=prefer")
+  ? false
+  : process.env["NODE_ENV"] === "production"
     ? { rejectUnauthorized: false }
-    : false,
+    : false;
+
+export const pool = new Pool({
+  connectionString: dbUrl || undefined,
+  ssl: useSSL,
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,

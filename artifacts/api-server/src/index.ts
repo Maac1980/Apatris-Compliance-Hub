@@ -5,15 +5,18 @@ const port = Number(process.env["PORT"] || "8080");
 // Wrap EVERYTHING in try/catch — the server MUST open port 8080 no matter what
 (async () => {
   let app: any;
+  let initError: string | null = null;
   try {
     app = (await import("./app")).default;
+    console.log("[Startup] App loaded successfully.");
   } catch (err) {
-    console.error("[FATAL] Failed to load app:", err);
-    // Minimal Express to serve health check even if app fails to load
+    initError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    console.error("[FATAL] Failed to load app:", initError);
+    // Minimal Express to serve health check + error details
     const express = (await import("express")).default;
     app = express();
-    app.get("/api/healthz", (_req: any, res: any) => res.json({ status: "ok", degraded: true }));
-    app.use((_req: any, res: any) => res.status(503).json({ error: "Server failed to initialize" }));
+    app.get("/api/healthz", (_req: any, res: any) => res.json({ status: "degraded", error: initError }));
+    app.use((_req: any, res: any) => res.status(503).json({ error: "Server failed to initialize", details: initError }));
   }
 
   // Database init — non-fatal
