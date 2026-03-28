@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { getWorkerConsents } from "../lib/gdpr.js";
 import { validateBody, GpsCheckinSchema, GpsCheckoutSchema } from "../lib/validate.js";
+import { broadcastGpsEvent } from "../lib/websocket.js";
 
 const router = Router();
 
@@ -138,6 +139,9 @@ router.post("/gps/checkin", requireAuth, validateBody(GpsCheckinSchema), async (
       [req.tenantId!, workerId, workerName, matchedGeofence?.id ?? null, siteName, latitude, longitude, isAnomaly, anomalyReason]
     );
 
+    // Broadcast real-time GPS event
+    broadcastGpsEvent(req.tenantId!, { type: "checkin", workerName, siteName, timestamp: new Date().toISOString() });
+
     res.status(201).json({
       checkin: row,
       matchedSite: matchedGeofence ? { id: matchedGeofence.id, name: matchedGeofence.site_name, distance: Math.round(closestDistance) } : null,
@@ -193,6 +197,9 @@ router.post("/gps/checkout", requireAuth, validateBody(GpsCheckoutSchema), async
        WHERE id = $6 RETURNING *`,
       [latitude, longitude, durationMinutes, isAnomaly, anomalyReason, openCheckin.id]
     );
+
+    // Broadcast real-time GPS event
+    broadcastGpsEvent(req.tenantId!, { type: "checkout", workerName: openCheckin.worker_name ?? "Worker", siteName: openCheckin.site_name, timestamp: new Date().toISOString() });
 
     res.json({ checkout: row, durationMinutes });
   } catch (err) {

@@ -1,5 +1,7 @@
+import { createServer } from "http";
 import app from "./app";
 import { initializeDatabase } from "./lib/init-db.js";
+import { initWebSocket } from "./lib/websocket.js";
 
 const rawPort = process.env["PORT"];
 
@@ -17,7 +19,9 @@ if (Number.isNaN(port) || port <= 0) {
 
 (async () => {
   await initializeDatabase();
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+  const server = createServer(app);
+  initWebSocket(server);
+  server.listen(port, () => {
+    console.log(`Server listening on port ${port} (HTTP + WebSocket)`);
   });
 })();
