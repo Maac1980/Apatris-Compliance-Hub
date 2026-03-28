@@ -440,6 +440,44 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // Site geofences (circular boundary around a construction site)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS site_geofences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      site_name TEXT NOT NULL,
+      latitude FLOAT8 NOT NULL,
+      longitude FLOAT8 NOT NULL,
+      radius_meters INTEGER NOT NULL DEFAULT 200,
+      address TEXT,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // GPS check-in/check-out records
+  await execute(`
+    CREATE TABLE IF NOT EXISTS gps_checkins (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+      worker_name TEXT NOT NULL,
+      site_geofence_id UUID REFERENCES site_geofences(id) ON DELETE SET NULL,
+      site_name TEXT NOT NULL,
+      check_in_lat FLOAT8 NOT NULL,
+      check_in_lng FLOAT8 NOT NULL,
+      check_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      check_out_lat FLOAT8,
+      check_out_lng FLOAT8,
+      check_out_at TIMESTAMPTZ,
+      duration_minutes INTEGER,
+      is_anomaly BOOLEAN DEFAULT FALSE,
+      anomaly_reason TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN

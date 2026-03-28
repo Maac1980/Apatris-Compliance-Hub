@@ -19,6 +19,7 @@ import contractsRouter from "./contracts.js";
 import signaturesRouter from "./signatures.js";
 import postedWorkersRouter from "./posted-workers.js";
 import countryComplianceRouter from "./country-compliance.js";
+import gpsRouter from "./gps.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -40,6 +41,7 @@ router.use(contractsRouter);
 router.use(signaturesRouter);
 router.use(postedWorkersRouter);
 router.use(countryComplianceRouter);
+router.use(gpsRouter);
 router.use(aiRouter);
 
 export default router;
