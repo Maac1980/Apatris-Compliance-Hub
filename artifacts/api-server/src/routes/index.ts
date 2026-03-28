@@ -16,6 +16,7 @@ import gdprRouter from "./gdpr.js";
 import faceAuthRouter from "./face-auth.js";
 import documentWorkflowRouter from "./document-workflow.js";
 import contractsRouter from "./contracts.js";
+import signaturesRouter from "./signatures.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -34,6 +35,7 @@ router.use(gdprRouter);
 router.use(faceAuthRouter);
 router.use(documentWorkflowRouter);
 router.use(contractsRouter);
+router.use(signaturesRouter);
 router.use(aiRouter);
 
 export default router;

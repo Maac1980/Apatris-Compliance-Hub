@@ -383,6 +383,22 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // signatures
+  await execute(`
+    CREATE TABLE IF NOT EXISTS signatures (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      contract_id UUID REFERENCES contracts(id) ON DELETE CASCADE,
+      worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+      signer_name TEXT NOT NULL,
+      signer_role TEXT NOT NULL,
+      signature_data TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      signed_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Add data_retention_days to tenants
   await execute(`
     DO $$ BEGIN
