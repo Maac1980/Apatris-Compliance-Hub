@@ -128,7 +128,9 @@
     "deployedPros": "Deployed Pros",
     "activeSites": "Active Sites",
     "renewalsNeeded": "Renewals Needed",
-    "pendingTechnicalActions": "Pending Technical Actions"
+    "pendingTechnicalActions": "Pending Technical Actions",
+    "professionalsAcross": "professionals across",
+    "sites": "sites"
   },
   "tier4": {
     "sharedWorkspaceDesc": "Full read/write access to Deployed Professional profiles & document queues — shared with Tech Ops.",

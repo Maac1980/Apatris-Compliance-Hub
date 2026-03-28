@@ -128,7 +128,9 @@
     "deployedPros": "Delegowani",
     "activeSites": "Aktywne obiekty",
     "renewalsNeeded": "Wymagane odnowienia",
-    "pendingTechnicalActions": "Oczekujące działania techniczne"
+    "pendingTechnicalActions": "Oczekujące działania techniczne",
+    "professionalsAcross": "specjalistów w",
+    "sites": "obiektach"
   },
   "tier4": {
     "sharedWorkspaceDesc": "Pełny dostęp do odczytu/zapisu profili delegowanych specjalistów i kolejek dokumentów — współdzielony z działem technicznym.",
