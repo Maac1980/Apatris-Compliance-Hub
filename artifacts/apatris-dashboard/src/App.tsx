@@ -91,7 +91,7 @@ function Router() {
         {() => <ProtectedRoute component={AiCopilot} />}
       </Route>
       <Route path="/calculator">
-        {() => <ProtectedRoute component={() => <div style={{padding:"24px",background:"#0f172a",minHeight:"100vh",overflowY:"auto",paddingBottom:"80px"}}><KnowledgeCenter /></div>} />}
+        {() => <ProtectedRoute component={() => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><KnowledgeCenter /></div>} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}

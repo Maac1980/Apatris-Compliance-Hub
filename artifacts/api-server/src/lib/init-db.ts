@@ -677,6 +677,73 @@ export async function initializeDatabase(): Promise<void> {
     }
 
     console.log("[init-db] Seeded 6 demo workers with compliance documents.");
+
+    // ── Seed site geofences ──────────────────────────────────────────────
+    const geofences = [
+      { name: "Site A – Dublin Docklands", lat: 53.3478, lng: -6.2297, radius: 250, address: "Grand Canal Dock, Dublin 2, Ireland" },
+      { name: "Site B – Cork Harbour", lat: 51.8503, lng: -8.2943, radius: 300, address: "Ringaskiddy, Co. Cork, Ireland" },
+      { name: "Site C – Galway Industrial", lat: 53.2707, lng: -9.0568, radius: 200, address: "Ballybrit Industrial Estate, Galway, Ireland" },
+    ];
+    for (const g of geofences) {
+      await execute(
+        `INSERT INTO site_geofences (tenant_id, site_name, latitude, longitude, radius_meters, address)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [defaultTenantId, g.name, g.lat, g.lng, g.radius, g.address]
+      );
+    }
+
+    // ── Seed POA signatories ─────────────────────────────────────────────
+    await execute(
+      `INSERT INTO power_of_attorney (tenant_id, full_name, position, email, can_sign_zlecenie, can_sign_o_prace, can_sign_b2b)
+       VALUES ($1, 'Manish Suresh Shetty', 'Prezes Zarządu', 'manish@apatris.pl', TRUE, TRUE, TRUE)`,
+      [defaultTenantId]
+    );
+    await execute(
+      `INSERT INTO power_of_attorney (tenant_id, full_name, position, email, can_sign_zlecenie, can_sign_o_prace, can_sign_b2b)
+       VALUES ($1, 'Akshay Gandhi', 'Wiceprezes Zarządu', 'akshay@apatris.pl', TRUE, TRUE, FALSE)`,
+      [defaultTenantId]
+    );
+
+    // ── Seed contracts for first 3 workers ──────────────────────────────
+    const firstThree = await query<{ id: string; full_name: string; assigned_site: string; hourly_rate: number }>(
+      "SELECT id, full_name, assigned_site, hourly_rate FROM workers WHERE tenant_id = $1 ORDER BY full_name LIMIT 3",
+      [defaultTenantId]
+    );
+    const poaRow = await query<{ id: string; full_name: string }>(
+      "SELECT id, full_name FROM power_of_attorney WHERE tenant_id = $1 LIMIT 1",
+      [defaultTenantId]
+    );
+    const poaId = poaRow[0]?.id;
+    const poaFullName = poaRow[0]?.full_name;
+
+    for (const w of firstThree) {
+      await execute(
+        `INSERT INTO contracts (tenant_id, worker_id, worker_name, contract_type, status, start_date, end_date,
+          hourly_rate, work_location, job_description, poa_id, poa_name, language, created_by)
+         VALUES ($1,$2,$3,'umowa_zlecenie','active',$4,$5,$6,$7,'Prace spawalnicze i montażowe / Welding and assembly work',$8,$9,'bilingual','System Seed')`,
+        [defaultTenantId, w.id, w.full_name, "2026-01-01", "2026-12-31",
+         w.hourly_rate, w.assigned_site, poaId, poaFullName]
+      );
+    }
+
+    // ── Seed document workflows ─────────────────────────────────────────
+    const workerIds = await query<{ id: string; full_name: string }>(
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 ORDER BY full_name",
+      [defaultTenantId]
+    );
+    const statuses = ["uploaded", "under_review", "approved", "approved", "under_review", "rejected"];
+    const docTypes = ["BHP Certificate", "TRC Renewal", "Medical Exam", "Passport Scan", "Work Permit", "Safety Training"];
+    for (let i = 0; i < Math.min(workerIds.length, 6); i++) {
+      const w = workerIds[i];
+      await execute(
+        `INSERT INTO document_workflows (tenant_id, worker_id, worker_name, document_type, status, uploaded_by, expiry_date)
+         VALUES ($1,$2,$3,$4,$5,'System Seed',$6)`,
+        [defaultTenantId, w.id, w.full_name, docTypes[i], statuses[i],
+         i < 4 ? `2026-${String(6 + i).padStart(2, "0")}-15` : null]
+      );
+    }
+
+    console.log("[init-db] Seeded geofences, POA, contracts, and document workflows.");
   }
 
   // Assign default tenant to any rows missing a tenant_id
