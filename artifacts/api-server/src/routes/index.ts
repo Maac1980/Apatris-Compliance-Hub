@@ -21,6 +21,7 @@ import postedWorkersRouter from "./posted-workers.js";
 import countryComplianceRouter from "./country-compliance.js";
 import gpsRouter from "./gps.js";
 import pushRouter from "./push.js";
+import analyticsRouter from "./analytics.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -44,6 +45,7 @@ router.use(postedWorkersRouter);
 router.use(countryComplianceRouter);
 router.use(gpsRouter);
 router.use(pushRouter);
+router.use(analyticsRouter);
 router.use(aiRouter);
 
 export default router;
