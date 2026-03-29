@@ -24,6 +24,8 @@ import DocumentWorkflow from "@/pages/DocumentWorkflow";
 import GpsTracking from "@/pages/GpsTracking";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import AiCopilot from "@/pages/AiCopilot";
+import RegulatoryIntelligence from "@/pages/RegulatoryIntelligence";
+import ImmigrationSearch from "@/pages/ImmigrationSearch";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -94,6 +96,12 @@ function Router() {
       </Route>
       <Route path="/ai-copilot">
         {() => <ProtectedRoute component={AiCopilot} />}
+      </Route>
+      <Route path="/regulatory">
+        {() => <ProtectedRoute component={RegulatoryIntelligence} />}
+      </Route>
+      <Route path="/immigration-search">
+        {() => <ProtectedRoute component={ImmigrationSearch} />}
       </Route>
       <Route path="/calculator">
         {() => <ProtectedRoute component={() => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><KnowledgeCenter /></div>} />}

@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
+  Shield, Search,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -16,6 +17,8 @@ const NAV_ITEMS = [
   { path: "/gps-tracking",      labelKey: "nav.gps",        icon: MapPin },
   { path: "/analytics",         labelKey: "nav.analytics",  icon: BarChart3 },
   { path: "/ai-copilot",        labelKey: "nav.ai",         icon: Sparkles },
+  { path: "/regulatory",        labelKey: "nav.regulatory", icon: Shield },
+  { path: "/immigration-search",labelKey: "nav.immigration",icon: Search },
   { path: "/history",            labelKey: "nav.history",    icon: History },
 ];
 

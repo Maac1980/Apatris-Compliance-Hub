@@ -24,6 +24,7 @@ import pushRouter from "./push.js";
 import analyticsRouter from "./analytics.js";
 import platformRouter from "./platform.js";
 import filesRouter from "./files.js";
+import regulatoryRouter from "./regulatory.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -51,5 +52,6 @@ router.use(analyticsRouter);
 router.use(platformRouter);
 router.use(filesRouter);
 router.use(aiRouter);
+router.use(regulatoryRouter);
 
 export default router;
