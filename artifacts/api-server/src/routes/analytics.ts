@@ -237,23 +237,20 @@ Current data (${now.toISOString().slice(0, 10)}):
 
 Answer the following question concisely and professionally. If you need to reference specific workers, use their names. Focus on actionable insights.`;
 
-      // Try OpenAI if configured, otherwise return rule-based response
-      const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-      if (apiKey && apiKey !== "placeholder") {
-        const OpenAI = (await import("openai")).default;
-        const openai = new OpenAI({
-          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-          apiKey,
-        });
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          max_completion_tokens: 500,
+      // Try Claude AI if configured, otherwise return rule-based response
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (apiKey && apiKey !== "") {
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const anthropic = new Anthropic({ apiKey });
+        const completion = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          system: context,
           messages: [
-            { role: "system", content: context },
             { role: "user", content: question },
           ],
         });
-        const answer = completion.choices[0]?.message?.content ?? "Unable to generate response.";
+        const answer = completion.content[0]?.type === "text" ? completion.content[0].text : "Unable to generate response.";
         return res.json({ answer, source: "ai", context: { total, compliant, critical, nonCompliant } });
       }
 

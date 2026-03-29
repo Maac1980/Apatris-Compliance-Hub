@@ -1,14 +1,13 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter } from "../lib/rate-limit.js";
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "placeholder",
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY ?? "",
 });
 
 interface ScannedPassport {
@@ -37,16 +36,16 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     if (docType === "passport") {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        max_completion_tokens: 512,
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 512,
         messages: [
           {
             role: "user",
             content: [
               {
-                type: "image_url",
-                image_url: { url: dataUrl, detail: "high" },
+                type: "image",
+                source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/webp", data: base64 },
               },
               {
                 type: "text",
@@ -63,22 +62,22 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
           },
         ],
       });
-      const text = response.choices[0]?.message?.content ?? "";
+      const text = response.content[0]?.type === "text" ? response.content[0].text : "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) return null;
       const parsed = JSON.parse(jsonMatch[0]);
       return { type: "passport", ...parsed };
     } else {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        max_completion_tokens: 256,
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 256,
         messages: [
           {
             role: "user",
             content: [
               {
-                type: "image_url",
-                image_url: { url: dataUrl, detail: "high" },
+                type: "image",
+                source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/webp", data: base64 },
               },
               {
                 type: "text",
@@ -92,7 +91,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
           },
         ],
       });
-      const text = response.choices[0]?.message?.content ?? "";
+      const text = response.content[0]?.type === "text" ? response.content[0].text : "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) return null;
       const parsed = JSON.parse(jsonMatch[0]);
@@ -285,20 +284,20 @@ async function scanBulkDocument(
   try {
     const base64 = fileBuffer.toString("base64");
     const dataUrl = `data:${mimeType};base64,${base64}`;
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 300,
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 300,
       messages: [
         {
           role: "user",
           content: [
-            { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+            { type: "image", source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/webp", data: base64 } },
             { type: "text", text: prompts[category] },
           ],
         },
       ],
     });
-    const text = response.choices[0]?.message?.content ?? "";
+    const text = response.content[0]?.type === "text" ? response.content[0].text : "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return {};
     return JSON.parse(jsonMatch[0]) as Record<string, string | null>;

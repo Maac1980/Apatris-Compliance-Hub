@@ -1,7 +1,7 @@
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { logger } from './logger.js'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
 
 export type RiskLevel = 'RED' | 'AMBER' | 'GREEN'
 
@@ -63,21 +63,22 @@ export async function scoreWorkerRisk(worker: any): Promise<WorkerRiskScore> {
   const baseScore = Math.min(100, redCount * 30 + amberCount * 15)
   const baseRisk: RiskLevel = redCount > 0 ? 'RED' : amberCount > 0 ? 'AMBER' : 'GREEN'
 
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.ANTHROPIC_API_KEY) {
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: `You are a welding compliance expert. Analyse this worker's compliance status.
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: 'You are a welding compliance expert. Respond in JSON format.',
+        messages: [{ role: 'user', content: `Analyse this worker's compliance status.
 Worker: ${worker.name ?? 'Unknown'}, Role: ${worker.specialization ?? 'Welder'}
 Expiring Documents: ${JSON.stringify(expiringDocuments)}
 Respond in JSON: { "score": 0-100, "riskLevel": "RED|AMBER|GREEN", "reasons": [], "recommendations": [] }` }],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
       })
-      const aiResult = JSON.parse(response.choices[0].message.content ?? '{}')
+      const aiText = response.content[0]?.type === 'text' ? response.content[0].text : '{}'
+      const aiResult = JSON.parse(aiText)
       return { workerId: worker.id ?? 'unknown', workerName: worker.name ?? 'Unknown', riskLevel: aiResult.riskLevel ?? baseRisk, score: aiResult.score ?? baseScore, reasons: aiResult.reasons ?? [], recommendations: aiResult.recommendations ?? [], expiringDocuments, analysedAt: new Date().toISOString() }
     } catch (err) {
-      logger.warn({ err }, 'OpenAI failed, using basic scoring')
+      logger.warn({ err }, 'Claude AI failed, using basic scoring')
     }
   }
 
