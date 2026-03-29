@@ -6,6 +6,8 @@ import { regulatoryUpdates, immigrationSearches } from "@workspace/db/schema";
 
 const router = Router();
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ─── Regulatory Updates Table (auto-created) ────────────────────────────────
 
 async function ensureRegulatoryTable() {
@@ -275,6 +277,7 @@ router.post("/regulatory/scan", requireAuth, async (_req: Request, res: Response
 // PATCH /api/regulatory/updates/:id/read — mark as read
 router.patch("/regulatory/updates/:id/read", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!UUID_RE.test(req.params.id)) return res.status(400).json({ error: "Invalid ID format" });
     await db.execute(sql`UPDATE regulatory_updates SET read_by_admin = true WHERE id = ${req.params.id}::uuid`);
     res.json({ ok: true });
   } catch (err: any) {
@@ -360,6 +363,7 @@ router.get("/immigration/history", requireAuth, async (req: Request, res: Respon
 // GET /api/immigration/history/:id — full search result
 router.get("/immigration/history/:id", requireAuth, async (req: Request, res: Response) => {
   try {
+    if (!UUID_RE.test(req.params.id)) return res.status(400).json({ error: "Invalid ID format" });
     const result = await db.execute(sql`
       SELECT * FROM immigration_searches WHERE id = ${req.params.id}::uuid
     `);
@@ -372,7 +376,7 @@ router.get("/immigration/history/:id", requireAuth, async (req: Request, res: Re
 });
 
 // GET /api/immigration/popular — suggested questions
-router.get("/immigration/popular", async (_req: Request, res: Response) => {
+router.get("/immigration/popular", requireAuth, async (_req: Request, res: Response) => {
   res.json({
     questions: [
       { en: "What documents are needed for a Type A work permit in Poland?", pl: "Jakie dokumenty sa potrzebne do zezwolenia na prace typu A?" },

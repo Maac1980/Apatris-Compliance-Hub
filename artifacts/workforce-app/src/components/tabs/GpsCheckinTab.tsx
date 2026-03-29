@@ -59,7 +59,7 @@ export function GpsCheckinTab() {
     fetch(`${API}/gps/active`, { headers: { Authorization: `Bearer ${jwt}` } })
       .then(r => r.json())
       .then(d => setActiveWorkers(d.active ?? []))
-      .catch(() => {});
+      .catch((err) => console.error("[GPS] Failed to load active workers:", err));
   }, [isExecutive, jwt]);
 
   const handleCheckIn = async () => {

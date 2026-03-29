@@ -13,7 +13,7 @@ const router = Router();
 
 // JWT secret — set JWT_SECRET env var in production; falls back to a random
 // per-process secret (sessions invalidated on server restart).
-const JWT_SECRET =
+export const JWT_SECRET =
   process.env.JWT_SECRET ||
   (() => {
     const fallback = crypto.randomBytes(48).toString("hex");

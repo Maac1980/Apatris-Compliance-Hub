@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FileSignature, Plus, Download, Users, ChevronRight, Loader2, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const API = "/api";
 function authHeaders() {
@@ -21,6 +22,7 @@ interface POA {
 
 export default function ContractHub() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [poas, setPoas] = useState<POA[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,10 @@ export default function ContractHub() {
     ]).then(([c, p]) => {
       setContracts(c.contracts ?? []);
       setPoas(p.signatories ?? []);
+    }).catch(() => {
+      setContracts([]);
+      setPoas([]);
+      toast({ title: "Error", description: "Failed to load contracts", variant: "destructive" });
     }).finally(() => setLoading(false));
   }, []);
 

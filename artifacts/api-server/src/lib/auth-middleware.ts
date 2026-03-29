@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "";
+import { JWT_SECRET } from "../routes/auth.js";
 
 // Extend Express Request to include authenticated user
 declare global {

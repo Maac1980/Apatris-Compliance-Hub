@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, AlertTriangle, TrendingUp, Shield, Loader2, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const API = "/api";
 function authHeaders() {
@@ -22,6 +23,7 @@ interface PredictiveAlert {
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [heatmap, setHeatmap] = useState<HeatmapSite[]>([]);
   const [alerts, setAlerts] = useState<PredictiveAlert[]>([]);
   const [summary, setSummary] = useState({ imminent: 0, upcoming: 0, future: 0, totalAlerts: 0, affectedWorkers: 0 });
@@ -36,6 +38,11 @@ export default function AnalyticsPage() {
       setHeatmap(h.heatmap ?? []);
       setAlerts(p.alerts ?? []);
       setSummary(p.summary ?? summary);
+    }).catch(() => {
+      setHeatmap([]);
+      setAlerts([]);
+      setSummary({ imminent: 0, upcoming: 0, future: 0, totalAlerts: 0, affectedWorkers: 0 });
+      toast({ title: "Error", description: "Failed to load analytics data", variant: "destructive" });
     }).finally(() => setLoading(false));
   }, []);
 

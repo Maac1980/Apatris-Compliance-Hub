@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FileSignature, Download, Loader2, FileText, ChevronRight, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,17 +50,25 @@ export function ContractTab() {
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
 
-  useEffect(() => {
+  const loadContracts = useCallback(() => {
     if (!jwt) return;
     setLoading(true);
+    setFetchError(null);
     fetch(`${API}/contracts`, { headers: { Authorization: `Bearer ${jwt}` } })
       .then(r => r.json())
       .then(d => setContracts(d.contracts ?? []))
-      .catch(() => setContracts([]))
+      .catch((err) => {
+        console.error("Failed to fetch contracts:", err);
+        setFetchError("Failed to load contracts. Please try again.");
+        setContracts([]);
+      })
       .finally(() => setLoading(false));
   }, [jwt]);
+
+  useEffect(() => { loadContracts(); }, [loadContracts]);
 
   const filtered = filter === "all" ? contracts : contracts.filter(c => c.status === filter);
 
@@ -72,7 +80,9 @@ export function ContractTab() {
       const a = document.createElement("a");
       a.href = url; a.download = "contract.pdf"; a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to download contract PDF:", err);
+    }
   };
 
   const statusCounts = {
@@ -122,6 +132,15 @@ export function ContractTab() {
           <div className="text-[9px] text-muted-foreground font-semibold uppercase mt-0.5">Szkice</div>
         </div>
       </div>
+
+      {/* Error banner */}
+      {fetchError && (
+        <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-3.5 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+          <p className="text-xs text-red-400 font-semibold flex-1">{fetchError}</p>
+          <button onClick={loadContracts} className="text-xs font-bold text-blue-400">Retry</button>
+        </div>
+      )}
 
       {/* Contract list */}
       {loading ? (

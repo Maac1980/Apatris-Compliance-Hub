@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FileCheck, Clock, XCircle, CheckCircle2, Upload, Loader2, Filter } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const API = "/api";
 function authHeaders() {
@@ -19,6 +20,7 @@ interface Stats { uploaded: number; under_review: number; approved: number; reje
 
 export default function DocumentWorkflow() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [docs, setDocs] = useState<WorkflowDoc[]>([]);
   const [stats, setStats] = useState<Stats>({ uploaded: 0, under_review: 0, approved: 0, rejected: 0, resubmit_requested: 0 });
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,10 @@ export default function DocumentWorkflow() {
     ]).then(([q, s]) => {
       setDocs(q.documents ?? []);
       setStats(s.stats ?? stats);
+    }).catch(() => {
+      setDocs([]);
+      setStats({ uploaded: 0, under_review: 0, approved: 0, rejected: 0, resubmit_requested: 0 });
+      toast({ title: "Error", description: "Failed to load documents", variant: "destructive" });
     }).finally(() => setLoading(false));
   };
 

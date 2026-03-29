@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   HardHat, Wrench, ShieldAlert, ShieldCheck,
@@ -205,7 +205,7 @@ export function Tier5Home() {
   const [profLoading, setProfLoading] = useState(true);
   const [hoursSheetOpen, setHoursSheetOpen] = useState(false);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     if (!jwt) return;
     setProfLoading(true);
     fetchMyWorkerProfile(jwt)
@@ -215,9 +215,9 @@ export function Tier5Home() {
     fetchMyHours(jwt)
       .then(setHoursLog)
       .catch(() => setHoursLog([]));
-  };
+  }, [jwt]);
 
-  useEffect(() => { loadData(); }, [jwt]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Derive document rows from profile
   const docRows: DocRow[] = profile ? [

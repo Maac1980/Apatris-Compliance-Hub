@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Clock, CheckCircle2, XCircle, AlertCircle, Loader2, Plus } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, AlertCircle, Loader2, Plus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { fetchMyHours, submitHours, type HoursEntry } from "@/lib/api";
-import { X } from "lucide-react";
 
 const statusStyle = {
   submitted: { icon: AlertCircle,  pill: "bg-blue-500/10 text-blue-400 border-blue-500/25",    label: "Submitted" },
@@ -116,16 +115,16 @@ export function TimesheetTab() {
   const [loading, setLoading] = useState(true);
   const [submitOpen, setSubmitOpen] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!jwt) return;
     setLoading(true);
     fetchMyHours(jwt)
       .then(setEntries)
       .catch(() => setEntries([]))
       .finally(() => setLoading(false));
-  };
+  }, [jwt]);
 
-  useEffect(() => { load(); }, [jwt]);
+  useEffect(() => { load(); }, [load]);
 
   const totalHours    = entries.reduce((s, e) => s + e.hours, 0);
   const approvedHours = entries.filter(e => e.status === "approved").reduce((s, e) => s + e.hours, 0);

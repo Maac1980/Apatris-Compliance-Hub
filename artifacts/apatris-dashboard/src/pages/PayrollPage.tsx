@@ -356,7 +356,7 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
         <div className="bg-slate-800/60 rounded-xl px-4 py-3 mb-2 border border-slate-700 text-xs font-mono">
           <p className="text-gray-400 mb-1">Effective employee ZUS (all 3 contributions):</p>
           <p className="text-purple-300 font-bold text-sm">
-            {(draft.emerytalneEmployee + draft.rentoweEmployee + (draft.chorobowe ?? 2.45)).toFixed(2)}%
+            {(draft.emerytalneEmployee + draft.rentoweEmployee + (draft.chorobowe ?? 0)).toFixed(2)}%
             <span className="text-gray-500 font-normal text-xs ml-2">(emerytalne + rentowe + chorobowe)</span>
           </p>
         </div>
@@ -481,7 +481,7 @@ export default function PayrollPage() {
       refetch();
       toast({
         title: "Payroll committed ✓",
-        description: `${result.savedCount ?? "All"} records saved for ${selectedMonth}.`,
+        description: `${result.snapshotsSaved ?? "All"} records saved for ${selectedMonth}.`,
       });
     },
   });

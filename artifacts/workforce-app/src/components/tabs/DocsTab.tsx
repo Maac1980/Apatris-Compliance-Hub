@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ShieldCheck, FileText, Wrench, Stethoscope, FileCheck,
@@ -70,16 +70,16 @@ export function DocsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!jwt) return;
     setLoading(true); setError(false);
     fetchMyWorkerProfile(jwt)
       .then(setProfile)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  };
+  }, [jwt]);
 
-  useEffect(() => { load(); }, [jwt]);
+  useEffect(() => { load(); }, [load]);
 
   const docRows = profile ? buildDocRows(profile) : [];
   const counts = { Valid: 0, Expiring: 0, Expired: 0, Missing: 0 };

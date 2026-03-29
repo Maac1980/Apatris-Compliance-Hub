@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Clock, AlertTriangle, Users, Loader2, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const API = "/api";
 function authHeaders() {
@@ -20,6 +21,7 @@ interface Geofence {
 
 export default function GpsTracking() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [active, setActive] = useState<ActiveCheckin[]>([]);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
@@ -37,6 +39,11 @@ export default function GpsTracking() {
       setActive(a.active ?? []);
       setGeofences(g.geofences ?? []);
       setAnomalies(an.anomalies ?? []);
+    }).catch(() => {
+      setActive([]);
+      setGeofences([]);
+      setAnomalies([]);
+      toast({ title: "Error", description: "Failed to load GPS data", variant: "destructive" });
     }).finally(() => setLoading(false));
   };
 

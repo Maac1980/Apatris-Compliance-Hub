@@ -9,7 +9,12 @@ import router from "./routes";
 const app: Express = express();
 
 app.use(helmet());
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({
+  credentials: true,
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : true, // fallback to permissive in dev only
+}));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
