@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { db } from "../lib/db.js";
-import { sql } from "drizzle-orm";
+import { sql, eq, and, desc, count } from "drizzle-orm";
+import { regulatoryUpdates, immigrationSearches } from "@workspace/db/schema";
 
 const router = Router();
 
@@ -46,24 +47,139 @@ async function ensureImmigrationTable() {
   `);
 }
 
+// ─── Seed sample regulatory data if table is empty ──────────────────────────
+
+async function seedRegulatoryData() {
+  const result = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM regulatory_updates`);
+  const rowCount = Number((result.rows?.[0] as any)?.cnt ?? 0);
+  if (rowCount > 0) return;
+
+  const seedData = [
+    {
+      source: "praca.gov.pl",
+      title: "Work Permit Fee Increase Effective July 2026",
+      summary: "The Ministry of Family, Labor and Social Policy has announced a significant increase in work permit application fees. Type A permits will rise from 100 PLN to 200 PLN, and seasonal work permits from 30 PLN to 50 PLN. Agencies must update fee schedules and inform clients before the July 1 deadline.",
+      category: "work_permits",
+      severity: "critical",
+      fineAmount: "N/A",
+      workersAffected: 500,
+      costImpact: "Estimated additional cost of 50,000-100,000 PLN annually for mid-size agencies",
+      actionRequired: JSON.stringify([
+        "Update internal fee schedules before July 1, 2026",
+        "Notify all clients with pending applications about increased costs",
+        "Submit pending applications before fee increase takes effect",
+      ]),
+    },
+    {
+      source: "zus.pl",
+      title: "ZUS Contribution Rate Changes for Q3 2026",
+      summary: "ZUS has published revised social security contribution rates effective from July 2026. The accident insurance base rate increases by 0.2 percentage points. Employers must update payroll systems and recalculate worker deductions. Non-compliance may result in penalties during ZUS audits.",
+      category: "zus",
+      severity: "warning",
+      fineAmount: "Up to 5,000 PLN per worker for incorrect contributions",
+      workersAffected: 1000,
+      costImpact: "Approximately 0.2% increase in total labor costs",
+      actionRequired: JSON.stringify([
+        "Update payroll systems with new contribution rates",
+        "Recalculate net salaries for all foreign workers",
+        "Submit corrected ZUS DRA declarations if affected",
+      ]),
+    },
+    {
+      source: "mos.gov.pl",
+      title: "New MOS Portal Features for Employer Registration",
+      summary: "The Modular Foreigners Service (MOS) portal has launched updated employer registration features including batch work permit applications and real-time status tracking. Agencies can now submit up to 50 applications simultaneously through the new batch processing module.",
+      category: "labor_law",
+      severity: "info",
+      fineAmount: null,
+      workersAffected: 0,
+      costImpact: "Potential time savings of 40-60% on application processing",
+      actionRequired: JSON.stringify([
+        "Register for updated MOS portal access",
+        "Train staff on new batch application features",
+        "Migrate existing application workflows to new system",
+      ]),
+    },
+    {
+      source: "pip.gov.pl",
+      title: "PIP Maximum Fine Increase for Labor Law Violations",
+      summary: "The National Labour Inspectorate (PIP) has received authority to impose significantly higher fines for labor law violations. Maximum fines for employing foreigners without valid work permits increase from 30,000 PLN to 50,000 PLN per worker. Repeat offenders face criminal proceedings.",
+      category: "fines",
+      severity: "critical",
+      fineAmount: "Up to 50,000 PLN per worker (increased from 30,000 PLN)",
+      workersAffected: 200,
+      costImpact: "Potential exposure increased by 66% per violation",
+      actionRequired: JSON.stringify([
+        "Audit all current work permits for validity immediately",
+        "Implement automated permit expiry alerts",
+        "Review and update compliance procedures for PIP inspections",
+        "Ensure all employment contracts match work permit conditions",
+      ]),
+    },
+    {
+      source: "gov.pl",
+      title: "7-Day Reporting Obligation Extended to All Permit Types",
+      summary: "The 7-day reporting obligation for foreign worker commencement of employment has been extended to cover all permit types including Oswiadczenie and seasonal permits. Employers must notify the relevant Voivode within 7 days of a worker starting or not starting employment. Late reporting now carries administrative penalties.",
+      category: "reporting",
+      severity: "warning",
+      fineAmount: "1,000-3,000 PLN per late report",
+      workersAffected: 800,
+      costImpact: "Minimal if reporting is timely; significant exposure if delayed",
+      actionRequired: JSON.stringify([
+        "Update onboarding checklists to include 7-day notification for all permit types",
+        "Set up automated reminders for worker start dates",
+        "Train HR staff on expanded reporting obligations",
+      ]),
+    },
+  ];
+
+  for (const item of seedData) {
+    await db.execute(sql`
+      INSERT INTO regulatory_updates (source, title, summary, category, severity, fine_amount, workers_affected, cost_impact, action_required)
+      VALUES (${item.source}, ${item.title}, ${item.summary}, ${item.category}, ${item.severity}, ${item.fineAmount}, ${item.workersAffected}, ${item.costImpact}, ${item.actionRequired}::jsonb)
+    `);
+  }
+
+  console.log("[Regulatory] Seeded 5 sample regulatory updates.");
+}
+
 // Init tables on import
-ensureRegulatoryTable().catch(() => {});
-ensureImmigrationTable().catch(() => {});
+ensureRegulatoryTable()
+  .then(() => seedRegulatoryData())
+  .catch((err) => console.error("[Regulatory] Table init/seed failed:", err));
+ensureImmigrationTable().catch((err) => console.error("[Immigration] Table init failed:", err));
 
 // ─── Regulatory Intelligence Endpoints ───────────────────────────────────────
 
-// GET /api/regulatory/updates — list all regulatory updates
+// GET /api/regulatory/updates — list all regulatory updates (parameterized)
 router.get("/regulatory/updates", requireAuth, async (req: Request, res: Response) => {
   try {
     const { category, severity, unreadOnly } = req.query;
-    let query = `SELECT * FROM regulatory_updates`;
-    const conditions: string[] = [];
-    if (category && category !== "all") conditions.push(`category = '${category}'`);
-    if (severity) conditions.push(`severity = '${severity}'`);
-    if (unreadOnly === "true") conditions.push(`read_by_admin = false`);
-    if (conditions.length > 0) query += ` WHERE ${conditions.join(" AND ")}`;
-    query += ` ORDER BY fetched_at DESC LIMIT 100`;
-    const result = await db.execute(sql.raw(query));
+
+    // Build query using safe parameterized sql fragments
+    const conditions: ReturnType<typeof sql>[] = [];
+    if (category && category !== "all") {
+      conditions.push(sql`category = ${category as string}`);
+    }
+    if (severity) {
+      conditions.push(sql`severity = ${severity as string}`);
+    }
+    if (unreadOnly === "true") {
+      conditions.push(sql`read_by_admin = false`);
+    }
+
+    let query;
+    if (conditions.length > 0) {
+      let whereClause = conditions[0]!;
+      for (let i = 1; i < conditions.length; i++) {
+        whereClause = sql`${whereClause} AND ${conditions[i]}`;
+      }
+      query = sql`SELECT * FROM regulatory_updates WHERE ${whereClause} ORDER BY fetched_at DESC LIMIT 100`;
+    } else {
+      query = sql`SELECT * FROM regulatory_updates ORDER BY fetched_at DESC LIMIT 100`;
+    }
+
+    const result = await db.execute(query);
     res.json({ updates: result.rows ?? [] });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

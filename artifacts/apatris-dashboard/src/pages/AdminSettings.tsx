@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -60,6 +61,7 @@ type Tab = "profiles" | "notifications" | "audit" | "site-coordinators";
 
 export default function AdminSettings() {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("profiles");
 
@@ -127,7 +129,7 @@ export default function AdminSettings() {
       if (!res.ok) { setNotifLog([]); return; }
       const data = await res.json();
       setNotifLog(Array.isArray(data.entries) ? data.entries : []);
-    } catch { setNotifLog([]); }
+    } catch (err) { console.error("[AdminSettings] Failed to load notification log:", err); setNotifLog([]); }
     finally { setNotifLoading(false); }
   }
 
@@ -138,7 +140,7 @@ export default function AdminSettings() {
       if (!res.ok) { setAuditLog([]); return; }
       const data = await res.json();
       setAuditLog(Array.isArray(data.entries) ? data.entries : []);
-    } catch { setAuditLog([]); }
+    } catch (err) { console.error("[AdminSettings] Failed to load audit log:", err); setAuditLog([]); }
     finally { setAuditLoading(false); }
   }
 
@@ -146,7 +148,7 @@ export default function AdminSettings() {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/settings/status`, { headers: authHeaders() });
       if (res.ok) setSysStatus(await res.json());
-    } catch { /* non-fatal */ }
+    } catch (err) { console.error("[AdminSettings] Failed to load system status:", err); }
   }
 
   async function loadCoordinators() {
@@ -231,7 +233,9 @@ export default function AdminSettings() {
     try {
       await fetch(`${import.meta.env.BASE_URL}api/site-coordinators/${id}`, { method: "DELETE", headers: authHeaders() });
       await loadCoordinators();
-    } catch {
+    } catch (err) {
+      console.error("[AdminSettings] Failed to delete coordinator:", err);
+      toast({ title: "Error", description: "Failed to delete coordinator. Please try again.", variant: "destructive" });
     } finally {
       setDeletingId(null);
     }

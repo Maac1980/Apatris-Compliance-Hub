@@ -131,7 +131,7 @@ export default function Dashboard() {
 
   // Seed today's snapshot once on mount so trend chart has data from day 1
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/compliance/snapshot`, { method: "POST", headers: authHeaders() }).catch(() => {});
+    fetch(`${import.meta.env.BASE_URL}api/compliance/snapshot`, { method: "POST", headers: authHeaders() }).catch((err) => { console.error("[Dashboard] Compliance snapshot seed failed:", err); });
   }, []);
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Search, Globe, BookOpen, ExternalLink, Loader2, History, Sparkles,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -21,6 +22,7 @@ interface SearchResult {
 export default function ImmigrationSearch() {
   const { i18n } = useTranslation();
   const isPl = i18n.language?.startsWith("pl");
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,12 +36,12 @@ export default function ImmigrationSearch() {
     fetch(`${BASE}api/immigration/popular`)
       .then((r) => r.json())
       .then((d) => setPopular(d.questions ?? []))
-      .catch(() => {});
+      .catch((err) => { console.error("[ImmigrationSearch] Failed to load popular questions:", err); });
 
     fetch(`${BASE}api/immigration/history`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => setSearchHistory(d.history ?? []))
-      .catch(() => {});
+      .catch((err) => { console.error("[ImmigrationSearch] Failed to load search history:", err); });
   }, []);
 
   async function handleSearch(q?: string) {
@@ -56,7 +58,9 @@ export default function ImmigrationSearch() {
       });
       const data = await res.json();
       setResult(data);
-    } catch {
+    } catch (err) {
+      console.error("[ImmigrationSearch] Search failed:", err);
+      toast({ title: isPl ? "Blad wyszukiwania" : "Search Failed", description: isPl ? "Nie udalo sie przeprowadzic wyszukiwania. Sprobuj ponownie." : "Search failed. Please try again.", variant: "destructive" });
       setResult({
         answer: isPl ? "Wyszukiwanie niedostepne. Sprobuj ponownie pozniej." : "Search unavailable. Try again later.",
         sources: [],

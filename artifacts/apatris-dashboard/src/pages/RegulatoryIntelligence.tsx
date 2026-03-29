@@ -4,6 +4,7 @@ import {
   Scale, AlertTriangle, Info, RefreshCw, ExternalLink,
   CheckCircle, ChevronDown, ChevronUp, Shield,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -41,6 +42,7 @@ const CATEGORIES = [
 export default function RegulatoryIntelligence() {
   const { t, i18n } = useTranslation();
   const isPl = i18n.language?.startsWith("pl");
+  const { toast } = useToast();
   const [updates, setUpdates] = useState<RegulatoryUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -55,7 +57,11 @@ export default function RegulatoryIntelligence() {
     fetch(`${BASE}api/regulatory/updates${q}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => setUpdates(d.updates ?? []))
-      .catch(() => setUpdates([]))
+      .catch((err) => {
+        console.error("[RegulatoryIntelligence] Failed to load updates:", err);
+        setUpdates([]);
+        toast({ title: isPl ? "Blad" : "Error", description: isPl ? "Nie udalo sie zaladowac aktualizacji regulacyjnych" : "Failed to load regulatory updates", variant: "destructive" });
+      })
       .finally(() => setLoading(false));
   }
 
@@ -64,7 +70,10 @@ export default function RegulatoryIntelligence() {
     try {
       await fetch(`${BASE}api/regulatory/scan`, { method: "POST", headers: authHeaders() });
       loadUpdates();
-    } catch {}
+    } catch (err) {
+      console.error("[RegulatoryIntelligence] Scan failed:", err);
+      toast({ title: isPl ? "Skanowanie nieudane" : "Scan Failed", description: isPl ? "Nie udalo sie przeprowadzic skanowania regulacyjnego" : "Failed to run regulatory scan. Please try again.", variant: "destructive" });
+    }
     setScanning(false);
   }
 
@@ -72,7 +81,9 @@ export default function RegulatoryIntelligence() {
     try {
       await fetch(`${BASE}api/regulatory/updates/${id}/read`, { method: "PATCH", headers: authHeaders() });
       setUpdates((prev) => prev.map((u) => (u.id === id ? { ...u, read_by_admin: true } : u)));
-    } catch {}
+    } catch (err) {
+      console.error("[RegulatoryIntelligence] Failed to mark as read:", err);
+    }
   }
 
   const critical = updates.filter((u) => u.severity === "critical").length;

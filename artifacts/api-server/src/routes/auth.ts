@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { findCoordinatorByEmail, verifyCoordinatorPassword } from "../lib/coordinators-db.js";
@@ -55,6 +55,27 @@ setInterval(() => {
 
 function signToken(userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string }) {
   return jwt.sign(userData, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000; // 15 minutes
+
+function setJwtCookie(res: Response, token: string) {
+  res.cookie("apatris_jwt", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: ACCESS_TOKEN_MAX_AGE_MS,
+  });
+}
+
+function clearJwtCookie(res: Response) {
+  res.clearCookie("apatris_jwt", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+  });
 }
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
@@ -115,6 +136,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
           const accessToken = signToken(userData);
           const refreshToken = await createRefreshToken(userData);
           appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed)" });
+          setJwtCookie(res, accessToken);
           return res.json({ ...userData, jwt: accessToken, refreshToken });
         }
         return res.json({ otpRequired: true, session });
@@ -124,6 +146,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
       const accessToken = signToken(userData);
       const refreshToken = await createRefreshToken(userData);
       appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (SMTP not configured)" });
+      setJwtCookie(res, accessToken);
       return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
 
@@ -143,6 +166,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
       };
       const accessToken = signToken(userData);
       const refreshToken = await createRefreshToken(userData);
+      setJwtCookie(res, accessToken);
       return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
 
@@ -192,6 +216,7 @@ router.post("/auth/verify-otp", authLimiter, async (req, res) => {
       note: "Login verified via 2FA OTP",
     });
 
+    setJwtCookie(res, accessToken);
     return res.json({ ...entry.userData, jwt: accessToken, refreshToken });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";
@@ -204,11 +229,13 @@ router.post("/auth/verify-otp", authLimiter, async (req, res) => {
 // to silently restore a session without a full login flow.
 router.get("/auth/verify", (req, res) => {
   try {
+    // Check cookie first, then Authorization header
+    const cookieToken = req.cookies?.apatris_jwt;
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = cookieToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+    if (!token) {
       return res.status(401).json({ error: "No token" });
     }
-    const token = authHeader.slice(7);
     const payload = jwt.verify(token, JWT_SECRET) as {
       email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string;
     };
@@ -260,6 +287,7 @@ router.post("/auth/mobile-login", authLimiter, validateBody(MobileLoginSchema), 
     const accessToken = signToken(mobileUserData);
     const refreshToken = await createRefreshToken(mobileUserData);
 
+    setJwtCookie(res, accessToken);
     return res.json({ role: result.role, name: result.name, jwt: accessToken, refreshToken });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";
@@ -370,6 +398,7 @@ router.post("/auth/refresh", async (req, res) => {
     const newAccessToken = signToken(userData);
     const newRefreshToken = await createRefreshToken(userData);
 
+    setJwtCookie(res, newAccessToken);
     return res.json({
       ...userData,
       jwt: newAccessToken,
@@ -390,8 +419,10 @@ router.post("/auth/logout", async (req, res) => {
       const hash = hashToken(refreshToken);
       await execute("UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1", [hash]);
     }
+    clearJwtCookie(res);
     return res.json({ success: true });
   } catch {
+    clearJwtCookie(res);
     return res.json({ success: true }); // Always succeed on logout
   }
 });

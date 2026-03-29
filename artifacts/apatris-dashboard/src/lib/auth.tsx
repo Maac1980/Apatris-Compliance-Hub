@@ -58,8 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (storedToken) {
       // Validate JWT with server — get fresh user payload
+      // Send both cookie (via credentials) and Authorization header for backwards compatibility
       fetch(`${import.meta.env.BASE_URL}api/auth/verify`, {
         headers: { Authorization: `Bearer ${storedToken}` },
+        credentials: "include",
       })
         .then(async (res) => {
           if (res.ok) {
@@ -106,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${import.meta.env.BASE_URL}api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password: pass }),
       });
 
@@ -136,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${import.meta.env.BASE_URL}api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ session, otp }),
       });
 

@@ -25,14 +25,17 @@ declare global {
  * Returns 401 if no token or invalid token.
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  // Check cookie first, then fall back to Authorization header
+  const cookieToken = (req as any).cookies?.apatris_jwt;
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  const token = cookieToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+
+  if (!token) {
     res.status(401).json({ error: "Authentication required." });
     return;
   }
 
   try {
-    const token = authHeader.slice(7);
     const payload = jwt.verify(token, JWT_SECRET) as {
       email: string; name: string; role: string;
       assignedSite?: string; tenantId?: string; tenantSlug?: string;
