@@ -5,30 +5,32 @@ export type ContractType = "zlecenie" | "praca";
 export function calculate(hours: number, rate: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   const gross = Math.round(hours * rate * 100) / 100;
 
-  // Employee ZUS
+  // Employee ZUS: pension 9.76% + disability 1.50% + optional sickness 2.45%
   const pension = Math.round(gross * 0.0976 * 100) / 100;
   const disability = Math.round(gross * 0.015 * 100) / 100;
   const sickness = includeSickness ? Math.round(gross * 0.0245 * 100) / 100 : 0;
   const employeeZus = pension + disability + sickness;
 
-  // Health insurance - different rate per contract
-  const healthRate = contract === "zlecenie" ? 0.079866 : 0.077661;
-  const health = Math.round(gross * healthRate * 100) / 100;
+  // Health base = gross - ZUS
+  const healthBase = gross - employeeZus;
+
+  // Health insurance = healthBase × 9%
+  const health = Math.round(healthBase * 0.09 * 100) / 100;
 
   // Tax base
   let taxBase: number;
   if (contract === "zlecenie") {
-    const kup = Math.round((gross - employeeZus) * 0.20 * 100) / 100;
-    taxBase = Math.round(gross - employeeZus - kup);
+    const kup = Math.round(healthBase * 0.20 * 100) / 100;
+    taxBase = Math.round(healthBase - kup);
   } else {
     taxBase = Math.round(gross - employeeZus - 250);
   }
 
-  // PIT
+  // PIT = max(0, round(taxBase × 12%) - 300 if PIT-2)
   const rawPit = Math.round(taxBase * 0.12) - (applyPit2 ? 300 : 0);
   const pit = Math.max(0, rawPit);
 
-  // Net
+  // Net = gross - ZUS - health - PIT
   const net = Math.round((gross - employeeZus - health - pit) * 100) / 100;
 
   // Net per hour
