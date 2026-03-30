@@ -11,6 +11,12 @@
     "history": "History",
     "regulatory": "Regulatory",
     "immigration": "Immigration",
+    "trc": "TRC Service",
+    "availability": "Availability",
+    "shifts": "Shifts",
+    "skills": "Skills",
+    "benchmark": "Benchmark",
+    "aiAudit": "AI Audit",
     "settings": "Settings"
   },
   "cards": {

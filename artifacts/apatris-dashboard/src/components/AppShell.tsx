@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
-  Shield, Search,
+  Shield, Search, CalendarDays, Clock, Award, TrendingUp,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -19,6 +19,12 @@ const NAV_ITEMS = [
   { path: "/ai-copilot",        labelKey: "nav.ai",         icon: Sparkles },
   { path: "/regulatory",        labelKey: "nav.regulatory", icon: Shield },
   { path: "/immigration-search",labelKey: "nav.immigration",icon: Search },
+  { path: "/trc-service",       labelKey: "nav.trc",        icon: FileCheck },
+  { path: "/availability",      labelKey: "nav.availability",icon: CalendarDays },
+  { path: "/shift-schedule",    labelKey: "nav.shifts",     icon: Clock },
+  { path: "/skills-matrix",     labelKey: "nav.skills",     icon: Award },
+  { path: "/salary-benchmark",  labelKey: "nav.benchmark",  icon: TrendingUp },
+  { path: "/ai-audit",          labelKey: "nav.aiAudit",    icon: Shield },
   { path: "/history",            labelKey: "nav.history",    icon: History },
 ];
 
@@ -30,7 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicRoute =
     location === "/login" ||
     location.startsWith("/apply") ||
-    location.startsWith("/worker-upload");
+    location.startsWith("/worker-upload") ||
+    location === "/pricing";
 
   const showShell = isAuthenticated && !isPublicRoute;
 

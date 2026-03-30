@@ -25,6 +25,12 @@ import analyticsRouter from "./analytics.js";
 import platformRouter from "./platform.js";
 import filesRouter from "./files.js";
 import regulatoryRouter from "./regulatory.js";
+import trcServiceRouter from "./trc-service.js";
+import availabilityRouter from "./availability.js";
+import shiftsRouter from "./shifts.js";
+import skillsRouter from "./skills.js";
+import aiAuditRouter from "./ai-audit.js";
+import billingRouter from "./billing.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -53,5 +59,11 @@ router.use(platformRouter);
 router.use(filesRouter);
 router.use(aiRouter);
 router.use(regulatoryRouter);
+router.use(trcServiceRouter);
+router.use(availabilityRouter);
+router.use(shiftsRouter);
+router.use(skillsRouter);
+router.use(aiAuditRouter);
+router.use(billingRouter);
 
 export default router;

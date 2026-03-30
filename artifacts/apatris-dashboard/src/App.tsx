@@ -26,6 +26,13 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 import AiCopilot from "@/pages/AiCopilot";
 import RegulatoryIntelligence from "@/pages/RegulatoryIntelligence";
 import ImmigrationSearch from "@/pages/ImmigrationSearch";
+import TRCService from "@/pages/TRCService";
+import WorkerAvailability from "@/pages/WorkerAvailability";
+import ShiftSchedule from "@/pages/ShiftSchedule";
+import SkillsMatrix from "@/pages/SkillsMatrix";
+import SalaryBenchmark from "@/pages/SalaryBenchmark";
+import AiAuditTrail from "@/pages/AiAuditTrail";
+import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -103,6 +110,25 @@ function Router() {
       <Route path="/immigration-search">
         {() => <ProtectedRoute component={ImmigrationSearch} />}
       </Route>
+      <Route path="/trc-service">
+        {() => <ProtectedRoute component={TRCService} />}
+      </Route>
+      <Route path="/availability">
+        {() => <ProtectedRoute component={WorkerAvailability} />}
+      </Route>
+      <Route path="/shift-schedule">
+        {() => <ProtectedRoute component={ShiftSchedule} />}
+      </Route>
+      <Route path="/skills-matrix">
+        {() => <ProtectedRoute component={SkillsMatrix} />}
+      </Route>
+      <Route path="/salary-benchmark">
+        {() => <ProtectedRoute component={SalaryBenchmark} />}
+      </Route>
+      <Route path="/ai-audit">
+        {() => <ProtectedRoute component={AiAuditTrail} />}
+      </Route>
+      <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
         {() => <ProtectedRoute component={() => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><KnowledgeCenter /></div>} />}
       </Route>
