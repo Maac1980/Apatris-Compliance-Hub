@@ -6,6 +6,7 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
+  Globe, Building2, UserPlus, Briefcase, Receipt, FileText,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -26,6 +27,18 @@ const NAV_ITEMS = [
   { path: "/salary-benchmark",  labelKey: "nav.benchmark",  icon: TrendingUp },
   { path: "/ai-audit",          labelKey: "nav.aiAudit",    icon: Shield },
   { path: "/history",            labelKey: "nav.history",    icon: History },
+  { path: "/admin-settings",    labelKey: "nav.settings",   icon: Settings },
+  { path: "/calculator",        labelKey: "nav.calculator", icon: Calculator },
+  { path: "/gdpr",              labelKey: "nav.gdpr",       icon: Shield },
+  { path: "/posted-workers",    labelKey: "nav.postedWorkers", icon: Globe },
+  { path: "/country-compliance",labelKey: "nav.countryCompliance", icon: Globe },
+  { path: "/hours",             labelKey: "nav.hours",      icon: Clock },
+  { path: "/system-logs",       labelKey: "nav.logs",       icon: FileText },
+  { path: "/clients",           labelKey: "nav.clients",    icon: Building2 },
+  { path: "/pay-transparency",  labelKey: "nav.payTransparency", icon: BarChart3 },
+  { path: "/applications",      labelKey: "nav.applications", icon: UserPlus },
+  { path: "/job-board",         labelKey: "nav.jobBoard",   icon: Briefcase },
+  { path: "/invoices",          labelKey: "nav.invoices",   icon: Receipt },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

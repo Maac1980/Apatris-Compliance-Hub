@@ -31,6 +31,10 @@ import shiftsRouter from "./shifts.js";
 import skillsRouter from "./skills.js";
 import aiAuditRouter from "./ai-audit.js";
 import billingRouter from "./billing.js";
+import clientsRouter from "./clients.js";
+import jobsRouter from "./jobs.js";
+import invoicesRouter from "./invoices.js";
+import applicationsRouter from "./applications.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -65,5 +69,9 @@ router.use(shiftsRouter);
 router.use(skillsRouter);
 router.use(aiAuditRouter);
 router.use(billingRouter);
+router.use(clientsRouter);
+router.use(jobsRouter);
+router.use(invoicesRouter);
+router.use(applicationsRouter);
 
 export default router;

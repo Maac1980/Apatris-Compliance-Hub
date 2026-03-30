@@ -5,6 +5,7 @@ import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "..
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter } from "../lib/rate-limit.js";
+import { execute } from "../lib/db.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY ?? "",
@@ -508,7 +509,19 @@ router.post("/workers/apply", applyUpload.fields([
     if (cvData.experience) workerFields.experience = cvData.experience;
     if (cvData.qualification && !workerFields.specialization) workerFields.specialization = cvData.qualification;
 
-    await createWorker(workerFields, req.tenantId!);
+    const newWorker = await createWorker(workerFields, req.tenantId!);
+
+    // Insert into job_applications table for ATS tracking
+    try {
+      const jobId = req.body.job_id ?? null;
+      await execute(
+        `INSERT INTO job_applications (job_id, worker_id, worker_name, worker_email, stage)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [jobId, newWorker.id, workerFields.full_name as string, (email?.trim() || null), "New"]
+      );
+    } catch (appErr) {
+      console.warn("[apply] Failed to insert job_application:", appErr instanceof Error ? appErr.message : appErr);
+    }
 
     // TODO: implement file storage migration (previously Airtable attachments)
 

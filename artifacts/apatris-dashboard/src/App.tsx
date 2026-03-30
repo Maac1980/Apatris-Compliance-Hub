@@ -32,6 +32,16 @@ import ShiftSchedule from "@/pages/ShiftSchedule";
 import SkillsMatrix from "@/pages/SkillsMatrix";
 import SalaryBenchmark from "@/pages/SalaryBenchmark";
 import AiAuditTrail from "@/pages/AiAuditTrail";
+import GDPRManagement from "@/pages/GDPRManagement";
+import PostedWorkers from "@/pages/PostedWorkers";
+import CountryCompliance from "@/pages/CountryCompliance";
+import HoursManagement from "@/pages/HoursManagement";
+import SystemLogs from "@/pages/SystemLogs";
+import ClientManagement from "@/pages/ClientManagement";
+import PayTransparency from "@/pages/PayTransparency";
+import ApplicationsFeed from "@/pages/ApplicationsFeed";
+import JobBoard from "@/pages/JobBoard";
+import InvoiceManagement from "@/pages/InvoiceManagement";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -127,6 +137,36 @@ function Router() {
       </Route>
       <Route path="/ai-audit">
         {() => <ProtectedRoute component={AiAuditTrail} />}
+      </Route>
+      <Route path="/gdpr">
+        {() => <ProtectedRoute component={GDPRManagement} />}
+      </Route>
+      <Route path="/posted-workers">
+        {() => <ProtectedRoute component={PostedWorkers} />}
+      </Route>
+      <Route path="/country-compliance">
+        {() => <ProtectedRoute component={CountryCompliance} />}
+      </Route>
+      <Route path="/hours">
+        {() => <ProtectedRoute component={HoursManagement} />}
+      </Route>
+      <Route path="/system-logs">
+        {() => <ProtectedRoute component={SystemLogs} />}
+      </Route>
+      <Route path="/clients">
+        {() => <ProtectedRoute component={ClientManagement} />}
+      </Route>
+      <Route path="/pay-transparency">
+        {() => <ProtectedRoute component={PayTransparency} />}
+      </Route>
+      <Route path="/applications">
+        {() => <ProtectedRoute component={ApplicationsFeed} />}
+      </Route>
+      <Route path="/job-board">
+        {() => <ProtectedRoute component={JobBoard} />}
+      </Route>
+      <Route path="/invoices">
+        {() => <ProtectedRoute component={InvoiceManagement} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

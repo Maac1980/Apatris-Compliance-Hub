@@ -24,6 +24,10 @@ const port = Number(process.env["PORT"] || "8080");
     const { initializeDatabase } = await import("./lib/init-db.js");
     await initializeDatabase();
     console.log("[Startup] Database initialized.");
+
+    // Seed sample data if tables are empty
+    const { seedSampleData } = await import("./lib/seed.js");
+    await seedSampleData();
   } catch (err) {
     console.error("[Startup] Database init failed:", err instanceof Error ? err.message : err);
   }

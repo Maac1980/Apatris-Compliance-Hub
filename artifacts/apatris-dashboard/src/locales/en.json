@@ -17,7 +17,18 @@
     "skills": "Skills",
     "benchmark": "Benchmark",
     "aiAudit": "AI Audit",
-    "settings": "Settings"
+    "settings": "Settings",
+    "calculator": "Calculator",
+    "gdpr": "GDPR",
+    "postedWorkers": "Posted Workers",
+    "countryCompliance": "Country Rules",
+    "hours": "Hours",
+    "logs": "System Logs",
+    "clients": "Clients",
+    "payTransparency": "Pay Transparency",
+    "applications": "Applications",
+    "jobBoard": "Job Board",
+    "invoices": "Invoices"
   },
   "cards": {
     "workers": "Workers",

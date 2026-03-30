@@ -17,7 +17,18 @@
     "skills": "Umiejetnosci",
     "benchmark": "Wynagrodzenia",
     "aiAudit": "Audyt AI",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "calculator": "Kalkulator",
+    "gdpr": "RODO",
+    "postedWorkers": "Delegowani",
+    "countryCompliance": "Przepisy Krajowe",
+    "hours": "Godziny",
+    "logs": "Logi Systemu",
+    "clients": "Klienci",
+    "payTransparency": "Transparentnosc Plac",
+    "applications": "Aplikacje",
+    "jobBoard": "Oferty Pracy",
+    "invoices": "Faktury"
   },
   "cards": {
     "workers": "Pracownicy",
