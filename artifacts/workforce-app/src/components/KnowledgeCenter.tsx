@@ -1,25 +1,65 @@
 import { useState, useMemo } from "react";
 
-type ContractType = "zlecenie" | "praca";
+export type ContractType = "zlecenie" | "praca";
 
-function calculate(hours: number, rate: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
+export function calculate(hours: number, rate: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   const gross = Math.round(hours * rate * 100) / 100;
+
+  // Employee ZUS
   const pension = Math.round(gross * 0.0976 * 100) / 100;
   const disability = Math.round(gross * 0.015 * 100) / 100;
   const sickness = includeSickness ? Math.round(gross * 0.0245 * 100) / 100 : 0;
   const employeeZus = pension + disability + sickness;
+
+  // Health insurance - different rate per contract
   const healthRate = contract === "zlecenie" ? 0.079866 : 0.077661;
   const health = Math.round(gross * healthRate * 100) / 100;
-  const healthBase = gross - employeeZus;
-  const kup = Math.round(healthBase * 0.20 * 100) / 100;
-  const taxBase = Math.round(healthBase - kup);
+
+  // Tax base
+  let taxBase: number;
+  if (contract === "zlecenie") {
+    const kup = Math.round((gross - employeeZus) * 0.20 * 100) / 100;
+    taxBase = Math.round(gross - employeeZus - kup);
+  } else {
+    taxBase = Math.round(gross - employeeZus - 250);
+  }
+
+  // PIT
   const rawPit = Math.round(taxBase * 0.12) - (applyPit2 ? 300 : 0);
   const pit = Math.max(0, rawPit);
+
+  // Net
   const net = Math.round((gross - employeeZus - health - pit) * 100) / 100;
-  const empRate = contract === "zlecenie" ? 0.1881 : 0.2048;
-  const employerZus = Math.round(gross * empRate * 100) / 100;
+
+  // Net per hour
+  const netPerHour = hours > 0 ? Math.round((net / hours) * 100) / 100 : 0;
+
+  // Employer ZUS
+  const empPension = Math.round(gross * 0.0976 * 100) / 100;
+  const empDisability = Math.round(gross * 0.065 * 100) / 100;
+  const empAccident = contract === "praca" ? Math.round(gross * 0.0167 * 100) / 100 : 0;
+  const empFP = Math.round(gross * 0.0245 * 100) / 100;
+  const empFGSP = Math.round(gross * 0.001 * 100) / 100;
+  const employerZus = empPension + empDisability + empAccident + empFP + empFGSP;
   const totalCost = Math.round((gross + employerZus) * 100) / 100;
-  return { gross, employeeZus, health, pit, net, employerZus, totalCost, taxBase };
+
+  return { gross, employeeZus, health, pit, net, netPerHour, employerZus, totalCost, taxBase };
+}
+
+// Reverse calculator: given desired net, find gross rate per hour
+export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
+  // Binary search for the gross rate that produces the desired net
+  let lo = 0, hi = desiredNet * 3;
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const result = calculate(hours, mid, contract, applyPit2, includeSickness);
+    const netPerHour = hours > 0 ? result.net / hours : 0;
+    if (netPerHour < desiredNet) lo = mid;
+    else hi = mid;
+    if (Math.abs(netPerHour - desiredNet) < 0.005) break;
+  }
+  const grossRate = Math.round(((lo + hi) / 2) * 100) / 100;
+  return calculate(hours, grossRate, contract, applyPit2, includeSickness);
 }
 
 export function KnowledgeCenter() {
@@ -28,74 +68,146 @@ export function KnowledgeCenter() {
   const [contract, setContract] = useState<ContractType>("zlecenie");
   const [applyPit2, setApplyPit2] = useState(true);
   const [includeSickness, setIncludeSickness] = useState(false);
-  const r = useMemo(() => calculate(hours, rate, contract, applyPit2, includeSickness), [hours, rate, contract, applyPit2, includeSickness]);
+  const [mode, setMode] = useState<"gross" | "net">("gross");
+  const [desiredNetRate, setDesiredNetRate] = useState(25.00);
+
+  const r = useMemo(() =>
+    mode === "gross"
+      ? calculate(hours, rate, contract, applyPit2, includeSickness)
+      : reverseCalculate(hours, desiredNetRate, contract, applyPit2, includeSickness),
+    [hours, rate, desiredNetRate, contract, applyPit2, includeSickness, mode]
+  );
+
+  const grossRate = mode === "net" && hours > 0 ? Math.round((r.gross / hours) * 100) / 100 : rate;
 
   return (
-    <div style={{ padding: "16px", color: "#e2e8f0", fontFamily: "Inter, sans-serif", maxWidth: "500px", margin: "0 auto" }}>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px", color: "#f8fafc" }}>ZUS Calculator</h2>
+    <div className="tab-page" style={{ background: "#0f172a", padding: 0 }}>
+    <div className="p-4 text-slate-200 pb-24">
+      <div className="max-w-2xl mx-auto space-y-4">
+        <h1 className="text-xl font-bold text-white">ZUS Calculator</h1>
 
-      <div style={{ display: "flex", borderRadius: "10px", overflow: "hidden", border: "1px solid #334155", marginBottom: "16px" }}>
-        <button onClick={() => setContract("zlecenie")} style={{ flex: 1, padding: "10px", fontSize: "13px", fontWeight: 700, background: contract === "zlecenie" ? "#3b82f6" : "#1e293b", color: "#fff", border: "none", cursor: "pointer" }}>
-          Umowa Zlecenie
-        </button>
-        <button onClick={() => setContract("praca")} style={{ flex: 1, padding: "10px", fontSize: "13px", fontWeight: 700, background: contract === "praca" ? "#22c55e" : "#1e293b", color: "#fff", border: "none", cursor: "pointer" }}>
-          Umowa o Pracę
-        </button>
-      </div>
+        {/* Contract Toggle */}
+        <div className="flex rounded-lg overflow-hidden border border-slate-700">
+          <button onClick={() => setContract("zlecenie")} className={`flex-1 py-2 text-sm font-bold transition-colors ${contract === "zlecenie" ? "bg-blue-600 text-white" : "bg-slate-900 text-slate-400"}`}>
+            Umowa Zlecenie
+          </button>
+          <button onClick={() => setContract("praca")} className={`flex-1 py-2 text-sm font-bold transition-colors ${contract === "praca" ? "bg-green-600 text-white" : "bg-slate-900 text-slate-400"}`}>
+            Umowa o Prace
+          </button>
+        </div>
 
-      <div style={{ background: "#1e293b", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-          <span style={{ fontSize: "13px", color: "#94a3b8" }}>Hours</span>
-          <span style={{ fontSize: "13px", fontWeight: 700, color: "#3b82f6" }}>{hours}h</span>
+        {/* Mode Toggle: Gross→Net or Net→Gross */}
+        <div className="flex rounded-lg overflow-hidden border border-slate-700">
+          <button onClick={() => setMode("gross")} className={`flex-1 py-2 text-xs font-bold transition-colors ${mode === "gross" ? "bg-blue-500 text-white" : "bg-slate-900 text-slate-400"}`}>
+            Gross → Net
+          </button>
+          <button onClick={() => setMode("net")} className={`flex-1 py-2 text-xs font-bold transition-colors ${mode === "net" ? "bg-green-500 text-white" : "bg-slate-900 text-slate-400"}`}>
+            Net → Gross (Reverse)
+          </button>
         </div>
-        <input type="range" min={1} max={300} value={hours} onChange={e => setHours(Number(e.target.value))} style={{ width: "100%", marginBottom: "12px", accentColor: "#3b82f6" }} />
-        <div style={{ marginBottom: "8px" }}>
-          <label style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Hourly Rate (PLN)</label>
-          <input type="number" step="0.10" value={rate} onChange={e => setRate(Number(e.target.value))} style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", padding: "8px 12px", color: "#fff", fontSize: "14px", boxSizing: "border-box" }} />
-        </div>
-        <div style={{ display: "flex", gap: "16px", paddingTop: "8px", borderTop: "1px solid #334155" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#cbd5e1", cursor: "pointer" }}>
-            <input type="checkbox" checked={applyPit2} onChange={e => setApplyPit2(e.target.checked)} style={{ accentColor: "#3b82f6" }} />
-            PIT-2 (300 PLN)
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#cbd5e1", cursor: "pointer" }}>
-            <input type="checkbox" checked={includeSickness} onChange={e => setIncludeSickness(e.target.checked)} style={{ accentColor: "#3b82f6" }} />
-            Sickness (2.45%)
-          </label>
-        </div>
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "16px" }}>
-        {[
-          ["GROSS", r.gross.toFixed(2), "#60a5fa"],
-          ["NET TAKE-HOME", r.net.toFixed(2), "#34d399"],
-          ["EMPLOYEE ZUS", `-${r.employeeZus.toFixed(2)}`, "#f87171"],
-          ["HEALTH", `-${r.health.toFixed(2)}`, "#f87171"],
-          ["PIT TAX", `-${r.pit.toFixed(2)}`, "#fbbf24"],
-          ["TOTAL EMPLOYER COST", r.totalCost.toFixed(2), "#e879f9"],
-        ].map(([label, value, color]) => (
-          <div key={label} style={{ background: "#1e293b", borderRadius: "10px", padding: "12px", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "10px", color: "#64748b", fontWeight: 600, letterSpacing: "0.05em", marginBottom: "4px" }}>{label}</div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: color as string }}>{value}</div>
-            <div style={{ fontSize: "10px", color: "#475569" }}>PLN</div>
+        {/* Controls */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
+          <div>
+            <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Hours</span><span className="text-blue-400 font-bold">{hours}h</span>
+            </div>
+            <input type="range" min={1} max={300} value={hours} onChange={e => setHours(Number(e.target.value))} className="w-full accent-blue-500" />
           </div>
-        ))}
-      </div>
 
-      <div style={{ background: "#1e293b", borderRadius: "10px", padding: "12px", border: "1px solid #334155", fontSize: "12px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-          <span style={{ color: "#64748b" }}>Tax Base (Podstawa)</span>
-          <span style={{ color: "#f8fafc", fontWeight: 600 }}>{r.taxBase.toFixed(2)} PLN</span>
+          {mode === "gross" ? (
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Gross Hourly Rate (PLN)</label>
+              <input type="number" step="0.10" value={rate} onChange={e => setRate(Number(e.target.value))} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+              {/* Net per hour display */}
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-slate-500">Net per hour:</span>
+                <span className="text-sm font-black text-green-400">{r.netPerHour.toFixed(2)} PLN/h</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Desired Net Hourly Rate (PLN)</label>
+              <input type="number" step="0.10" value={desiredNetRate} onChange={e => setDesiredNetRate(Number(e.target.value))} className="w-full bg-slate-950 border border-green-700 rounded-lg px-3 py-2 text-green-300 text-sm outline-none" />
+              {/* Gross per hour needed */}
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-slate-500">Gross rate needed:</span>
+                <span className="text-sm font-black text-blue-400">{grossRate.toFixed(2)} PLN/h</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-2 border-t border-slate-800">
+            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={applyPit2} onChange={e => setApplyPit2(e.target.checked)} className="accent-blue-500" />
+              PIT-2 (300 PLN)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={includeSickness} onChange={e => setIncludeSickness(e.target.checked)} className="accent-blue-500" />
+              Sickness (2.45%)
+            </label>
+          </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-          <span style={{ color: "#64748b" }}>Employer ZUS</span>
-          <span style={{ color: "#f8fafc", fontWeight: 600 }}>{r.employerZus.toFixed(2)} PLN</span>
+
+        {/* Per-hour summary card */}
+        <div className="bg-gradient-to-r from-blue-900/50 to-green-900/50 border border-slate-700 rounded-xl p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-xs text-slate-400 uppercase">Gross / Hour</p>
+              <p className="text-lg font-black text-blue-400">{grossRate.toFixed(2)} PLN</p>
+            </div>
+            <div className="text-2xl text-slate-600">→</div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400 uppercase">Net / Hour</p>
+              <p className="text-lg font-black text-green-400">{r.netPerHour.toFixed(2)} PLN</p>
+            </div>
+          </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ color: "#64748b" }}>Contract Type</span>
-          <span style={{ color: "#f8fafc", fontWeight: 600 }}>{contract === "zlecenie" ? "Umowa Zlecenie" : "Umowa o Pracę"}</span>
+
+        {/* Results */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">Gross Monthly</p>
+            <p className="text-xl font-black text-blue-400">{r.gross.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">Net Take-Home</p>
+            <p className="text-xl font-black text-green-400">{r.net.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">Employee ZUS</p>
+            <p className="text-xl font-black text-red-400">-{r.employeeZus.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">Health</p>
+            <p className="text-xl font-black text-red-400">-{r.health.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">PIT Tax</p>
+            <p className="text-xl font-black text-amber-400">-{r.pit.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-400 uppercase mb-1">Total Employer Cost</p>
+            <p className="text-xl font-black text-rose-400">{r.totalCost.toFixed(2)}</p>
+            <p className="text-xs text-slate-500">PLN</p>
+          </div>
+        </div>
+
+        {/* Tax Base Info */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-400">
+          <div className="flex justify-between"><span>Tax Base (Podstawa)</span><span className="text-white">{r.taxBase.toFixed(2)} PLN</span></div>
+          <div className="flex justify-between mt-1"><span>Employer ZUS</span><span className="text-white">{r.employerZus.toFixed(2)} PLN</span></div>
+          <div className="flex justify-between mt-1"><span>Net per Hour</span><span className="text-green-400 font-bold">{r.netPerHour.toFixed(2)} PLN/h</span></div>
+          <div className="flex justify-between mt-1"><span>Contract Type</span><span className="text-white">{contract === "zlecenie" ? "Umowa Zlecenie" : "Umowa o Prace"}</span></div>
+          <div className="flex justify-between mt-1"><span>Mode</span><span className="text-white">{mode === "gross" ? "Gross → Net" : "Net → Gross (Reverse)"}</span></div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
