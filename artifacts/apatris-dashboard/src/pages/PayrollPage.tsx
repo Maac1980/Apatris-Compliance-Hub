@@ -556,8 +556,9 @@ export default function PayrollPage() {
     netto: filteredWorkers.reduce((s, w) => s + w.finalNetto, 0),
   }), [filteredWorkers]);
 
+  // Always calculate ZUS totals for correct Take-Home values
   const zusTotal = useMemo(() => {
-    if (!showZUS || !isAdmin) return null;
+    if (!isAdmin) return null;
     return filteredWorkers.reduce((acc, w) => {
       const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, pit2Overrides[w.id] ?? w.pit2);
       return {
@@ -1252,8 +1253,8 @@ export default function PayrollPage() {
                         {/* Take-home / Netto */}
                         <td className={`${tdCls} text-right`}>
                           <div>
-                            <span className={`text-sm font-mono font-bold ${(showZUS && zus ? zus.takeHome : w.finalNetto) < 0 ? "text-red-400" : "text-green-400"}`}>
-                              {fmt(showZUS && zus ? zus.takeHome : w.finalNetto)}
+                            <span className={`text-sm font-mono font-bold ${(zus ? zus.takeHome : w.finalNetto) < 0 ? "text-red-400" : "text-green-400"}`}>
+                              {fmt(zus ? zus.takeHome : w.finalNetto)}
                             </span>
                             <span className="text-[10px] text-gray-500 ml-1 font-mono">PLN</span>
                           </div>
@@ -1301,10 +1302,19 @@ export default function PayrollPage() {
                         <td className={`${tdCls} text-right text-sm font-mono font-bold text-green-300`}>{fmt(splitTotals.net)}</td>
                       </>;
                     })()}
+                    {/* Net/h + Final Net totals in basic view */}
+                    {!showZUS && isAdmin && zusTotal && (<>
+                      <td className={`${tdCls} text-right text-sm font-mono text-gray-500`}>—</td>
+                      <td className={`${tdCls} text-right text-sm font-mono font-bold text-purple-300`}>{fmt(zusTotal.net)}</td>
+                    </>)}
+                    {/* Net/h total in ZUS view */}
+                    {showZUS && isAdmin && (
+                      <td className={`${tdCls} text-right text-sm font-mono text-gray-500`}>—</td>
+                    )}
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-orange-400`}>{fmt(totals.advances)}</td>
                     <td className={`${tdCls} text-right text-sm font-mono font-bold text-red-400`}>{fmt(totals.penalties)}</td>
                     <td className={`${tdCls} text-right`}>
-                      <span className="text-base font-mono font-bold text-green-400">{fmt(totals.netto)}</span>
+                      <span className="text-base font-mono font-bold text-green-400">{fmt(zusTotal ? zusTotal.take : totals.netto)}</span>
                       <span className="text-xs text-gray-500 ml-1 font-mono">PLN</span>
                     </td>
                   </tr>
