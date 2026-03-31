@@ -137,7 +137,7 @@ const DEFAULT_RATES_2026: ZUSRates = {
   emerytalneEmployee: 9.76,
   rentoweEmployee: 1.5,
   chorobowe: 0,   // voluntary for umowa zlecenie — not included per 2026 standard
-  zdrowotne: 7.9866,
+  zdrowotne: 9.0,
   kup: 20.0,
   pit: 12.0,
   pit2Reduction: 300,
@@ -175,13 +175,14 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 0)) / 100;
   const employeeZUS = gross * zusRate;
   const healthBase = gross - employeeZUS;
-  const healthInsurance = gross * (rates.zdrowotne / 100);
-  // KUP is 20% of Health Base (not gross) — per 2026 Umowa Zlecenie rules
+  // Health insurance = healthBase × 9% (NOT gross × zdrowotne)
+  const healthInsurance = Math.round(healthBase * (rates.zdrowotne / 100) * 100) / 100;
+  // KUP is 20% of healthBase — per 2026 Umowa Zlecenie rules
   const kup = Math.round(healthBase * (rates.kup / 100) * 100) / 100;
   const taxBase = Math.max(0, Math.round(healthBase - kup));
-  const grossTax = taxBase * (rates.pit / 100);
-  // Income tax advance is rounded to nearest integer
-  const estimatedTax = Math.max(0, Math.round(grossTax - (pit2 ? (rates.pit2Reduction ?? 300) : 0)));
+  // PIT = max(0, round(taxBase × 12%) - PIT-2 reduction)
+  const grossTaxRounded = Math.round(taxBase * (rates.pit / 100));
+  const estimatedTax = Math.max(0, grossTaxRounded - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
   const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
   const takeHome = netAfterTax - advance - penalties;
   // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net
@@ -1021,7 +1022,7 @@ export default function PayrollPage() {
                     <span className="text-cyan-400">Bank IBAN ✎</span>
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
-                    {isAdmin ? "Rate (PLN/h)" : <span className="text-gray-600">Rate</span>}
+                    {isAdmin ? "Gross Rate PLN/h" : <span className="text-gray-600">Rate</span>}
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "100px" }}>
                     <span className="text-yellow-400">Hours ✎</span>
@@ -1034,6 +1035,7 @@ export default function PayrollPage() {
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
                     <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Net After Tax</th>
+                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "100px" }}>Net/h</th>
                     <th className={`${thCls} text-right text-orange-400`} style={{ minWidth: "140px" }}>Total Empl. Cost</th>
                   </>}
                   {showZUS && showSplit && isAdmin && <>
@@ -1143,6 +1145,9 @@ export default function PayrollPage() {
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
+                          </td>
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
