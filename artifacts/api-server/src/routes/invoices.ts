@@ -4,26 +4,29 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
-// Ensure invoices table exists
-execute(`
-  CREATE TABLE IF NOT EXISTS invoices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    invoice_number TEXT NOT NULL,
-    client_id UUID,
-    client_name TEXT,
-    month_year TEXT,
-    items JSONB DEFAULT '[]',
-    subtotal NUMERIC(10,2) DEFAULT 0,
-    vat_rate NUMERIC(5,2) DEFAULT 23,
-    vat_amount NUMERIC(10,2) DEFAULT 0,
-    total NUMERIC(10,2) DEFAULT 0,
-    due_date DATE,
-    status TEXT DEFAULT 'draft',
-    paid_at TIMESTAMPTZ,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-`).catch((err) => console.error("[invoices] Table creation error:", err));
+(async () => {
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        invoice_number TEXT NOT NULL,
+        client_id UUID,
+        client_name TEXT,
+        month_year TEXT,
+        items JSONB DEFAULT '[]',
+        subtotal NUMERIC(10,2) DEFAULT 0,
+        vat_rate NUMERIC(5,2) DEFAULT 23,
+        vat_amount NUMERIC(10,2) DEFAULT 0,
+        total NUMERIC(10,2) DEFAULT 0,
+        due_date DATE,
+        status TEXT DEFAULT 'draft',
+        paid_at TIMESTAMPTZ,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  } catch (err) { console.error("[invoices] Table creation error:", err); }
+})();
 
 // GET /invoices — list all
 router.get("/invoices", requireAuth, async (_req, res) => {

@@ -4,20 +4,24 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
-// Ensure job_applications table exists
-execute(`
-  CREATE TABLE IF NOT EXISTS job_applications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    job_id UUID,
-    worker_id TEXT,
-    worker_name TEXT,
-    worker_email TEXT,
-    stage TEXT DEFAULT 'New',
-    match_score REAL DEFAULT 0,
-    notes TEXT,
-    applied_at TIMESTAMPTZ DEFAULT NOW()
-  );
-`).catch((err) => console.error("[applications] Table creation error:", err));
+// Ensure job_applications table exists (must complete before requests)
+(async () => {
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS job_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        job_id UUID,
+        worker_id TEXT,
+        worker_name TEXT,
+        worker_email TEXT,
+        stage TEXT DEFAULT 'New',
+        match_score REAL DEFAULT 0,
+        notes TEXT,
+        applied_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+  } catch (err) { console.error("[applications] Table creation error:", err); }
+})();
 
 // GET /applications — list all, optional ?stage= filter
 router.get("/applications", requireAuth, async (req, res) => {

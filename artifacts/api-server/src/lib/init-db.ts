@@ -746,6 +746,7 @@ export async function initializeDatabase(): Promise<void> {
     console.log("[init-db] Seeded geofences, POA, contracts, and document workflows.");
 
     // ── Seed compliance snapshots (last 14 days) ─────────────────────────
+    await execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cs_tenant_date ON compliance_snapshots(tenant_id, snapshot_date)`);
     const today = new Date();
     for (let d = 13; d >= 0; d--) {
       const date = new Date(today);
@@ -757,7 +758,7 @@ export async function initializeDatabase(): Promise<void> {
       const expired = 6 - compliant - warning - critical;
       await execute(
         `INSERT INTO compliance_snapshots (tenant_id, snapshot_date, total, compliant, warning, critical, expired)
-         VALUES ($1,$2,6,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+         VALUES ($1,$2,6,$3,$4,$5,$6) ON CONFLICT (tenant_id, snapshot_date) DO NOTHING`,
         [defaultTenantId, dateStr, compliant, warning, critical, Math.max(0, expired)]
       );
     }
