@@ -172,18 +172,23 @@ function saveZUSRates(rates: ZUSRates) {
 // pit2: worker has filed PIT-2 → monthly tax advance reduced by rates.pit2Reduction PLN
 // chorobowe defaults to 0 — voluntary for umowa zlecenie (not selected per 2026 standard)
 function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRates, pit2 = false): ZUSBreakdown {
-  const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 0)) / 100;
-  const employeeZUS = gross * zusRate;
+  // Exact same formula as KnowledgeCenter.tsx — round each component separately
+  const pension = Math.round(gross * (rates.emerytalneEmployee / 100) * 100) / 100;
+  const disability = Math.round(gross * (rates.rentoweEmployee / 100) * 100) / 100;
+  const sickness = (rates.chorobowe ?? 0) > 0 ? Math.round(gross * ((rates.chorobowe ?? 0) / 100) * 100) / 100 : 0;
+  const employeeZUS = pension + disability + sickness;
   const healthBase = gross - employeeZUS;
-  // Health insurance = healthBase × 9% (NOT gross × zdrowotne)
+  // Health = healthBase × 9%
   const healthInsurance = Math.round(healthBase * (rates.zdrowotne / 100) * 100) / 100;
-  // KUP is 20% of healthBase — per 2026 Umowa Zlecenie rules
+  // KUP = healthBase × 20%
   const kup = Math.round(healthBase * (rates.kup / 100) * 100) / 100;
+  // taxBase = round(healthBase - KUP)
   const taxBase = Math.max(0, Math.round(healthBase - kup));
-  // PIT = max(0, round(taxBase × 12%) - PIT-2 reduction)
+  // PIT = max(0, round(taxBase × 12%) - 300 with PIT-2)
   const grossTaxRounded = Math.round(taxBase * (rates.pit / 100));
   const estimatedTax = Math.max(0, grossTaxRounded - (pit2 ? (rates.pit2Reduction ?? 300) : 0));
-  const netAfterTax = Math.max(0, gross - employeeZUS - healthInsurance - estimatedTax);
+  // Net = gross - ZUS - health - PIT
+  const netAfterTax = Math.round((gross - employeeZUS - healthInsurance - estimatedTax) * 100) / 100;
   const takeHome = netAfterTax - advance - penalties;
   // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net
   const employerRate = ((rates.emerytalneEmployer ?? 9.76) + (rates.rentoweEmployer ?? 6.5) + (rates.wypadkowe ?? 1.67) + (rates.fp ?? 2.45) + (rates.fgsp ?? 0.10)) / 100;
