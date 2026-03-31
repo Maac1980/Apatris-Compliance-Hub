@@ -6,11 +6,12 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
-  Globe, Building2, UserPlus, Briefcase, Receipt, FileText,
+  Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { path: "/",                   labelKey: "nav.workers",    icon: Users },
+  { path: "/net-per-hour",      labelKey: "nav.netPerHour", icon: DollarSign },
   { path: "/payroll",            labelKey: "nav.payroll",    icon: Calculator },
   { path: "/compliance-alerts",  labelKey: "nav.alerts",     icon: AlertTriangle },
   { path: "/contracts",          labelKey: "nav.contracts",  icon: FileSignature },

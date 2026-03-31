@@ -1,6 +1,7 @@
 {
   "nav": {
     "workers": "Pracownicy",
+    "netPerHour": "Netto/Godz",
     "payroll": "Lista Płac",
     "alerts": "Alerty Compliance",
     "contracts": "Umowy",

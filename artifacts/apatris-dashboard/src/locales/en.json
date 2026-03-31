@@ -1,6 +1,7 @@
 {
   "nav": {
     "workers": "Workers",
+    "netPerHour": "Net/Hour",
     "payroll": "Payroll",
     "alerts": "Alerts",
     "contracts": "Contracts",
