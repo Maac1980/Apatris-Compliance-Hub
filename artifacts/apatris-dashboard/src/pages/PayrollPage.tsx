@@ -210,7 +210,7 @@ function calcSplit(
   // ZUS saved = what WOULD have been deducted if these hours were at Apatris
   const zusRate = (rates.emerytalneEmployee + rates.rentoweEmployee + (rates.chorobowe ?? 2.45)) / 100;
   const wouldBeZUS = otherGross * zusRate;
-  const wouldBeHealth = otherGross * (rates.zdrowotne / 100);
+  const wouldBeHealth = (otherGross - wouldBeZUS) * (rates.zdrowotne / 100);
   const zusSaved = wouldBeZUS + wouldBeHealth;
   const totalNet = mainTakeHome + otherNet;
   return { otherGross, otherPIT, otherNet, zusSaved, totalNet };
@@ -327,7 +327,7 @@ function ZUSRatesModal({ rates, onSave, onClose }: {
           {field("Rentowe (Disability)", "rentoweEmployee", "Employee disability contribution")}
           {field("Chorobowe (Sickness)", "chorobowe", "Employee sickness insurance — 2.45% standard")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">Health & Tax</p>
-          {field("Zdrowotne (Health)", "zdrowotne", "Applied on Gross directly")}
+          {field("Zdrowotne (Health)", "zdrowotne", "Applied on Health Base (Gross − ZUS)")}
           {field("KUP (Cost of Work)", "kup", "Cost of obtaining income — applied on Health Base (Gross − ZUS)")}
           {field("PIT (Income Tax)", "pit", "Flat tax rate before PIT-2 reduction")}
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mt-4 mb-3">PIT-2 Declaration</p>
@@ -1030,9 +1030,10 @@ export default function PayrollPage() {
                   <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}>
                     {isAdmin ? "Gross Total" : <span className="text-gray-600">Gross</span>}
                   </th>
-                  {!showZUS && isAdmin && (
+                  {!showZUS && isAdmin && (<>
                     <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "100px" }}>Net/h</th>
-                  )}
+                    <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Final Net</th>
+                  </>)}
                   {showZUS && isAdmin && <>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Emp. ZUS</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
@@ -1122,12 +1123,15 @@ export default function PayrollPage() {
                             {fmt(w.grossPayout)}
                           </span>
                         </td>
-                        {/* Net/h in basic view (calc even without ZUS toggle) */}
-                        {!showZUS && isAdmin && zus && (
+                        {/* Net/h + Final Net in basic view */}
+                        {!showZUS && isAdmin && zus && (<>
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
                           </td>
-                        )}
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
+                          </td>
+                        </>)}
                         {/* ZUS columns */}
                         {showZUS && isAdmin && zus && <>
                           <td className={`${tdCls} text-right`}>
