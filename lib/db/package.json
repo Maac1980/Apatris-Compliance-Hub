@@ -8,8 +8,8 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push": "echo 'DISABLED: drizzle-kit push drops tables not in schema. Use CREATE TABLE IF NOT EXISTS in route files instead.'",
+    "push-force": "echo 'DISABLED: --force drops production tables. NEVER use this.'"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
