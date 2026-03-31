@@ -413,41 +413,46 @@ body {
   border-right: 1px solid rgba(255,255,255,0.06);
 }
 
-/* Nav tabs — pill-style buttons in scrollable row */
+/* Nav tabs — compact pills, horizontally scrollable */
 .app-top-nav {
   display: flex;
   align-items: center;
   flex: 1;
-  gap: 4px;
-  padding: 0 8px;
+  gap: 3px;
+  padding: 0 6px;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 .app-top-nav::-webkit-scrollbar { display: none; }
 
 .app-top-nav-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  font-size: 11px;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
   font-family: ui-monospace, monospace;
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
   border: none;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.05);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
   color: #64748b;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   flex-shrink: 0;
 }
+/* Hide labels on small screens — icon only */
+.app-top-nav-item span { display: none; }
+@media (min-width: 1024px) { .app-top-nav-item span { display: inline; } }
+
 .app-top-nav-item:hover {
   background: rgba(196,30,24,0.15);
   color: #fca5a5;
-  box-shadow: 0 0 8px rgba(196,30,24,0.15);
+  box-shadow: 0 0 6px rgba(196,30,24,0.12);
 }
 .app-top-nav-item--active {
   background: #C41E18;
