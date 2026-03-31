@@ -66,6 +66,6 @@ export function setDefaultTenantId(id: string): void {
   _defaultTenantId = id;
 }
 
-export function getDefaultTenantId(): string {
-  return _defaultTenantId ?? "00000000-0000-0000-0000-000000000000";
+export function getDefaultTenantId(): string | null {
+  return _defaultTenantId;
 }
