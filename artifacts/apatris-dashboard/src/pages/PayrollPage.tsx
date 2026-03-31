@@ -560,7 +560,7 @@ export default function PayrollPage() {
   const zusTotal = useMemo(() => {
     if (!isAdmin) return null;
     return filteredWorkers.reduce((acc, w) => {
-      const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, pit2Overrides[w.id] ?? w.pit2);
+      const z = calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, pit2Overrides[w.id] ?? true);
       return {
         zus: acc.zus + z.employeeZUS,
         health: acc.health + z.healthInsurance,
@@ -1094,7 +1094,7 @@ export default function PayrollPage() {
                   </tr>
                 ) : (
                   filteredWorkers.map((w) => {
-                    const wPit2 = pit2Overrides[w.id] ?? w.pit2;
+                    const wPit2 = pit2Overrides[w.id] ?? true;
                     const zus = isAdmin ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, wPit2) : null;
                     const wSplitHrs = splitHours[w.id] ?? 0;
                     const split = (showZUS && showSplit && isAdmin && zus) ? calcSplit(zus.takeHome, wSplitHrs, w.hourlyRate, zusRates) : null;
