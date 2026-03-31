@@ -2,7 +2,7 @@ import pkg from "pg";
 const { Pool } = pkg;
 
 // Detect if SSL should be used — Replit's built-in PostgreSQL uses sslmode=disable
-const dbUrl = process.env["DATABASE_URL"] ?? "";
+const dbUrl = process.env["NEON_DATABASE_URL"] ?? "";
 const useSSL = dbUrl.includes("sslmode=disable") || dbUrl.includes("sslmode=prefer")
   ? false
   : process.env["NODE_ENV"] === "production"
