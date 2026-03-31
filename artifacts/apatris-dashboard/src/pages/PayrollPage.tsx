@@ -1180,7 +1180,7 @@ export default function PayrollPage() {
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
-                          <td className={`${tdCls} text-right`}>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
                             <div className="flex flex-col items-end gap-1">
                               <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
                               <div className="flex items-center gap-1">

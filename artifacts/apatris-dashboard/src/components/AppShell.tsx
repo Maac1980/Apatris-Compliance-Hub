@@ -103,10 +103,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={path}
                 onClick={() => setLocation(path)}
                 className={`app-top-nav-item ${active ? "app-top-nav-item--active" : ""}`}
-                style={{ color: active ? "#C41E18" : "#64748b", borderBottomColor: active ? "#C41E18" : "transparent" }}
               >
-                <Icon className="w-4 h-4" />
-                <span className="hidden lg:inline">{t(labelKey)}</span>
+                <Icon className="w-3.5 h-3.5" />
+                <span>{t(labelKey)}</span>
               </button>
             );
           })}
