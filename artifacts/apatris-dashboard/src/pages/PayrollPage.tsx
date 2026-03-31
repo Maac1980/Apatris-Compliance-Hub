@@ -192,6 +192,21 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome, employerZUS, totalEmployerCost };
 }
 
+// Reverse: given desired net/h, find gross/h via binary search
+function reverseNetToGross(desiredNetPerHour: number, hours: number, rates: ZUSRates, pit2: boolean): number {
+  if (hours <= 0 || desiredNetPerHour <= 0) return 0;
+  const targetNet = desiredNetPerHour * hours;
+  let lo = 0, hi = targetNet * 3;
+  for (let i = 0; i < 100; i++) {
+    const midGross = (lo + hi) / 2;
+    const r = calcZUS(midGross, 0, 0, rates, pit2);
+    if (r.netAfterTax < targetNet) lo = midGross;
+    else hi = midGross;
+    if (Math.abs(r.netAfterTax - targetNet) < 0.5) break;
+  }
+  return Math.round(((lo + hi) / 2 / hours) * 100) / 100;
+}
+
 // ─── Split-Employer Calculator ────────────────────────────────────────────────
 // In Poland: if Contract 1 (Apatris) covers minimum wage, Contract 2 (other
 // company) is ZUS-exempt. Worker pays only PIT on the 2nd employer's income.
@@ -1160,7 +1175,27 @@ export default function PayrollPage() {
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-gray-600">want:</span>
+                                <input
+                                  type="number" step="0.5" min="0"
+                                  placeholder="net/h"
+                                  className="w-[52px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-700/50 rounded text-green-300 text-right outline-none focus:border-green-500"
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value);
+                                    if (val > 0 && w.monthlyHours > 0) {
+                                      const needed = reverseNetToGross(val, w.monthlyHours, zusRates, wPit2);
+                                      e.target.title = `Need ${needed} PLN/h gross`;
+                                      const sibling = e.target.nextElementSibling as HTMLElement | null;
+                                      if (sibling) sibling.textContent = `→ ${needed}`;
+                                    }
+                                  }}
+                                />
+                                <span className="text-[9px] font-mono text-blue-400 min-w-[40px]"></span>
+                              </div>
+                            </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
