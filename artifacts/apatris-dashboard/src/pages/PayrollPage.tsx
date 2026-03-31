@@ -1028,8 +1028,11 @@ export default function PayrollPage() {
                     <span className="text-yellow-400">Hours ✎</span>
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}>
-                    {isAdmin ? "Gross (PLN)" : <span className="text-gray-600">Gross</span>}
+                    {isAdmin ? "Gross Total" : <span className="text-gray-600">Gross</span>}
                   </th>
+                  {!showZUS && isAdmin && (
+                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "100px" }}>Net/h</th>
+                  )}
                   {showZUS && isAdmin && <>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Emp. ZUS</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
@@ -1051,7 +1054,7 @@ export default function PayrollPage() {
                     {isAdmin ? <span className="text-red-400">Penalties ✎</span> : <span className="text-gray-600">Penalties</span>}
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "130px" }}>
-                    <span className="text-green-400">{showZUS && isAdmin ? "Take-Home" : "Final Net"}</span>
+                    <span className="text-green-400">Take-Home</span>
                   </th>
                 </tr>
               </thead>
@@ -1070,7 +1073,7 @@ export default function PayrollPage() {
                 ) : (
                   filteredWorkers.map((w) => {
                     const wPit2 = pit2Overrides[w.id] ?? w.pit2;
-                    const zus = (showZUS && isAdmin) ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, wPit2) : null;
+                    const zus = isAdmin ? calcZUS(w.grossPayout, w.advance, w.penalties, zusRates, wPit2) : null;
                     const wSplitHrs = splitHours[w.id] ?? 0;
                     const split = (showZUS && showSplit && isAdmin && zus) ? calcSplit(zus.takeHome, wSplitHrs, w.hourlyRate, zusRates) : null;
                     return (
@@ -1119,6 +1122,12 @@ export default function PayrollPage() {
                             {fmt(w.grossPayout)}
                           </span>
                         </td>
+                        {/* Net/h in basic view (calc even without ZUS toggle) */}
+                        {!showZUS && isAdmin && zus && (
+                          <td className={`${tdCls} text-right`}>
+                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                          </td>
+                        )}
                         {/* ZUS columns */}
                         {showZUS && isAdmin && zus && <>
                           <td className={`${tdCls} text-right`}>
