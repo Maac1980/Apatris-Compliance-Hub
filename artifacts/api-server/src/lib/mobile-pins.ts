@@ -35,6 +35,16 @@ export async function initMobilePinsTable(): Promise<void> {
   const rows = await query<{ count: string }>("SELECT COUNT(*) AS count FROM mobile_pins");
   if (Number(rows[0]?.count ?? 0) > 0) return;
 
+  // Default PINs — used if env vars are not set
+  const DEFAULT_PINS: Record<string, string> = {
+    APATRIS_PASS_AKSHAY: "Apatris2026!",
+    APATRIS_PASS_MANISH: "Apatris2026!",
+    MOBILE_T2_PIN: "legal2026",
+    MOBILE_T3_PIN: "ops2026",
+    MOBILE_T4_PIN: "coord2026",
+    MOBILE_T5_PIN: "worker2026",
+  };
+
   const seeds: Array<{ tier: number; userKey: string; envKey: string }> = [
     { tier: 1, userKey: "akshay",  envKey: "APATRIS_PASS_AKSHAY" },
     { tier: 1, userKey: "manish",  envKey: "APATRIS_PASS_MANISH"  },
@@ -45,7 +55,7 @@ export async function initMobilePinsTable(): Promise<void> {
   ];
 
   for (const { tier, userKey, envKey } of seeds) {
-    const pin = process.env[envKey];
+    const pin = process.env[envKey] ?? DEFAULT_PINS[envKey];
     if (!pin) continue;
     await execute(
       `INSERT INTO mobile_pins (tier, user_key, pin_hash)
@@ -94,15 +104,20 @@ export async function verifyMobilePin(
   );
 
   if (rows.length === 0) {
-    // No records in DB → check if env var is set (failsafe for mis-configured installs)
+    // No records in DB → check env var or default (failsafe)
+    const DEFAULTS: Record<string, string> = {
+      APATRIS_PASS_AKSHAY: "Apatris2026!", APATRIS_PASS_MANISH: "Apatris2026!",
+      MOBILE_T2_PIN: "legal2026", MOBILE_T3_PIN: "ops2026",
+      MOBILE_T4_PIN: "coord2026", MOBILE_T5_PIN: "worker2026",
+    };
     if (tier === 1) {
-      const a = process.env["APATRIS_PASS_AKSHAY"];
-      const m = process.env["APATRIS_PASS_MANISH"];
-      if (a && pin === a) return { name: "Akshay", role: "Executive" };
-      if (m && pin === m) return { name: "Manish", role: "Executive" };
+      const a = process.env["APATRIS_PASS_AKSHAY"] ?? DEFAULTS["APATRIS_PASS_AKSHAY"];
+      const m = process.env["APATRIS_PASS_MANISH"] ?? DEFAULTS["APATRIS_PASS_MANISH"];
+      if (pin === a) return { name: "Akshay", role: "Executive" };
+      if (pin === m) return { name: "Manish", role: "Executive" };
     } else {
       const envKey = `MOBILE_T${tier}_PIN`;
-      const envPin = process.env[envKey];
+      const envPin = process.env[envKey] ?? DEFAULTS[envKey];
       if (!envPin) return null;
       if (pin === envPin) return { name: TIER_TO_ROLE[tier] ?? "User", role: TIER_TO_ROLE[tier] ?? "" };
     }
