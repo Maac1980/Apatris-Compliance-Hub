@@ -272,8 +272,8 @@ function NumCell({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setEditing(false); setDraft(String(value)); } }}
-        className="w-full bg-slate-700 border border-red-500/60 text-white rounded px-1.5 py-0.5 text-sm font-mono focus:outline-none text-right"
-        style={{ maxWidth: "90px" }}
+        className="bg-slate-700 border border-red-500/60 text-white rounded px-1.5 py-0.5 text-sm font-mono focus:outline-none text-right"
+        style={{ width: "85px", maxWidth: "85px" }}
       />
     );
   }

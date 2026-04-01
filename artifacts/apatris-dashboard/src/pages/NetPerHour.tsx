@@ -39,16 +39,18 @@ export default function NetPerHour() {
   const [mode, setMode] = useState<"gross" | "net">("gross");
   const [grossStr, setGrossStr] = useState("31.40");
   const [netStr, setNetStr] = useState("24.56");
+  const [grossCommitted, setGrossCommitted] = useState(31.40);
+  const [netCommitted, setNetCommitted] = useState(24.56);
   const [hours, setHours] = useState(160);
   const [pit2, setPit2] = useState(true);
 
-  const grossInput = parseFloat(grossStr) || 0;
-  const netInput = parseFloat(netStr) || 0;
+  const commitGross = () => { const v = parseFloat(grossStr); if (!isNaN(v) && v > 0) setGrossCommitted(v); };
+  const commitNet = () => { const v = parseFloat(netStr); if (!isNaN(v) && v > 0) setNetCommitted(v); };
 
   const r = useMemo(() => {
-    if (mode === "gross") return { grossRate: grossInput, ...calcFromGross(grossInput, hours, pit2) };
-    return calcFromNet(netInput, hours, pit2);
-  }, [mode, grossInput, netInput, hours, pit2]);
+    if (mode === "gross") return { grossRate: grossCommitted, ...calcFromGross(grossCommitted, hours, pit2) };
+    return calcFromNet(netCommitted, hours, pit2);
+  }, [mode, grossCommitted, netCommitted, hours, pit2]);
 
   const sections = [
     { title: "Gross", items: [
@@ -107,13 +109,17 @@ export default function NetPerHour() {
           {mode === "gross" ? (
             <div className="mb-4">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Gross Per Hour (PLN)</label>
-              <input type="text" inputMode="decimal" value={grossStr} onChange={(e) => setGrossStr(e.target.value)}
+              <input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={grossStr}
+                onChange={(e) => setGrossStr(e.target.value)} onBlur={commitGross}
+                onKeyDown={(e) => { if (e.key === "Enter") commitGross(); }}
                 className="w-full px-4 py-3 bg-slate-800 border-2 border-blue-500/50 rounded-xl text-2xl font-black text-blue-400 outline-none focus:border-blue-400 transition-colors" />
             </div>
           ) : (
             <div className="mb-4">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Desired Net Per Hour (PLN)</label>
-              <input type="text" inputMode="decimal" value={netStr} onChange={(e) => setNetStr(e.target.value)}
+              <input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={netStr}
+                onChange={(e) => setNetStr(e.target.value)} onBlur={commitNet}
+                onKeyDown={(e) => { if (e.key === "Enter") commitNet(); }}
                 className="w-full px-4 py-3 bg-slate-800 border-2 border-emerald-500/50 rounded-xl text-2xl font-black text-emerald-400 outline-none focus:border-emerald-400 transition-colors" />
               <div className="mt-2 text-sm font-bold text-blue-400">
                 → Need gross: {r.grossRate.toFixed(2)} PLN/h

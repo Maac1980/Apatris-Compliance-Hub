@@ -178,14 +178,22 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
-  // mobile_pins
+  // mobile_pins — create if not exists, then add tenant_id if missing
+  await execute(`
+    CREATE TABLE IF NOT EXISTS mobile_pins (
+      tier      INTEGER NOT NULL,
+      user_key  TEXT    NOT NULL,
+      pin_hash  TEXT    NOT NULL,
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (tier, user_key)
+    );
+  `);
   await execute(`
     DO $$ BEGIN
-      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='mobile_pins') THEN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='mobile_pins' AND column_name='tenant_id') THEN
-          ALTER TABLE mobile_pins ADD COLUMN tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
-          CREATE INDEX IF NOT EXISTS idx_mobile_pins_tenant ON mobile_pins(tenant_id);
-        END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='mobile_pins' AND column_name='tenant_id') THEN
+        ALTER TABLE mobile_pins ADD COLUMN tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+        CREATE INDEX IF NOT EXISTS idx_mobile_pins_tenant ON mobile_pins(tenant_id);
       END IF;
     END $$;
   `);
