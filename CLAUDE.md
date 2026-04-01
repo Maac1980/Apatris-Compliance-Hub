@@ -169,3 +169,214 @@ S3_SECRET_ACCESS_KEY=<secret>
 - Vitest unit tests in `artifacts/api-server/src/*.test.ts`
 - Run: `cd artifacts/api-server && npx vitest run`
 - Test coverage: auth, payroll, GDPR, country compliance, ZUS calculations
+
+---
+
+## ROADMAP — Phase 1-3 Execution Plan
+
+### Owner: Manish Shetty
+### Companies: Apatris, EEJ (Euro Edu Jobs), IWS, STPG
+### Workers: 200+ certified welders across Poland, Ireland, Germany
+
+---
+
+## RULES (MUST FOLLOW)
+- Always use pnpm not npm
+- Always build dist before pushing
+- Always test ZUS formula: 160h × 31.40 = 3929.05 net
+- Never use DROP TABLE — only CREATE TABLE IF NOT EXISTS
+- Never break existing features
+- Use NEON_DATABASE_URL for Apatris database connection
+- Push to `main` branch for Apatris
+- After every change: build dist → copy to artifacts → commit → push
+- Replit deploy: `git fetch origin main && git reset --hard origin/main`
+
+---
+
+## PHASE 1 — WEEK 1: Core Business Tools (21 Features)
+
+### 1. CRM Module
+- Client list: company name, NIP, contact person, email, phone, industry
+- Deal pipeline: Lead → Proposal → Negotiation → Won → Active
+- Activity log per client (calls, emails, meetings, notes)
+- Link clients to workers assigned to them
+- Dashboard widget showing pipeline value and conversion rate
+
+### 2. Client Portal
+- Read-only access for clients to see their workers' compliance status
+- Document expiry dashboard per client
+- Worker profiles visible to their employer
+- Secure token-based access (no login required)
+
+### 3. Worker Self-Service Portal
+- Workers login with PIN/biometric
+- See own documents, expiry dates, payslips
+- Submit hours, request leave, upload documents
+- View assigned site and schedule
+
+### 4. Google Workspace Integration (Gmail, Calendar, Drive, Chat)
+- MCP Server: google-workspace
+- Auto-send compliance alerts via Gmail
+- Schedule interviews in Google Calendar
+- Store contracts in Google Drive
+- Team chat notifications in Google Chat
+
+### 5. WhatsApp Alerts via Twilio
+- MCP Server: twilio
+- Send document expiry reminders to workers via WhatsApp
+- Payslip delivery via WhatsApp
+- Shift assignment notifications
+- Two-way messaging (worker can reply)
+
+### 6. AI Contract Generator
+- Generate Umowa Zlecenie / Umowa o Pracę from worker data
+- Auto-fill: name, PESEL, IBAN, rate, site, dates
+- Polish legal templates with RODO clause
+- PDF generation with signature fields
+- One-click send to worker for e-signature
+
+### 7. Worker Matching AI
+- Client requests: "5 TIG welders, Cork, next Monday"
+- AI searches available workers by: specialization, location, documents, experience
+- Match score 0-100 based on fit
+- One-click assign and notify
+
+### 8. Predictive Compliance
+- AI predicts which documents will expire in 30/60/90 days
+- Risk scoring per worker (green/yellow/red)
+- Auto-trigger renewal reminders
+- PIP inspection readiness score
+
+### 9. Salary Prediction AI
+- Predict market rate for role + location + experience
+- Compare worker salary to market median
+- Suggest adjustments for retention
+- Trained on Polish market data
+
+### 10. Legal Change Predictor
+- Monitor Polish government gazette (Dz.U.)
+- Predict impact of upcoming legislation on workforce
+- Alert when new law affects work permits, ZUS, or labor code
+- Auto-update compliance checklists
+
+### 11. Revenue Forecasting
+- Predict monthly revenue based on active contracts
+- Worker utilization rate tracking
+- Margin analysis per client
+- Cash flow projection
+
+### 12. Onboarding Checklist
+- Step-by-step new worker setup
+- Document collection tracker
+- ZUS registration reminder
+- Site safety briefing confirmation
+- Auto-create worker profile when checklist complete
+
+### 13. Invoice Auto-Send
+- Generate Faktura VAT monthly per client
+- Calculate: hours × rate × workers + VAT 23%
+- Auto-send via email on 1st of month
+- Track payment status (sent → paid)
+
+### 14. Salary Advance Request
+- Worker requests advance via mobile app
+- Manager approves/rejects
+- Deducted from next payroll automatically
+- Limit: max 50% of earned amount
+
+### 15. Voice Check-in
+- Worker calls a phone number to check in/out
+- Twilio Voice API records timestamp + caller ID
+- Auto-matches to worker by phone number
+- Replaces manual GPS check-in for sites without internet
+
+### 16. Worker Mood Tracker
+- Weekly pulse survey (1-5 scale) via mobile app
+- "How are you feeling at work this week?"
+- Aggregate mood scores per site
+- Alert manager when site mood drops below threshold
+
+### 17. ESSPASS Integration
+- Track EU digital social security pass
+- Verify posted worker status
+- Auto-check A1 certificate validity
+- Integration with EU ESSPASS portal when available
+
+### 18. ZUS/DRA Tax Filing Auto
+- Generate ZUS DRA declaration monthly
+- Calculate all contribution amounts per worker
+- Export XML for ZUS e-Płatnik submission
+- Track filing status (draft → submitted → confirmed)
+
+### 19. Multi-Country Support
+- Ireland: Revenue.ie tax rules, PRSI contributions
+- Germany: Sozialversicherung, Lohnsteuer
+- Czech Republic: ČSSZ contributions
+- Country-specific payroll calculators
+- Work permit rules per country
+
+### 20. Site Safety AI
+- AI scans uploaded site photos for safety violations
+- PPE detection (helmet, gloves, glasses)
+- Incident reporting with photo evidence
+- Safety score per site
+
+### 21. Competitor Price Monitor
+- Track competitor pricing for welding services
+- Alert when market rates change
+- Pricing recommendation engine
+- Win/loss analysis on proposals
+
+---
+
+## PHASE 2 — ENTERPRISE ARCHITECTURE
+
+### Model Routing
+- Simple queries → Gemini Flash (fast, cheap)
+- Complex reasoning → Claude Sonnet (accurate)
+- Private data → Llama on AWS Bedrock (secure)
+- Image scanning → Claude Vision
+- Real-time search → Perplexity API
+
+### Sub-Agent Architecture
+- Main agent receives request
+- Spawns sub-agents in parallel:
+  * Compliance sub-agent → checks documents
+  * Payroll sub-agent → calculates ZUS
+  * Immigration sub-agent → searches law changes
+  * Notification sub-agent → sends WhatsApp/email
+- Results aggregated and returned to user
+
+### AWS Bedrock Integration
+- Run models privately for sensitive worker data
+- PESEL, IBAN, passport data never leaves AWS
+- Auto-scale based on agency count
+
+### Google Vertex AI
+- AutoML for worker matching
+- Demand forecasting for staffing needs
+- Salary prediction model trained on Polish market data
+
+### MCP Servers
+- google-workspace → Gmail, Calendar, Drive, Chat
+- twilio → WhatsApp, SMS, Voice
+- stripe → Billing, invoices
+- neon → Direct database queries
+- github → Auto deployment
+
+---
+
+## PHASE 3 — SaaS PLATFORM
+
+### Multi-Tenant SaaS
+- Any staffing agency can sign up at apatris.io
+- Starter €199/month (25 workers)
+- Professional €499/month (100 workers)
+- Enterprise €999/month (unlimited)
+- White-label option for large agencies
+
+### API Marketplace
+- Public API for third-party integrations
+- Webhook system for real-time events
+- SDKs for Python, Node.js, .NET
+- Partner program for HR software vendors
