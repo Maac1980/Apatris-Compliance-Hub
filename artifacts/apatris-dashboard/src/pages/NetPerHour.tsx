@@ -22,36 +22,25 @@ function calcFromGross(grossPerHour: number, hours: number, pit2: boolean) {
   return { gross, pension, disability, zus, healthBase, health, kup, taxBase, grossTax, pit, net, netPerHour, employerZus, totalCost };
 }
 
-// Reverse: find gross/h that gives desired net/h, with verification
+// Reverse: estimate gross then walk up by 0.01 until net matches
 function calcFromNet(desiredNetPerHour: number, hours: number, pit2: boolean) {
   if (hours <= 0 || desiredNetPerHour <= 0) return { grossRate: 0, ...calcFromGross(0, hours, pit2) };
 
-  // Step 1: Binary search to narrow down
-  let lo = 0, hi = desiredNetPerHour * 4;
-  for (let i = 0; i < 300; i++) {
-    const mid = (lo + hi) / 2;
-    const r = calcFromGross(mid, hours, pit2);
-    if (r.netPerHour < desiredNetPerHour) lo = mid; else hi = mid;
-    if (hi - lo < 0.0001) break;
-  }
+  const desiredNetMonthly = desiredNetPerHour * hours;
 
-  // Step 2: Round to 2dp
-  let grossRate = Math.round(((lo + hi) / 2) * 100) / 100;
+  // Step 1: estimate using effective deduction rate (~19.25% for Zlecenie with PIT-2)
+  let grossPerHour = Math.round(((desiredNetMonthly + (pit2 ? 300 : 0)) / 0.807534 / hours) * 100) / 100;
 
-  // Step 3: Verify and adjust — try grossRate, grossRate+0.01, grossRate-0.01
-  for (let adj = 0; adj <= 10; adj++) {
-    const candidates = adj === 0 ? [grossRate] : [grossRate + adj * 0.01, grossRate - adj * 0.01];
-    for (const g of candidates) {
-      if (g <= 0) continue;
-      const r = calcFromGross(g, hours, pit2);
-      if (Math.abs(r.netPerHour - desiredNetPerHour) < 0.005) {
-        return { grossRate: Math.round(g * 100) / 100, ...r };
-      }
+  // Step 2-5: verify with exact forward formula, increase by 0.01 if net too low
+  for (let i = 0; i < 200; i++) {
+    const r = calcFromGross(grossPerHour, hours, pit2);
+    if (r.net >= desiredNetMonthly - 0.005) {
+      return { grossRate: grossPerHour, ...r };
     }
+    grossPerHour = Math.round((grossPerHour + 0.01) * 100) / 100;
   }
 
-  // Fallback: return best binary search result
-  return { grossRate, ...calcFromGross(grossRate, hours, pit2) };
+  return { grossRate: grossPerHour, ...calcFromGross(grossPerHour, hours, pit2) };
 }
 
 export default function NetPerHour() {

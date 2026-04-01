@@ -269,18 +269,19 @@ function NumCell({
     return (
       <input
         ref={inputRef} type="number" value={draft} step="0.01" min="0"
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => { const v = e.target.value; if (Number(v) >= 0 || v === "") setDraft(v); }}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setEditing(false); setDraft(String(value)); } }}
-        className="bg-slate-700 border border-red-500/60 text-white rounded px-1.5 py-0.5 text-sm font-mono focus:outline-none text-right"
-        style={{ width: "85px", maxWidth: "85px" }}
+        className="bg-slate-700 border-2 border-yellow-500/70 text-yellow-300 rounded px-1.5 py-1 text-sm font-mono font-bold focus:outline-none focus:border-yellow-400 text-right"
+        style={{ width: "80px" }}
       />
     );
   }
 
   return (
     <button onClick={() => setEditing(true)} title="Click to edit"
-      className={`text-sm font-mono font-semibold text-right w-full transition-colors px-2 py-1 rounded hover:bg-white/5 ${accent ?? "text-gray-200"}`}>
+      className={`text-sm font-mono font-semibold text-right transition-colors px-2 py-1 rounded hover:bg-white/10 hover:ring-1 hover:ring-yellow-500/30 ${accent ?? "text-gray-200"}`}
+      style={{ maxWidth: "80px" }}>
       {fmt(value)}
     </button>
   );
@@ -1180,28 +1181,10 @@ export default function PayrollPage() {
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
-                          <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-gray-600">want:</span>
-                                <input
-                                  type="number" step="0.5" min="0"
-                                  placeholder="net/h"
-                                  className="w-[52px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-700/50 rounded text-green-300 text-right outline-none focus:border-green-500"
-                                  onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    if (val > 0 && w.monthlyHours > 0) {
-                                      const needed = reverseNetToGross(val, w.monthlyHours, zusRates, wPit2);
-                                      e.target.title = `Need ${needed} PLN/h gross`;
-                                      const sibling = e.target.nextElementSibling as HTMLElement | null;
-                                      if (sibling) sibling.textContent = `→ ${needed}`;
-                                    }
-                                  }}
-                                />
-                                <span className="text-[9px] font-mono text-blue-400 min-w-[40px]"></span>
-                              </div>
-                            </div>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "80px" }}>
+                            <span className="text-sm font-mono font-semibold text-green-300">
+                              {w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}
+                            </span>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
