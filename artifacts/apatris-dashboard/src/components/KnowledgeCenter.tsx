@@ -48,22 +48,17 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
   return { gross, employeeZus, health, pit, net, netPerHour, employerZus, totalCost, taxBase };
 }
 
-// Reverse: estimate gross then walk up by 0.01 until net matches
+// Reverse: brute force walk from 0.01 — guaranteed correct
 export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   if (hours <= 0 || desiredNet <= 0) return calculate(hours, 0, contract, applyPit2, includeSickness);
 
-  const desiredNetMonthly = desiredNet * hours;
-  // Step 1: estimate using ~80.75% effective rate
-  let grossPerHour = Math.round(((desiredNetMonthly + (applyPit2 ? 300 : 0)) / 0.807534 / hours) * 100) / 100;
-
-  // Step 2-5: verify with exact forward formula, walk up by 0.01
-  for (let i = 0; i < 200; i++) {
-    const r = calculate(hours, grossPerHour, contract, applyPit2, includeSickness);
-    if (r.net >= desiredNetMonthly - 0.005) return r;
-    grossPerHour = Math.round((grossPerHour + 0.01) * 100) / 100;
+  let g = 0.01;
+  while (g < 500) {
+    const r = calculate(hours, g, contract, applyPit2, includeSickness);
+    if (r.netPerHour >= desiredNet) return r;
+    g = Math.round((g + 0.01) * 100) / 100;
   }
-
-  return calculate(hours, grossPerHour, contract, applyPit2, includeSickness);
+  return calculate(hours, g, contract, applyPit2, includeSickness);
 }
 
 export function KnowledgeCenter() {

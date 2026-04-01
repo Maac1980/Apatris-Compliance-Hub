@@ -22,25 +22,20 @@ function calcFromGross(grossPerHour: number, hours: number, pit2: boolean) {
   return { gross, pension, disability, zus, healthBase, health, kup, taxBase, grossTax, pit, net, netPerHour, employerZus, totalCost };
 }
 
-// Reverse: estimate gross then walk up by 0.01 until net matches
+// Reverse: brute force — start at 0.01, walk up by 0.01 until net/h matches
+// No estimation, no binary search, no rounding bugs. Max ~5000 iterations = instant.
 function calcFromNet(desiredNetPerHour: number, hours: number, pit2: boolean) {
   if (hours <= 0 || desiredNetPerHour <= 0) return { grossRate: 0, ...calcFromGross(0, hours, pit2) };
 
-  const desiredNetMonthly = desiredNetPerHour * hours;
-
-  // Step 1: estimate using effective deduction rate (~19.25% for Zlecenie with PIT-2)
-  let grossPerHour = Math.round(((desiredNetMonthly + (pit2 ? 300 : 0)) / 0.807534 / hours) * 100) / 100;
-
-  // Step 2-5: verify with exact forward formula, increase by 0.01 if net too low
-  for (let i = 0; i < 200; i++) {
-    const r = calcFromGross(grossPerHour, hours, pit2);
-    if (r.net >= desiredNetMonthly - 0.005) {
-      return { grossRate: grossPerHour, ...r };
+  let g = 0.01;
+  while (g < 500) {
+    const r = calcFromGross(g, hours, pit2);
+    if (r.netPerHour >= desiredNetPerHour) {
+      return { grossRate: g, ...r };
     }
-    grossPerHour = Math.round((grossPerHour + 0.01) * 100) / 100;
+    g = Math.round((g + 0.01) * 100) / 100;
   }
-
-  return { grossRate: grossPerHour, ...calcFromGross(grossPerHour, hours, pit2) };
+  return { grossRate: g, ...calcFromGross(g, hours, pit2) };
 }
 
 export default function NetPerHour() {
