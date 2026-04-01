@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { path: "/net-per-hour",      label: "Net/h",       icon: DollarSign },
   { path: "/payroll",            label: "Payroll",     icon: Calculator },
   { path: "/compliance-alerts",  label: "Alerts",      icon: AlertTriangle },
   { path: "/contracts",          label: "Contracts",   icon: FileSignature },

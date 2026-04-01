@@ -43,7 +43,6 @@ import ApplicationsFeed from "@/pages/ApplicationsFeed";
 import JobBoard from "@/pages/JobBoard";
 import InvoiceManagement from "@/pages/InvoiceManagement";
 import PricingPage from "@/pages/PricingPage";
-import NetPerHour from "@/pages/NetPerHour";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -170,9 +169,6 @@ function Router() {
         {() => <ProtectedRoute component={InvoiceManagement} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
-      <Route path="/net-per-hour">
-        {() => <ProtectedRoute component={NetPerHour} />}
-      </Route>
       <Route path="/calculator">
         {() => <ProtectedRoute component={() => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><KnowledgeCenter /></div>} />}
       </Route>

@@ -6,7 +6,7 @@ export async function seedSampleData(): Promise<void> {
     const countRows = await query<{ count: string }>("SELECT COUNT(*) AS count FROM workers");
     const workerCount = parseInt(countRows[0]?.count ?? "0", 10);
 
-    if (workerCount >= 5) {
+    if (workerCount >= 6) {
       console.log(`[seed] Workers table already has ${workerCount} rows — skipping seed.`);
       return;
     }

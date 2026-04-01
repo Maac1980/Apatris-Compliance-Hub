@@ -543,7 +543,7 @@ export async function initializeDatabase(): Promise<void> {
     (await query<{ count: string }>("SELECT count(*)::text AS count FROM workers"))[0]?.count ?? "0", 10
   );
 
-  if (workerCount === 0 && defaultTenantId) {
+  if (workerCount < 6 && defaultTenantId) {
     console.log("[init-db] Seeding demo workers…");
     const workers = [
       {

@@ -1147,8 +1147,22 @@ export default function PayrollPage() {
                         </td>
                         {/* Net/h + Final Net in basic view */}
                         {!showZUS && isAdmin && zus && (<>
-                          <td className={`${tdCls} text-right`}>
-                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "90px" }}>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                              <input type="number" step="0.01" min="0" placeholder="set"
+                                className="w-[70px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-600/40 rounded text-green-300 text-right outline-none focus:border-green-400"
+                                onBlur={(e) => {
+                                  const desired = Number(e.target.value);
+                                  if (desired > 0 && w.monthlyHours > 0) {
+                                    const desiredMonthly = desired * w.monthlyHours;
+                                    let gm = Math.round(desiredMonthly * 1.20);
+                                    while (gm > 0) { const r = calcZUS(gm, 0, 0, zusRates, wPit2); if (r.netAfterTax < desiredMonthly) { gm += 1; break; } gm -= 1; }
+                                    for (let i = 0; i < 200; i++) { const g = gm + i * 0.01; const r = calcZUS(g, 0, 0, zusRates, wPit2); if (r.netAfterTax >= desiredMonthly) { handleSave(w.id, "hourlyRate", Math.round(g / w.monthlyHours * 100) / 100); break; } }
+                                  }
+                                }}
+                              />
+                            </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
@@ -1181,10 +1195,32 @@ export default function PayrollPage() {
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
-                          <td className={`${tdCls} text-right`} style={{ minWidth: "80px" }}>
-                            <span className="text-sm font-mono font-semibold text-green-300">
-                              {w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}
-                            </span>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "90px" }}>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-sm font-mono font-semibold text-green-300">
+                                {w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}
+                              </span>
+                              <input type="number" step="0.01" min="0" placeholder="set net/h"
+                                className="w-[70px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-600/40 rounded text-green-300 text-right outline-none focus:border-green-400"
+                                onBlur={(e) => {
+                                  const desired = Number(e.target.value);
+                                  if (desired > 0 && w.monthlyHours > 0) {
+                                    const desiredMonthly = desired * w.monthlyHours;
+                                    let gm = Math.round(desiredMonthly * 1.20);
+                                    while (gm > 0) {
+                                      const r = calcZUS(gm, 0, 0, zusRates, wPit2);
+                                      if (r.netAfterTax < desiredMonthly) { gm += 1; break; }
+                                      gm -= 1;
+                                    }
+                                    for (let i = 0; i < 200; i++) {
+                                      const g = gm + i * 0.01;
+                                      const r = calcZUS(g, 0, 0, zusRates, wPit2);
+                                      if (r.netAfterTax >= desiredMonthly) { handleSave(w.id, "hourlyRate", Math.round(g / w.monthlyHours * 100) / 100); break; }
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
