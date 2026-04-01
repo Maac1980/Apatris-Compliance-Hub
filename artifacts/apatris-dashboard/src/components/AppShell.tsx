@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
+import { ChevronDown } from "lucide-react";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
@@ -9,37 +10,47 @@ import {
   Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { path: "/",                   labelKey: "nav.workers",    icon: Users },
-  { path: "/net-per-hour",      labelKey: "nav.netPerHour", icon: DollarSign },
-  { path: "/payroll",            labelKey: "nav.payroll",    icon: Calculator },
-  { path: "/compliance-alerts",  labelKey: "nav.alerts",     icon: AlertTriangle },
-  { path: "/contracts",          labelKey: "nav.contracts",  icon: FileSignature },
-  { path: "/doc-workflow",       labelKey: "nav.documents",  icon: FileCheck },
-  { path: "/gps-tracking",      labelKey: "nav.gps",        icon: MapPin },
-  { path: "/analytics",         labelKey: "nav.analytics",  icon: BarChart3 },
-  { path: "/ai-copilot",        labelKey: "nav.ai",         icon: Sparkles },
-  { path: "/regulatory",        labelKey: "nav.regulatory", icon: Shield },
-  { path: "/immigration-search",labelKey: "nav.immigration",icon: Search },
-  { path: "/trc-service",       labelKey: "nav.trc",        icon: FileCheck },
-  { path: "/availability",      labelKey: "nav.availability",icon: CalendarDays },
-  { path: "/shift-schedule",    labelKey: "nav.shifts",     icon: Clock },
-  { path: "/skills-matrix",     labelKey: "nav.skills",     icon: Award },
-  { path: "/salary-benchmark",  labelKey: "nav.benchmark",  icon: TrendingUp },
-  { path: "/ai-audit",          labelKey: "nav.aiAudit",    icon: Shield },
-  { path: "/history",            labelKey: "nav.history",    icon: History },
-  { path: "/admin-settings",    labelKey: "nav.settings",   icon: Settings },
-  { path: "/calculator",        labelKey: "nav.calculator", icon: Calculator },
-  { path: "/gdpr",              labelKey: "nav.gdpr",       icon: Shield },
-  { path: "/posted-workers",    labelKey: "nav.postedWorkers", icon: Globe },
-  { path: "/country-compliance",labelKey: "nav.countryCompliance", icon: Globe },
-  { path: "/hours",             labelKey: "nav.hours",      icon: Clock },
-  { path: "/system-logs",       labelKey: "nav.logs",       icon: FileText },
-  { path: "/clients",           labelKey: "nav.clients",    icon: Building2 },
-  { path: "/pay-transparency",  labelKey: "nav.payTransparency", icon: BarChart3 },
-  { path: "/applications",      labelKey: "nav.applications", icon: UserPlus },
-  { path: "/job-board",         labelKey: "nav.jobBoard",   icon: Briefcase },
-  { path: "/invoices",          labelKey: "nav.invoices",   icon: Receipt },
+const NAV_CATEGORIES = [
+  { label: "Workers", icon: Users, items: [
+    { path: "/", label: "Dashboard" },
+    { path: "/compliance-alerts", label: "Compliance" },
+    { path: "/doc-workflow", label: "Documents" },
+    { path: "/gps-tracking", label: "GPS" },
+    { path: "/hours", label: "Hours" },
+    { path: "/applications", label: "Applications" },
+    { path: "/job-board", label: "Job Board" },
+  ]},
+  { label: "Payroll", icon: Calculator, items: [
+    { path: "/payroll", label: "Ledger" },
+    { path: "/net-per-hour", label: "Net/Hour Calc" },
+    { path: "/calculator", label: "ZUS Calculator" },
+    { path: "/history", label: "History" },
+    { path: "/invoices", label: "Invoices" },
+    { path: "/pay-transparency", label: "Pay Report" },
+    { path: "/salary-benchmark", label: "Benchmark" },
+  ]},
+  { label: "Operations", icon: FileSignature, items: [
+    { path: "/contracts", label: "Contracts" },
+    { path: "/shift-schedule", label: "Shifts" },
+    { path: "/availability", label: "Availability" },
+    { path: "/skills-matrix", label: "Skills" },
+    { path: "/trc-service", label: "TRC Service" },
+    { path: "/posted-workers", label: "Posted Workers" },
+  ]},
+  { label: "Intelligence", icon: Sparkles, items: [
+    { path: "/regulatory", label: "Regulatory" },
+    { path: "/immigration-search", label: "Immigration" },
+    { path: "/ai-copilot", label: "AI Copilot" },
+    { path: "/ai-audit", label: "AI Audit" },
+    { path: "/analytics", label: "Analytics" },
+    { path: "/country-compliance", label: "Countries" },
+  ]},
+  { label: "Settings", icon: Settings, items: [
+    { path: "/admin-settings", label: "Admin" },
+    { path: "/gdpr", label: "GDPR" },
+    { path: "/clients", label: "Clients" },
+    { path: "/system-logs", label: "Logs" },
+  ]},
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -94,19 +105,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Desktop inline nav tabs */}
+        {/* Desktop nav — 5 dropdown categories */}
         <nav className="app-top-nav">
-          {NAV_ITEMS.map(({ path, labelKey, icon: Icon }) => {
-            const active = isActive(path);
+          {NAV_CATEGORIES.map((cat) => {
+            const CatIcon = cat.icon;
+            const hasActive = cat.items.some((item) => isActive(item.path));
             return (
-              <button
-                key={path}
-                onClick={() => setLocation(path)}
-                className={`app-top-nav-item ${active ? "app-top-nav-item--active" : ""}`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{t(labelKey)}</span>
-              </button>
+              <div key={cat.label} className="relative group">
+                <button className={`app-top-nav-item ${hasActive ? "app-top-nav-item--active" : ""}`}>
+                  <CatIcon className="w-3.5 h-3.5" />
+                  <span>{cat.label}</span>
+                  <ChevronDown className="w-3 h-3 opacity-50" />
+                </button>
+                <div className="absolute top-full left-0 mt-1 min-w-[180px] bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[300] py-1">
+                  {cat.items.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                      <button key={item.path} onClick={() => setLocation(item.path)}
+                        className={`w-full text-left px-3 py-2 text-xs font-mono transition-colors ${active ? "bg-primary/20 text-white font-bold" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>

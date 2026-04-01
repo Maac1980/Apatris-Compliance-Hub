@@ -1135,7 +1135,7 @@ export default function PayrollPage() {
                             : <span className="text-sm font-mono text-gray-600 block text-right">{fmt(w.hourlyRate)}</span>}
                         </td>
                         {/* Hours */}
-                        <td className={`${tdCls} text-right`}>
+                        <td className={`${tdCls} text-right`} style={{ minWidth: "100px", maxWidth: "100px" }}>
                           <NumCell value={w.monthlyHours} workerId={w.id} field="monthlyHours" onSave={handleSave} accent="text-yellow-400" />
                         </td>
                         {/* Gross */}

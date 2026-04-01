@@ -37,10 +37,13 @@ function calcFromNet(desiredNetPerHour: number, hours: number, pit2: boolean) {
 
 export default function NetPerHour() {
   const [mode, setMode] = useState<"gross" | "net">("gross");
-  const [grossInput, setGrossInput] = useState(31.40);
-  const [netInput, setNetInput] = useState(24.56);
+  const [grossStr, setGrossStr] = useState("31.40");
+  const [netStr, setNetStr] = useState("24.56");
   const [hours, setHours] = useState(160);
   const [pit2, setPit2] = useState(true);
+
+  const grossInput = parseFloat(grossStr) || 0;
+  const netInput = parseFloat(netStr) || 0;
 
   const r = useMemo(() => {
     if (mode === "gross") return { grossRate: grossInput, ...calcFromGross(grossInput, hours, pit2) };
@@ -104,13 +107,13 @@ export default function NetPerHour() {
           {mode === "gross" ? (
             <div className="mb-4">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Gross Per Hour (PLN)</label>
-              <input type="number" step="0.01" value={grossInput} onChange={(e) => setGrossInput(Number(e.target.value))}
+              <input type="text" inputMode="decimal" value={grossStr} onChange={(e) => setGrossStr(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border-2 border-blue-500/50 rounded-xl text-2xl font-black text-blue-400 outline-none focus:border-blue-400 transition-colors" />
             </div>
           ) : (
             <div className="mb-4">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Desired Net Per Hour (PLN)</label>
-              <input type="number" step="0.01" value={netInput} onChange={(e) => setNetInput(Number(e.target.value))}
+              <input type="text" inputMode="decimal" value={netStr} onChange={(e) => setNetStr(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border-2 border-emerald-500/50 rounded-xl text-2xl font-black text-emerald-400 outline-none focus:border-emerald-400 transition-colors" />
               <div className="mt-2 text-sm font-bold text-blue-400">
                 → Need gross: {r.grossRate.toFixed(2)} PLN/h
