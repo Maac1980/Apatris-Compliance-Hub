@@ -29,8 +29,8 @@ export async function seedSampleData(): Promise<void> {
 
     for (const w of workers) {
       await execute(
-        `INSERT INTO workers (full_name, specialization, assigned_site, trc_expiry, passport_expiry, bhp_expiry, contract_end_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        `INSERT INTO workers (full_name, specialization, assigned_site, trc_expiry, passport_expiry, bhp_expiry, contract_end_date, hourly_rate, monthly_hours)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 31.40, 160)`,
         [w.name, w.spec, w.site, w.trc, w.passport, w.bhp, w.contract]
       );
     }

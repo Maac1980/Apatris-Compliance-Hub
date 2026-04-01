@@ -48,19 +48,29 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
   return { gross, employeeZus, health, pit, net, netPerHour, employerZus, totalCost, taxBase };
 }
 
-// Reverse calculator: given desired net, find gross rate per hour
+// Reverse calculator: given desired net/h, find gross rate/h with verification
 export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
-  // Binary search for the gross rate that produces the desired net
-  let lo = 0, hi = desiredNet * 3;
-  for (let i = 0; i < 100; i++) {
+  if (hours <= 0 || desiredNet <= 0) return calculate(hours, 0, contract, applyPit2, includeSickness);
+  let lo = 0, hi = desiredNet * 4;
+  for (let i = 0; i < 300; i++) {
     const mid = (lo + hi) / 2;
-    const result = calculate(hours, mid, contract, applyPit2, includeSickness);
-    const netPerHour = hours > 0 ? result.net / hours : 0;
-    if (netPerHour < desiredNet) lo = mid;
-    else hi = mid;
-    if (Math.abs(netPerHour - desiredNet) < 0.005) break;
+    const r = calculate(hours, mid, contract, applyPit2, includeSickness);
+    if (r.netPerHour < desiredNet) lo = mid; else hi = mid;
+    if (hi - lo < 0.0001) break;
   }
-  const grossRate = Math.round(((lo + hi) / 2) * 100) / 100;
+  let grossRate = Math.round(((lo + hi) / 2) * 100) / 100;
+  // Verify and adjust by 0.01 until net/h matches within 0.005
+  for (let adj = 0; adj <= 10; adj++) {
+    const candidates = adj === 0 ? [grossRate] : [grossRate + adj * 0.01, grossRate - adj * 0.01];
+    for (const g of candidates) {
+      if (g <= 0) continue;
+      const r = calculate(hours, g, contract, applyPit2, includeSickness);
+      if (Math.abs(r.netPerHour - desiredNet) < 0.005) {
+        grossRate = Math.round(g * 100) / 100;
+        return calculate(hours, grossRate, contract, applyPit2, includeSickness);
+      }
+    }
+  }
   return calculate(hours, grossRate, contract, applyPit2, includeSickness);
 }
 

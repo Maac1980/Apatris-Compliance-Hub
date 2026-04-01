@@ -511,8 +511,8 @@ export default function PayrollPage() {
     if (!data?.workers) return [];
     return data.workers.map((w) => {
       const p = pending[w.id] ?? {};
-      const hourlyRate = p.hourlyRate ?? w.hourlyRate;
-      const monthlyHours = p.monthlyHours ?? w.monthlyHours;
+      const hourlyRate = p.hourlyRate ?? w.hourlyRate ?? 31.40;
+      const monthlyHours = p.monthlyHours ?? w.monthlyHours ?? 160;
       const advance = p.advance ?? w.advance;
       const penalties = p.penalties ?? w.penalties;
       const grossPayout = hourlyRate * monthlyHours;
