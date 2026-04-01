@@ -287,6 +287,56 @@ function NumCell({
   );
 }
 
+// ─── Net/h editable cell — click to type desired net, reverse-calcs gross ────
+function NetHourCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSave }: {
+  netPerHour: number; monthlyHours: number; workerId: string;
+  zusRates: ZUSRates; pit2: boolean;
+  onSave: (id: string, field: string, val: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const desired = parseFloat(draft);
+    if (!isNaN(desired) && desired > 0 && monthlyHours > 0) {
+      // Brute force: walk gross/h by 0.01 until net/h >= desired
+      let g = 0.01;
+      while (g < 500) {
+        const r = calcZUS(g * monthlyHours, 0, 0, zusRates, pit2);
+        if (r.netAfterTax / monthlyHours >= desired - 0.005) {
+          onSave(workerId, "hourlyRate", g);
+          break;
+        }
+        g = Math.round((g + 0.01) * 100) / 100;
+      }
+    }
+  };
+
+  if (editing) {
+    return (
+      <input ref={inputRef} type="number" step="0.01" min="0" value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        className="bg-slate-700 border-2 border-green-500/70 text-green-300 rounded px-1.5 py-1 text-sm font-mono font-bold focus:outline-none text-right"
+        style={{ width: "80px" }}
+      />
+    );
+  }
+
+  return (
+    <button onClick={() => { setDraft(netPerHour.toFixed(2)); setEditing(true); }} title="Click to set desired net/h"
+      className="text-sm font-mono font-semibold text-right transition-colors px-2 py-1 rounded hover:bg-green-500/10 hover:ring-1 hover:ring-green-500/30 text-green-300"
+      style={{ maxWidth: "80px" }}>
+      {netPerHour > 0 ? netPerHour.toFixed(2) : "—"}
+    </button>
+  );
+}
+
 // ─── ZUS Rates Editor Modal ───────────────────────────────────────────────────
 function ZUSRatesModal({ rates, onSave, onClose }: {
   rates: ZUSRates; onSave: (r: ZUSRates) => void; onClose: () => void;
@@ -1147,24 +1197,8 @@ export default function PayrollPage() {
                         </td>
                         {/* Net/h + Final Net in basic view */}
                         {!showZUS && isAdmin && zus && (<>
-                          <td className={`${tdCls} text-right`} style={{ minWidth: "120px" }}>
-                            <div className="flex items-center justify-end gap-1">
-                              <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
-                              <input type="number" step="0.01" min="0" placeholder="✎"
-                                className="w-[50px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-500/50 rounded text-green-200 text-right outline-none focus:border-green-400"
-                                onBlur={(e) => {
-                                  const desired = Number(e.target.value);
-                                  if (desired > 0 && w.monthlyHours > 0) {
-                                    let g = 0.01;
-                                    while (g < 500) {
-                                      const r = calcZUS(g * w.monthlyHours, 0, 0, zusRates, wPit2);
-                                      if (r.netAfterTax / w.monthlyHours >= desired - 0.005) { handleSave(w.id, "hourlyRate", g); break; }
-                                      g = Math.round((g + 0.01) * 100) / 100;
-                                    }
-                                  }
-                                }}
-                              />
-                            </div>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
+                            <NetHourCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
@@ -1197,26 +1231,8 @@ export default function PayrollPage() {
                           <td className={`${tdCls} text-right`}>
                             <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
                           </td>
-                          <td className={`${tdCls} text-right`} style={{ minWidth: "120px" }}>
-                            <div className="flex items-center justify-end gap-1">
-                              <span className="text-sm font-mono font-semibold text-green-300">
-                                {w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}
-                              </span>
-                              <input type="number" step="0.01" min="0" placeholder="✎"
-                                className="w-[50px] px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-green-500/50 rounded text-green-200 text-right outline-none focus:border-green-400"
-                                onBlur={(e) => {
-                                  const desired = Number(e.target.value);
-                                  if (desired > 0 && w.monthlyHours > 0) {
-                                    let g = 0.01;
-                                    while (g < 500) {
-                                      const r = calcZUS(g * w.monthlyHours, 0, 0, zusRates, wPit2);
-                                      if (r.netAfterTax / w.monthlyHours >= desired - 0.005) { handleSave(w.id, "hourlyRate", g); break; }
-                                      g = Math.round((g + 0.01) * 100) / 100;
-                                    }
-                                  }
-                                }}
-                              />
-                            </div>
+                          <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
+                            <NetHourCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
