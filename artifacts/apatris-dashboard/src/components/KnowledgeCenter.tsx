@@ -48,29 +48,16 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
   return { gross, employeeZus, health, pit, net, netPerHour, employerZus, totalCost, taxBase };
 }
 
-// Reverse: walk monthly gross by 0.01 PLN for exact net match
+// Reverse: walk gross/h by 0.01, return first where netPerHour >= desired
 export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   if (hours <= 0 || desiredNet <= 0) return calculate(hours, 0, contract, applyPit2, includeSickness);
-
-  const desiredNetMonthly = Math.round(desiredNet * hours * 100) / 100;
-  // Start estimate then walk monthly gross by 0.01
-  let grossMonthly = Math.round(desiredNetMonthly * 1.20);
-  // Walk down to find the lowest gross that gives net >= desired
-  while (grossMonthly > 0) {
-    const rate = Math.round((grossMonthly / hours) * 10000) / 10000;
-    const r = calculate(hours, rate, contract, applyPit2, includeSickness);
-    if (r.net < desiredNetMonthly) { grossMonthly += 1; break; }
-    grossMonthly -= 1;
+  let g = 0.01;
+  while (g < 500) {
+    const r = calculate(hours, g, contract, applyPit2, includeSickness);
+    if (r.netPerHour >= desiredNet) return r;
+    g = Math.round((g + 0.01) * 100) / 100;
   }
-  // Now walk up by 0.01 PLN monthly for precision
-  for (let i = 0; i < 200; i++) {
-    const gm = grossMonthly + i * 0.01;
-    const rate = gm / hours;
-    const r = calculate(hours, rate, contract, applyPit2, includeSickness);
-    if (r.net >= desiredNetMonthly) return r;
-  }
-  const rate = grossMonthly / hours;
-  return calculate(hours, rate, contract, applyPit2, includeSickness);
+  return calculate(hours, g, contract, applyPit2, includeSickness);
 }
 
 export function KnowledgeCenter() {
