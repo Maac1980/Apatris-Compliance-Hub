@@ -48,30 +48,22 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
   return { gross, employeeZus, health, pit, net, netPerHour, employerZus, totalCost, taxBase };
 }
 
-// Reverse calculator: given desired net/h, find gross rate/h with verification
+// Reverse: estimate gross then walk up by 0.01 until net matches
 export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   if (hours <= 0 || desiredNet <= 0) return calculate(hours, 0, contract, applyPit2, includeSickness);
-  let lo = 0, hi = desiredNet * 4;
-  for (let i = 0; i < 300; i++) {
-    const mid = (lo + hi) / 2;
-    const r = calculate(hours, mid, contract, applyPit2, includeSickness);
-    if (r.netPerHour < desiredNet) lo = mid; else hi = mid;
-    if (hi - lo < 0.0001) break;
+
+  const desiredNetMonthly = desiredNet * hours;
+  // Step 1: estimate using ~80.75% effective rate
+  let grossPerHour = Math.round(((desiredNetMonthly + (applyPit2 ? 300 : 0)) / 0.807534 / hours) * 100) / 100;
+
+  // Step 2-5: verify with exact forward formula, walk up by 0.01
+  for (let i = 0; i < 200; i++) {
+    const r = calculate(hours, grossPerHour, contract, applyPit2, includeSickness);
+    if (r.net >= desiredNetMonthly - 0.005) return r;
+    grossPerHour = Math.round((grossPerHour + 0.01) * 100) / 100;
   }
-  let grossRate = Math.round(((lo + hi) / 2) * 100) / 100;
-  // Verify and adjust by 0.01 until net/h matches within 0.005
-  for (let adj = 0; adj <= 10; adj++) {
-    const candidates = adj === 0 ? [grossRate] : [grossRate + adj * 0.01, grossRate - adj * 0.01];
-    for (const g of candidates) {
-      if (g <= 0) continue;
-      const r = calculate(hours, g, contract, applyPit2, includeSickness);
-      if (Math.abs(r.netPerHour - desiredNet) < 0.005) {
-        grossRate = Math.round(g * 100) / 100;
-        return calculate(hours, grossRate, contract, applyPit2, includeSickness);
-      }
-    }
-  }
-  return calculate(hours, grossRate, contract, applyPit2, includeSickness);
+
+  return calculate(hours, grossPerHour, contract, applyPit2, includeSickness);
 }
 
 export function KnowledgeCenter() {

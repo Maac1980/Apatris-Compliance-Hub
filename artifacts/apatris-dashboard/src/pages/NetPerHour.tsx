@@ -136,9 +136,12 @@ export default function NetPerHour() {
           )}
           <div className="mb-3">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Hours / Month</label>
-            <input type="range" min={1} max={300} value={hours} onChange={(e) => setHours(Number(e.target.value))}
-              className="w-full accent-primary" />
-            <div className="text-right text-sm font-bold text-white">{hours}h</div>
+            <div className="flex items-center gap-3">
+              <input type="range" min={0} max={360} value={hours} onChange={(e) => setHours(Number(e.target.value))}
+                className="flex-1 accent-primary" />
+              <input type="number" min={0} max={360} value={hours} onChange={(e) => { const v = Math.max(0, Math.min(360, Number(e.target.value) || 0)); setHours(v); }}
+                className="w-16 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-sm font-bold text-white text-center outline-none focus:border-primary" />
+            </div>
           </div>
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" checked={pit2} onChange={(e) => setPit2(e.target.checked)}
