@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
-import { ChevronDown } from "lucide-react";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
@@ -10,47 +9,37 @@ import {
   Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign,
 } from "lucide-react";
 
-const NAV_CATEGORIES = [
-  { label: "Workers", icon: Users, items: [
-    { path: "/", label: "Dashboard" },
-    { path: "/compliance-alerts", label: "Compliance" },
-    { path: "/doc-workflow", label: "Documents" },
-    { path: "/gps-tracking", label: "GPS" },
-    { path: "/hours", label: "Hours" },
-    { path: "/applications", label: "Applications" },
-    { path: "/job-board", label: "Job Board" },
-  ]},
-  { label: "Payroll", icon: Calculator, items: [
-    { path: "/payroll", label: "Ledger" },
-    { path: "/net-per-hour", label: "Net/Hour Calc" },
-    { path: "/calculator", label: "ZUS Calculator" },
-    { path: "/history", label: "History" },
-    { path: "/invoices", label: "Invoices" },
-    { path: "/pay-transparency", label: "Pay Report" },
-    { path: "/salary-benchmark", label: "Benchmark" },
-  ]},
-  { label: "Operations", icon: FileSignature, items: [
-    { path: "/contracts", label: "Contracts" },
-    { path: "/shift-schedule", label: "Shifts" },
-    { path: "/availability", label: "Availability" },
-    { path: "/skills-matrix", label: "Skills" },
-    { path: "/trc-service", label: "TRC Service" },
-    { path: "/posted-workers", label: "Posted Workers" },
-  ]},
-  { label: "Intelligence", icon: Sparkles, items: [
-    { path: "/regulatory", label: "Regulatory" },
-    { path: "/immigration-search", label: "Immigration" },
-    { path: "/ai-copilot", label: "AI Copilot" },
-    { path: "/ai-audit", label: "AI Audit" },
-    { path: "/analytics", label: "Analytics" },
-    { path: "/country-compliance", label: "Countries" },
-  ]},
-  { label: "Settings", icon: Settings, items: [
-    { path: "/admin-settings", label: "Admin" },
-    { path: "/gdpr", label: "GDPR" },
-    { path: "/clients", label: "Clients" },
-    { path: "/system-logs", label: "Logs" },
-  ]},
+const NAV_ITEMS = [
+  { path: "/",                   label: "Workers",     icon: Users },
+  { path: "/net-per-hour",      label: "Net/h",       icon: DollarSign },
+  { path: "/payroll",            label: "Payroll",     icon: Calculator },
+  { path: "/compliance-alerts",  label: "Alerts",      icon: AlertTriangle },
+  { path: "/contracts",          label: "Contracts",   icon: FileSignature },
+  { path: "/doc-workflow",       label: "Docs",        icon: FileCheck },
+  { path: "/gps-tracking",      label: "GPS",         icon: MapPin },
+  { path: "/analytics",         label: "Analytics",   icon: BarChart3 },
+  { path: "/ai-copilot",        label: "AI",          icon: Sparkles },
+  { path: "/regulatory",        label: "Regulatory",  icon: Shield },
+  { path: "/immigration-search",label: "Immigration", icon: Search },
+  { path: "/trc-service",       label: "TRC",         icon: FileCheck },
+  { path: "/availability",      label: "Avail",       icon: CalendarDays },
+  { path: "/shift-schedule",    label: "Shifts",      icon: Clock },
+  { path: "/skills-matrix",     label: "Skills",      icon: Award },
+  { path: "/salary-benchmark",  label: "Bench",       icon: TrendingUp },
+  { path: "/ai-audit",          label: "Audit",       icon: Shield },
+  { path: "/history",            label: "History",     icon: History },
+  { path: "/admin-settings",    label: "Admin",       icon: Settings },
+  { path: "/calculator",        label: "ZUS",         icon: Calculator },
+  { path: "/gdpr",              label: "GDPR",        icon: Shield },
+  { path: "/posted-workers",    label: "Posted",      icon: Globe },
+  { path: "/country-compliance",label: "Countries",   icon: Globe },
+  { path: "/hours",             label: "Hours",       icon: Clock },
+  { path: "/system-logs",       label: "Logs",        icon: FileText },
+  { path: "/clients",           label: "Clients",     icon: Building2 },
+  { path: "/pay-transparency",  label: "PayRpt",      icon: BarChart3 },
+  { path: "/applications",      label: "Apps",        icon: UserPlus },
+  { path: "/job-board",         label: "Jobs",        icon: Briefcase },
+  { path: "/invoices",          label: "Invoices",    icon: Receipt },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -105,30 +94,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Desktop nav — 5 dropdown categories */}
+        {/* Flat nav pills — horizontal scroll */}
         <nav className="app-top-nav">
-          {NAV_CATEGORIES.map((cat) => {
-            const CatIcon = cat.icon;
-            const hasActive = cat.items.some((item) => isActive(item.path));
+          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+            const active = isActive(path);
             return (
-              <div key={cat.label} className="relative group">
-                <button className={`app-top-nav-item ${hasActive ? "app-top-nav-item--active" : ""}`}>
-                  <CatIcon className="w-3.5 h-3.5" />
-                  <span>{cat.label}</span>
-                  <ChevronDown className="w-3 h-3 opacity-50" />
-                </button>
-                <div className="absolute top-full left-0 mt-1 min-w-[180px] bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[300] py-1">
-                  {cat.items.map((item) => {
-                    const active = isActive(item.path);
-                    return (
-                      <button key={item.path} onClick={() => setLocation(item.path)}
-                        className={`w-full text-left px-3 py-2 text-xs font-mono transition-colors ${active ? "bg-primary/20 text-white font-bold" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <button key={path} onClick={() => setLocation(path)}
+                className={`app-top-nav-item ${active ? "app-top-nav-item--active" : ""}`}>
+                <Icon className="w-3 h-3" />
+                <span>{label}</span>
+              </button>
             );
           })}
         </nav>
