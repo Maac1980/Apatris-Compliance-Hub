@@ -25,7 +25,7 @@ const JWT_EXPIRES_IN = "15m"; // 15 minutes (short-lived access token)
 
 const ALLOWED_USERS = [
   {
-    email: "manish@apatris.pl",
+    email: "manishshetty79@gmail.com",
     name: "Manish",
     role: "Admin",
     passEnvKey: "APATRIS_PASS_MANISH",
@@ -291,7 +291,7 @@ router.post("/auth/mobile-login", validateBody(MobileLoginSchema), async (req, r
     }
 
     const mobileUserData = {
-      email: `${matched.name.toLowerCase()}@apatris.pl`,
+      email: matched.name.toLowerCase() === "manish" ? "manishshetty79@gmail.com" : `${matched.name.toLowerCase()}@apatris.pl`,
       name: matched.name,
       role: matched.role,
       tenantId: req.tenantId,
