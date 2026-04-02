@@ -27,17 +27,23 @@ app.use("/api", apiLimiter);
 app.use("/api", router);
 
 // ── Static file serving for dashboard and workforce app ─────────────────────
+const cwd = process.cwd();
+console.log("[static] cwd:", cwd, "__dirname:", __dirname);
+
 const dashboardPaths = [
-  path.resolve("artifacts/apatris-dashboard/dist/public"),
-  path.resolve(__dirname, "../../apatris-dashboard/dist/public"),
   "/app/artifacts/apatris-dashboard/dist/public",
+  path.join(cwd, "artifacts/apatris-dashboard/dist/public"),
+  path.resolve(__dirname, "../../apatris-dashboard/dist/public"),
+  path.resolve(__dirname, "../../../artifacts/apatris-dashboard/dist/public"),
 ];
 const workforcePaths = [
-  path.resolve("artifacts/workforce-app/dist/public"),
-  path.resolve(__dirname, "../../workforce-app/dist/public"),
   "/app/artifacts/workforce-app/dist/public",
+  path.join(cwd, "artifacts/workforce-app/dist/public"),
+  path.resolve(__dirname, "../../workforce-app/dist/public"),
+  path.resolve(__dirname, "../../../artifacts/workforce-app/dist/public"),
 ];
 
+console.log("[static] checking dashboard paths:", dashboardPaths.map(p => `${p} → ${fs.existsSync(p)}`));
 const dashDist = dashboardPaths.find(p => fs.existsSync(p));
 const workDist = workforcePaths.find(p => fs.existsSync(p));
 
