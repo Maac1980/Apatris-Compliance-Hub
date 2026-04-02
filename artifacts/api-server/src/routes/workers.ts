@@ -1,15 +1,16 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
-import Anthropic from "@anthropic-ai/sdk";
+// Anthropic SDK loaded dynamically where needed
 import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter } from "../lib/rate-limit.js";
 import { execute } from "../lib/db.js";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY ?? "",
-});
+let anthropic: any = null;
+import("@anthropic-ai/sdk").then(m => {
+  anthropic = new m.default({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+}).catch(() => { console.warn("[workers] @anthropic-ai/sdk not available"); });
 
 interface ScannedPassport {
   type: "passport";

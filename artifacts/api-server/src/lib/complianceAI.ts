@@ -1,7 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { logger } from './logger.js'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
+let anthropic: any = null;
+import('@anthropic-ai/sdk').then(m => {
+  anthropic = new m.default({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' });
+}).catch(() => { logger.warn('[AI] @anthropic-ai/sdk not available'); });
 
 export type RiskLevel = 'RED' | 'AMBER' | 'GREEN'
 
