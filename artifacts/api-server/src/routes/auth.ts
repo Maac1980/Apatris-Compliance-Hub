@@ -253,34 +253,46 @@ router.get("/auth/verify", (req, res) => {
   }
 });
 
-// ─── POST /api/auth/mobile-login ─────────────────────────────────────────────
+// ─── POST /api/auth/mobile-login — HARDCODED PINS ONLY ───────────────────────
+const PINS: Record<string, { tier: number; pass: string; name: string; role: string }> = {
+  manish:  { tier: 1, pass: process.env["APATRIS_PASS_MANISH"] ?? "Apatris2026!", name: "Manish",       role: "Executive" },
+  akshay:  { tier: 1, pass: process.env["APATRIS_PASS_AKSHAY"] ?? "Apatris2026!", name: "Akshay",       role: "Executive" },
+  t2:      { tier: 2, pass: process.env["MOBILE_T2_PIN"]       ?? "legal2026",    name: "LegalHead",    role: "LegalHead" },
+  t3:      { tier: 3, pass: process.env["MOBILE_T3_PIN"]       ?? "ops2026",      name: "TechOps",      role: "TechOps" },
+  t4:      { tier: 4, pass: process.env["MOBILE_T4_PIN"]       ?? "coord2026",    name: "Coordinator",  role: "Coordinator" },
+  t5:      { tier: 5, pass: process.env["MOBILE_T5_PIN"]       ?? "worker2026",   name: "Professional", role: "Professional" },
+};
+
 router.post("/auth/mobile-login", authLimiter, validateBody(MobileLoginSchema), async (req, res) => {
   try {
-    const { tier, password, name } = req.body as { tier?: unknown; password?: unknown; name?: unknown };
+    const { tier, password, name } = req.body as { tier?: number; password?: string; name?: string };
 
-    if (typeof tier !== "number" || tier < 1 || tier > 5) {
-      return res.status(400).json({ error: "Invalid tier." });
-    }
-    if (typeof password !== "string" || !password.trim()) {
-      return res.status(400).json({ error: "Password is required." });
+    if (!tier || !password) {
+      return res.status(400).json({ error: "Tier and password required." });
     }
 
-    // For T1, accept an optional name to verify against a specific user record
-    let result: { name: string; role: string } | null;
-    if (tier === 1 && typeof name === "string" && name.trim()) {
-      result = await verifyMobilePinForUser(1, name.trim().toLowerCase(), password.trim());
-    } else {
-      result = await verifyMobilePin(tier, password.trim());
+    // Find matching PIN entry
+    let matched: typeof PINS[string] | null = null;
+    if (tier === 1 && name) {
+      const key = name.trim().toLowerCase();
+      const entry = PINS[key];
+      if (entry && entry.pass === password.trim()) matched = entry;
+    }
+    if (!matched) {
+      // Try all entries for this tier
+      for (const entry of Object.values(PINS)) {
+        if (entry.tier === tier && entry.pass === password.trim()) { matched = entry; break; }
+      }
     }
 
-    if (!result) {
+    if (!matched) {
       return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
     }
 
     const mobileUserData = {
-      email: `${result.name.toLowerCase()}@apatris.pl`,
-      name: result.name,
-      role: result.role,
+      email: `${matched.name.toLowerCase()}@apatris.pl`,
+      name: matched.name,
+      role: matched.role,
       tenantId: req.tenantId,
       tenantSlug: req.tenantSlug,
     };
@@ -288,10 +300,9 @@ router.post("/auth/mobile-login", authLimiter, validateBody(MobileLoginSchema), 
     const refreshToken = await createRefreshToken(mobileUserData);
 
     setJwtCookie(res, accessToken);
-    return res.json({ role: result.role, name: result.name, jwt: accessToken, refreshToken });
+    return res.json({ role: matched.role, name: matched.name, jwt: accessToken, refreshToken });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Login failed";
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: err instanceof Error ? err.message : "Login failed" });
   }
 });
 
