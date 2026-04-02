@@ -7,7 +7,7 @@ import type {
   Specialization,
 } from "@/data/mockWorkers";
 
-const API_BASE = "/api";
+const API_BASE = (import.meta.env.VITE_API_URL as string) || "/api";
 
 function getAuthHeader(jwt?: string): Record<string, string> {
   if (!jwt) return {};
