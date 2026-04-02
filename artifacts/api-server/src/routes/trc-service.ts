@@ -249,7 +249,7 @@ router.post("/trc/cases/:id/generate-checklist", requireAuth, async (req, res) =
 
     const c = trcCase as Record<string, unknown>;
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2048,
       system: "You are a Polish immigration law expert specializing in Temporary Residence Cards (Karta Pobytu). Generate a detailed document checklist for TRC applications based on the case details provided. Return a JSON array of objects with fields: docType, description, required (boolean), deadline (optional).",
       messages: [{

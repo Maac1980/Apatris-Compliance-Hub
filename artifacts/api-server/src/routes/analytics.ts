@@ -243,7 +243,7 @@ Answer the following question concisely and professionally. If you need to refer
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const anthropic = new Anthropic({ apiKey });
         const completion = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 500,
           system: context,
           messages: [

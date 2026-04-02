@@ -68,7 +68,7 @@ export async function scoreWorkerRisk(worker: any): Promise<WorkerRiskScore> {
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         system: 'You are a welding compliance expert. Respond in JSON format.',
         messages: [{ role: 'user', content: `Analyse this worker's compliance status.

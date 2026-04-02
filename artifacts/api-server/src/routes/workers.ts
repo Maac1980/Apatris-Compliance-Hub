@@ -39,7 +39,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
 
     if (docType === "passport") {
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 512,
         messages: [
           {
@@ -71,7 +71,7 @@ async function scanDocument(fileBuffer: Buffer, mimeType: string, docType: "pass
       return { type: "passport", ...parsed };
     } else {
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 256,
         messages: [
           {
@@ -287,7 +287,7 @@ async function scanBulkDocument(
     const base64 = fileBuffer.toString("base64");
     const dataUrl = `data:${mimeType};base64,${base64}`;
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 300,
       messages: [
         {

@@ -156,7 +156,7 @@ router.post("/regulatory/scan", requireAuth, async (_req: Request, res: Response
     for (const { q, category } of queries) {
       try {
         const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 1024,
           system: `You are a Polish labor law compliance analyst. Analyze recent regulatory changes and return a JSON object with: title (string), summary (string, 2-3 sentences), severity ("info"|"warning"|"critical"), fineAmount (string or null), workersAffected (number estimate), costImpact (string or null), actionRequired (string array). Respond ONLY with valid JSON.`,
           messages: [{ role: "user", content: q }],
@@ -221,7 +221,7 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
       : `You are an expert on Polish immigration law and labor regulations. Answer questions about work permits, visas, ZUS contributions, employment contracts in Poland. Respond ONLY in JSON format: { "answer": string, "sources": [{"url": string, "title": string}], "confidence": number (0-1), "actionItems": string[] }`;
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: searchQuery }],
