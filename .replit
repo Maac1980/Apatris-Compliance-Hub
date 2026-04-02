@@ -8,7 +8,7 @@ id = "artifacts/mockup-sandbox"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["sh", "-c", "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/workforce-app run build && pnpm --filter @workspace/apatris-dashboard run build"]
+build = ["sh", "-c", "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"]
 run = ["node", "artifacts/api-server/dist/index.cjs"]
 
 [deployment.env]
