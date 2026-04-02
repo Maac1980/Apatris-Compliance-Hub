@@ -119,37 +119,10 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
 
       const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
-      // 2FA: if SMTP is configured, send OTP and require verification
-      if (isMailConfigured()) {
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const session = crypto.randomUUID();
-        otpStore.set(session, {
-          otp,
-          expires: Date.now() + 5 * 60 * 1000,
-          userData,
-        });
-        try {
-          const EMAIL_TIMEOUT_MS = 3000;
-          await Promise.race([
-            sendOtpEmail(user.email, user.name, otp),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("OTP email timed out after 3s")), EMAIL_TIMEOUT_MS)),
-          ]);
-        } catch (e) {
-          console.error("[Auth] OTP email failed or timed out — falling back to direct JWT login:", e);
-          console.log(`[Auth] FALLBACK: issuing direct JWT for ${user.email} (OTP skipped)`);
-          const accessToken = signToken(userData);
-          const refreshToken = await createRefreshToken(userData);
-          appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed/timed out)" });
-          setJwtCookie(res, accessToken);
-          return res.json({ ...userData, jwt: accessToken, refreshToken });
-        }
-        return res.json({ otpRequired: true, session });
-      }
-
-      // No SMTP: direct login with JWT
+      // OTP disabled — direct JWT login (re-enable OTP later)
       const accessToken = signToken(userData);
       const refreshToken = await createRefreshToken(userData);
-      appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (SMTP not configured)" });
+      appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP disabled)" });
       setJwtCookie(res, accessToken);
       return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
