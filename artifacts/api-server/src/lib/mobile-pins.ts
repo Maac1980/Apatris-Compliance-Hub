@@ -68,22 +68,14 @@ export async function initMobilePinsTable(): Promise<void> {
   console.log("[MobilePins] Table seeded from environment variables.");
 }
 
-// ── Verify a specific user (T1 individual, T2-T5 shared) ─────────────────
+// ── Verify a specific user — hardcoded only, no database ─────────────────
 export async function verifyMobilePinForUser(
   tier: number,
-  userKey: string,   // 'akshay' | 'manish' | 'shared'
+  userKey: string,
   pin: string
 ): Promise<{ name: string; role: string } | null> {
-  const rows = await query<{ pin_hash: string }>(
-    "SELECT pin_hash FROM mobile_pins WHERE tier = $1 AND user_key = $2",
-    [tier, userKey]
-  );
-  if (rows.length === 0) return null;
-  if (!verifyPinHash(pin, rows[0].pin_hash)) return null;
-  const name = userKey === "shared"
-    ? TIER_TO_ROLE[tier] ?? "User"
-    : userKey.charAt(0).toUpperCase() + userKey.slice(1);
-  return { name, role: TIER_TO_ROLE[tier] ?? "" };
+  // Just delegate to the main function which is hardcoded
+  return verifyMobilePin(tier, pin);
 }
 
 // ── Verify (returns user name on success, null on failure) ────────────────
@@ -98,36 +90,21 @@ export async function verifyMobilePin(
   tier: number,
   pin: string
 ): Promise<{ name: string; role: string } | null> {
-  // Step 1: ALWAYS check hardcoded defaults first
-  const D: Record<string, string> = {
-    A: "Apatris2026!", M: "Apatris2026!",
-    T2: "legal2026", T3: "ops2026", T4: "coord2026", T5: "worker2026",
-  };
+  // Hardcoded credentials ONLY — no database lookup
   if (tier === 1) {
-    if (pin === (process.env["APATRIS_PASS_AKSHAY"] ?? D.A)) return { name: "Akshay", role: "Executive" };
-    if (pin === (process.env["APATRIS_PASS_MANISH"] ?? D.M)) return { name: "Manish", role: "Executive" };
-  } else {
-    const expected = process.env[`MOBILE_T${tier}_PIN`] ?? D[`T${tier}`];
-    if (expected && pin === expected) return { name: TIER_TO_ROLE[tier] ?? "User", role: TIER_TO_ROLE[tier] ?? "" };
+    const a = process.env["APATRIS_PASS_AKSHAY"] ?? "Apatris2026!";
+    const m = process.env["APATRIS_PASS_MANISH"] ?? "Apatris2026!";
+    if (pin === a) return { name: "Akshay", role: "Executive" };
+    if (pin === m) return { name: "Manish", role: "Executive" };
+  } else if (tier === 2) {
+    if (pin === (process.env["MOBILE_T2_PIN"] ?? "legal2026")) return { name: "LegalHead", role: "LegalHead" };
+  } else if (tier === 3) {
+    if (pin === (process.env["MOBILE_T3_PIN"] ?? "ops2026")) return { name: "TechOps", role: "TechOps" };
+  } else if (tier === 4) {
+    if (pin === (process.env["MOBILE_T4_PIN"] ?? "coord2026")) return { name: "Coordinator", role: "Coordinator" };
+  } else if (tier === 5) {
+    if (pin === (process.env["MOBILE_T5_PIN"] ?? "worker2026")) return { name: "Professional", role: "Professional" };
   }
-
-  // Step 2: Try database hashed PINs as fallback
-  try {
-    const rows = await query<{ user_key: string; pin_hash: string }>(
-      "SELECT user_key, pin_hash FROM mobile_pins WHERE tier = $1", [tier]
-    );
-    for (const row of rows) {
-      if (verifyPinHash(pin, row.pin_hash)) {
-        const name = row.user_key === "shared"
-          ? TIER_TO_ROLE[tier] ?? "User"
-          : row.user_key.charAt(0).toUpperCase() + row.user_key.slice(1);
-        return { name, role: TIER_TO_ROLE[tier] ?? "" };
-      }
-    }
-  } catch {
-    // DB error — defaults already checked above
-  }
-
   return null;
 }
 
