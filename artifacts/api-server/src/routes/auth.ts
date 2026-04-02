@@ -129,13 +129,17 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
           userData,
         });
         try {
-          await sendOtpEmail(user.email, user.name, otp);
+          const EMAIL_TIMEOUT_MS = 3000;
+          await Promise.race([
+            sendOtpEmail(user.email, user.name, otp),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("OTP email timed out after 3s")), EMAIL_TIMEOUT_MS)),
+          ]);
         } catch (e) {
-          console.error("[Auth] Failed to send OTP email:", e);
-          // On email failure, fall back to direct login so admin is never locked out
+          console.error("[Auth] OTP email failed or timed out — falling back to direct JWT login:", e);
+          console.log(`[Auth] FALLBACK: issuing direct JWT for ${user.email} (OTP skipped)`);
           const accessToken = signToken(userData);
           const refreshToken = await createRefreshToken(userData);
-          appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed)" });
+          appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP email failed/timed out)" });
           setJwtCookie(res, accessToken);
           return res.json({ ...userData, jwt: accessToken, refreshToken });
         }
