@@ -263,9 +263,10 @@ const PINS: Record<string, { tier: number; pass: string; name: string; role: str
   t5:      { tier: 5, pass: process.env["MOBILE_T5_PIN"]       ?? "worker2026",   name: "Professional", role: "Professional" },
 };
 
-router.post("/auth/mobile-login", authLimiter, validateBody(MobileLoginSchema), async (req, res) => {
+router.post("/auth/mobile-login", validateBody(MobileLoginSchema), async (req, res) => {
   try {
     const { tier, password, name } = req.body as { tier?: number; password?: string; name?: string };
+    console.log(`[mobile-login] tier=${tier} name=${name ?? "none"} passLen=${password?.length ?? 0}`);
 
     if (!tier || !password) {
       return res.status(400).json({ error: "Tier and password required." });
