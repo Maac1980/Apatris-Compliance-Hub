@@ -990,6 +990,43 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_zus_filings_tenant ON zus_filings(tenant_id)");
   await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_zus_filings_period ON zus_filings(tenant_id, month, year)");
 
+  // job_requests
+  await execute(`
+    CREATE TABLE IF NOT EXISTS job_requests (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_id UUID,
+      company_name TEXT,
+      role_type TEXT NOT NULL,
+      skills_required TEXT,
+      certifications_required TEXT,
+      location TEXT,
+      start_date DATE,
+      workers_needed INTEGER DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'open',
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_job_requests_tenant ON job_requests(tenant_id)");
+
+  // worker_matches
+  await execute(`
+    CREATE TABLE IF NOT EXISTS worker_matches (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      job_request_id UUID REFERENCES job_requests(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL,
+      match_score INTEGER DEFAULT 0,
+      match_reasons JSONB DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'suggested',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_worker_matches_job ON worker_matches(job_request_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_worker_matches_worker ON worker_matches(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

@@ -94,6 +94,7 @@ const NAV_GROUPS: NavGroup[] = [
     activeBg: "bg-cyan-500/15 text-cyan-400",
     items: [
       { path: "/crm",            label: "CRM",           icon: Briefcase },
+      { path: "/matching",       label: "Worker Match",  icon: Users },
       { path: "/clients",       label: "Clients",       icon: Building2 },
       { path: "/job-board",     label: "Job Board",     icon: Briefcase },
       { path: "/applications",  label: "Applications",  icon: UserPlus },

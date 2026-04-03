@@ -46,6 +46,7 @@ import ImmigrationDashboard from "@/pages/ImmigrationDashboard";
 import OnboardingPage from "@/pages/OnboardingPage";
 import CrmPage from "@/pages/CrmPage";
 import ZusFilings from "@/pages/ZusFilings";
+import WorkerMatching from "@/pages/WorkerMatching";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -183,6 +184,9 @@ function Router() {
       </Route>
       <Route path="/zus">
         {() => <ProtectedRoute component={ZusFilings} />}
+      </Route>
+      <Route path="/matching">
+        {() => <ProtectedRoute component={WorkerMatching} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

@@ -32,6 +32,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "crm",           label: "nav.crm",         icon: Briefcase },
         { id: "invoices",      label: "nav.invoices",    icon: Receipt },
         { id: "zus",           label: "nav.zus",         icon: Calculator },
+        { id: "matching",      label: "nav.matching",    icon: Users },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
     case "LegalHead":
@@ -44,6 +45,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "crm",           label: "nav.crm",         icon: Briefcase },
         { id: "invoices",      label: "nav.invoices",    icon: Receipt },
         { id: "zus",           label: "nav.zus",         icon: Calculator },
+        { id: "matching",      label: "nav.matching",    icon: Users },
         { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];

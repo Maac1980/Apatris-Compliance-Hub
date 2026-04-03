@@ -26,6 +26,7 @@ import { OnboardingTab } from "@/components/tabs/OnboardingTab";
 import { CrmTab } from "@/components/tabs/CrmTab";
 import { InvoiceTab } from "@/components/tabs/InvoiceTab";
 import { ZusTab } from "@/components/tabs/ZusTab";
+import { MatchingTab } from "@/components/tabs/MatchingTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -182,6 +183,10 @@ export function DashboardPage() {
       // ── ZUS FILINGS ─────────────────────────────────────────────────────
       case "zus":
         return <ZusTab />;
+
+      // ── WORKER MATCHING ─────────────────────────────────────────────────
+      case "matching":
+        return <MatchingTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
