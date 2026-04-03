@@ -1218,6 +1218,22 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_fine_pred_worker ON fine_predictions(worker_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_fine_pred_status ON fine_predictions(status)");
 
+  // trust_scores
+  await execute(`
+    CREATE TABLE IF NOT EXISTS trust_scores (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      score INTEGER NOT NULL DEFAULT 0,
+      breakdown JSONB DEFAULT '{}',
+      calculated_at TIMESTAMPTZ DEFAULT NOW(),
+      version INTEGER DEFAULT 1
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_trust_tenant ON trust_scores(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_trust_worker ON trust_scores(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

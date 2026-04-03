@@ -292,10 +292,23 @@ export function startScheduler(): void {
       .then(() => runImmigrationAlerts())
       .then(() => runBenchAlerts())
       .then(() => runFinesScan())
+      .then(() => runTrustScores())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Trust score calculation — runs after fines scan
+async function runTrustScores(): Promise<void> {
+  try {
+    const { runTrustScoreCalculation } = await import("../routes/trust.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await runTrustScoreCalculation(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Trust score calc failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Fines prediction scan — runs after bench alerts

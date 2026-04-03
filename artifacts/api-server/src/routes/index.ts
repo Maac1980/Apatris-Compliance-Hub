@@ -50,6 +50,7 @@ import contractGenRouter from "./contract-gen.js";
 import selfServiceRouter from "./self-service.js";
 import roiRouter from "./roi.js";
 import finesRouter from "./fines.js";
+import trustRouter from "./trust.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -103,5 +104,6 @@ router.use(contractGenRouter);
 router.use(selfServiceRouter);
 router.use(roiRouter);
 router.use(finesRouter);
+router.use(trustRouter);
 
 export default router;
