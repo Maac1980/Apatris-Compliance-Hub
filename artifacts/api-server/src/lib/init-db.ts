@@ -1153,6 +1153,27 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_google_int_tenant ON google_integrations(tenant_id)");
 
+  // generated_contracts
+  await execute(`
+    CREATE TABLE IF NOT EXISTS generated_contracts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      company_id UUID,
+      company_name TEXT,
+      contract_type TEXT NOT NULL,
+      contract_data JSONB DEFAULT '{}',
+      contract_html TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      generated_at TIMESTAMPTZ DEFAULT NOW(),
+      signed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_gen_contracts_tenant ON generated_contracts(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_gen_contracts_worker ON generated_contracts(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

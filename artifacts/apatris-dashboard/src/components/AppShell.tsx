@@ -87,6 +87,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: "/contracts",      label: "Contracts",     icon: FileSignature },
       { path: "/doc-workflow",   label: "Doc Workflow",  icon: FileCheck },
+      { path: "/contract-gen",          label: "AI Contracts",  icon: FileSignature },
       { path: "/certified-signatures", label: "Certified Sigs", icon: FileSignature },
     ],
   },

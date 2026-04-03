@@ -32,6 +32,7 @@ import { AdvancesTab } from "@/components/tabs/AdvancesTab";
 import { SignaturesTab } from "@/components/tabs/SignaturesTab";
 import { BenchTab } from "@/components/tabs/BenchTab";
 import { GoogleCalendarTab } from "@/components/tabs/GoogleCalendarTab";
+import { ContractGenTab } from "@/components/tabs/ContractGenTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -212,6 +213,10 @@ export function DashboardPage() {
       // ── GOOGLE CALENDAR ─────────────────────────────────────────────────
       case "calendar":
         return <GoogleCalendarTab />;
+
+      // ── AI CONTRACT GENERATOR ───────────────────────────────────────────
+      case "contractgen":
+        return <ContractGenTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

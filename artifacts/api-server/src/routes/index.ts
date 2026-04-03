@@ -46,6 +46,7 @@ import advancesRouter from "./advances.js";
 import certifiedSignaturesRouter from "./certified-signatures.js";
 import benchRouter from "./bench.js";
 import googleRouter from "./google.js";
+import contractGenRouter from "./contract-gen.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -95,5 +96,6 @@ router.use(advancesRouter);
 router.use(certifiedSignaturesRouter);
 router.use(benchRouter);
 router.use(googleRouter);
+router.use(contractGenRouter);
 
 export default router;

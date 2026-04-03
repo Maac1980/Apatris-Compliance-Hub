@@ -53,6 +53,7 @@ import SalaryAdvances from "@/pages/SalaryAdvances";
 import CertifiedSignatures from "@/pages/CertifiedSignatures";
 import BenchManagement from "@/pages/BenchManagement";
 import GoogleWorkspace from "@/pages/GoogleWorkspace";
+import ContractGenerator from "@/pages/ContractGenerator";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -211,6 +212,9 @@ function Router() {
       </Route>
       <Route path="/google">
         {() => <ProtectedRoute component={GoogleWorkspace} />}
+      </Route>
+      <Route path="/contract-gen">
+        {() => <ProtectedRoute component={ContractGenerator} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
