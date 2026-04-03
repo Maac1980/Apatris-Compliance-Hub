@@ -76,6 +76,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
         { id: "gps",           label: "nav.gps",         icon: Navigation },
         { id: "mood",          label: "nav.mood",        icon: SmilePlus },
+        { id: "advances",     label: "nav.advances",    icon: DollarSign },
         { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];

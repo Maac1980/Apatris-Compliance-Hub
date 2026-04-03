@@ -49,6 +49,7 @@ import ZusFilings from "@/pages/ZusFilings";
 import WorkerMatching from "@/pages/WorkerMatching";
 import MoodTracker from "@/pages/MoodTracker";
 import VoiceCheckins from "@/pages/VoiceCheckins";
+import SalaryAdvances from "@/pages/SalaryAdvances";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -195,6 +196,9 @@ function Router() {
       </Route>
       <Route path="/voice">
         {() => <ProtectedRoute component={VoiceCheckins} />}
+      </Route>
+      <Route path="/advances">
+        {() => <ProtectedRoute component={SalaryAdvances} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

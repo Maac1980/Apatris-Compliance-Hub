@@ -42,6 +42,7 @@ import zusRouter from "./zus.js";
 import matchingRouter from "./matching.js";
 import moodRouter from "./mood.js";
 import voiceRouter from "./voice.js";
+import advancesRouter from "./advances.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -87,5 +88,6 @@ router.use(zusRouter);
 router.use(matchingRouter);
 router.use(moodRouter);
 router.use(voiceRouter);
+router.use(advancesRouter);
 
 export default router;
