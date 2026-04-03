@@ -413,50 +413,106 @@ body {
   border-right: 1px solid rgba(255,255,255,0.06);
 }
 
-/* Nav tabs — compact pills, horizontally scrollable */
+/* Nav tabs — quick access pills */
 .app-top-nav {
   display: flex;
   align-items: center;
   flex: 1;
-  gap: 3px;
-  padding: 0 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
+  gap: 4px;
+  padding: 0 10px;
 }
-.app-top-nav::-webkit-scrollbar { display: none; }
 
 .app-top-nav-item {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  font-size: 10px;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
   font-family: ui-monospace, monospace;
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
   border: none;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  background: transparent;
   color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
-/* Always show labels — pills are small enough */
 
 .app-top-nav-item:hover {
-  background: rgba(196,30,24,0.15);
+  background: rgba(196,30,24,0.12);
   color: #fca5a5;
-  box-shadow: 0 0 6px rgba(196,30,24,0.12);
 }
 .app-top-nav-item--active {
   background: #C41E18;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(196,30,24,0.4);
+  box-shadow: 0 0 12px rgba(196,30,24,0.35);
   font-weight: 700;
+}
+
+/* ─── Mega Menu (desktop) ─────────────────────────────────────────── */
+.app-mega-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 820px;
+  background: linear-gradient(180deg, #111827 0%, #0c1424 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(196,30,24,0.1),
+    0 0 40px rgba(0,0,0,0.3);
+  z-index: 500;
+  animation: megaMenuIn 0.15s ease-out;
+}
+
+@keyframes megaMenuIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.app-mega-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 12px;
+}
+
+.app-mega-menu-group {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+}
+
+/* ─── Mobile mega menu ─────────────────────────────────────────────── */
+.app-mega-menu-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+}
+
+.app-mega-menu-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #111827 0%, #0c1424 100%);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px 20px 0 0;
+  z-index: 301;
+  animation: mobileMenuIn 0.2s ease-out;
+}
+
+@keyframes mobileMenuIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 .app-top-right {

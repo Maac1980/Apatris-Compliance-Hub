@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
@@ -6,45 +6,157 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
-  Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign, Stamp,
+  Globe, Building2, UserPlus, Briefcase, Receipt, FileText, Stamp,
+  LayoutGrid, ChevronDown, X,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { path: "/payroll",            label: "Payroll",     icon: Calculator },
-  { path: "/compliance-alerts",  label: "Alerts",      icon: AlertTriangle },
-  { path: "/contracts",          label: "Contracts",   icon: FileSignature },
-  { path: "/doc-workflow",       label: "Docs",        icon: FileCheck },
-  { path: "/gps-tracking",      label: "GPS",         icon: MapPin },
-  { path: "/analytics",         label: "Analytics",   icon: BarChart3 },
-  { path: "/ai-copilot",        label: "AI",          icon: Sparkles },
-  { path: "/regulatory",        label: "Regulatory",  icon: Shield },
-  { path: "/immigration-search",label: "Immigration", icon: Search },
-  { path: "/trc-service",       label: "TRC",         icon: FileCheck },
-  { path: "/availability",      label: "Avail",       icon: CalendarDays },
-  { path: "/shift-schedule",    label: "Shifts",      icon: Clock },
-  { path: "/skills-matrix",     label: "Skills",      icon: Award },
-  { path: "/salary-benchmark",  label: "Bench",       icon: TrendingUp },
-  { path: "/ai-audit",          label: "Audit",       icon: Shield },
-  { path: "/history",            label: "History",     icon: History },
-  { path: "/admin-settings",    label: "Admin",       icon: Settings },
-  { path: "/calculator",        label: "ZUS",         icon: Calculator },
-  { path: "/gdpr",              label: "GDPR",        icon: Shield },
-  { path: "/posted-workers",    label: "Posted",      icon: Globe },
-  { path: "/country-compliance",label: "Countries",   icon: Globe },
-  { path: "/hours",             label: "Hours",       icon: Clock },
-  { path: "/system-logs",       label: "Logs",        icon: FileText },
-  { path: "/clients",           label: "Clients",     icon: Building2 },
-  { path: "/pay-transparency",  label: "PayRpt",      icon: BarChart3 },
-  { path: "/applications",      label: "Apps",        icon: UserPlus },
-  { path: "/job-board",         label: "Jobs",        icon: Briefcase },
-  { path: "/invoices",          label: "Invoices",    icon: Receipt },
-  { path: "/immigration",       label: "Permits",     icon: Stamp },
+// ── Grouped Navigation ──────────────────────────────────────────────────────
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  color: string;
+  hoverBg: string;
+  activeBg: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: "workforce",
+    label: "Workforce",
+    color: "text-blue-400",
+    hoverBg: "hover:bg-blue-500/10",
+    activeBg: "bg-blue-500/15 text-blue-400",
+    items: [
+      { path: "/",                  label: "Workers",       icon: Users },
+      { path: "/hours",             label: "Hours",         icon: Clock },
+      { path: "/availability",      label: "Availability",  icon: CalendarDays },
+      { path: "/shift-schedule",    label: "Shifts",        icon: Clock },
+      { path: "/skills-matrix",     label: "Skills Matrix", icon: Award },
+      { path: "/gps-tracking",      label: "GPS Tracking",  icon: MapPin },
+    ],
+  },
+  {
+    id: "compliance",
+    label: "Compliance",
+    color: "text-amber-400",
+    hoverBg: "hover:bg-amber-500/10",
+    activeBg: "bg-amber-500/15 text-amber-400",
+    items: [
+      { path: "/compliance-alerts",  label: "Alerts",             icon: AlertTriangle },
+      { path: "/immigration",        label: "Permits",            icon: Stamp },
+      { path: "/immigration-search", label: "Immigration Search", icon: Search },
+      { path: "/trc-service",        label: "TRC Service",        icon: FileCheck },
+      { path: "/posted-workers",     label: "Posted Workers",     icon: Globe },
+      { path: "/country-compliance", label: "Country Rules",      icon: Globe },
+      { path: "/gdpr",              label: "GDPR",               icon: Shield },
+    ],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    color: "text-emerald-400",
+    hoverBg: "hover:bg-emerald-500/10",
+    activeBg: "bg-emerald-500/15 text-emerald-400",
+    items: [
+      { path: "/payroll",           label: "Payroll",          icon: Calculator },
+      { path: "/calculator",        label: "ZUS Calculator",   icon: Calculator },
+      { path: "/salary-benchmark",  label: "Salary Benchmark", icon: TrendingUp },
+      { path: "/pay-transparency",  label: "Pay Reports",      icon: BarChart3 },
+      { path: "/invoices",          label: "Invoices",         icon: Receipt },
+    ],
+  },
+  {
+    id: "documents",
+    label: "Documents",
+    color: "text-violet-400",
+    hoverBg: "hover:bg-violet-500/10",
+    activeBg: "bg-violet-500/15 text-violet-400",
+    items: [
+      { path: "/contracts",      label: "Contracts",     icon: FileSignature },
+      { path: "/doc-workflow",   label: "Doc Workflow",  icon: FileCheck },
+    ],
+  },
+  {
+    id: "business",
+    label: "Business",
+    color: "text-cyan-400",
+    hoverBg: "hover:bg-cyan-500/10",
+    activeBg: "bg-cyan-500/15 text-cyan-400",
+    items: [
+      { path: "/clients",       label: "Clients",       icon: Building2 },
+      { path: "/job-board",     label: "Job Board",     icon: Briefcase },
+      { path: "/applications",  label: "Applications",  icon: UserPlus },
+    ],
+  },
+  {
+    id: "intelligence",
+    label: "Intelligence",
+    color: "text-rose-400",
+    hoverBg: "hover:bg-rose-500/10",
+    activeBg: "bg-rose-500/15 text-rose-400",
+    items: [
+      { path: "/analytics",    label: "Analytics",     icon: BarChart3 },
+      { path: "/ai-copilot",   label: "AI Copilot",    icon: Sparkles },
+      { path: "/regulatory",   label: "Regulatory",    icon: Shield },
+      { path: "/ai-audit",     label: "AI Audit",      icon: Shield },
+    ],
+  },
+  {
+    id: "system",
+    label: "System",
+    color: "text-slate-400",
+    hoverBg: "hover:bg-slate-500/10",
+    activeBg: "bg-slate-500/15 text-slate-300",
+    items: [
+      { path: "/history",         label: "History",    icon: History },
+      { path: "/system-logs",     label: "Logs",       icon: FileText },
+      { path: "/admin-settings",  label: "Settings",   icon: Settings },
+    ],
+  },
 ];
+
+// Quick-access tabs shown directly in the top bar
+const QUICK_TABS: NavItem[] = [
+  { path: "/",                  label: "Workers",    icon: Users },
+  { path: "/payroll",           label: "Payroll",    icon: Calculator },
+  { path: "/compliance-alerts", label: "Alerts",     icon: AlertTriangle },
+  { path: "/contracts",         label: "Contracts",  icon: FileSignature },
+  { path: "/analytics",         label: "Analytics",  icon: BarChart3 },
+  { path: "/immigration",       label: "Permits",    icon: Stamp },
+];
+
+// Flat list for mobile bottom bar (top 7 most used)
+const MOBILE_TABS: NavItem[] = [
+  { path: "/",                  label: "Workers",   icon: Users },
+  { path: "/payroll",           label: "Payroll",   icon: Calculator },
+  { path: "/compliance-alerts", label: "Alerts",    icon: AlertTriangle },
+  { path: "/immigration",       label: "Permits",   icon: Stamp },
+  { path: "/contracts",         label: "Contracts", icon: FileSignature },
+  { path: "/analytics",         label: "Analytics", icon: BarChart3 },
+];
+
+function findActiveGroup(location: string): NavGroup | undefined {
+  return NAV_GROUPS.find(g =>
+    g.items.some(item =>
+      item.path === "/" ? location === "/" : location.startsWith(item.path)
+    )
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isPublicRoute =
     location === "/login" ||
@@ -63,19 +175,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.body.classList.remove("has-app-shell");
   }, [showShell]);
 
-  if (!showShell) return <>{children}</>;
+  // Close menu on click outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
 
-  const isAdmin = user?.role === "Admin";
+  // Close menu on ESC
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [menuOpen]);
+
+  if (!showShell) return <>{children}</>;
 
   const isActive = (path: string) =>
     path === "/" ? location === "/" : location.startsWith(path);
+
+  const activeGroup = findActiveGroup(location);
+
+  const navigate = (path: string) => {
+    setLocation(path);
+    setMenuOpen(false);
+  };
 
   return (
     <div className="app-shell-root">
       {/* ─── Top Navigation Bar ───────────────────────────────────────── */}
       <header className="app-top-bar">
-        {/* Brand — click to go home */}
-        <div className="app-top-brand cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setLocation("/")}>
+        {/* Brand */}
+        <div className="app-top-brand cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate("/")}>
           <div
             className="w-8 h-8 rounded-full bg-white flex-shrink-0 flex items-center justify-center"
             style={{ boxShadow: "0 0 0 2px rgba(196,30,24,0.35), 0 0 10px rgba(196,30,24,0.2)" }}
@@ -93,34 +230,82 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Flat nav pills — horizontal scroll */}
+        {/* Quick-access tabs */}
         <nav className="app-top-nav">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+          {QUICK_TABS.map(({ path, label, icon: Icon }) => {
             const active = isActive(path);
             return (
-              <button key={path} onClick={() => setLocation(path)}
+              <button key={path} onClick={() => navigate(path)}
                 className={`app-top-nav-item ${active ? "app-top-nav-item--active" : ""}`}>
                 <Icon className="w-3 h-3" />
                 <span>{label}</span>
               </button>
             );
           })}
+
+          {/* All Modules dropdown trigger */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`app-top-nav-item ${menuOpen ? "app-top-nav-item--active" : ""}`}
+            >
+              <LayoutGrid className="w-3 h-3" />
+              <span>All</span>
+              <ChevronDown className={`w-2.5 h-2.5 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {/* ─── Mega Menu ───────────────────────────────────────────── */}
+            {menuOpen && (
+              <div className="app-mega-menu">
+                {/* Close button */}
+                <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-700/50">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">All Modules</p>
+                  <button onClick={() => setMenuOpen(false)} className="p-1 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="app-mega-menu-grid">
+                  {NAV_GROUPS.map(group => (
+                    <div key={group.id} className="app-mega-menu-group">
+                      <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-2 ${group.color}`}>
+                        {group.label}
+                      </p>
+                      <div className="space-y-0.5">
+                        {group.items.map(item => {
+                          const active = isActive(item.path);
+                          const Icon = item.icon;
+                          return (
+                            <button
+                              key={item.path}
+                              onClick={() => navigate(item.path)}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all ${
+                                active
+                                  ? `${group.activeBg} font-bold`
+                                  : `text-slate-400 ${group.hoverBg} hover:text-white`
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
 
-        {/* Right: admin settings + user chip */}
+        {/* Right: current section badge + user chip */}
         <div className="app-top-right">
-          {isAdmin && (
-            <button
-              onClick={() => setLocation("/admin-settings")}
-              title="Ustawienia"
-              className={`p-1.5 rounded-lg transition-colors ${
-                isActive("/admin-settings")
-                  ? "text-white bg-slate-700"
-                  : "text-slate-500 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-            </button>
+          {/* Active section indicator */}
+          {activeGroup && !QUICK_TABS.some(t => isActive(t.path)) && (
+            <span className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border border-white/10 ${activeGroup.color} bg-white/[0.03]`}>
+              {activeGroup.label}
+            </span>
           )}
 
           <div className="flex items-center gap-2 pl-2 border-l border-slate-700/60">
@@ -149,9 +334,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
 
-      {/* ─── Mobile Bottom Bar (scrollable for many tabs) ──────────────── */}
+      {/* ─── Mobile Bottom Bar ──────────────────────────────────────── */}
       <nav className="app-bottom-bar">
-        {NAV_ITEMS.map(({ path, labelKey, icon: Icon }) => {
+        {MOBILE_TABS.map(({ path, label, icon: Icon }) => {
           const active = isActive(path);
           return (
             <button
@@ -165,12 +350,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className={`text-[9px] font-mono font-bold uppercase tracking-wide leading-none whitespace-nowrap ${
                 active ? "text-[#C41E18]" : "text-slate-600"
               }`}>
-                {t(labelKey)}
+                {label}
               </span>
             </button>
           );
         })}
+        {/* All modules button on mobile */}
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-1 h-full transition-colors flex-shrink-0"
+        >
+          <div className={`p-1.5 rounded-xl ${menuOpen ? "bg-red-900/40" : ""}`}>
+            <LayoutGrid className={`w-5 h-5 ${menuOpen ? "text-[#C41E18]" : "text-slate-500"}`} />
+          </div>
+          <span className={`text-[9px] font-mono font-bold uppercase tracking-wide leading-none ${
+            menuOpen ? "text-[#C41E18]" : "text-slate-600"
+          }`}>More</span>
+        </button>
       </nav>
+
+      {/* ─── Mobile mega menu overlay ──────────────────────────────── */}
+      {menuOpen && (
+        <div className="app-mega-menu-mobile-overlay md:hidden" onClick={() => setMenuOpen(false)}>
+          <div className="app-mega-menu-mobile" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-700/50">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">All Modules</p>
+              <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-lg bg-white/5 text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-5 overflow-y-auto max-h-[70vh]">
+              {NAV_GROUPS.map(group => (
+                <div key={group.id}>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-2 ${group.color}`}>{group.label}</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {group.items.map(item => {
+                      const active = isActive(item.path);
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.path}
+                          onClick={() => navigate(item.path)}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs transition-all ${
+                            active ? `${group.activeBg} font-bold` : `text-slate-400 active:bg-white/5`
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
