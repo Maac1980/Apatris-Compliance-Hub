@@ -1174,6 +1174,27 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_gen_contracts_tenant ON generated_contracts(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_gen_contracts_worker ON generated_contracts(worker_id)");
 
+  // leave_requests
+  await execute(`
+    CREATE TABLE IF NOT EXISTS leave_requests (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      leave_type TEXT NOT NULL DEFAULT 'annual',
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      days INTEGER DEFAULT 1,
+      reason TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      reviewed_by TEXT,
+      reviewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_leave_tenant ON leave_requests(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_leave_worker ON leave_requests(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

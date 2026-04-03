@@ -33,6 +33,7 @@ import { SignaturesTab } from "@/components/tabs/SignaturesTab";
 import { BenchTab } from "@/components/tabs/BenchTab";
 import { GoogleCalendarTab } from "@/components/tabs/GoogleCalendarTab";
 import { ContractGenTab } from "@/components/tabs/ContractGenTab";
+import { LeaveTab } from "@/components/tabs/LeaveTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -217,6 +218,10 @@ export function DashboardPage() {
       // ── AI CONTRACT GENERATOR ───────────────────────────────────────────
       case "contractgen":
         return <ContractGenTab />;
+
+      // ── LEAVE REQUESTS ──────────────────────────────────────────────────
+      case "leave":
+        return <LeaveTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

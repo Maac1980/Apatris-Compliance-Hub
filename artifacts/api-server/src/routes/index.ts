@@ -47,6 +47,7 @@ import certifiedSignaturesRouter from "./certified-signatures.js";
 import benchRouter from "./bench.js";
 import googleRouter from "./google.js";
 import contractGenRouter from "./contract-gen.js";
+import selfServiceRouter from "./self-service.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -97,5 +98,6 @@ router.use(certifiedSignaturesRouter);
 router.use(benchRouter);
 router.use(googleRouter);
 router.use(contractGenRouter);
+router.use(selfServiceRouter);
 
 export default router;

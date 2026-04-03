@@ -84,6 +84,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "mood",          label: "nav.mood",        icon: SmilePlus },
         { id: "advances",     label: "nav.advances",    icon: DollarSign },
         { id: "signatures",   label: "nav.signatures",  icon: FileSignature },
+        { id: "leave",        label: "nav.leave",       icon: CalendarDays },
         { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
