@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Stamp, ChevronRight, X, Brain, Play, Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Stamp, ChevronRight, X, Brain, Play, Shield, AlertTriangle, CheckCircle2, Bell, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -23,6 +24,16 @@ interface Permit {
   status: string;
   application_ref: string | null;
   notes: string | null;
+  trc_application_submitted?: boolean;
+}
+
+interface AlertEntry {
+  id: number;
+  channel: string;
+  worker_name: string;
+  message_preview: string;
+  status: string;
+  created_at: string;
 }
 
 function daysRemaining(d: string | null): number | null {
@@ -53,12 +64,18 @@ const PERMIT_TYPES = ["TRC", "Work Permit", "Visa", "A1", "Passport"];
 
 export function ImmigrationTab() {
   const { toast } = useToast();
+  const { role } = useAuth();
+  const queryClient = useQueryClient();
+  const [activeView, setActiveView] = useState<"permits" | "alerts">("permits");
   const [filter, setFilter] = useState("");
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState("");
   const [prediction, setPrediction] = useState<any>(null);
   const [predictingId, setPredictingId] = useState<string | null>(null);
 
+  const isManager = role === "Executive" || role === "LegalHead" || role === "TechOps" || role === "Coordinator";
+
+  // Fetch permits — all for managers, own for T5
   const { data, isLoading } = useQuery({
     queryKey: ["immigration-permits"],
     queryFn: async () => {
@@ -68,6 +85,18 @@ export function ImmigrationTab() {
     },
   });
 
+  // Alert history
+  const { data: alertData } = useQuery({
+    queryKey: ["immigration-alerts-history"],
+    queryFn: async () => {
+      const res = await fetch(`${API}api/immigration/alerts/history`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json() as Promise<{ alerts: AlertEntry[] }>;
+    },
+    enabled: activeView === "alerts",
+  });
+
+  // Worker permit history (side panel)
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ["immigration-history", selectedWorkerId],
     queryFn: async () => {
@@ -95,7 +124,25 @@ export function ImmigrationTab() {
       return res.json();
     },
     onSuccess: () => { toast({ description: "Renewal workflow created" }); },
-    onError: () => { toast({ description: "Failed to start renewal", variant: "destructive" }); },
+    onError: () => { toast({ description: "Failed", variant: "destructive" }); },
+  });
+
+  // Mark permit as renewal_in_progress (DONE reply equivalent)
+  const doneMutation = useMutation({
+    mutationFn: async (permitId: string) => {
+      const res = await fetch(`${API}api/immigration/${permitId}`, {
+        method: "PATCH", headers: authHeaders(),
+        body: JSON.stringify({ status: "renewal_in_progress" }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ description: "Marked as renewal in progress" });
+      queryClient.invalidateQueries({ queryKey: ["immigration-permits"] });
+      queryClient.invalidateQueries({ queryKey: ["immigration-history", selectedWorkerId] });
+    },
+    onError: () => { toast({ description: "Failed", variant: "destructive" }); },
   });
 
   const runPrediction = (permitId: string) => {
@@ -127,81 +174,125 @@ export function ImmigrationTab() {
   return (
     <div className="p-4 min-h-full overflow-y-auto pb-24 bg-[#0c0c0e]">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-3">
         <Stamp className="w-5 h-5 text-[#C41E18]" />
         <h2 className="text-lg font-bold text-white">Immigration Permits</h2>
       </div>
 
-      {/* Summary pills */}
-      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-        {([
-          { label: "Green", count: counts.green, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-          { label: "Amber", count: counts.amber, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-          { label: "Red", count: counts.red, color: "text-red-400 bg-red-500/10 border-red-500/20" },
-          { label: "Expired", count: counts.expired, color: "text-red-300 bg-red-900/20 border-red-800/30" },
-        ]).map(s => (
-          <div key={s.label} className={cn("flex-shrink-0 px-3 py-2 rounded-xl border text-center min-w-[70px]", s.color)}>
-            <p className="text-lg font-black leading-none">{s.count}</p>
-            <p className="text-[9px] uppercase tracking-wider font-bold mt-0.5">{s.label}</p>
-          </div>
-        ))}
+      {/* Tab switcher */}
+      <div className="flex gap-1 mb-4 bg-white/[0.03] rounded-xl p-1">
+        <button onClick={() => setActiveView("permits")}
+          className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
+            activeView === "permits" ? "bg-[#C41E18] text-white" : "text-white/40"
+          )}>
+          <Stamp className="w-3 h-3" />Permits
+        </button>
+        <button onClick={() => setActiveView("alerts")}
+          className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
+            activeView === "alerts" ? "bg-[#C41E18] text-white" : "text-white/40"
+          )}>
+          <Bell className="w-3 h-3" />Alerts
+        </button>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setFilter("")}
-          className={cn("px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0",
-            !filter ? "bg-white/10 text-white border-white/20" : "text-white/40 border-white/10"
+      {activeView === "alerts" ? (
+        /* ─── Alerts View ─── */
+        <div className="space-y-2">
+          {!alertData?.alerts?.length ? (
+            <div className="text-center py-16 text-white/30">
+              <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-semibold">No alerts yet</p>
+            </div>
+          ) : (
+            alertData.alerts.map((a) => (
+              <div key={a.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-white">{a.worker_name}</span>
+                  <span className={cn("px-2 py-0.5 rounded-full text-[9px] font-bold",
+                    a.status === "sent" ? "bg-emerald-500/10 text-emerald-400" :
+                    a.status === "failed" ? "bg-red-500/10 text-red-400" :
+                    "bg-amber-500/10 text-amber-400"
+                  )}>{a.status}</span>
+                </div>
+                <p className="text-[10px] text-white/40 line-clamp-2">{a.message_preview}</p>
+                <p className="text-[9px] text-white/20 font-mono mt-1">{new Date(a.created_at).toLocaleDateString("en-GB")}</p>
+              </div>
+            ))
           )}
-        >All</button>
-        {PERMIT_TYPES.map(t => (
-          <button
-            key={t}
-            onClick={() => setFilter(t)}
-            className={cn("px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0",
-              filter === t ? "bg-white/10 text-white border-white/20" : "text-white/40 border-white/10"
-            )}
-          >{t}</button>
-        ))}
-      </div>
-
-      {/* List */}
-      {isLoading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin w-6 h-6 border-2 border-[#C41E18] border-t-transparent rounded-full" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-white/30">
-          <Stamp className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm font-semibold">No permits found</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map(p => {
-            const s = ZONE_STYLE[p.zone];
-            return (
-              <button
-                key={p.id}
-                onClick={() => { setSelectedWorkerId(p.worker_id); setSelectedName(p.worker_name_live || p.worker_name); setPrediction(null); setPredictingId(null); }}
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
-              >
-                <div className={cn("w-2 h-2 rounded-full flex-shrink-0", s.dot)} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{p.worker_name_live || p.worker_name}</p>
-                  <p className="text-[11px] text-white/40 font-mono">{p.permit_type} &middot; {p.country}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className={cn("text-sm font-black font-mono", s.text)}>
-                    {p.days !== null ? (p.days < 0 ? `${Math.abs(p.days)}d over` : `${p.days}d`) : "—"}
-                  </p>
-                  <p className="text-[9px] text-white/30 uppercase tracking-wider font-bold">{s.label}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
-              </button>
-            );
-          })}
-        </div>
+        <>
+          {/* Summary pills */}
+          <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+            {([
+              { label: "Green", count: counts.green, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+              { label: "Amber", count: counts.amber, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+              { label: "Red", count: counts.red, color: "text-red-400 bg-red-500/10 border-red-500/20" },
+              { label: "Expired", count: counts.expired, color: "text-red-300 bg-red-900/20 border-red-800/30" },
+            ]).map(s => (
+              <div key={s.label} className={cn("flex-shrink-0 px-3 py-2 rounded-xl border text-center min-w-[70px]", s.color)}>
+                <p className="text-lg font-black leading-none">{s.count}</p>
+                <p className="text-[9px] uppercase tracking-wider font-bold mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Filter chips */}
+          <div className="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar">
+            <button onClick={() => setFilter("")}
+              className={cn("px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0",
+                !filter ? "bg-white/10 text-white border-white/20" : "text-white/40 border-white/10"
+              )}>All</button>
+            {PERMIT_TYPES.map(t => (
+              <button key={t} onClick={() => setFilter(t)}
+                className={cn("px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0",
+                  filter === t ? "bg-white/10 text-white border-white/20" : "text-white/40 border-white/10"
+                )}>{t}</button>
+            ))}
+          </div>
+
+          {/* Permit List */}
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <div className="animate-spin w-6 h-6 border-2 border-[#C41E18] border-t-transparent rounded-full" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 text-white/30">
+              <Stamp className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-semibold">No permits found</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map(p => {
+                const s = ZONE_STYLE[p.zone];
+                return (
+                  <button key={p.id}
+                    onClick={() => { setSelectedWorkerId(p.worker_id); setSelectedName(p.worker_name_live || p.worker_name); setPrediction(null); setPredictingId(null); }}
+                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+                  >
+                    <div className={cn("w-2 h-2 rounded-full flex-shrink-0", s.dot)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-white truncate">{p.worker_name_live || p.worker_name}</p>
+                        {p.trc_application_submitted && (
+                          <Shield className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-white/40 font-mono">{p.permit_type} &middot; {p.country}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={cn("text-sm font-black font-mono", s.text)}>
+                        {p.days !== null ? (p.days < 0 ? `${Math.abs(p.days)}d over` : `${p.days}d`) : "—"}
+                      </p>
+                      <p className="text-[9px] text-white/30 uppercase tracking-wider font-bold">{s.label}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Side panel */}
@@ -239,37 +330,46 @@ export function ImmigrationTab() {
                           {st.label}
                         </span>
                       </div>
+
+                      {/* TRC Protection Badge */}
+                      {h.trc_application_submitted && (
+                        <div className="flex items-center gap-1.5 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-3">
+                          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                          <p className="text-[10px] font-bold text-emerald-400">TRC Application Filed — Legally Protected</p>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div><p className="text-white/30">Country</p><p className="text-white font-medium">{h.country}</p></div>
                         <div><p className="text-white/30">Status</p><p className="text-white font-medium capitalize">{h.status}</p></div>
                         <div><p className="text-white/30">Issued</p><p className="text-white font-mono">{h.issue_date ? new Date(h.issue_date).toLocaleDateString("en-GB") : "—"}</p></div>
                         <div><p className="text-white/30">Expires</p><p className="text-white font-mono">{h.expiry_date ? new Date(h.expiry_date).toLocaleDateString("en-GB") : "—"}</p></div>
-                        {h.application_ref && <div className="col-span-2"><p className="text-white/30">Ref</p><p className="text-white font-mono">{h.application_ref}</p></div>}
-                        {h.notes && <div className="col-span-2"><p className="text-white/30">Notes</p><p className="text-white/70">{h.notes}</p></div>}
                       </div>
 
                       {/* Actions */}
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          onClick={() => runPrediction(h.id)}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button onClick={() => runPrediction(h.id)}
                           disabled={predictMutation.isPending && predictingId === h.id}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50"
-                        >
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50">
                           {predictMutation.isPending && predictingId === h.id ? (
                             <div className="animate-spin w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full" />
-                          ) : (
-                            <Brain className="w-3 h-3" />
-                          )}
+                          ) : (<Brain className="w-3 h-3" />)}
                           AI Predict
                         </button>
-                        <button
-                          onClick={() => renewalMutation.mutate(h.id)}
-                          disabled={renewalMutation.isPending}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50"
-                        >
-                          <Play className="w-3 h-3" />
-                          Renewal
-                        </button>
+                        {isManager && (
+                          <button onClick={() => renewalMutation.mutate(h.id)}
+                            disabled={renewalMutation.isPending}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50">
+                            <Play className="w-3 h-3" />Renewal
+                          </button>
+                        )}
+                        {h.status === "active" && (
+                          <button onClick={() => doneMutation.mutate(h.id)}
+                            disabled={doneMutation.isPending}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50">
+                            <MessageSquare className="w-3 h-3" />DONE
+                          </button>
+                        )}
                       </div>
 
                       {/* Prediction result */}
@@ -279,9 +379,8 @@ export function ImmigrationTab() {
                             <Brain className="w-3.5 h-3.5 text-indigo-400" />
                             <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">AI Prediction</p>
                           </div>
-
                           {prediction.trc_protection_status === "protected_trc_pending" ? (
-                            <div className="flex items-start gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-2">
+                            <div className="flex items-start gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                               <Shield className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
                               <div>
                                 <p className="text-[10px] font-bold text-emerald-400">TRC Pending — Protected</p>
@@ -312,7 +411,6 @@ export function ImmigrationTab() {
                               </div>
                             </>
                           )}
-
                           {prediction.action_items?.length > 0 && (
                             <ul className="space-y-0.5">
                               {prediction.action_items.map((item: string, i: number) => (

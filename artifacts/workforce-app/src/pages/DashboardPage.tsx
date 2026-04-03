@@ -22,6 +22,7 @@ import { DocsTab } from "@/components/tabs/DocsTab";
 import { GpsCheckinTab } from "@/components/tabs/GpsCheckinTab";
 import { ContractTab } from "@/components/tabs/ContractTab";
 import { ImmigrationTab } from "@/components/tabs/ImmigrationTab";
+import { OnboardingTab } from "@/components/tabs/OnboardingTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -162,6 +163,10 @@ export function DashboardPage() {
       // ── IMMIGRATION PERMITS ──────────────────────────────────────────────
       case "immigration":
         return <ImmigrationTab />;
+
+      // ── ONBOARDING CHECKLIST ───────────────────────────────────────────
+      case "onboarding":
+        return <OnboardingTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
