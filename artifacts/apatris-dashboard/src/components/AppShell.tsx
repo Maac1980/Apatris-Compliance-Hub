@@ -43,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/gps-tracking",      label: "GPS Tracking",  icon: MapPin },
       { path: "/voice",             label: "Voice Check-in", icon: Users },
       { path: "/onboarding",        label: "Onboarding",    icon: ClipboardCheck },
+      { path: "/bench",             label: "Bench",         icon: Users },
     ],
   },
   {

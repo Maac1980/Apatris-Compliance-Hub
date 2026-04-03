@@ -44,6 +44,7 @@ import moodRouter from "./mood.js";
 import voiceRouter from "./voice.js";
 import advancesRouter from "./advances.js";
 import certifiedSignaturesRouter from "./certified-signatures.js";
+import benchRouter from "./bench.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -91,5 +92,6 @@ router.use(moodRouter);
 router.use(voiceRouter);
 router.use(advancesRouter);
 router.use(certifiedSignaturesRouter);
+router.use(benchRouter);
 
 export default router;

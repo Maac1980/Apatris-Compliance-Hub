@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -33,6 +33,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "invoices",      label: "nav.invoices",    icon: Receipt },
         { id: "zus",           label: "nav.zus",         icon: Calculator },
         { id: "matching",      label: "nav.matching",    icon: Users },
+        { id: "bench",         label: "nav.bench",       icon: UserMinus },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
     case "LegalHead":
@@ -46,6 +47,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "invoices",      label: "nav.invoices",    icon: Receipt },
         { id: "zus",           label: "nav.zus",         icon: Calculator },
         { id: "matching",      label: "nav.matching",    icon: Users },
+        { id: "bench",         label: "nav.bench",       icon: UserMinus },
         { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];

@@ -290,10 +290,21 @@ export function startScheduler(): void {
   setTimeout(function daily() {
     runDailyScan()
       .then(() => runImmigrationAlerts())
+      .then(() => runBenchAlerts())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Bench alerts — runs after immigration alerts
+async function runBenchAlerts(): Promise<void> {
+  try {
+    const { runBenchAlertScan } = await import("../routes/bench.js");
+    await runBenchAlertScan();
+  } catch (err) {
+    console.error("[Scheduler] Bench alert scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Immigration permit WhatsApp alerts — runs after daily compliance scan
