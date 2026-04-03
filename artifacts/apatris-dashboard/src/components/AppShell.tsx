@@ -101,6 +101,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: "/crm",            label: "CRM",           icon: Briefcase },
       { path: "/matching",       label: "Worker Match",  icon: Users },
+      { path: "/roi",            label: "ROI Dashboard", icon: Briefcase },
       { path: "/clients",       label: "Clients",       icon: Building2 },
       { path: "/job-board",     label: "Job Board",     icon: Briefcase },
       { path: "/applications",  label: "Applications",  icon: UserPlus },
