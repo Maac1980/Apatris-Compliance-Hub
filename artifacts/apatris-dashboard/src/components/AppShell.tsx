@@ -72,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/salary-benchmark",  label: "Salary Benchmark", icon: TrendingUp },
       { path: "/pay-transparency",  label: "Pay Reports",      icon: BarChart3 },
       { path: "/invoices",          label: "Invoices",         icon: Receipt },
+      { path: "/zus",               label: "ZUS/DRA Filings",  icon: Calculator },
     ],
   },
   {

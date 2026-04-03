@@ -38,6 +38,7 @@ import applicationsRouter from "./applications.js";
 import immigrationRouter from "./immigration.js";
 import onboardingRouter from "./onboarding.js";
 import crmRouter from "./crm.js";
+import zusRouter from "./zus.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -79,5 +80,6 @@ router.use(applicationsRouter);
 router.use(immigrationRouter);
 router.use(onboardingRouter);
 router.use(crmRouter);
+router.use(zusRouter);
 
 export default router;

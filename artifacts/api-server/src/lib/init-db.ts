@@ -969,6 +969,27 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_crm_deals_company ON crm_deals(company_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_crm_deals_stage ON crm_deals(stage)");
 
+  // zus_filings
+  await execute(`
+    CREATE TABLE IF NOT EXISTS zus_filings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      month INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      generated_at TIMESTAMPTZ,
+      submitted_at TIMESTAMPTZ,
+      worker_count INTEGER DEFAULT 0,
+      total_contributions NUMERIC(12,2) DEFAULT 0,
+      xml_data TEXT,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_zus_filings_tenant ON zus_filings(tenant_id)");
+  await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_zus_filings_period ON zus_filings(tenant_id, month, year)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
