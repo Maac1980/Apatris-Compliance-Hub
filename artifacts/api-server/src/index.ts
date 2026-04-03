@@ -28,6 +28,10 @@ const port = Number(process.env["PORT"] || "8080");
     // Seed sample data if tables are empty
     const { seedSampleData } = await import("./lib/seed.js");
     await seedSampleData();
+
+    // Comprehensive seed data
+    const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
+    await seedComprehensiveData();
   } catch (err) {
     console.error("[Startup] Database init failed:", err instanceof Error ? err.message : err);
   }
