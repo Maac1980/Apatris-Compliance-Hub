@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
-import { query, queryOne } from "../lib/db.js";
+import { query, queryOne, execute } from "../lib/db.js";
+import { sendWhatsAppAlert, runImmigrationAlertScan, isWhatsAppConfigured, ALERT_THRESHOLDS } from "../lib/whatsapp.js";
+import { getDefaultTenantId } from "../lib/tenant.js";
 
 const router = Router();
 
@@ -223,6 +225,101 @@ router.post("/immigration/:id/start-renewal", requireAuth, requireRole("Admin", 
     res.status(201).json({ workflow: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to start renewal" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WHATSAPP ALERTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /api/immigration/alerts/send — manually trigger alert scan
+router.post("/immigration/alerts/send", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+  try {
+    const tenantId = req.tenantId!;
+    const result = await runImmigrationAlertScan(tenantId);
+    res.json({ ...result, configured: isWhatsAppConfigured(), thresholds: ALERT_THRESHOLDS });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Alert scan failed" });
+  }
+});
+
+// GET /api/immigration/alerts/history — notification log for immigration alerts
+router.get("/immigration/alerts/history", requireAuth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT * FROM notification_log
+       WHERE tenant_id = $1 AND channel = 'whatsapp' AND sent_by = 'system-immigration-alert'
+       ORDER BY created_at DESC LIMIT 200`,
+      [req.tenantId!]
+    );
+    res.json({ alerts: rows, count: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to fetch alert history" });
+  }
+});
+
+// GET /api/immigration/alerts/status — current alert status per worker
+router.get("/immigration/alerts/status", requireAuth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT ip.id AS permit_id, ip.worker_id, ip.worker_name, ip.permit_type, ip.expiry_date,
+              ip.trc_application_submitted, w.phone AS worker_phone,
+              nl.status AS last_alert_status, nl.created_at AS last_alert_at, nl.message_preview
+       FROM immigration_permits ip
+       LEFT JOIN workers w ON w.id = ip.worker_id
+       LEFT JOIN LATERAL (
+         SELECT status, created_at, message_preview FROM notification_log
+         WHERE worker_id = ip.worker_id::text AND channel = 'whatsapp' AND sent_by = 'system-immigration-alert'
+         ORDER BY created_at DESC LIMIT 1
+       ) nl ON true
+       WHERE ip.tenant_id = $1 AND ip.status = 'active'
+       ORDER BY ip.expiry_date ASC NULLS LAST`,
+      [req.tenantId!]
+    );
+    res.json({ workers: rows, count: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to fetch alert status" });
+  }
+});
+
+// POST /api/immigration/webhook/twilio — Twilio incoming message webhook (public, no auth)
+router.post("/immigration/webhook/twilio", async (req, res) => {
+  try {
+    const body = req.body as Record<string, string>;
+    const from = (body.From || "").replace("whatsapp:", "");
+    const text = (body.Body || "").trim().toUpperCase();
+
+    if (text === "DONE" && from) {
+      // Find worker by phone number
+      const worker = await queryOne<Record<string, any>>(
+        "SELECT id, full_name FROM workers WHERE phone = $1 LIMIT 1",
+        [from]
+      );
+
+      if (worker) {
+        // Update all active permits for this worker to renewal_in_progress
+        await execute(
+          `UPDATE immigration_permits SET status = 'renewal_in_progress', updated_at = NOW()
+           WHERE worker_id = $1 AND status = 'active'`,
+          [worker.id]
+        );
+
+        // Log the reply
+        await execute(
+          `INSERT INTO notification_log (channel, worker_id, worker_name, sent_by, recipient, message_preview, status)
+           VALUES ('whatsapp', $1, $2, 'worker-reply', $3, 'Worker replied DONE — permit status updated to renewal_in_progress', 'sent')`,
+          [worker.id, worker.full_name, from]
+        );
+
+        console.log(`[WhatsApp] Worker ${worker.full_name} replied DONE — permits updated to renewal_in_progress`);
+      }
+    }
+
+    // Twilio expects 200 + TwiML
+    res.type("text/xml").send("<Response></Response>");
+  } catch (err) {
+    console.error("[WhatsApp Webhook] Error:", err);
+    res.type("text/xml").send("<Response></Response>");
   }
 });
 

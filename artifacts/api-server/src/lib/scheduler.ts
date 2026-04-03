@@ -288,10 +288,24 @@ export function startScheduler(): void {
     `[Scheduler] Daily compliance scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
   );
   setTimeout(function daily() {
-    runDailyScan().finally(() => {
-      setTimeout(daily, SCAN_INTERVAL_MS);
-    });
+    runDailyScan()
+      .then(() => runImmigrationAlerts())
+      .finally(() => {
+        setTimeout(daily, SCAN_INTERVAL_MS);
+      });
   }, msToFirst);
+}
+
+// Immigration permit WhatsApp alerts — runs after daily compliance scan
+async function runImmigrationAlerts(): Promise<void> {
+  try {
+    const { runImmigrationAlertScan } = await import("./whatsapp.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await runImmigrationAlertScan(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Immigration alert scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Manual trigger for API route
