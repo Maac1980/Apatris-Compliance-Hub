@@ -38,6 +38,7 @@ import { RoiTab } from "@/components/tabs/RoiTab";
 import { FinesTab } from "@/components/tabs/FinesTab";
 import { TrustTab } from "@/components/tabs/TrustTab";
 import { ChurnTab } from "@/components/tabs/ChurnTab";
+import { HousingTab } from "@/components/tabs/HousingTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -242,6 +243,10 @@ export function DashboardPage() {
       // ── CHURN PREDICTION ────────────────────────────────────────────────
       case "churn":
         return <ChurnTab />;
+
+      // ── HOUSING ─────────────────────────────────────────────────────────
+      case "housing":
+        return <HousingTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

@@ -52,6 +52,7 @@ import roiRouter from "./roi.js";
 import finesRouter from "./fines.js";
 import trustRouter from "./trust.js";
 import churnRouter from "./churn.js";
+import housingRouter from "./housing.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -107,5 +108,6 @@ router.use(roiRouter);
 router.use(finesRouter);
 router.use(trustRouter);
 router.use(churnRouter);
+router.use(housingRouter);
 
 export default router;

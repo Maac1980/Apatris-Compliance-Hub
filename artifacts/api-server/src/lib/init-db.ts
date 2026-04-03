@@ -1254,6 +1254,58 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_churn_tenant ON churn_predictions(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_churn_worker ON churn_predictions(worker_id)");
 
+  // hostels
+  await execute(`
+    CREATE TABLE IF NOT EXISTS hostels (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      address TEXT,
+      city TEXT,
+      country TEXT DEFAULT 'PL',
+      type TEXT DEFAULT 'hostel',
+      total_rooms INTEGER DEFAULT 0,
+      cost_per_bed_monthly NUMERIC(10,2) DEFAULT 0,
+      owner_type TEXT NOT NULL DEFAULT 'owned',
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_hostels_tenant ON hostels(tenant_id)");
+
+  // hostel_rooms
+  await execute(`
+    CREATE TABLE IF NOT EXISTS hostel_rooms (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      hostel_id UUID REFERENCES hostels(id) ON DELETE CASCADE,
+      room_number TEXT NOT NULL,
+      capacity INTEGER DEFAULT 4,
+      current_occupancy INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'available',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_hostel_rooms_hostel ON hostel_rooms(hostel_id)");
+
+  // worker_housing
+  await execute(`
+    CREATE TABLE IF NOT EXISTS worker_housing (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      hostel_id UUID REFERENCES hostels(id) ON DELETE SET NULL,
+      room_id UUID REFERENCES hostel_rooms(id) ON DELETE SET NULL,
+      check_in_date DATE DEFAULT CURRENT_DATE,
+      check_out_date DATE,
+      cost_per_month NUMERIC(10,2) DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_tenant ON worker_housing(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_worker ON worker_housing(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
