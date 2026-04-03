@@ -51,6 +51,7 @@ import selfServiceRouter from "./self-service.js";
 import roiRouter from "./roi.js";
 import finesRouter from "./fines.js";
 import trustRouter from "./trust.js";
+import churnRouter from "./churn.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -105,5 +106,6 @@ router.use(selfServiceRouter);
 router.use(roiRouter);
 router.use(finesRouter);
 router.use(trustRouter);
+router.use(churnRouter);
 
 export default router;

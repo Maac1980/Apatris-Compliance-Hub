@@ -58,6 +58,7 @@ import SelfService from "@/pages/SelfService";
 import RoiDashboard from "@/pages/RoiDashboard";
 import FinesPrevention from "@/pages/FinesPrevention";
 import TrustScores from "@/pages/TrustScores";
+import ChurnPrediction from "@/pages/ChurnPrediction";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -231,6 +232,9 @@ function Router() {
       </Route>
       <Route path="/trust">
         {() => <ProtectedRoute component={TrustScores} />}
+      </Route>
+      <Route path="/churn">
+        {() => <ProtectedRoute component={ChurnPrediction} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

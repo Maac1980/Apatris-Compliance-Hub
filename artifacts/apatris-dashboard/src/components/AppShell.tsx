@@ -121,6 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/ai-audit",     label: "AI Audit",      icon: Shield },
       { path: "/mood",         label: "Mood Tracker",  icon: SmilePlus },
       { path: "/trust",        label: "Trust Scores",  icon: Award },
+      { path: "/churn",        label: "Churn Predict", icon: Users },
     ],
   },
   {

@@ -1234,6 +1234,26 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_trust_tenant ON trust_scores(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_trust_worker ON trust_scores(worker_id)");
 
+  // churn_predictions
+  await execute(`
+    CREATE TABLE IF NOT EXISTS churn_predictions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      churn_probability INTEGER DEFAULT 0,
+      risk_level TEXT NOT NULL DEFAULT 'low',
+      signals JSONB DEFAULT '[]',
+      recommended_action TEXT,
+      predicted_leave_date DATE,
+      status TEXT NOT NULL DEFAULT 'active',
+      resolved_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_churn_tenant ON churn_predictions(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_churn_worker ON churn_predictions(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

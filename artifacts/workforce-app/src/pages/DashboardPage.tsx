@@ -37,6 +37,7 @@ import { LeaveTab } from "@/components/tabs/LeaveTab";
 import { RoiTab } from "@/components/tabs/RoiTab";
 import { FinesTab } from "@/components/tabs/FinesTab";
 import { TrustTab } from "@/components/tabs/TrustTab";
+import { ChurnTab } from "@/components/tabs/ChurnTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -237,6 +238,10 @@ export function DashboardPage() {
       // ── TRUST SCORES ────────────────────────────────────────────────────
       case "trust":
         return <TrustTab />;
+
+      // ── CHURN PREDICTION ────────────────────────────────────────────────
+      case "churn":
+        return <ChurnTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

@@ -293,10 +293,23 @@ export function startScheduler(): void {
       .then(() => runBenchAlerts())
       .then(() => runFinesScan())
       .then(() => runTrustScores())
+      .then(() => runChurnScan())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Churn prediction — runs after trust scores
+async function runChurnScan(): Promise<void> {
+  try {
+    const { runChurnScan: scan } = await import("../routes/churn.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await scan(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Churn scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Trust score calculation — runs after fines scan
