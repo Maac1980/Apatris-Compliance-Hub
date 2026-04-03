@@ -1136,6 +1136,23 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_bench_tenant ON bench_entries(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_bench_worker ON bench_entries(worker_id)");
 
+  // google_integrations
+  await execute(`
+    CREATE TABLE IF NOT EXISTS google_integrations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      access_token TEXT,
+      refresh_token TEXT,
+      email TEXT,
+      scopes TEXT,
+      connected_at TIMESTAMPTZ DEFAULT NOW(),
+      expires_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_google_int_tenant ON google_integrations(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

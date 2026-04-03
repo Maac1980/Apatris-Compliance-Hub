@@ -45,6 +45,7 @@ import voiceRouter from "./voice.js";
 import advancesRouter from "./advances.js";
 import certifiedSignaturesRouter from "./certified-signatures.js";
 import benchRouter from "./bench.js";
+import googleRouter from "./google.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -93,5 +94,6 @@ router.use(voiceRouter);
 router.use(advancesRouter);
 router.use(certifiedSignaturesRouter);
 router.use(benchRouter);
+router.use(googleRouter);
 
 export default router;

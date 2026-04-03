@@ -52,6 +52,7 @@ import VoiceCheckins from "@/pages/VoiceCheckins";
 import SalaryAdvances from "@/pages/SalaryAdvances";
 import CertifiedSignatures from "@/pages/CertifiedSignatures";
 import BenchManagement from "@/pages/BenchManagement";
+import GoogleWorkspace from "@/pages/GoogleWorkspace";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -207,6 +208,9 @@ function Router() {
       </Route>
       <Route path="/bench">
         {() => <ProtectedRoute component={BenchManagement} />}
+      </Route>
+      <Route path="/google">
+        {() => <ProtectedRoute component={GoogleWorkspace} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

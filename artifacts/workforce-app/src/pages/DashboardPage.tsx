@@ -31,6 +31,7 @@ import { MoodTab } from "@/components/tabs/MoodTab";
 import { AdvancesTab } from "@/components/tabs/AdvancesTab";
 import { SignaturesTab } from "@/components/tabs/SignaturesTab";
 import { BenchTab } from "@/components/tabs/BenchTab";
+import { GoogleCalendarTab } from "@/components/tabs/GoogleCalendarTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -207,6 +208,10 @@ export function DashboardPage() {
       // ── BENCH ───────────────────────────────────────────────────────────
       case "bench":
         return <BenchTab />;
+
+      // ── GOOGLE CALENDAR ─────────────────────────────────────────────────
+      case "calendar":
+        return <GoogleCalendarTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
