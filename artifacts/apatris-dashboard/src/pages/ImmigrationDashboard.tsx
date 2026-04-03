@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Stamp, X, ChevronRight, Filter, Plus, Search,
+  Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 
 function authHeaders(): Record<string, string> {
@@ -69,6 +69,8 @@ export default function ImmigrationDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [selectedWorkerName, setSelectedWorkerName] = useState<string>("");
+  const [prediction, setPrediction] = useState<any>(null);
+  const [predictingId, setPredictingId] = useState<string | null>(null);
 
   // Fetch all permits
   const { data, isLoading } = useQuery({
@@ -90,6 +92,36 @@ export default function ImmigrationDashboard() {
     },
     enabled: !!selectedWorkerId,
   });
+
+  const predictMutation = useMutation({
+    mutationFn: async (permitId: string) => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/immigration/${permitId}/predict`, {
+        method: "POST", headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error("Prediction failed");
+      return res.json();
+    },
+    onSuccess: (data) => { setPrediction(data.prediction); },
+    onError: (err) => { toast({ description: err instanceof Error ? err.message : "Prediction failed", variant: "destructive" }); },
+  });
+
+  const renewalMutation = useMutation({
+    mutationFn: async (permitId: string) => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/immigration/${permitId}/start-renewal`, {
+        method: "POST", headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to start renewal");
+      return res.json();
+    },
+    onSuccess: () => { toast({ description: "Renewal workflow created" }); },
+    onError: (err) => { toast({ description: err instanceof Error ? err.message : "Failed", variant: "destructive" }); },
+  });
+
+  const runPrediction = (permitId: string) => {
+    setPredictingId(permitId);
+    setPrediction(null);
+    predictMutation.mutate(permitId);
+  };
 
   const permits = data?.permits ?? [];
 
@@ -130,6 +162,8 @@ export default function ImmigrationDashboard() {
   const openPanel = (workerId: string, workerName: string) => {
     setSelectedWorkerId(workerId);
     setSelectedWorkerName(workerName);
+    setPrediction(null);
+    setPredictingId(null);
   };
 
   return (
@@ -335,6 +369,98 @@ export default function ImmigrationDashboard() {
                       <p className="text-[10px] text-slate-600 mt-2 font-mono">
                         {days !== null && (days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`)}
                       </p>
+
+                      {/* Predict button per permit */}
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => runPrediction(h.id)}
+                          disabled={predictMutation.isPending && predictingId === h.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-bold hover:bg-indigo-600/30 transition-colors disabled:opacity-50"
+                        >
+                          {predictMutation.isPending && predictingId === h.id ? (
+                            <div className="animate-spin w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full" />
+                          ) : (
+                            <Brain className="w-3 h-3" />
+                          )}
+                          AI Predict
+                        </button>
+                        <button
+                          onClick={() => renewalMutation.mutate(h.id)}
+                          disabled={renewalMutation.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C41E18]/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold hover:bg-[#C41E18]/30 transition-colors disabled:opacity-50"
+                        >
+                          <Play className="w-3 h-3" />
+                          Start Renewal
+                        </button>
+                      </div>
+
+                      {/* Prediction result */}
+                      {prediction && predictingId === h.id && (
+                        <div className="mt-3 bg-slate-900 border border-indigo-500/20 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Brain className="w-4 h-4 text-indigo-400" />
+                            <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">AI Renewal Prediction</p>
+                          </div>
+
+                          {prediction.trc_protection_status === "protected_trc_pending" ? (
+                            <div className="flex items-start gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-3">
+                              <Shield className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-bold text-emerald-400">TRC Application Pending — Protected</p>
+                                <p className="text-xs text-slate-300 mt-1">{prediction.summary}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className={`flex items-start gap-2 p-3 rounded-lg mb-3 ${
+                                prediction.risk_level === "high" ? "bg-red-500/10 border border-red-500/20" :
+                                prediction.risk_level === "medium" ? "bg-amber-500/10 border border-amber-500/20" :
+                                "bg-emerald-500/10 border border-emerald-500/20"
+                              }`}>
+                                {prediction.risk_level === "high" ? <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" /> :
+                                 prediction.risk_level === "medium" ? <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" /> :
+                                 <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />}
+                                <div>
+                                  <p className={`text-xs font-bold ${
+                                    prediction.risk_level === "high" ? "text-red-400" :
+                                    prediction.risk_level === "medium" ? "text-amber-400" : "text-emerald-400"
+                                  }`}>
+                                    Risk: {prediction.risk_level.toUpperCase()}
+                                  </p>
+                                  <p className="text-xs text-slate-300 mt-1">{prediction.summary}</p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                                <div>
+                                  <p className="text-slate-500">Start By</p>
+                                  <p className="text-white font-mono font-bold">
+                                    {prediction.recommended_start_date ? new Date(prediction.recommended_start_date).toLocaleDateString("en-GB") : "ASAP"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-slate-500">Est. Processing</p>
+                                  <p className="text-white font-mono font-bold">{prediction.processing_days_estimate} days</p>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {prediction.action_items?.length > 0 && (
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1.5">Action Items</p>
+                              <ul className="space-y-1">
+                                {prediction.action_items.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                                    <span className="text-indigo-400 mt-0.5">•</span>
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })

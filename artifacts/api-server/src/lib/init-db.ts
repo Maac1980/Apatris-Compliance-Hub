@@ -899,6 +899,15 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_immigration_permits_worker ON immigration_permits(worker_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_immigration_permits_expiry ON immigration_permits(expiry_date)");
 
+  // Add trc_application_submitted column if missing
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='immigration_permits' AND column_name='trc_application_submitted') THEN
+        ALTER TABLE immigration_permits ADD COLUMN trc_application_submitted BOOLEAN DEFAULT FALSE;
+      END IF;
+    END $$;
+  `);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

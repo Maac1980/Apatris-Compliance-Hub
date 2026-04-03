@@ -81,6 +81,7 @@ router.patch("/immigration/:id", requireAuth, requireRole("Admin", "Executive", 
     const fieldMap: Record<string, string> = {
       permitType: "permit_type", country: "country", issueDate: "issue_date",
       expiryDate: "expiry_date", status: "status", applicationRef: "application_ref", notes: "notes",
+      trcApplicationSubmitted: "trc_application_submitted",
     };
     const sets: string[] = [];
     const vals: unknown[] = [];
@@ -99,6 +100,129 @@ router.patch("/immigration/:id", requireAuth, requireRole("Admin", "Executive", 
     res.json({ permit: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Update failed" });
+  }
+});
+
+// POST /api/immigration/:id/predict — AI renewal prediction
+router.post("/immigration/:id/predict", requireAuth, async (req, res) => {
+  try {
+    const permit = await queryOne<Record<string, any>>(
+      `SELECT ip.*, w.full_name AS worker_name_live, w.specialization
+       FROM immigration_permits ip
+       LEFT JOIN workers w ON w.id = ip.worker_id
+       WHERE ip.id = $1 AND ip.tenant_id = $2`,
+      [req.params.id, req.tenantId!]
+    );
+    if (!permit) return res.status(404).json({ error: "Permit not found" });
+
+    const trcSubmitted = permit.trc_application_submitted === true;
+
+    // If TRC application is already submitted, worker is protected under Polish law
+    if (trcSubmitted) {
+      return res.json({
+        prediction: {
+          recommended_start_date: null,
+          processing_days_estimate: 0,
+          risk_level: "low",
+          action_items: [
+            "TRC application is pending — worker is legally protected to stay and work",
+            "Monitor application status at Urząd Wojewódzki",
+            "Keep proof of application (stamp in passport) accessible",
+          ],
+          trc_protection_status: "protected_trc_pending",
+          summary: "Worker has a pending TRC application. Under Polish law (Art. 108 Act on Foreigners), the worker is legally protected to continue working until a decision is made.",
+        },
+      });
+    }
+
+    // Use AI for renewal prediction
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      // Fallback without AI
+      const daysLeft = permit.expiry_date
+        ? Math.ceil((new Date(permit.expiry_date).getTime() - Date.now()) / 86_400_000)
+        : null;
+      const riskLevel = daysLeft === null ? "high" : daysLeft < 30 ? "high" : daysLeft < 60 ? "medium" : "low";
+      const processingDays = permit.permit_type === "TRC" ? 90 : permit.permit_type === "Work Permit" ? 30 : 60;
+      const recommended = permit.expiry_date
+        ? new Date(new Date(permit.expiry_date).getTime() - processingDays * 86_400_000).toISOString().slice(0, 10)
+        : null;
+      return res.json({
+        prediction: {
+          recommended_start_date: recommended,
+          processing_days_estimate: processingDays,
+          risk_level: riskLevel,
+          action_items: [`Begin ${permit.permit_type} renewal process`, "Gather required documents", "Schedule appointment at Urząd Wojewódzki"],
+          trc_protection_status: "not_submitted",
+          summary: `Estimated ${processingDays} days processing. Start renewal ${recommended ? "by " + recommended : "immediately"}.`,
+        },
+      });
+    }
+
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const anthropic = new Anthropic({ apiKey });
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: `You are a Polish immigration law expert specializing in work permits, TRC (Temporary Residence Card), visas, and A1 certificates. Given permit details, predict the renewal timeline and risk. Respond ONLY in valid JSON format:
+{
+  "recommended_start_date": "YYYY-MM-DD or null",
+  "processing_days_estimate": number,
+  "risk_level": "low"|"medium"|"high",
+  "action_items": ["string array of specific steps"],
+  "summary": "1-2 sentence summary of the situation and recommendation"
+}
+Consider Polish Urząd Wojewódzki processing times, seasonal backlogs, and document requirements for each permit type.`,
+      messages: [{
+        role: "user",
+        content: `Predict renewal timeline for this immigration permit:
+- Permit type: ${permit.permit_type}
+- Country: ${permit.country}
+- Worker nationality: ${permit.specialization ? "worker specialization: " + permit.specialization : "unknown"}
+- Expiry date: ${permit.expiry_date || "not set"}
+- Current status: ${permit.status}
+- TRC application submitted: No
+- Today's date: ${new Date().toISOString().slice(0, 10)}`,
+      }],
+    });
+
+    const content = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+    const parsed = JSON.parse(content);
+
+    res.json({
+      prediction: {
+        recommended_start_date: parsed.recommended_start_date ?? null,
+        processing_days_estimate: parsed.processing_days_estimate ?? 60,
+        risk_level: parsed.risk_level ?? "medium",
+        action_items: parsed.action_items ?? ["Begin renewal process"],
+        trc_protection_status: "not_submitted",
+        summary: parsed.summary ?? "AI prediction unavailable",
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Prediction failed" });
+  }
+});
+
+// POST /api/immigration/:id/start-renewal — create a document workflow for renewal
+router.post("/immigration/:id/start-renewal", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
+  try {
+    const permit = await queryOne<Record<string, any>>(
+      "SELECT * FROM immigration_permits WHERE id = $1 AND tenant_id = $2",
+      [req.params.id, req.tenantId!]
+    );
+    if (!permit) return res.status(404).json({ error: "Permit not found" });
+
+    const userEmail = (req as any).user?.email ?? "system";
+    const row = await queryOne(
+      `INSERT INTO document_workflows (tenant_id, worker_id, worker_name, document_type, status, expiry_date, uploaded_by)
+       VALUES ($1, $2, $3, $4, 'uploaded', $5, $6) RETURNING *`,
+      [req.tenantId!, permit.worker_id, permit.worker_name, `${permit.permit_type} Renewal`, permit.expiry_date, userEmail]
+    );
+    res.status(201).json({ workflow: row });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to start renewal" });
   }
 });
 

@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Stamp, ChevronRight, X } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Stamp, ChevronRight, X, Brain, Play, Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -51,9 +52,12 @@ const ZONE_STYLE: Record<Zone, { dot: string; text: string; label: string }> = {
 const PERMIT_TYPES = ["TRC", "Work Permit", "Visa", "A1", "Passport"];
 
 export function ImmigrationTab() {
+  const { toast } = useToast();
   const [filter, setFilter] = useState("");
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState("");
+  const [prediction, setPrediction] = useState<any>(null);
+  const [predictingId, setPredictingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["immigration-permits"],
@@ -73,6 +77,32 @@ export function ImmigrationTab() {
     },
     enabled: !!selectedWorkerId,
   });
+
+  const predictMutation = useMutation({
+    mutationFn: async (permitId: string) => {
+      const res = await fetch(`${API}api/immigration/${permitId}/predict`, { method: "POST", headers: authHeaders() });
+      if (!res.ok) throw new Error("Prediction failed");
+      return res.json();
+    },
+    onSuccess: (data) => { setPrediction(data.prediction); },
+    onError: () => { toast({ description: "Prediction failed", variant: "destructive" }); },
+  });
+
+  const renewalMutation = useMutation({
+    mutationFn: async (permitId: string) => {
+      const res = await fetch(`${API}api/immigration/${permitId}/start-renewal`, { method: "POST", headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => { toast({ description: "Renewal workflow created" }); },
+    onError: () => { toast({ description: "Failed to start renewal", variant: "destructive" }); },
+  });
+
+  const runPrediction = (permitId: string) => {
+    setPredictingId(permitId);
+    setPrediction(null);
+    predictMutation.mutate(permitId);
+  };
 
   const enriched = useMemo(() =>
     (data?.permits ?? []).map(p => {
@@ -153,7 +183,7 @@ export function ImmigrationTab() {
             return (
               <button
                 key={p.id}
-                onClick={() => { setSelectedWorkerId(p.worker_id); setSelectedName(p.worker_name_live || p.worker_name); }}
+                onClick={() => { setSelectedWorkerId(p.worker_id); setSelectedName(p.worker_name_live || p.worker_name); setPrediction(null); setPredictingId(null); }}
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
               >
                 <div className={cn("w-2 h-2 rounded-full flex-shrink-0", s.dot)} />
@@ -217,6 +247,83 @@ export function ImmigrationTab() {
                         {h.application_ref && <div className="col-span-2"><p className="text-white/30">Ref</p><p className="text-white font-mono">{h.application_ref}</p></div>}
                         {h.notes && <div className="col-span-2"><p className="text-white/30">Notes</p><p className="text-white/70">{h.notes}</p></div>}
                       </div>
+
+                      {/* Actions */}
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => runPrediction(h.id)}
+                          disabled={predictMutation.isPending && predictingId === h.id}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50"
+                        >
+                          {predictMutation.isPending && predictingId === h.id ? (
+                            <div className="animate-spin w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full" />
+                          ) : (
+                            <Brain className="w-3 h-3" />
+                          )}
+                          AI Predict
+                        </button>
+                        <button
+                          onClick={() => renewalMutation.mutate(h.id)}
+                          disabled={renewalMutation.isPending}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-xl text-[11px] font-bold active:scale-95 transition-transform disabled:opacity-50"
+                        >
+                          <Play className="w-3 h-3" />
+                          Renewal
+                        </button>
+                      </div>
+
+                      {/* Prediction result */}
+                      {prediction && predictingId === h.id && (
+                        <div className="mt-3 bg-white/[0.02] border border-indigo-500/20 rounded-xl p-3">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">AI Prediction</p>
+                          </div>
+
+                          {prediction.trc_protection_status === "protected_trc_pending" ? (
+                            <div className="flex items-start gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-2">
+                              <Shield className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-[10px] font-bold text-emerald-400">TRC Pending — Protected</p>
+                                <p className="text-[10px] text-white/50 mt-0.5">{prediction.summary}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className={cn("flex items-start gap-2 p-2.5 rounded-lg mb-2",
+                                prediction.risk_level === "high" ? "bg-red-500/10 border border-red-500/20" :
+                                prediction.risk_level === "medium" ? "bg-amber-500/10 border border-amber-500/20" :
+                                "bg-emerald-500/10 border border-emerald-500/20"
+                              )}>
+                                {prediction.risk_level === "high" ? <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" /> :
+                                 prediction.risk_level === "medium" ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" /> :
+                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />}
+                                <div>
+                                  <p className={cn("text-[10px] font-bold",
+                                    prediction.risk_level === "high" ? "text-red-400" :
+                                    prediction.risk_level === "medium" ? "text-amber-400" : "text-emerald-400"
+                                  )}>Risk: {prediction.risk_level.toUpperCase()}</p>
+                                  <p className="text-[10px] text-white/50 mt-0.5">{prediction.summary}</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
+                                <div><p className="text-white/30">Start By</p><p className="text-white font-mono font-bold">{prediction.recommended_start_date ? new Date(prediction.recommended_start_date).toLocaleDateString("en-GB") : "ASAP"}</p></div>
+                                <div><p className="text-white/30">Processing</p><p className="text-white font-mono font-bold">{prediction.processing_days_estimate}d</p></div>
+                              </div>
+                            </>
+                          )}
+
+                          {prediction.action_items?.length > 0 && (
+                            <ul className="space-y-0.5">
+                              {prediction.action_items.map((item: string, i: number) => (
+                                <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/50">
+                                  <span className="text-indigo-400 mt-px">•</span>{item}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
