@@ -386,6 +386,23 @@ async function sendWeeklyReport(): Promise<void> {
   }
 }
 
+// Monthly invoice generation — 1st of every month at 06:00
+export function startMonthlyInvoices(): void {
+  function msUntilFirst6am(): number {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 6, 0, 0, 0);
+    return next.getTime() - now.getTime();
+  }
+  const ms = msUntilFirst6am();
+  const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+  console.log(`[Scheduler] Monthly invoice generation scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (1st of month 06:00).`);
+  setTimeout(function monthly() {
+    import("../routes/invoices.js").then(m => m.runMonthlyInvoiceGeneration()).catch(err =>
+      console.error("[Scheduler] Monthly invoice error:", err)
+    ).finally(() => setTimeout(monthly, MONTH_MS));
+  }, ms);
+}
+
 // Schedule weekly report — every Monday at 07:00
 export function startWeeklyReport(): void {
   if (!isMailConfigured()) {

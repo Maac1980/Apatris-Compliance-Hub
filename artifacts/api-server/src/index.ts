@@ -42,10 +42,11 @@ const port = Number(process.env["PORT"] || "8080");
     console.error("[Startup] WebSocket init failed:", err instanceof Error ? err.message : err);
   }
 
-  // Weekly report — non-fatal
+  // Weekly report + monthly invoices — non-fatal
   try {
-    const { startWeeklyReport } = await import("./lib/scheduler.js");
+    const { startWeeklyReport, startMonthlyInvoices } = await import("./lib/scheduler.js");
     startWeeklyReport();
+    startMonthlyInvoices();
   } catch {}
 
   server.listen(port, "0.0.0.0", () => {

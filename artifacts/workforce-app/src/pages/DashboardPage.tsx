@@ -24,6 +24,7 @@ import { ContractTab } from "@/components/tabs/ContractTab";
 import { ImmigrationTab } from "@/components/tabs/ImmigrationTab";
 import { OnboardingTab } from "@/components/tabs/OnboardingTab";
 import { CrmTab } from "@/components/tabs/CrmTab";
+import { InvoiceTab } from "@/components/tabs/InvoiceTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -172,6 +173,10 @@ export function DashboardPage() {
       // ── CRM ─────────────────────────────────────────────────────────────
       case "crm":
         return <CrmTab />;
+
+      // ── INVOICES ────────────────────────────────────────────────────────
+      case "invoices":
+        return <InvoiceTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
