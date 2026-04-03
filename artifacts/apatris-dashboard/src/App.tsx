@@ -47,6 +47,7 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import CrmPage from "@/pages/CrmPage";
 import ZusFilings from "@/pages/ZusFilings";
 import WorkerMatching from "@/pages/WorkerMatching";
+import MoodTracker from "@/pages/MoodTracker";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -187,6 +188,9 @@ function Router() {
       </Route>
       <Route path="/matching">
         {() => <ProtectedRoute component={WorkerMatching} />}
+      </Route>
+      <Route path="/mood">
+        {() => <ProtectedRoute component={MoodTracker} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

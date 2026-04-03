@@ -7,7 +7,7 @@ import {
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
   Globe, Building2, UserPlus, Briefcase, Receipt, FileText, Stamp,
-  LayoutGrid, ChevronDown, X, ClipboardCheck,
+  LayoutGrid, ChevronDown, X, ClipboardCheck, SmilePlus,
 } from "lucide-react";
 
 // ── Grouped Navigation ──────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/ai-copilot",   label: "AI Copilot",    icon: Sparkles },
       { path: "/regulatory",   label: "Regulatory",    icon: Shield },
       { path: "/ai-audit",     label: "AI Audit",      icon: Shield },
+      { path: "/mood",         label: "Mood Tracker",  icon: SmilePlus },
     ],
   },
   {

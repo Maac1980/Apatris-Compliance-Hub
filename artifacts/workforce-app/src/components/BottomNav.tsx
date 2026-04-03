@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -75,6 +75,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "immigration",   label: "nav.permits",     icon: Stamp },
         { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
         { id: "gps",           label: "nav.gps",         icon: Navigation },
+        { id: "mood",          label: "nav.mood",        icon: SmilePlus },
         { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];

@@ -403,6 +403,26 @@ export function startMonthlyInvoices(): void {
   }, ms);
 }
 
+// Weekly mood prompts — every Monday at 09:00
+export function startWeeklyMoodPrompts(): void {
+  function msUntilNextMonday9am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setDate(now.getDate() + ((8 - now.getDay()) % 7 || 7));
+    next.setHours(9, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 7);
+    return next.getTime() - now.getTime();
+  }
+  const ms = msUntilNextMonday9am();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  console.log(`[Scheduler] Weekly mood prompts scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 09:00).`);
+  setTimeout(function moodWeekly() {
+    import("../routes/mood.js").then(m => m.sendWeeklyMoodPrompts()).catch(err =>
+      console.error("[Scheduler] Mood prompt error:", err)
+    ).finally(() => setTimeout(moodWeekly, WEEK_MS));
+  }, ms);
+}
+
 // Schedule weekly report — every Monday at 07:00
 export function startWeeklyReport(): void {
   if (!isMailConfigured()) {
