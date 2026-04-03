@@ -1,0 +1,9 @@
+node_modules
+.git
+.claude
+.agents
+*.log
+.env
+.env.*
+!.env.example
+attached_assets
