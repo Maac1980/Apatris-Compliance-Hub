@@ -53,6 +53,7 @@ import finesRouter from "./fines.js";
 import trustRouter from "./trust.js";
 import churnRouter from "./churn.js";
 import housingRouter from "./housing.js";
+import revenueRouter from "./revenue.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -109,5 +110,6 @@ router.use(finesRouter);
 router.use(trustRouter);
 router.use(churnRouter);
 router.use(housingRouter);
+router.use(revenueRouter);
 
 export default router;

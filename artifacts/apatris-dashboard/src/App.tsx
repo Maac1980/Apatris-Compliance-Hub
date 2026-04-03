@@ -60,6 +60,7 @@ import FinesPrevention from "@/pages/FinesPrevention";
 import TrustScores from "@/pages/TrustScores";
 import ChurnPrediction from "@/pages/ChurnPrediction";
 import HousingManagement from "@/pages/HousingManagement";
+import RevenueForecast from "@/pages/RevenueForecast";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -239,6 +240,9 @@ function Router() {
       </Route>
       <Route path="/housing">
         {() => <ProtectedRoute component={HousingManagement} />}
+      </Route>
+      <Route path="/revenue">
+        {() => <ProtectedRoute component={RevenueForecast} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
