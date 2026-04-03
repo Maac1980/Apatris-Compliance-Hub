@@ -49,6 +49,7 @@ import googleRouter from "./google.js";
 import contractGenRouter from "./contract-gen.js";
 import selfServiceRouter from "./self-service.js";
 import roiRouter from "./roi.js";
+import finesRouter from "./fines.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -101,5 +102,6 @@ router.use(googleRouter);
 router.use(contractGenRouter);
 router.use(selfServiceRouter);
 router.use(roiRouter);
+router.use(finesRouter);
 
 export default router;

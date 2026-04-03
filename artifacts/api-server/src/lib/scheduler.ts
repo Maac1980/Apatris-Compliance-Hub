@@ -291,10 +291,23 @@ export function startScheduler(): void {
     runDailyScan()
       .then(() => runImmigrationAlerts())
       .then(() => runBenchAlerts())
+      .then(() => runFinesScan())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Fines prediction scan — runs after bench alerts
+async function runFinesScan(): Promise<void> {
+  try {
+    const { runFineScan } = await import("../routes/fines.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await runFineScan(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Fines scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Bench alerts — runs after immigration alerts

@@ -56,6 +56,7 @@ import GoogleWorkspace from "@/pages/GoogleWorkspace";
 import ContractGenerator from "@/pages/ContractGenerator";
 import SelfService from "@/pages/SelfService";
 import RoiDashboard from "@/pages/RoiDashboard";
+import FinesPrevention from "@/pages/FinesPrevention";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -223,6 +224,9 @@ function Router() {
       </Route>
       <Route path="/roi">
         {() => <ProtectedRoute component={RoiDashboard} />}
+      </Route>
+      <Route path="/fines">
+        {() => <ProtectedRoute component={FinesPrevention} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

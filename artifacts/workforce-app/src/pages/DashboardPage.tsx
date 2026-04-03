@@ -35,6 +35,7 @@ import { GoogleCalendarTab } from "@/components/tabs/GoogleCalendarTab";
 import { ContractGenTab } from "@/components/tabs/ContractGenTab";
 import { LeaveTab } from "@/components/tabs/LeaveTab";
 import { RoiTab } from "@/components/tabs/RoiTab";
+import { FinesTab } from "@/components/tabs/FinesTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -227,6 +228,10 @@ export function DashboardPage() {
       // ── ROI DASHBOARD ───────────────────────────────────────────────────
       case "roi":
         return <RoiTab />;
+
+      // ── FINES PREVENTION ────────────────────────────────────────────────
+      case "fines":
+        return <FinesTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

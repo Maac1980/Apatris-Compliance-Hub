@@ -60,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/trc-service",        label: "TRC Service",        icon: FileCheck },
       { path: "/posted-workers",     label: "Posted Workers",     icon: Globe },
       { path: "/country-compliance", label: "Country Rules",      icon: Globe },
+      { path: "/fines",             label: "Fines Prevention",   icon: Shield },
       { path: "/gdpr",              label: "GDPR",               icon: Shield },
     ],
   },
