@@ -21,6 +21,7 @@ import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
 import { GpsCheckinTab } from "@/components/tabs/GpsCheckinTab";
 import { ContractTab } from "@/components/tabs/ContractTab";
+import { ImmigrationTab } from "@/components/tabs/ImmigrationTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -157,6 +158,10 @@ export function DashboardPage() {
       // ── GPS CHECK-IN ─────────────────────────────────────────────────────
       case "gps":
         return <GpsCheckinTab />;
+
+      // ── IMMIGRATION PERMITS ──────────────────────────────────────────────
+      case "immigration":
+        return <ImmigrationTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

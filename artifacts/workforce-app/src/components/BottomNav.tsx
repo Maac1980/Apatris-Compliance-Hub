@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -26,16 +26,18 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
         { id: "alerts",     label: "nav.alerts",     icon: Bell },
         { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
-        { id: "gps",        label: "nav.gps",        icon: Navigation },
-        { id: "profile",    label: "nav.profile",    icon: User },
+        { id: "gps",           label: "nav.gps",        icon: Navigation },
+        { id: "immigration",   label: "nav.permits",    icon: Stamp },
+        { id: "profile",       label: "nav.profile",    icon: User },
       ];
     case "LegalHead":
       return [
-        { id: "home",    label: "nav.home",      icon: Home },
-        { id: "workers", label: "nav.directory", icon: Users },
-        { id: "alerts",  label: "nav.alerts",    icon: Bell },
-        { id: "queue",   label: "nav.docQueue", icon: ClipboardList },
-        { id: "profile", label: "nav.profile",   icon: User },
+        { id: "home",          label: "nav.home",      icon: Home },
+        { id: "workers",       label: "nav.directory", icon: Users },
+        { id: "alerts",        label: "nav.alerts",    icon: Bell },
+        { id: "immigration",   label: "nav.permits",   icon: Stamp },
+        { id: "queue",         label: "nav.docQueue", icon: ClipboardList },
+        { id: "profile",       label: "nav.profile",   icon: User },
       ];
     case "TechOps":
       return [
