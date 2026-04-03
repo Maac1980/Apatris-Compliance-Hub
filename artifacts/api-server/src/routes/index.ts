@@ -35,6 +35,7 @@ import clientsRouter from "./clients.js";
 import jobsRouter from "./jobs.js";
 import invoicesRouter from "./invoices.js";
 import applicationsRouter from "./applications.js";
+import immigrationRouter from "./immigration.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -73,5 +74,6 @@ router.use(clientsRouter);
 router.use(jobsRouter);
 router.use(invoicesRouter);
 router.use(applicationsRouter);
+router.use(immigrationRouter);
 
 export default router;

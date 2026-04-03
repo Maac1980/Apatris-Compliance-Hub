@@ -877,6 +877,28 @@ export async function initializeDatabase(): Promise<void> {
   }
 
   // ── Performance indexes ──────────────────────────────────────────────────
+  // immigration_permits
+  await execute(`
+    CREATE TABLE IF NOT EXISTS immigration_permits (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      permit_type TEXT NOT NULL DEFAULT 'work_permit',
+      country TEXT NOT NULL DEFAULT 'PL',
+      issue_date DATE,
+      expiry_date DATE,
+      status TEXT NOT NULL DEFAULT 'active',
+      application_ref TEXT,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_immigration_permits_tenant ON immigration_permits(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_immigration_permits_worker ON immigration_permits(worker_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_immigration_permits_expiry ON immigration_permits(expiry_date)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

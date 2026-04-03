@@ -42,6 +42,7 @@ import PayTransparency from "@/pages/PayTransparency";
 import ApplicationsFeed from "@/pages/ApplicationsFeed";
 import JobBoard from "@/pages/JobBoard";
 import InvoiceManagement from "@/pages/InvoiceManagement";
+import ImmigrationDashboard from "@/pages/ImmigrationDashboard";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -167,6 +168,9 @@ function Router() {
       </Route>
       <Route path="/invoices">
         {() => <ProtectedRoute component={InvoiceManagement} />}
+      </Route>
+      <Route path="/immigration">
+        {() => <ProtectedRoute component={ImmigrationDashboard} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

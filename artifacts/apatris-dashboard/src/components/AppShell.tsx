@@ -6,7 +6,7 @@ import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
-  Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign,
+  Globe, Building2, UserPlus, Briefcase, Receipt, FileText, DollarSign, Stamp,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -38,6 +38,7 @@ const NAV_ITEMS = [
   { path: "/applications",      label: "Apps",        icon: UserPlus },
   { path: "/job-board",         label: "Jobs",        icon: Briefcase },
   { path: "/invoices",          label: "Invoices",    icon: Receipt },
+  { path: "/immigration",       label: "Permits",     icon: Stamp },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
