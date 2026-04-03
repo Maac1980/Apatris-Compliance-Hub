@@ -7,7 +7,7 @@ import {
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
   Shield, Search, CalendarDays, Clock, Award, TrendingUp,
   Globe, Building2, UserPlus, Briefcase, Receipt, FileText, Stamp,
-  LayoutGrid, ChevronDown, X,
+  LayoutGrid, ChevronDown, X, ClipboardCheck,
 } from "lucide-react";
 
 // ── Grouped Navigation ──────────────────────────────────────────────────────
@@ -41,6 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/shift-schedule",    label: "Shifts",        icon: Clock },
       { path: "/skills-matrix",     label: "Skills Matrix", icon: Award },
       { path: "/gps-tracking",      label: "GPS Tracking",  icon: MapPin },
+      { path: "/onboarding",        label: "Onboarding",    icon: ClipboardCheck },
     ],
   },
   {

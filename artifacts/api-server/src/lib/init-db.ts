@@ -908,6 +908,27 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // onboarding_checklists
+  await execute(`
+    CREATE TABLE IF NOT EXISTS onboarding_checklists (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      step_name TEXT NOT NULL,
+      step_order INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      due_date DATE,
+      completed_at TIMESTAMPTZ,
+      notes TEXT,
+      required_document TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_onboarding_tenant ON onboarding_checklists(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_onboarding_worker ON onboarding_checklists(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
