@@ -48,6 +48,7 @@ import CrmPage from "@/pages/CrmPage";
 import ZusFilings from "@/pages/ZusFilings";
 import WorkerMatching from "@/pages/WorkerMatching";
 import MoodTracker from "@/pages/MoodTracker";
+import VoiceCheckins from "@/pages/VoiceCheckins";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -191,6 +192,9 @@ function Router() {
       </Route>
       <Route path="/mood">
         {() => <ProtectedRoute component={MoodTracker} />}
+      </Route>
+      <Route path="/voice">
+        {() => <ProtectedRoute component={VoiceCheckins} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

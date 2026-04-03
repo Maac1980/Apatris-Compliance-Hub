@@ -1046,6 +1046,26 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_mood_worker ON mood_entries(worker_id)");
   await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_mood_weekly ON mood_entries(tenant_id, worker_id, week_number, year)");
 
+  // voice_checkins
+  await execute(`
+    CREATE TABLE IF NOT EXISTS voice_checkins (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      worker_id UUID,
+      worker_name TEXT,
+      phone_number TEXT NOT NULL,
+      checkin_type TEXT NOT NULL DEFAULT 'check_in',
+      site TEXT,
+      timestamp TIMESTAMPTZ DEFAULT NOW(),
+      transcription TEXT,
+      status TEXT NOT NULL DEFAULT 'recorded',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_voice_checkins_tenant ON voice_checkins(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_voice_checkins_worker ON voice_checkins(worker_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_voice_checkins_phone ON voice_checkins(phone_number)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

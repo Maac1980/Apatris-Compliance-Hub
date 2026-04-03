@@ -41,6 +41,7 @@ import crmRouter from "./crm.js";
 import zusRouter from "./zus.js";
 import matchingRouter from "./matching.js";
 import moodRouter from "./mood.js";
+import voiceRouter from "./voice.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -85,5 +86,6 @@ router.use(crmRouter);
 router.use(zusRouter);
 router.use(matchingRouter);
 router.use(moodRouter);
+router.use(voiceRouter);
 
 export default router;
