@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -29,6 +29,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "gps",           label: "nav.gps",        icon: Navigation },
         { id: "immigration",   label: "nav.permits",     icon: Stamp },
         { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+        { id: "crm",           label: "nav.crm",         icon: Briefcase },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
     case "LegalHead":
@@ -38,6 +39,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "alerts",        label: "nav.alerts",      icon: Bell },
         { id: "immigration",   label: "nav.permits",     icon: Stamp },
         { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+        { id: "crm",           label: "nav.crm",         icon: Briefcase },
         { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
@@ -48,6 +50,7 @@ function getTabsForRole(role: Role): Tab[] {
         { id: "sites",         label: "nav.sites",       icon: MapPin },
         { id: "immigration",   label: "nav.permits",     icon: Stamp },
         { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+        { id: "crm",           label: "nav.crm",         icon: Briefcase },
         { id: "profile",       label: "nav.profile",     icon: User },
       ];
     case "Coordinator":

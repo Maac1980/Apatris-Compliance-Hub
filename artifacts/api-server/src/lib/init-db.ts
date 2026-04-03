@@ -929,6 +929,46 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_onboarding_tenant ON onboarding_checklists(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_onboarding_worker ON onboarding_checklists(worker_id)");
 
+  // crm_companies
+  await execute(`
+    CREATE TABLE IF NOT EXISTS crm_companies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_name TEXT NOT NULL,
+      nip TEXT,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      country TEXT DEFAULT 'PL',
+      status TEXT NOT NULL DEFAULT 'active',
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_crm_companies_tenant ON crm_companies(tenant_id)");
+
+  // crm_deals
+  await execute(`
+    CREATE TABLE IF NOT EXISTS crm_deals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_id UUID REFERENCES crm_companies(id) ON DELETE CASCADE,
+      deal_name TEXT NOT NULL,
+      stage TEXT NOT NULL DEFAULT 'Lead',
+      value_eur NUMERIC(12,2) DEFAULT 0,
+      workers_needed INTEGER DEFAULT 0,
+      role_type TEXT,
+      start_date DATE,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant ON crm_deals(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_crm_deals_company ON crm_deals(company_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_crm_deals_stage ON crm_deals(stage)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

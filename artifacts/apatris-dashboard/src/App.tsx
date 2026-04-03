@@ -44,6 +44,7 @@ import JobBoard from "@/pages/JobBoard";
 import InvoiceManagement from "@/pages/InvoiceManagement";
 import ImmigrationDashboard from "@/pages/ImmigrationDashboard";
 import OnboardingPage from "@/pages/OnboardingPage";
+import CrmPage from "@/pages/CrmPage";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -175,6 +176,9 @@ function Router() {
       </Route>
       <Route path="/onboarding">
         {() => <ProtectedRoute component={OnboardingPage} />}
+      </Route>
+      <Route path="/crm">
+        {() => <ProtectedRoute component={CrmPage} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
