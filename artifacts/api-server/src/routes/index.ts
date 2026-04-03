@@ -43,6 +43,7 @@ import matchingRouter from "./matching.js";
 import moodRouter from "./mood.js";
 import voiceRouter from "./voice.js";
 import advancesRouter from "./advances.js";
+import certifiedSignaturesRouter from "./certified-signatures.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -89,5 +90,6 @@ router.use(matchingRouter);
 router.use(moodRouter);
 router.use(voiceRouter);
 router.use(advancesRouter);
+router.use(certifiedSignaturesRouter);
 
 export default router;

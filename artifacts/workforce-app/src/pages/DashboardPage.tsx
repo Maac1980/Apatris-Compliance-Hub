@@ -29,6 +29,7 @@ import { ZusTab } from "@/components/tabs/ZusTab";
 import { MatchingTab } from "@/components/tabs/MatchingTab";
 import { MoodTab } from "@/components/tabs/MoodTab";
 import { AdvancesTab } from "@/components/tabs/AdvancesTab";
+import { SignaturesTab } from "@/components/tabs/SignaturesTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -197,6 +198,10 @@ export function DashboardPage() {
       // ── SALARY ADVANCES ─────────────────────────────────────────────────
       case "advances":
         return <AdvancesTab />;
+
+      // ── CERTIFIED SIGNATURES ────────────────────────────────────────────
+      case "signatures":
+        return <SignaturesTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

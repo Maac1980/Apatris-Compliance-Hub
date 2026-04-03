@@ -50,6 +50,7 @@ import WorkerMatching from "@/pages/WorkerMatching";
 import MoodTracker from "@/pages/MoodTracker";
 import VoiceCheckins from "@/pages/VoiceCheckins";
 import SalaryAdvances from "@/pages/SalaryAdvances";
+import CertifiedSignatures from "@/pages/CertifiedSignatures";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -199,6 +200,9 @@ function Router() {
       </Route>
       <Route path="/advances">
         {() => <ProtectedRoute component={SalaryAdvances} />}
+      </Route>
+      <Route path="/certified-signatures">
+        {() => <ProtectedRoute component={CertifiedSignatures} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

@@ -1088,6 +1088,33 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_salary_advances_tenant ON salary_advances(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_salary_advances_worker ON salary_advances(worker_id)");
 
+  // certified_signatures
+  await execute(`
+    CREATE TABLE IF NOT EXISTS certified_signatures (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      document_id UUID,
+      contract_id UUID,
+      worker_id UUID,
+      worker_name TEXT,
+      worker_email TEXT,
+      provider TEXT NOT NULL DEFAULT 'docusign',
+      envelope_id TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      sent_at TIMESTAMPTZ,
+      viewed_at TIMESTAMPTZ,
+      signed_at TIMESTAMPTZ,
+      ip_address TEXT,
+      certificate_url TEXT,
+      signing_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_cert_sigs_tenant ON certified_signatures(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_cert_sigs_envelope ON certified_signatures(envelope_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_cert_sigs_contract ON certified_signatures(contract_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
