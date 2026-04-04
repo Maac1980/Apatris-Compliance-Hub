@@ -485,19 +485,24 @@ async function sendWeeklyReport(): Promise<void> {
 }
 
 // Monthly invoice generation — 1st of every month at 06:00
+// NOTE: A fixed 30-day setTimeout overflows the 32-bit limit (2,147,483,647 ms)
+// so we recalculate the delay to the next 1st-of-month each time.
 export function startMonthlyInvoices(): void {
-  function msUntilFirst6am(): number {
+  function msUntilNextFirst6am(): number {
     const now = new Date();
     const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 6, 0, 0, 0);
+    if (next.getTime() - now.getTime() < 60_000) {
+      // Less than a minute away — target the following month
+      next.setMonth(next.getMonth() + 1);
+    }
     return next.getTime() - now.getTime();
   }
-  const ms = msUntilFirst6am();
-  const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+  const ms = msUntilNextFirst6am();
   console.log(`[Scheduler] Monthly invoice generation scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (1st of month 06:00).`);
   setTimeout(function monthly() {
     import("../routes/invoices.js").then(m => m.runMonthlyInvoiceGeneration()).catch(err =>
       console.error("[Scheduler] Monthly invoice error:", err)
-    ).finally(() => setTimeout(monthly, MONTH_MS));
+    ).finally(() => setTimeout(monthly, msUntilNextFirst6am()));
   }, ms);
 }
 
