@@ -63,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/country-compliance", label: "Country Rules",      icon: Globe },
       { path: "/fines",             label: "Fines Prevention",   icon: Shield },
       { path: "/legal",             label: "Legal Monitor",      icon: Shield },
+      { path: "/safety",            label: "Site Safety",        icon: Shield },
       { path: "/gdpr",              label: "GDPR",               icon: Shield },
     ],
   },

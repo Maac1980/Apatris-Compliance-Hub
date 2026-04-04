@@ -1366,6 +1366,41 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_legal_tenant ON legal_updates(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_legal_status ON legal_updates(status)");
 
+  // safety_incidents
+  await execute(`
+    CREATE TABLE IF NOT EXISTS safety_incidents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      site TEXT NOT NULL,
+      incident_type TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'medium',
+      description TEXT,
+      photo_url TEXT,
+      ai_analysis JSONB,
+      status TEXT NOT NULL DEFAULT 'open',
+      reported_at TIMESTAMPTZ DEFAULT NOW(),
+      resolved_at TIMESTAMPTZ,
+      resolved_by TEXT
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_safety_inc_tenant ON safety_incidents(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_safety_inc_site ON safety_incidents(site)");
+
+  // safety_scores
+  await execute(`
+    CREATE TABLE IF NOT EXISTS safety_scores (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      site TEXT NOT NULL,
+      score INTEGER DEFAULT 100,
+      breakdown JSONB DEFAULT '{}',
+      calculated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_safety_scores_tenant ON safety_scores(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
