@@ -1801,6 +1801,63 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_rate_cards_agreement ON rate_cards(agreement_id)");
 
+  // legal_knowledge
+  await execute(`
+    CREATE TABLE IF NOT EXISTS legal_knowledge (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      source_url TEXT,
+      source_name TEXT,
+      effective_date DATE,
+      last_verified TIMESTAMPTZ DEFAULT NOW(),
+      language TEXT DEFAULT 'en',
+      tags JSONB DEFAULT '[]'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_legal_kb_category ON legal_knowledge(category)");
+
+  // legal_queries
+  await execute(`
+    CREATE TABLE IF NOT EXISTS legal_queries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      user_id TEXT,
+      question TEXT NOT NULL,
+      answer TEXT,
+      sources_used JSONB DEFAULT '[]',
+      language TEXT DEFAULT 'en',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_legal_queries_tenant ON legal_queries(tenant_id)");
+
+  // Seed knowledge base if empty
+  const kbCount = await query<{count:string}>("SELECT COUNT(*) AS count FROM legal_knowledge");
+  if (parseInt(kbCount[0]?.count ?? "0") < 5) {
+    const articles = [
+      { cat: "TRC", title: "Art. 108 — Stamp in Passport Protection", content: "Under Art. 108 of the Act on Foreigners (Ustawa o cudzoziemcach), if a foreigner has submitted a TRC application before the expiry of their current stay, their stay is considered legal until a final decision is made. The stamp in the passport (stempel w paszporcie) serves as proof of legal stay and the right to work. This protection applies regardless of how long the decision takes.", source: "https://mos.cudzoziemcy.gov.pl", sourceName: "MOS Cudzoziemcy", lang: "en", tags: ["TRC", "stamp", "legal stay", "Art. 108"] },
+      { cat: "TRC", title: "Karta Pobytu — Required Documents", content: "To apply for a Temporary Residence Card (Karta Pobytu Czasowego) and work permit (zezwolenie na pracę), a foreigner needs: valid passport, 4 photos, proof of accommodation, health insurance, employer's information letter (informacja starosty), work contract or promise of employment, proof of stable income, and payment of 440 PLN fee.", source: "https://migrant.poznan.uw.gov.pl", sourceName: "Poznan Voivodeship", lang: "en", tags: ["TRC", "documents", "application"] },
+      { cat: "Work Permit", title: "Types of Work Permits in Poland", content: "Poland issues 6 types of work permits (A through S). Type A is most common — for foreigners working for an employer with a registered office in Poland. Type B is for board members. Type C-E are for posted workers. Oświadczenie o powierzeniu pracy (Declaration) allows employment up to 24 months for citizens of Armenia, Belarus, Georgia, Moldova, Russia, and Ukraine without a full work permit.", source: "https://mos.cudzoziemcy.gov.pl", sourceName: "MOS Cudzoziemcy", lang: "en", tags: ["work permit", "Type A", "Oświadczenie"] },
+      { cat: "ZUS", title: "ZUS Contribution Rates 2026 — Umowa Zlecenie", content: "For Umowa Zlecenie (civil law contract): Employee contributions: emerytalne 9.76%, rentowe 1.5%, chorobowe 2.45% (voluntary). Employer contributions: emerytalne 9.76%, rentowe 6.5%, wypadkowe 1.67%, FP 2.45%, FGŚP 0.10%. Health insurance (zdrowotne): 9% of base after social security deduction. Minimum hourly rate: 31.40 PLN gross (2026).", source: "https://www.zus.pl", sourceName: "ZUS.pl", lang: "en", tags: ["ZUS", "contributions", "Umowa Zlecenie", "rates"] },
+      { cat: "Posted Workers", title: "A1 Certificate — Posted Workers Directive", content: "An A1 certificate confirms which country's social security legislation applies to the worker. For workers posted from Poland to another EU country, the A1 is issued by ZUS. Standard posting period: 12 months (extendable to 18 months with notification). The worker retains Polish ZUS contributions. Host country minimum wage and working conditions apply from day 1 (Directive 2018/957/EU).", source: "https://www.zus.pl", sourceName: "ZUS.pl", lang: "en", tags: ["A1", "posted workers", "PWD", "social security"] },
+      { cat: "PIT-11", title: "PIT-11 — Annual Tax Information", content: "PIT-11 is the annual tax information form issued by the employer to the employee and tax office by end of February. It contains: total gross income, social security contributions, health insurance, advance tax payments, and cost of obtaining income (KUP). The employee uses PIT-11 to file their annual PIT-37 tax return by April 30th.", source: "https://www.podatki.gov.pl", sourceName: "Podatki.gov.pl", lang: "en", tags: ["PIT-11", "tax", "annual"] },
+      { cat: "PIT-37", title: "PIT-37 — Annual Tax Return for Employees", content: "PIT-37 is filed by individuals who earned income solely from employment or civil law contracts (Umowa Zlecenie/Dzieło). Tax rates: 12% on income up to 120,000 PLN, 32% above. Tax-free amount: 30,000 PLN. PIT-2 declaration reduces monthly advance payments by 300 PLN. Filing deadline: April 30th. E-filing via Twój e-PIT on podatki.gov.pl.", source: "https://www.podatki.gov.pl", sourceName: "Podatki.gov.pl", lang: "en", tags: ["PIT-37", "tax return", "filing"] },
+      { cat: "Labour Code", title: "Kodeks Pracy — Notice Periods", content: "Under Polish Labour Code (Kodeks Pracy), notice periods for Umowa o Pracę depend on employment duration: 2 weeks (up to 6 months employment), 1 month (6 months to 3 years), 3 months (over 3 years). For Umowa Zlecenie — either party can terminate at any time unless contract specifies otherwise. During notice period, worker retains all employment rights.", source: "https://isap.sejm.gov.pl", sourceName: "Kodeks Pracy", lang: "en", tags: ["Labour Code", "notice period", "termination"] },
+      { cat: "GDPR", title: "RODO — Employee Data Processing", content: "Under RODO (Polish GDPR implementation), employers may process employee data based on Art. 6(1)(b) — contract performance, and Art. 6(1)(c) — legal obligation. Employee data that can be processed: name, date of birth, PESEL, address, education, employment history. Sensitive data (health, biometrics) requires explicit consent or legal basis. Data retention: employment records must be kept for 10 years after employment ends.", source: "https://uodo.gov.pl", sourceName: "UODO", lang: "en", tags: ["GDPR", "RODO", "data processing", "employee data"] },
+      { cat: "A1 Certificate", title: "How to Apply for A1 Certificate from ZUS", content: "To obtain an A1 certificate for posting a worker from Poland: 1) Submit ZUS US-1 form via PUE ZUS platform. 2) Include: worker details, posting period, host country, employer data. 3) ZUS processes within 7-30 days. 4) Worker must have been subject to Polish social security for at least 1 month before posting. 5) Employer must conduct substantial activity in Poland (not just administrative). Certificate valid for the posting period (max 24 months).", source: "https://www.zus.pl", sourceName: "ZUS.pl", lang: "en", tags: ["A1", "ZUS", "application", "posting"] },
+    ];
+    for (const a of articles) {
+      await execute(
+        `INSERT INTO legal_knowledge (category, title, content, source_url, source_name, language, tags) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [a.cat, a.title, a.content, a.source, a.sourceName, a.lang, JSON.stringify(a.tags)]
+      );
+    }
+    console.log("[init-db] Seeded 10 legal knowledge base articles.");
+  }
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

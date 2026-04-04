@@ -72,6 +72,7 @@ import identityRouter from "./identity.js";
 import guaranteesRouter from "./guarantees.js";
 import whitelabelRouter from "./whitelabel.js";
 import frameworksRouter from "./frameworks.js";
+import legalKbRouter from "./legal-kb.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -147,5 +148,6 @@ router.use(identityRouter);
 router.use(guaranteesRouter);
 router.use(whitelabelRouter);
 router.use(frameworksRouter);
+router.use(legalKbRouter);
 
 export default router;

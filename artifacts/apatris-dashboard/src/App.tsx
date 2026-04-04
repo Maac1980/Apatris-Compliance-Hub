@@ -78,6 +78,7 @@ import WorkerIdentity from "@/pages/WorkerIdentity";
 import ComplianceGuarantees from "@/pages/ComplianceGuarantees";
 import WhiteLabel from "@/pages/WhiteLabel";
 import FrameworkAgreements from "@/pages/FrameworkAgreements";
+import LegalKB from "@/pages/LegalKB";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -311,6 +312,9 @@ function Router() {
       </Route>
       <Route path="/frameworks">
         {() => <ProtectedRoute component={FrameworkAgreements} />}
+      </Route>
+      <Route path="/legal-kb">
+        {() => <ProtectedRoute component={LegalKB} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
