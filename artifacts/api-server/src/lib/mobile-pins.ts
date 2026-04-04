@@ -35,16 +35,7 @@ export async function initMobilePinsTable(): Promise<void> {
   const rows = await query<{ count: string }>("SELECT COUNT(*) AS count FROM mobile_pins");
   if (Number(rows[0]?.count ?? 0) > 0) return;
 
-  // Default PINs — used if env vars are not set
-  const DEFAULT_PINS: Record<string, string> = {
-    APATRIS_PASS_AKSHAY: "Apatris2026!",
-    APATRIS_PASS_MANISH: "Apatris2026!",
-    MOBILE_T2_PIN: "legal2026",
-    MOBILE_T3_PIN: "ops2026",
-    MOBILE_T4_PIN: "coord2026",
-    MOBILE_T5_PIN: "worker2026",
-  };
-
+  // Seed from configured env vars only — no hardcoded fallback passwords
   const seeds: Array<{ tier: number; userKey: string; envKey: string }> = [
     { tier: 1, userKey: "akshay",  envKey: "APATRIS_PASS_AKSHAY" },
     { tier: 1, userKey: "manish",  envKey: "APATRIS_PASS_MANISH"  },
@@ -55,8 +46,11 @@ export async function initMobilePinsTable(): Promise<void> {
   ];
 
   for (const { tier, userKey, envKey } of seeds) {
-    const pin = process.env[envKey] ?? DEFAULT_PINS[envKey];
-    if (!pin) continue;
+    const pin = process.env[envKey]?.trim();
+    if (!pin) {
+      console.warn(`[MobilePins] ${envKey} not configured — skipping seed for tier ${tier}.`);
+      continue;
+    }
     await execute(
       `INSERT INTO mobile_pins (tier, user_key, pin_hash)
        VALUES ($1, $2, $3)
@@ -90,20 +84,19 @@ export async function verifyMobilePin(
   tier: number,
   pin: string
 ): Promise<{ name: string; role: string } | null> {
-  // Hardcoded credentials ONLY — no database lookup
-  if (tier === 1) {
-    const a = process.env["APATRIS_PASS_AKSHAY"] ?? "Apatris2026!";
-    const m = process.env["APATRIS_PASS_MANISH"] ?? "Apatris2026!";
-    if (pin === a) return { name: "Akshay", role: "Executive" };
-    if (pin === m) return { name: "Manish", role: "Executive" };
-  } else if (tier === 2) {
-    if (pin === (process.env["MOBILE_T2_PIN"] ?? "legal2026")) return { name: "LegalHead", role: "LegalHead" };
-  } else if (tier === 3) {
-    if (pin === (process.env["MOBILE_T3_PIN"] ?? "ops2026")) return { name: "TechOps", role: "TechOps" };
-  } else if (tier === 4) {
-    if (pin === (process.env["MOBILE_T4_PIN"] ?? "coord2026")) return { name: "Coordinator", role: "Coordinator" };
-  } else if (tier === 5) {
-    if (pin === (process.env["MOBILE_T5_PIN"] ?? "worker2026")) return { name: "Professional", role: "Professional" };
+  // Verify against configured env vars only — no hardcoded fallbacks
+  const checks: Array<{ tier: number; envKey: string; name: string; role: string }> = [
+    { tier: 1, envKey: "APATRIS_PASS_AKSHAY", name: "Akshay",       role: "Executive" },
+    { tier: 1, envKey: "APATRIS_PASS_MANISH", name: "Manish",       role: "Executive" },
+    { tier: 2, envKey: "MOBILE_T2_PIN",       name: "LegalHead",    role: "LegalHead" },
+    { tier: 3, envKey: "MOBILE_T3_PIN",       name: "TechOps",      role: "TechOps" },
+    { tier: 4, envKey: "MOBILE_T4_PIN",       name: "Coordinator",  role: "Coordinator" },
+    { tier: 5, envKey: "MOBILE_T5_PIN",       name: "Professional", role: "Professional" },
+  ];
+  for (const check of checks) {
+    if (check.tier !== tier) continue;
+    const configured = process.env[check.envKey]?.trim();
+    if (configured && pin === configured) return { name: check.name, role: check.role };
   }
   return null;
 }

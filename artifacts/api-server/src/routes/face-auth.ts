@@ -7,11 +7,9 @@ import { enrollFace, getWorkerFaces, deleteWorkerFaces, verifyFace } from "../li
 import { fetchWorkerById } from "../lib/workers-db.js";
 import { logGdprAction } from "../lib/gdpr.js";
 import { isMailConfigured, sendOtpEmail } from "../lib/mailer.js";
-import { otpStore } from "./auth.js";
-
-const JWT_SECRET = process.env.JWT_SECRET || "";
+import { otpStore, JWT_SECRET } from "./auth.js";
 const JWT_EXPIRES_IN = "15m";
-const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const ADMIN_EMAILS = new Set(["manishshetty79@gmail.com", "akshay@apatris.pl"]);
 
 function signToken(userData: Record<string, unknown>) {
