@@ -1539,6 +1539,45 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_msg_threads_tenant ON message_threads(tenant_id)");
 
+  // insurance_policies
+  await execute(`
+    CREATE TABLE IF NOT EXISTS insurance_policies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      policy_name TEXT NOT NULL,
+      provider TEXT,
+      policy_type TEXT NOT NULL DEFAULT 'group_health',
+      coverage_amount NUMERIC(12,2) DEFAULT 0,
+      premium_monthly NUMERIC(10,2) DEFAULT 0,
+      start_date DATE,
+      end_date DATE,
+      status TEXT DEFAULT 'active',
+      workers_covered INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_insurance_pol_tenant ON insurance_policies(tenant_id)");
+
+  // insurance_claims
+  await execute(`
+    CREATE TABLE IF NOT EXISTS insurance_claims (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      policy_id UUID REFERENCES insurance_policies(id) ON DELETE SET NULL,
+      incident_date DATE,
+      description TEXT,
+      amount_claimed NUMERIC(10,2) DEFAULT 0,
+      status TEXT DEFAULT 'open',
+      resolution TEXT,
+      resolved_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_insurance_claims_tenant ON insurance_claims(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

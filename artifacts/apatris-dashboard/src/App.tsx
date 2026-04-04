@@ -68,6 +68,7 @@ import CountryPayroll from "@/pages/CountryPayroll";
 import FraudDetection from "@/pages/FraudDetection";
 import TranslationEngine from "@/pages/TranslationEngine";
 import Messaging from "@/pages/Messaging";
+import InsuranceManagement from "@/pages/InsuranceManagement";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -271,6 +272,9 @@ function Router() {
       </Route>
       <Route path="/messages">
         {() => <ProtectedRoute component={Messaging} />}
+      </Route>
+      <Route path="/insurance">
+        {() => <ProtectedRoute component={InsuranceManagement} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

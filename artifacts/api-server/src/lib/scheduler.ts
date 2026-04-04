@@ -296,10 +296,21 @@ export function startScheduler(): void {
       .then(() => runFinesScan())
       .then(() => runTrustScores())
       .then(() => runChurnScan())
+      .then(() => runInsuranceAlerts())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Insurance expiry alerts
+async function runInsuranceAlerts(): Promise<void> {
+  try {
+    const { runInsuranceExpiryAlerts } = await import("../routes/insurance.js");
+    await runInsuranceExpiryAlerts();
+  } catch (err) {
+    console.error("[Scheduler] Insurance alert failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Fraud scan — runs at 3am daily
