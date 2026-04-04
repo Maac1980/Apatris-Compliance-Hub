@@ -19,23 +19,32 @@ const port = Number(process.env["PORT"] || "8080");
     app.use((_req: any, res: any) => res.status(503).json({ error: "Server failed to initialize", details: initError }));
   }
 
-  // Database init — non-fatal
+  // Database init — track readiness state for health checks
   try {
-    const { initializeDatabase } = await import("./lib/init-db.js");
-    await initializeDatabase();
-    console.log("[Startup] Database initialized.");
+    const { setDbReady } = await import("./routes/health.js");
+    try {
+      const { initializeDatabase } = await import("./lib/init-db.js");
+      await initializeDatabase();
+      console.log("[Startup] Database initialized.");
 
-    // Seed demo data only in non-production environments
-    if (process.env.NODE_ENV !== "production") {
-      const { seedSampleData } = await import("./lib/seed.js");
-      await seedSampleData();
-      const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
-      await seedComprehensiveData();
-    } else {
-      console.log("[Startup] Production mode — skipping demo data seeders.");
+      // Seed demo data only in non-production environments
+      if (process.env.NODE_ENV !== "production") {
+        const { seedSampleData } = await import("./lib/seed.js");
+        await seedSampleData();
+        const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
+        await seedComprehensiveData();
+      } else {
+        console.log("[Startup] Production mode — skipping demo data seeders.");
+      }
+
+      setDbReady(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Startup] Database init failed:", msg);
+      setDbReady(false, msg);
     }
-  } catch (err) {
-    console.error("[Startup] Database init failed:", err instanceof Error ? err.message : err);
+  } catch {
+    console.error("[Startup] Could not import health module for readiness signal.");
   }
 
   const server = createServer(app);
@@ -56,7 +65,10 @@ const port = Number(process.env["PORT"] || "8080");
     startWeeklyMoodPrompts();
     startWeeklyCompetitorScan();
     startWeeklySignalScan();
-  } catch {}
+    console.log("[Startup] Schedulers started.");
+  } catch (err) {
+    console.error("[Startup] Scheduler init failed:", err instanceof Error ? err.message : err);
+  }
 
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server listening on 0.0.0.0:${port}`);
