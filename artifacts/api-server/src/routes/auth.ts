@@ -119,12 +119,18 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
 
       const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
-      // OTP disabled — direct JWT login (re-enable OTP later)
-      const accessToken = signToken(userData);
-      const refreshToken = await createRefreshToken(userData);
-      appendAuditLog({ timestamp: new Date().toISOString(), actor: user.name, actorEmail: user.email, action: "ADMIN_LOGIN", workerId: "—", workerName: "—", note: "Direct login (OTP disabled)" });
-      setJwtCookie(res, accessToken);
-      return res.json({ ...userData, jwt: accessToken, refreshToken });
+      // Generate OTP, store it, and send via email
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const session = crypto.randomUUID();
+      otpStore.set(session, { otp, expires: Date.now() + 5 * 60 * 1000, userData });
+
+      try {
+        await sendOtpEmail(user.email, user.name, otp);
+      } catch (e) {
+        console.error("[Auth] OTP email failed:", e);
+      }
+
+      return res.json({ otpRequired: true, session });
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
