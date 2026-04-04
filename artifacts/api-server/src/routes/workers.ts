@@ -6,6 +6,7 @@ import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter } from "../lib/rate-limit.js";
 import { execute } from "../lib/db.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 let anthropic: any = null;
 import("@anthropic-ai/sdk").then(m => {
@@ -402,7 +403,9 @@ router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "Leg
   try {
     const body = req.body as Record<string, unknown>;
     const updated = await updateWorker(req.params.id, body, req.tenantId!);
-    res.json(mapRowToWorker(updated));
+    const mapped = mapRowToWorker(updated);
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "UPDATE_WORKER", workerId: req.params.id, workerName: mapped.name, note: `Fields updated: ${Object.keys(body).join(", ")}` });
+    res.json(mapped);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });

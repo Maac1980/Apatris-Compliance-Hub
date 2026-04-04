@@ -5,6 +5,7 @@ import {
 } from "../lib/admins-db.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { queryOne, execute } from "../lib/db.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -32,6 +33,7 @@ router.patch("/admins/:id", requireAuth, requireRole("Admin", "Executive"), asyn
     }
 
     const updated = await updateAdmin(id, { email, phone }, req.tenantId!);
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "ADMIN_UPDATE", workerId: id, workerName: (updated as any).full_name ?? "", note: `Admin updated: ${[email && "email", phone && "phone"].filter(Boolean).join(", ")}` });
     return res.json({ admin: updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update admin";
@@ -53,6 +55,7 @@ router.post("/admins", requireAuth, requireRole("Admin"), async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [req.tenantId!, fullName.trim(), email ?? "", phone ?? "", role ?? "Admin"]
     );
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "ADMIN_CREATE", workerId: (row as any)?.id ?? "", workerName: fullName.trim(), note: `Admin created with role ${role ?? "Admin"}` });
     return res.status(201).json({ admin: row });
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create admin" });
@@ -66,6 +69,7 @@ router.delete("/admins/:id", requireAuth, requireRole("Admin"), async (req, res)
       "DELETE FROM admins WHERE id = $1 AND tenant_id = $2",
       [req.params.id, req.tenantId!]
     );
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "ADMIN_DELETE", workerId: req.params.id, workerName: "—", note: "Admin account deleted" });
     return res.json({ deleted: true });
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : "Failed to delete admin" });

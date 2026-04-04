@@ -271,7 +271,7 @@ const PINS: Record<string, { tier: number; envKey: string; name: string; role: s
 router.post("/auth/mobile-login", validateBody(MobileLoginSchema), async (req, res) => {
   try {
     const { tier, password, name } = req.body as { tier?: number; password?: string; name?: string };
-    console.log(`[mobile-login] tier=${tier} name=${name ?? "none"} passLen=${password?.length ?? 0}`);
+    console.log(`[mobile-login] tier=${tier} name=${name ?? "none"}`);
 
     if (!tier || !password) {
       return res.status(400).json({ error: "Tier and password required." });

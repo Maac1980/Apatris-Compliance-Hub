@@ -3,6 +3,7 @@ import {
   listCoordinators, addCoordinator, updateCoordinator, removeCoordinator
 } from "../lib/coordinators-db.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.post("/site-coordinators", requireAuth, requireRole("Admin"), async (req,
     }
     const coord = await addCoordinator({ name, email, password, assignedSite, alertEmail: alertEmail || email }, req.tenantId!);
     const { passwordHash: _, ...safe } = coord;
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "COORDINATOR_CREATE", workerId: safe.id ?? "", workerName: name, note: `Coordinator created for site ${assignedSite}` });
     return res.status(201).json(safe);
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
@@ -37,6 +39,7 @@ router.patch("/site-coordinators/:id", requireAuth, requireRole("Admin"), async 
     const updates = req.body as Record<string, string>;
     const coord = await updateCoordinator(req.params.id, updates, req.tenantId!);
     const { passwordHash: _, ...safe } = coord;
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "COORDINATOR_UPDATE", workerId: req.params.id, workerName: safe.name ?? "", note: `Fields updated: ${Object.keys(updates).join(", ")}` });
     res.json(safe);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
@@ -47,6 +50,7 @@ router.patch("/site-coordinators/:id", requireAuth, requireRole("Admin"), async 
 router.delete("/site-coordinators/:id", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     await removeCoordinator(req.params.id, req.tenantId!);
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "COORDINATOR_DELETE", workerId: req.params.id, workerName: "—", note: "Coordinator deleted" });
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });

@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { isMailConfigured } from "../lib/mailer.js";
 import { getDefaultTenantId } from "../lib/tenant.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -93,6 +94,7 @@ router.post("/invoices", requireAuth, requireRole("Admin", "Executive", "LegalHe
        body.items ? JSON.stringify(body.items) : "[]", amountNet, vatRate, amountVat, amountGross,
        amountNet, amountGross, issueDate, dueDate, "draft", body.notes ?? null, req.tenantId!]
     );
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "INVOICE_CREATE", workerId: (row as any)?.id ?? "", workerName: "—", note: `Invoice ${invoiceNumber} created, gross ${amountGross}` });
     res.status(201).json({ invoice: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create" });
@@ -130,6 +132,7 @@ router.patch("/invoices/:id", requireAuth, requireRole("Admin", "Executive", "Le
     vals.push(req.params.id, req.tenantId!);
     const row = await queryOne(`UPDATE invoices SET ${sets.join(", ")} WHERE id = $${idx} AND tenant_id = $${idx + 1} RETURNING *`, vals);
     if (!row) return res.status(404).json({ error: "Not found" });
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "INVOICE_UPDATE", workerId: req.params.id, workerName: "—", note: `Invoice updated: ${Object.keys(body).join(", ")}` });
     res.json({ invoice: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
@@ -273,6 +276,7 @@ router.delete("/invoices/:id", requireAuth, requireRole("Admin", "Executive"), a
   try {
     const row = await queryOne("DELETE FROM invoices WHERE id = $1 AND tenant_id = $2 RETURNING id", [req.params.id, req.tenantId!]);
     if (!row) return res.status(404).json({ error: "Not found" });
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "INVOICE_DELETE", workerId: req.params.id, workerName: "—", note: "Invoice deleted" });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
