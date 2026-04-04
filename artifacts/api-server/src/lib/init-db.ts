@@ -1632,7 +1632,7 @@ export async function initializeDatabase(): Promise<void> {
       tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
       worker_id UUID NOT NULL,
       worker_name TEXT NOT NULL DEFAULT '',
-      current_role TEXT,
+      worker_role TEXT,
       current_certifications TEXT,
       recommended_next_cert TEXT,
       estimated_salary_increase NUMERIC(8,2) DEFAULT 0,
@@ -1642,6 +1642,8 @@ export async function initializeDatabase(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+  // Rename reserved-word column if table was created before the fix
+  try { await execute(`ALTER TABLE career_paths RENAME COLUMN "current_role" TO worker_role`); } catch { /* already renamed or column doesn't exist */ }
   await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_tenant ON career_paths(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_worker ON career_paths(worker_id)");
 

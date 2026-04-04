@@ -84,7 +84,7 @@ router.post("/careers/generate/:workerId", requireAuth, async (req, res) => {
     // Upsert
     await execute("DELETE FROM career_paths WHERE worker_id = $1 AND tenant_id = $2", [req.params.workerId, req.tenantId!]);
     const row = await queryOne(
-      `INSERT INTO career_paths (tenant_id, worker_id, worker_name, current_role, current_certifications, recommended_next_cert, estimated_salary_increase, time_to_achieve, steps)
+      `INSERT INTO career_paths (tenant_id, worker_id, worker_name, worker_role, current_certifications, recommended_next_cert, estimated_salary_increase, time_to_achieve, steps)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [req.tenantId!, worker.id, worker.full_name, role, worker.qualification || "", nextCert, totalIncrease, timeToAchieve, JSON.stringify(steps)]
     );
