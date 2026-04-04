@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { fetchWorkerById } from "../lib/workers-db.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 import { generateContractPDF, streamContractPDF, type ContractData } from "../lib/contract-generator.js";
 import { logGdprAction } from "../lib/gdpr.js";
 import { validateBody, CreateContractSchema } from "../lib/validate.js";
@@ -50,6 +51,7 @@ router.post("/poa", requireAuth, requireRole("Admin", "Executive"), async (req, 
       [req.tenantId!, fullName.trim(), position.trim(), email ?? null, phone ?? null, pesel ?? null,
        canSignZlecenie ?? true, canSignOPrace ?? true, canSignB2b ?? true, notes ?? null]
     );
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "POA_CREATE", workerId: (row as any)?.id ?? "", workerName: fullName!.trim(), note: `POA signatory created: ${position}` });
     res.status(201).json({ signatory: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to add signatory" });
@@ -95,6 +97,7 @@ router.delete("/poa/:id", requireAuth, requireRole("Admin", "Executive"), async 
       "UPDATE power_of_attorney SET is_active = FALSE, updated_at = NOW() WHERE id = $1 AND tenant_id = $2",
       [req.params.id, req.tenantId!]
     );
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "POA_DELETE", workerId: req.params.id, workerName: "—", note: "POA signatory deactivated" });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to deactivate signatory" });

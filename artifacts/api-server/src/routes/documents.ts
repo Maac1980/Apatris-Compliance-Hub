@@ -8,6 +8,7 @@ import {
 import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { validateBody, CreateDocumentSchema } from "../lib/validate.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -87,6 +88,7 @@ router.post("/documents", requireAuth, requireRole("Admin", "Executive", "LegalH
       );
     }
 
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "DOCUMENT_CREATE", workerId: workerId ?? "", workerName: workerName!, note: `${documentType} created, expires ${expiryDate}` });
     return res.status(201).json({ document: doc, alertFired: needsAlert });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create document";
@@ -115,6 +117,7 @@ router.patch("/documents/:id", requireAuth, requireRole("Admin", "Executive", "L
       );
     }
 
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "DOCUMENT_UPDATE", workerId: id, workerName: doc.workerName ?? "", note: `Document updated: ${Object.keys(fields).join(", ")}` });
     return res.json({ document: doc, alertFired: needsAlert });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update document";
@@ -126,6 +129,7 @@ router.patch("/documents/:id", requireAuth, requireRole("Admin", "Executive", "L
 router.delete("/documents/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     await deleteDocument(req.params.id, req.tenantId!);
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "DOCUMENT_DELETE", workerId: req.params.id, workerName: "—", note: "Document deleted" });
     return res.json({ deleted: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to delete document";

@@ -13,6 +13,7 @@ import {
   purgeExpiredData,
 } from "../lib/gdpr.js";
 import { queryOne } from "../lib/db.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 import { validateBody, ConsentSchema } from "../lib/validate.js";
 
 const router = Router();
@@ -124,6 +125,7 @@ router.get(
   async (req, res) => {
     try {
       const data = await exportWorkerData(req.params.workerId, req.tenantId!, req.user!.name);
+      appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "GDPR_EXPORT", workerId: req.params.workerId, workerName: "—", note: "GDPR data subject access request (Article 15)" });
       res.json(data);
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Export failed" });
