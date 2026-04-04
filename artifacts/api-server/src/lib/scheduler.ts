@@ -510,6 +510,27 @@ export function startWeeklyMoodPrompts(): void {
   }, ms);
 }
 
+// Weekly market signals scan — every Tuesday at 11:00
+export function startWeeklySignalScan(): void {
+  function msUntilNextTuesday11am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    const daysUntilTue = (9 - now.getDay()) % 7 || 7;
+    next.setDate(now.getDate() + daysUntilTue);
+    next.setHours(11, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 7);
+    return next.getTime() - now.getTime();
+  }
+  const ms = msUntilNextTuesday11am();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  console.log(`[Scheduler] Weekly signal scan scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Tuesday 11:00).`);
+  setTimeout(function sigWeekly() {
+    import("../routes/signals.js").then(m => m.runSignalScan(getDefaultTenantId()!)).catch(err =>
+      console.error("[Scheduler] Signal scan error:", err)
+    ).finally(() => setTimeout(sigWeekly, WEEK_MS));
+  }, ms);
+}
+
 // Weekly competitor scan — every Monday at 10:00
 export function startWeeklyCompetitorScan(): void {
   function msUntilNextMonday10am(): number {

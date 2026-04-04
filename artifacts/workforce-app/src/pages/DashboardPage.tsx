@@ -53,6 +53,7 @@ import { SkillsGapTab } from "@/components/tabs/SkillsGapTab";
 import { CareerTab } from "@/components/tabs/CareerTab";
 import { MarginTab } from "@/components/tabs/MarginTab";
 import { GeoTab } from "@/components/tabs/GeoTab";
+import { SignalsTab } from "@/components/tabs/SignalsTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -317,6 +318,10 @@ export function DashboardPage() {
       // ── GEO INTELLIGENCE ────────────────────────────────────────────────
       case "geo":
         return <GeoTab />;
+
+      // ── MARKET SIGNALS ──────────────────────────────────────────────────
+      case "signals":
+        return <SignalsTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

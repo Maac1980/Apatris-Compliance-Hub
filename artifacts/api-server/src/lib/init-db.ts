@@ -1657,6 +1657,25 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_geo_tenant ON geo_data(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_geo_worker ON geo_data(worker_id)");
 
+  // market_signals
+  await execute(`
+    CREATE TABLE IF NOT EXISTS market_signals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      signal_type TEXT NOT NULL,
+      country TEXT,
+      role_type TEXT,
+      signal_strength TEXT DEFAULT 'medium',
+      description TEXT,
+      recommended_action TEXT,
+      source TEXT DEFAULT 'ai_scan',
+      detected_at TIMESTAMPTZ DEFAULT NOW(),
+      expires_at TIMESTAMPTZ,
+      status TEXT DEFAULT 'active'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_market_signals_tenant ON market_signals(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

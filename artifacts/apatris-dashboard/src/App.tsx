@@ -73,6 +73,7 @@ import SkillsGap from "@/pages/SkillsGap";
 import CareerPaths from "@/pages/CareerPaths";
 import MarginAnalysis from "@/pages/MarginAnalysis";
 import GeoIntelligence from "@/pages/GeoIntelligence";
+import MarketSignals from "@/pages/MarketSignals";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -291,6 +292,9 @@ function Router() {
       </Route>
       <Route path="/geo">
         {() => <ProtectedRoute component={GeoIntelligence} />}
+      </Route>
+      <Route path="/signals">
+        {() => <ProtectedRoute component={MarketSignals} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

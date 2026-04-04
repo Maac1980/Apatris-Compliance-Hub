@@ -134,6 +134,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/skills-gap",   label: "Skills Gap",    icon: Award },
       { path: "/careers",      label: "Career Paths",  icon: Award },
       { path: "/geo",          label: "Geo Intel",     icon: Globe },
+      { path: "/signals",      label: "Signals",       icon: Award },
     ],
   },
   {

@@ -67,6 +67,7 @@ import skillsGapRouter from "./skills-gap.js";
 import careersRouter from "./careers.js";
 import marginsRouter from "./margins.js";
 import geoRouter from "./geo.js";
+import signalsRouter from "./signals.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -137,5 +138,6 @@ router.use(skillsGapRouter);
 router.use(careersRouter);
 router.use(marginsRouter);
 router.use(geoRouter);
+router.use(signalsRouter);
 
 export default router;
