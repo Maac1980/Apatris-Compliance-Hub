@@ -81,6 +81,7 @@ import FrameworkAgreements from "@/pages/FrameworkAgreements";
 import LegalKB from "@/pages/LegalKB";
 import SaaSBilling from "@/pages/SaaSBilling";
 import PostedNotifications from "@/pages/PostedNotifications";
+import EsspassPage from "@/pages/EsspassPage";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -323,6 +324,9 @@ function Router() {
       </Route>
       <Route path="/posted-notifications">
         {() => <ProtectedRoute component={PostedNotifications} />}
+      </Route>
+      <Route path="/esspass">
+        {() => <ProtectedRoute component={EsspassPage} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

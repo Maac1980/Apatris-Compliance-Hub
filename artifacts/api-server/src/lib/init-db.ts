@@ -1945,6 +1945,26 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_pwn_tenant ON posted_worker_notifications(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_pwn_country ON posted_worker_notifications(host_country)");
 
+  // esspass_records
+  await execute(`
+    CREATE TABLE IF NOT EXISTS esspass_records (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT,
+      esspass_id TEXT,
+      social_security_country TEXT DEFAULT 'PL',
+      a1_certificate_ref TEXT,
+      valid_from DATE,
+      valid_until DATE,
+      verification_status TEXT DEFAULT 'pending',
+      last_verified TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_esspass_tenant ON esspass_records(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_esspass_worker ON esspass_records(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
