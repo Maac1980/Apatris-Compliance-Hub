@@ -65,6 +65,7 @@ import LegalMonitor from "@/pages/LegalMonitor";
 import SafetyMonitor from "@/pages/SafetyMonitor";
 import CompetitorMonitor from "@/pages/CompetitorMonitor";
 import CountryPayroll from "@/pages/CountryPayroll";
+import FraudDetection from "@/pages/FraudDetection";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -259,6 +260,9 @@ function Router() {
       </Route>
       <Route path="/country-payroll">
         {() => <ProtectedRoute component={CountryPayroll} />}
+      </Route>
+      <Route path="/fraud">
+        {() => <ProtectedRoute component={FraudDetection} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

@@ -288,7 +288,8 @@ export function startScheduler(): void {
     `[Scheduler] Daily compliance scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
   );
   setTimeout(function daily() {
-    runLegalScanJob()
+    runFraudScanJob()
+      .then(() => runLegalScanJob())
       .then(() => runDailyScan())
       .then(() => runImmigrationAlerts())
       .then(() => runBenchAlerts())
@@ -299,6 +300,18 @@ export function startScheduler(): void {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Fraud scan — runs at 3am daily
+async function runFraudScanJob(): Promise<void> {
+  try {
+    const { runFraudScan } = await import("../routes/fraud.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await runFraudScan(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Fraud scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Legal scan — runs first in daily chain

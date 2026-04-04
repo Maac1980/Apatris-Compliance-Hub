@@ -1463,6 +1463,26 @@ export async function initializeDatabase(): Promise<void> {
     console.log("[init-db] Seeded 7 country configurations.");
   }
 
+  // fraud_alerts
+  await execute(`
+    CREATE TABLE IF NOT EXISTS fraud_alerts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      alert_type TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'medium',
+      description TEXT,
+      worker_id UUID,
+      worker_name TEXT,
+      evidence JSONB DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'active',
+      resolution TEXT,
+      detected_at TIMESTAMPTZ DEFAULT NOW(),
+      resolved_at TIMESTAMPTZ
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_fraud_tenant ON fraud_alerts(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_fraud_status ON fraud_alerts(status)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
