@@ -29,8 +29,8 @@ async function translateText(text: string, sourceLang: string, targetLang: strin
 
   // Check cache first
   const cached = await queryOne<Record<string, any>>(
-    "SELECT translated_text FROM translation_cache WHERE source_text = $1 AND source_lang = $2 AND target_lang = $3 LIMIT 1",
-    [text.slice(0, 500), sourceLang, targetLang]
+    "SELECT translated_text FROM translation_cache WHERE source_text = $1 AND source_lang = $2 AND target_lang = $3 AND (tenant_id = $4 OR tenant_id IS NULL) LIMIT 1",
+    [text.slice(0, 500), sourceLang, targetLang, tenantId ?? null]
   );
   if (cached) return cached.translated_text;
 

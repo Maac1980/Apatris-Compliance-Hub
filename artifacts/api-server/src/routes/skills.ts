@@ -10,6 +10,7 @@ async function ensureTables() {
   await execute(`
     CREATE TABLE IF NOT EXISTS worker_skills (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
       worker_id TEXT NOT NULL,
       category TEXT NOT NULL,
       rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
@@ -28,8 +29,8 @@ router.get("/skills/matrix", requireAuth, async (req, res) => {
   try {
     const rows = await query(
       `SELECT worker_id, category, rating, assessed_at
-       FROM worker_skills ORDER BY worker_id ASC, category ASC`,
-      []
+       FROM worker_skills WHERE tenant_id = $1 ORDER BY worker_id ASC, category ASC`,
+      [req.tenantId!]
     );
 
     // Group by worker_id
@@ -49,8 +50,8 @@ router.get("/skills/matrix", requireAuth, async (req, res) => {
 router.get("/skills/:workerId", requireAuth, async (req, res) => {
   try {
     const rows = await query(
-      "SELECT * FROM worker_skills WHERE worker_id = $1 ORDER BY category ASC",
-      [req.params.workerId]
+      "SELECT * FROM worker_skills WHERE worker_id = $1 AND tenant_id = $2 ORDER BY category ASC",
+      [req.params.workerId, req.tenantId!]
     );
     res.json({ skills: rows, workerId: req.params.workerId });
   } catch (err) {
@@ -72,11 +73,11 @@ router.post("/skills", requireAuth, async (req, res) => {
     }
 
     const row = await queryOne(
-      `INSERT INTO worker_skills (worker_id, category, rating)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (worker_id, category) DO UPDATE SET rating = $3, assessed_at = NOW()
+      `INSERT INTO worker_skills (tenant_id, worker_id, category, rating)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (worker_id, category) DO UPDATE SET rating = $4, assessed_at = NOW()
        RETURNING *`,
-      [workerId, category, rating]
+      [req.tenantId!, workerId, category, rating]
     );
     res.status(201).json({ skill: row });
   } catch (err) {

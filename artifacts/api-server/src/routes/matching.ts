@@ -49,7 +49,7 @@ router.post("/matching/requests/:id/match", requireAuth, async (req, res) => {
     if (!jobReq) return res.status(404).json({ error: "Job request not found" });
 
     // Clear old matches
-    await execute("DELETE FROM worker_matches WHERE job_request_id = $1", [req.params.id]);
+    await execute("DELETE FROM worker_matches WHERE job_request_id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
 
     // Get all workers
     const dbRows = await fetchAllWorkers(req.tenantId!);

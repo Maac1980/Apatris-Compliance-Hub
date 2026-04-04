@@ -136,13 +136,13 @@ router.delete(
       );
       if (!sig) return res.status(404).json({ error: "Signature not found" });
 
-      await execute("DELETE FROM signatures WHERE id = $1", [req.params.id]);
+      await execute("DELETE FROM signatures WHERE id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
 
       // Reset the contract signature flag
       const signedField = sig.signer_role === "worker" ? "signed_by_worker" : "signed_by_company";
       await execute(
-        `UPDATE contracts SET ${signedField} = FALSE, status = 'pending_signature', signed_at = NULL, updated_at = NOW() WHERE id = $1`,
-        [sig.contract_id]
+        `UPDATE contracts SET ${signedField} = FALSE, status = 'pending_signature', signed_at = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+        [sig.contract_id, req.tenantId!]
       );
 
       res.json({ success: true });

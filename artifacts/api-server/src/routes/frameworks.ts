@@ -63,10 +63,10 @@ router.post("/frameworks/generate", requireAuth, requireRole("Admin", "Executive
     const { companyId } = req.body as { companyId?: string };
     if (!companyId) return res.status(400).json({ error: "companyId required" });
 
-    const company = await queryOne<Record<string, any>>("SELECT * FROM crm_companies WHERE id = $1", [companyId]);
+    const company = await queryOne<Record<string, any>>("SELECT * FROM crm_companies WHERE id = $1 AND tenant_id = $2", [companyId, req.tenantId!]);
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    const deals = await query<Record<string, any>>("SELECT * FROM crm_deals WHERE company_id = $1 AND stage = 'Active'", [companyId]);
+    const deals = await query<Record<string, any>>("SELECT * FROM crm_deals WHERE company_id = $1 AND stage = 'Active' AND tenant_id = $2", [companyId, req.tenantId!]);
     const roles = deals.map(d => d.role_type).filter(Boolean);
     const totalValue = deals.reduce((s, d) => s + Number(d.value_eur), 0);
 
