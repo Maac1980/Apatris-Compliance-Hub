@@ -64,6 +64,7 @@ import { PostedNotifTab } from "@/components/tabs/PostedNotifTab";
 import { EsspassTab } from "@/components/tabs/EsspassTab";
 import { DeveloperTab } from "@/components/tabs/DeveloperTab";
 import { IntelFeedTab } from "@/components/tabs/IntelFeedTab";
+import { WellnessTab } from "@/components/tabs/WellnessTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -372,6 +373,10 @@ export function DashboardPage() {
       // ── INTEL FEED ──────────────────────────────────────────────────────
       case "intelfeed":
         return <IntelFeedTab />;
+
+      // ── WELLNESS ────────────────────────────────────────────────────────
+      case "wellness":
+        return <WellnessTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

@@ -84,6 +84,7 @@ import PostedNotifications from "@/pages/PostedNotifications";
 import EsspassPage from "@/pages/EsspassPage";
 import DeveloperPortal from "@/pages/DeveloperPortal";
 import IntelligenceFeed from "@/pages/IntelligenceFeed";
+import FinancialWellness from "@/pages/FinancialWellness";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -335,6 +336,9 @@ function Router() {
       </Route>
       <Route path="/intelligence-feed">
         {() => <ProtectedRoute component={IntelligenceFeed} />}
+      </Route>
+      <Route path="/wellness">
+        {() => <ProtectedRoute component={FinancialWellness} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

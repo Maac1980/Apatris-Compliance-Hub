@@ -89,6 +89,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/advances",          label: "Advances",         icon: Calculator },
       { path: "/revenue",           label: "Revenue",          icon: TrendingUp },
       { path: "/margins",           label: "Margins",          icon: BarChart3 },
+      { path: "/wellness",          label: "Wellness",         icon: Calculator },
     ],
   },
   {

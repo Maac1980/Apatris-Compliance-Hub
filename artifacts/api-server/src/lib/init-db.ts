@@ -2042,6 +2042,30 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // financial_wellness
+  await execute(`
+    CREATE TABLE IF NOT EXISTS financial_wellness (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT,
+      month INTEGER,
+      year INTEGER,
+      gross_salary NUMERIC(10,2) DEFAULT 0,
+      net_salary NUMERIC(10,2) DEFAULT 0,
+      zus_contributions NUMERIC(10,2) DEFAULT 0,
+      tax_paid NUMERIC(10,2) DEFAULT 0,
+      advances_taken NUMERIC(10,2) DEFAULT 0,
+      housing_cost NUMERIC(10,2) DEFAULT 0,
+      estimated_savings NUMERIC(10,2) DEFAULT 0,
+      wellness_score INTEGER DEFAULT 50,
+      breakdown JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_wellness_tenant ON financial_wellness(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_wellness_worker ON financial_wellness(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
