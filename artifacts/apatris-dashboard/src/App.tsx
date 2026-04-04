@@ -80,6 +80,7 @@ import WhiteLabel from "@/pages/WhiteLabel";
 import FrameworkAgreements from "@/pages/FrameworkAgreements";
 import LegalKB from "@/pages/LegalKB";
 import SaaSBilling from "@/pages/SaaSBilling";
+import PostedNotifications from "@/pages/PostedNotifications";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -319,6 +320,9 @@ function Router() {
       </Route>
       <Route path="/saas-billing">
         {() => <ProtectedRoute component={SaaSBilling} />}
+      </Route>
+      <Route path="/posted-notifications">
+        {() => <ProtectedRoute component={PostedNotifications} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

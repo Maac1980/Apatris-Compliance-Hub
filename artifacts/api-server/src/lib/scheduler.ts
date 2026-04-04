@@ -297,10 +297,21 @@ export function startScheduler(): void {
       .then(() => runTrustScores())
       .then(() => runChurnScan())
       .then(() => runInsuranceAlerts())
+      .then(() => runPostingExpiryAlertsJob())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Posted worker notification expiry alerts
+async function runPostingExpiryAlertsJob(): Promise<void> {
+  try {
+    const { runPostingExpiryAlerts } = await import("../routes/posted-notifications.js");
+    await runPostingExpiryAlerts();
+  } catch (err) {
+    console.error("[Scheduler] Posting expiry alert failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Insurance expiry alerts

@@ -1920,6 +1920,31 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_billing_tenant ON billing_history(tenant_id)");
 
+  // posted_worker_notifications
+  await execute(`
+    CREATE TABLE IF NOT EXISTS posted_worker_notifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      company_id UUID,
+      company_name TEXT,
+      host_country TEXT NOT NULL,
+      start_date DATE,
+      end_date DATE,
+      role_type TEXT,
+      notification_ref TEXT,
+      notification_system TEXT,
+      required_documents JSONB DEFAULT '[]',
+      status TEXT DEFAULT 'draft',
+      submitted_at TIMESTAMPTZ,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_pwn_tenant ON posted_worker_notifications(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_pwn_country ON posted_worker_notifications(host_country)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
