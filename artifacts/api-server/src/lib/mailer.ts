@@ -139,7 +139,10 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
 
 // ─── OTP Email ────────────────────────────────────────────────────────────────
 export async function sendOtpEmail(to: string, name: string, otp: string): Promise<void> {
-  if (!isMailConfigured()) return;
+  if (!isMailConfigured()) {
+    console.warn(`[Mailer] OTP email skipped for ${to} because SMTP is not configured.`);
+    return;
+  }
   const transport = createTransport();
   const html = `
 <!DOCTYPE html>

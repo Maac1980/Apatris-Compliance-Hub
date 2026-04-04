@@ -6,9 +6,13 @@ import { sensitiveLimiter } from "../lib/rate-limit.js";
 import { enrollFace, getWorkerFaces, deleteWorkerFaces, verifyFace } from "../lib/face-recognition.js";
 import { fetchWorkerById } from "../lib/workers-db.js";
 import { logGdprAction } from "../lib/gdpr.js";
+import { isMailConfigured, sendOtpEmail } from "../lib/mailer.js";
+import { otpStore } from "./auth.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 const JWT_EXPIRES_IN = "15m";
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const ADMIN_EMAILS = new Set(["manishshetty79@gmail.com", "akshay@apatris.pl"]);
 
 function signToken(userData: Record<string, unknown>) {
   return jwt.sign(userData, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -172,6 +176,41 @@ router.post("/face/verify", sensitiveLimiter, async (req, res) => {
       role: "Professional",  // Face login is for T5 workers
       tenantId,
     };
+
+    if (ADMIN_EMAILS.has(userData.email.toLowerCase())) {
+      if (!isMailConfigured()) {
+        return res.status(503).json({ error: "Two-factor login is temporarily unavailable. Contact the administrator." });
+      }
+
+      const session = crypto.randomBytes(24).toString("hex");
+      const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+
+      otpStore.set(session, {
+        otp,
+        expires: Date.now() + OTP_EXPIRY_MS,
+        userData: {
+          email: userData.email,
+          name: userData.name,
+          role: "Admin",
+          tenantId,
+        },
+      });
+
+      try {
+        await sendOtpEmail(userData.email, userData.name, otp);
+      } catch (err) {
+        otpStore.delete(session);
+        console.error("[FaceAuth] Failed to send OTP email:", err instanceof Error ? err.message : err);
+        return res.status(503).json({ error: "We could not send your verification code. Please try again or contact the administrator." });
+      }
+
+      return res.json({
+        matched: true,
+        confidence: result.confidence,
+        otpRequired: true,
+        session,
+      });
+    }
 
     const accessToken = signToken(userData);
 

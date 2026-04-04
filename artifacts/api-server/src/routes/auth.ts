@@ -38,8 +38,17 @@ const ALLOWED_USERS = [
   },
 ];
 
+function getRequiredSecret(envKey: string): string | null {
+  const value = process.env[envKey]?.trim();
+  if (!value) {
+    console.error(`[Auth] Required secret ${envKey} is not configured.`);
+    return null;
+  }
+  return value;
+}
+
 // In-memory OTP store: session → { otp, expires, userData }
-const otpStore = new Map<string, {
+export const otpStore = new Map<string, {
   otp: string;
   expires: number;
   userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string };
@@ -79,6 +88,7 @@ function clearJwtCookie(res: Response) {
 }
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -112,22 +122,34 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
     const user = ALLOWED_USERS.find((u) => u.email === normalizedEmail);
 
     if (user) {
-      const storedPassword = process.env[user.passEnvKey];
-      if (!storedPassword || storedPassword !== password) {
+      const storedPassword = getRequiredSecret(user.passEnvKey);
+      if (!storedPassword) {
+        return res.status(503).json({ error: "Login is temporarily unavailable. Contact the administrator." });
+      }
+      if (storedPassword !== password) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
-      // Generate OTP, store it, and send via email
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const session = crypto.randomUUID();
-      otpStore.set(session, { otp, expires: Date.now() + 5 * 60 * 1000, userData });
+      if (!isMailConfigured()) {
+        return res.status(503).json({ error: "Two-factor login is temporarily unavailable. Contact the administrator." });
+      }
+
+      const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+      const session = crypto.randomBytes(24).toString("hex");
+      otpStore.set(session, {
+        otp,
+        expires: Date.now() + OTP_EXPIRY_MS,
+        userData,
+      });
 
       try {
         await sendOtpEmail(user.email, user.name, otp);
-      } catch (e) {
-        console.error("[Auth] OTP email failed:", e);
+      } catch (err) {
+        otpStore.delete(session);
+        console.error("[Auth] Failed to send OTP email:", err instanceof Error ? err.message : err);
+        return res.status(503).json({ error: "We could not send your verification code. Please try again or contact the administrator." });
       }
 
       return res.json({ otpRequired: true, session });
@@ -237,13 +259,13 @@ router.get("/auth/verify", (req, res) => {
 });
 
 // ─── POST /api/auth/mobile-login — HARDCODED PINS ONLY ───────────────────────
-const PINS: Record<string, { tier: number; pass: string; name: string; role: string }> = {
-  manish:  { tier: 1, pass: process.env["APATRIS_PASS_MANISH"] ?? "Apatris2026!", name: "Manish",       role: "Executive" },
-  akshay:  { tier: 1, pass: process.env["APATRIS_PASS_AKSHAY"] ?? "Apatris2026!", name: "Akshay",       role: "Executive" },
-  t2:      { tier: 2, pass: process.env["MOBILE_T2_PIN"]       ?? "legal2026",    name: "LegalHead",    role: "LegalHead" },
-  t3:      { tier: 3, pass: process.env["MOBILE_T3_PIN"]       ?? "ops2026",      name: "TechOps",      role: "TechOps" },
-  t4:      { tier: 4, pass: process.env["MOBILE_T4_PIN"]       ?? "coord2026",    name: "Coordinator",  role: "Coordinator" },
-  t5:      { tier: 5, pass: process.env["MOBILE_T5_PIN"]       ?? "worker2026",   name: "Professional", role: "Professional" },
+const PINS: Record<string, { tier: number; envKey: string; name: string; role: string }> = {
+  manish:  { tier: 1, envKey: "APATRIS_PASS_MANISH", name: "Manish",       role: "Executive" },
+  akshay:  { tier: 1, envKey: "APATRIS_PASS_AKSHAY", name: "Akshay",       role: "Executive" },
+  t2:      { tier: 2, envKey: "MOBILE_T2_PIN",       name: "LegalHead",    role: "LegalHead" },
+  t3:      { tier: 3, envKey: "MOBILE_T3_PIN",       name: "TechOps",      role: "TechOps" },
+  t4:      { tier: 4, envKey: "MOBILE_T4_PIN",       name: "Coordinator",  role: "Coordinator" },
+  t5:      { tier: 5, envKey: "MOBILE_T5_PIN",       name: "Professional", role: "Professional" },
 };
 
 router.post("/auth/mobile-login", validateBody(MobileLoginSchema), async (req, res) => {
@@ -260,16 +282,27 @@ router.post("/auth/mobile-login", validateBody(MobileLoginSchema), async (req, r
     if (tier === 1 && name) {
       const key = name.trim().toLowerCase();
       const entry = PINS[key];
-      if (entry && entry.pass === password.trim()) matched = entry;
+      const configuredSecret = entry ? getRequiredSecret(entry.envKey) : null;
+      if (entry && configuredSecret && configuredSecret === password.trim()) matched = entry;
     }
     if (!matched) {
       // Try all entries for this tier
       for (const entry of Object.values(PINS)) {
-        if (entry.tier === tier && entry.pass === password.trim()) { matched = entry; break; }
+        const configuredSecret = getRequiredSecret(entry.envKey);
+        if (entry.tier === tier && configuredSecret && configuredSecret === password.trim()) {
+          matched = entry;
+          break;
+        }
       }
     }
 
     if (!matched) {
+      const hasConfiguredSecretForTier = Object.values(PINS).some((entry) => (
+        entry.tier === tier && !!getRequiredSecret(entry.envKey)
+      ));
+      if (!hasConfiguredSecretForTier) {
+        return res.status(503).json({ error: "Mobile login is temporarily unavailable. Contact the administrator." });
+      }
       return res.status(401).json({ error: "Incorrect password. Contact your administrator." });
     }
 
