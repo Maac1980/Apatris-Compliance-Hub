@@ -76,6 +76,7 @@ import GeoIntelligence from "@/pages/GeoIntelligence";
 import MarketSignals from "@/pages/MarketSignals";
 import WorkerIdentity from "@/pages/WorkerIdentity";
 import ComplianceGuarantees from "@/pages/ComplianceGuarantees";
+import WhiteLabel from "@/pages/WhiteLabel";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -303,6 +304,9 @@ function Router() {
       </Route>
       <Route path="/guarantees">
         {() => <ProtectedRoute component={ComplianceGuarantees} />}
+      </Route>
+      <Route path="/whitelabel">
+        {() => <ProtectedRoute component={WhiteLabel} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

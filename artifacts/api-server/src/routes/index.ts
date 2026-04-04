@@ -70,6 +70,7 @@ import geoRouter from "./geo.js";
 import signalsRouter from "./signals.js";
 import identityRouter from "./identity.js";
 import guaranteesRouter from "./guarantees.js";
+import whitelabelRouter from "./whitelabel.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -143,5 +144,6 @@ router.use(geoRouter);
 router.use(signalsRouter);
 router.use(identityRouter);
 router.use(guaranteesRouter);
+router.use(whitelabelRouter);
 
 export default router;

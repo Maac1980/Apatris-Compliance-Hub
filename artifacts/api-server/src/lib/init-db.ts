@@ -1734,6 +1734,37 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_comp_incidents_guarantee ON compliance_incidents(guarantee_id)");
 
+  // white_label_agencies
+  await execute(`
+    CREATE TABLE IF NOT EXISTS white_label_agencies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      agency_name TEXT NOT NULL,
+      domain TEXT,
+      logo_url TEXT,
+      primary_color TEXT DEFAULT '#C41E18',
+      secondary_color TEXT DEFAULT '#0f172a',
+      contact_email TEXT,
+      plan TEXT DEFAULT 'starter',
+      worker_limit INTEGER DEFAULT 25,
+      monthly_fee NUMERIC(10,2) DEFAULT 199,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_wl_agencies_tenant ON white_label_agencies(tenant_id)");
+
+  // agency_workers
+  await execute(`
+    CREATE TABLE IF NOT EXISTS agency_workers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agency_id UUID REFERENCES white_label_agencies(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_agency_workers_agency ON agency_workers(agency_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
