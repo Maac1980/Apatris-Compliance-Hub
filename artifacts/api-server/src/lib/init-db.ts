@@ -1765,6 +1765,42 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_agency_workers_agency ON agency_workers(agency_id)");
 
+  // framework_agreements
+  await execute(`
+    CREATE TABLE IF NOT EXISTS framework_agreements (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_id UUID,
+      company_name TEXT,
+      agreement_name TEXT NOT NULL,
+      start_date DATE,
+      end_date DATE,
+      roles_covered JSONB DEFAULT '[]',
+      sla_terms TEXT,
+      guarantee_terms TEXT,
+      agreement_html TEXT,
+      status TEXT DEFAULT 'draft',
+      signed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_framework_tenant ON framework_agreements(tenant_id)");
+
+  // rate_cards
+  await execute(`
+    CREATE TABLE IF NOT EXISTS rate_cards (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agreement_id UUID REFERENCES framework_agreements(id) ON DELETE CASCADE,
+      role_type TEXT NOT NULL,
+      country TEXT DEFAULT 'PL',
+      rate_per_hour NUMERIC(8,2) DEFAULT 0,
+      currency TEXT DEFAULT 'EUR',
+      minimum_hours INTEGER DEFAULT 160,
+      overtime_rate NUMERIC(8,2) DEFAULT 0
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_rate_cards_agreement ON rate_cards(agreement_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

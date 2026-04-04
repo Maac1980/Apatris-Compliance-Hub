@@ -71,6 +71,7 @@ import signalsRouter from "./signals.js";
 import identityRouter from "./identity.js";
 import guaranteesRouter from "./guarantees.js";
 import whitelabelRouter from "./whitelabel.js";
+import frameworksRouter from "./frameworks.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -145,5 +146,6 @@ router.use(signalsRouter);
 router.use(identityRouter);
 router.use(guaranteesRouter);
 router.use(whitelabelRouter);
+router.use(frameworksRouter);
 
 export default router;

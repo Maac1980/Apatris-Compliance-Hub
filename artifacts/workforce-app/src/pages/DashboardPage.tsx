@@ -57,6 +57,7 @@ import { SignalsTab } from "@/components/tabs/SignalsTab";
 import { IdentityTab } from "@/components/tabs/IdentityTab";
 import { GuaranteesTab } from "@/components/tabs/GuaranteesTab";
 import { WhiteLabelTab } from "@/components/tabs/WhiteLabelTab";
+import { FrameworksTab } from "@/components/tabs/FrameworksTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -337,6 +338,10 @@ export function DashboardPage() {
       // ── WHITE LABEL ─────────────────────────────────────────────────────
       case "whitelabel":
         return <WhiteLabelTab />;
+
+      // ── FRAMEWORKS ──────────────────────────────────────────────────────
+      case "frameworks":
+        return <FrameworksTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
