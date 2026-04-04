@@ -130,6 +130,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/churn",        label: "Churn Predict", icon: Users },
       { path: "/competitors",  label: "Competitors",   icon: Award },
       { path: "/fraud",        label: "Fraud Detect",  icon: Shield },
+      { path: "/skills-gap",   label: "Skills Gap",    icon: Award },
     ],
   },
   {

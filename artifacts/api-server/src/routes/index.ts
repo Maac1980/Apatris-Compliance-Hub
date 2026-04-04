@@ -63,6 +63,7 @@ import fraudRouter from "./fraud.js";
 import translateRouter from "./translate.js";
 import messagingRouter from "./messaging.js";
 import insuranceRouter from "./insurance.js";
+import skillsGapRouter from "./skills-gap.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -129,5 +130,6 @@ router.use(fraudRouter);
 router.use(translateRouter);
 router.use(messagingRouter);
 router.use(insuranceRouter);
+router.use(skillsGapRouter);
 
 export default router;

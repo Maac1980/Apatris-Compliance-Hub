@@ -1578,6 +1578,25 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_insurance_claims_tenant ON insurance_claims(tenant_id)");
 
+  // skill_demands
+  await execute(`
+    CREATE TABLE IF NOT EXISTS skill_demands (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      role_type TEXT NOT NULL,
+      skill_name TEXT NOT NULL,
+      certification_name TEXT,
+      country TEXT,
+      demand_level TEXT DEFAULT 'medium',
+      current_pool_count INTEGER DEFAULT 0,
+      shortage_count INTEGER DEFAULT 0,
+      avg_premium_rate NUMERIC(8,2) DEFAULT 0,
+      recommendation TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_skill_demands_tenant ON skill_demands(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

@@ -49,6 +49,7 @@ import { FraudTab } from "@/components/tabs/FraudTab";
 import { TranslateTab } from "@/components/tabs/TranslateTab";
 import { MessagingTab } from "@/components/tabs/MessagingTab";
 import { InsuranceTab } from "@/components/tabs/InsuranceTab";
+import { SkillsGapTab } from "@/components/tabs/SkillsGapTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -297,6 +298,10 @@ export function DashboardPage() {
       // ── INSURANCE ───────────────────────────────────────────────────────
       case "insurance":
         return <InsuranceTab />;
+
+      // ── SKILLS GAP ──────────────────────────────────────────────────────
+      case "skillsgap":
+        return <SkillsGapTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
