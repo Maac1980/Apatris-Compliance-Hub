@@ -9,10 +9,10 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { t } = useTranslation();
 
-  // Screen: "login" | "otp"
-  const [screen, setScreen] = useState<"login" | "otp">("login");
-  const [otpSession, setOtpSession] = useState("");
-  const [otpEmail, setOtpEmail] = useState("");
+  // Screen: "login" | "otp" — restore from sessionStorage if mid-OTP
+  const [screen, setScreen] = useState<"login" | "otp">(() => sessionStorage.getItem("otp_session") ? "otp" : "login");
+  const [otpSession, setOtpSession] = useState(() => sessionStorage.getItem("otp_session") ?? "");
+  const [otpEmail, setOtpEmail] = useState(() => sessionStorage.getItem("otp_email") ?? "");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +34,8 @@ export default function Login() {
       return;
     }
     if (result.otpRequired && result.session) {
+      sessionStorage.setItem("otp_session", result.session);
+      sessionStorage.setItem("otp_email", email);
       setOtpSession(result.session);
       setOtpEmail(email);
       setScreen("otp");
@@ -78,6 +80,8 @@ export default function Login() {
       otpRefs.current[0]?.focus();
       return;
     }
+    sessionStorage.removeItem("otp_session");
+    sessionStorage.removeItem("otp_email");
     setLocation("/");
   };
 
@@ -156,7 +160,7 @@ export default function Login() {
                       />
                     ))}
                   </div>
-                  <p className="text-center text-xs text-gray-600 font-mono mt-3">Code expires in 5 minutes</p>
+                  <p className="text-center text-xs text-gray-600 font-mono mt-3">Code expires in 10 minutes</p>
                 </div>
 
                 <button
@@ -170,7 +174,7 @@ export default function Login() {
             </div>
 
             <button
-              onClick={() => { setScreen("login"); setError(""); setOtp(["", "", "", "", "", ""]); }}
+              onClick={() => { sessionStorage.removeItem("otp_session"); sessionStorage.removeItem("otp_email"); setScreen("login"); setError(""); setOtp(["", "", "", "", "", ""]); }}
               className="mt-4 w-full flex items-center justify-center gap-2 text-gray-500 hover:text-gray-300 text-xs font-mono transition-colors"
             >
               <RotateCcw className="w-3 h-3" /> Back to login
