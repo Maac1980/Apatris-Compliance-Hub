@@ -154,6 +154,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/translate",        label: "Translate",  icon: Globe },
       { path: "/messages",         label: "Messages",   icon: Users },
       { path: "/whitelabel",       label: "White-Label", icon: Settings },
+      { path: "/saas-billing",    label: "Billing",     icon: Settings },
       { path: "/admin-settings",  label: "Settings",   icon: Settings },
     ],
   },

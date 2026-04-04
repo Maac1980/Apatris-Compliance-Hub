@@ -1886,6 +1886,40 @@ export async function initializeDatabase(): Promise<void> {
     console.log("[init-db] Seeded 10 legal knowledge base articles.");
   }
 
+  // subscriptions
+  await execute(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      plan TEXT NOT NULL DEFAULT 'starter',
+      status TEXT NOT NULL DEFAULT 'trialing',
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
+      worker_limit INTEGER DEFAULT 50,
+      current_period_start TIMESTAMPTZ,
+      current_period_end TIMESTAMPTZ,
+      trial_ends_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_tenant ON subscriptions(tenant_id)");
+
+  // billing_history
+  await execute(`
+    CREATE TABLE IF NOT EXISTS billing_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      amount NUMERIC(10,2) DEFAULT 0,
+      currency TEXT DEFAULT 'eur',
+      status TEXT DEFAULT 'paid',
+      stripe_invoice_id TEXT,
+      description TEXT,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_billing_tenant ON billing_history(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

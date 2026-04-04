@@ -79,6 +79,7 @@ import ComplianceGuarantees from "@/pages/ComplianceGuarantees";
 import WhiteLabel from "@/pages/WhiteLabel";
 import FrameworkAgreements from "@/pages/FrameworkAgreements";
 import LegalKB from "@/pages/LegalKB";
+import SaaSBilling from "@/pages/SaaSBilling";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -315,6 +316,9 @@ function Router() {
       </Route>
       <Route path="/legal-kb">
         {() => <ProtectedRoute component={LegalKB} />}
+      </Route>
+      <Route path="/saas-billing">
+        {() => <ProtectedRoute component={SaaSBilling} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

@@ -73,6 +73,7 @@ import guaranteesRouter from "./guarantees.js";
 import whitelabelRouter from "./whitelabel.js";
 import frameworksRouter from "./frameworks.js";
 import legalKbRouter from "./legal-kb.js";
+import saasBillingRouter from "./saas-billing.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -149,5 +150,6 @@ router.use(guaranteesRouter);
 router.use(whitelabelRouter);
 router.use(frameworksRouter);
 router.use(legalKbRouter);
+router.use(saasBillingRouter);
 
 export default router;

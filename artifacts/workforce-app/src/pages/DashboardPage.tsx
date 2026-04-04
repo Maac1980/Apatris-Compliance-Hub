@@ -59,6 +59,7 @@ import { GuaranteesTab } from "@/components/tabs/GuaranteesTab";
 import { WhiteLabelTab } from "@/components/tabs/WhiteLabelTab";
 import { FrameworksTab } from "@/components/tabs/FrameworksTab";
 import { LegalKBTab } from "@/components/tabs/LegalKBTab";
+import { BillingTab } from "@/components/tabs/BillingTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -347,6 +348,10 @@ export function DashboardPage() {
       // ── LEGAL KB ────────────────────────────────────────────────────────
       case "legalkb":
         return <LegalKBTab />;
+
+      // ── BILLING ─────────────────────────────────────────────────────────
+      case "billing":
+        return <BillingTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
