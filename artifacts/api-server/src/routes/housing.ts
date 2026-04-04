@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { sendWhatsAppAlert } from "../lib/whatsapp.js";
 
 const router = Router();
 
@@ -85,6 +86,24 @@ router.post("/housing/assignments", requireAuth, requireRole("Admin", "Executive
     // Update room occupancy
     await execute("UPDATE hostel_rooms SET current_occupancy = current_occupancy + 1 WHERE id = $1", [b.roomId]);
 
+    // Check 90% capacity — WhatsApp alert
+    try {
+      const hostelCap = await queryOne<Record<string, any>>(
+        `SELECT h.name, COALESCE(SUM(r.capacity), 0) AS cap, COALESCE(SUM(r.current_occupancy), 0) AS occ
+         FROM hostels h LEFT JOIN hostel_rooms r ON r.hostel_id = h.id WHERE h.id = $1 GROUP BY h.name`, [b.hostelId]);
+      if (hostelCap) {
+        const pct = Number(hostelCap.cap) > 0 ? Number(hostelCap.occ) / Number(hostelCap.cap) : 0;
+        if (pct >= 0.9) {
+          const coords = await query<Record<string, any>>("SELECT phone, name FROM site_coordinators WHERE tenant_id = $1 LIMIT 3", [req.tenantId!]);
+          for (const c of coords) {
+            if (c.phone) await sendWhatsAppAlert({ to: c.phone, workerName: c.name, workerI: "system",
+              permitType: `HOUSING ALERT: ${hostelCap.name} at ${Math.round(pct * 100)}% capacity (${hostelCap.occ}/${hostelCap.cap}). Consider overflow arrangements.`,
+              daysRemaining: 0, tenantId: req.tenantId! });
+          }
+        }
+      }
+    } catch { /* non-blocking */ }
+
     res.status(201).json({ assignment: row });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
 });
@@ -145,6 +164,28 @@ router.get("/housing/summary", requireAuth, async (req, res) => {
       unhousedWorkers: Number(unhoused?.count ?? 0),
       capacityAlerts,
     });
+  } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
+});
+
+// GET /api/housing/hostels/:id/rooms — room grid for a hostel
+router.get("/housing/hostels/:id/rooms", requireAuth, async (req, res) => {
+  try {
+    const rooms = await query(
+      `SELECT r.*, (SELECT array_agg(json_build_object('name', wh.worker_name, 'id', wh.worker_id))
+        FROM worker_housing wh WHERE wh.room_id = r.id AND wh.status = 'active') AS occupants
+       FROM hostel_rooms r WHERE r.hostel_id = $1 ORDER BY r.room_number`, [req.params.id]);
+    res.json({ rooms });
+  } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
+});
+
+// GET /api/housing/unhoused — workers without housing
+router.get("/housing/unhoused", requireAuth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT w.id, w.full_name, w.specialization, w.assigned_site FROM workers w
+       WHERE w.tenant_id = $1 AND NOT EXISTS (SELECT 1 FROM worker_housing wh WHERE wh.worker_id = w.id AND wh.status = 'active')`,
+      [req.tenantId!]);
+    res.json({ workers: rows });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
 });
 

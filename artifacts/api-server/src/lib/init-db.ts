@@ -1306,6 +1306,34 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_tenant ON worker_housing(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_worker ON worker_housing(worker_id)");
 
+  // Seed hostels if empty
+  const hostelCount = await query<{count:string}>("SELECT COUNT(*) AS count FROM hostels");
+  if (parseInt(hostelCount[0]?.count ?? "0") < 3 && defaultTenantId) {
+    const hostels = [
+      { name: "Apatris House Warsaw", addr: "ul. Kolejowa 12", city: "Warsaw", country: "PL", rooms: 15, cost: 0, owner: "owned", notes: "Main Apatris-owned accommodation. 60 beds." },
+      { name: "Apatris House Gdansk", addr: "ul. Portowa 8", city: "Gdansk", country: "PL", rooms: 10, cost: 0, owner: "owned", notes: "Shipyard worker housing. 40 beds." },
+      { name: "Apatris House Krakow", addr: "ul. Zakopianska 45", city: "Krakow", country: "PL", rooms: 8, cost: 0, owner: "owned", notes: "Southern Poland hub. 32 beds." },
+      { name: "Rotterdam Workers Hostel", addr: "Waalhaven Zuidzijde 22", city: "Rotterdam", country: "NL", rooms: 12, cost: 450, owner: "third_party", notes: "Close to Europoort. €450/bed/mo." },
+      { name: "Antwerp Flex Stay", addr: "Noorderlaan 100", city: "Antwerp", country: "BE", rooms: 8, cost: 420, owner: "third_party", notes: "Walking distance to port. €420/bed/mo." },
+      { name: "Klaipeda Maritime Lodge", addr: "Taikos pr. 55", city: "Klaipeda", country: "LT", rooms: 6, cost: 280, owner: "third_party", notes: "Near shipyard. €280/bed/mo." },
+      { name: "Bratislava Worker Dorm", addr: "Pristavna 10", city: "Bratislava", country: "SK", rooms: 5, cost: 250, owner: "third_party", notes: "Industrial zone. €250/bed/mo." },
+    ];
+    for (const h of hostels) {
+      const hRow = await queryOne<{id:string}>(
+        `INSERT INTO hostels (tenant_id, name, address, city, country, total_rooms, cost_per_bed_monthly, owner_type, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+        [defaultTenantId, h.name, h.addr, h.city, h.country, h.rooms, h.cost, h.owner, h.notes]
+      );
+      if (hRow) {
+        for (let r = 1; r <= h.rooms; r++) {
+          await execute(`INSERT INTO hostel_rooms (hostel_id, room_number, capacity, current_occupancy, status) VALUES ($1,$2,4,$3,'available')`,
+            [hRow.id, String(r).padStart(2, "0"), Math.floor(Math.random() * 4)]);
+        }
+      }
+    }
+    console.log("[init-db] Seeded 7 hostels (3 owned + 4 third party) with rooms.");
+  }
+
   // revenue_forecasts
   await execute(`
     CREATE TABLE IF NOT EXISTS revenue_forecasts (
