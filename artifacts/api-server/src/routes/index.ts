@@ -68,6 +68,7 @@ import careersRouter from "./careers.js";
 import marginsRouter from "./margins.js";
 import geoRouter from "./geo.js";
 import signalsRouter from "./signals.js";
+import identityRouter from "./identity.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -139,5 +140,6 @@ router.use(careersRouter);
 router.use(marginsRouter);
 router.use(geoRouter);
 router.use(signalsRouter);
+router.use(identityRouter);
 
 export default router;

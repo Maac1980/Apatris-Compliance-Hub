@@ -1676,6 +1676,28 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_market_signals_tenant ON market_signals(tenant_id)");
 
+  // worker_identities
+  await execute(`
+    CREATE TABLE IF NOT EXISTS worker_identities (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      identity_hash TEXT UNIQUE,
+      certifications JSONB DEFAULT '[]',
+      work_history JSONB DEFAULT '[]',
+      trust_score INTEGER DEFAULT 0,
+      trust_level TEXT DEFAULT 'bronze',
+      compliance_status TEXT DEFAULT 'compliant',
+      issued_at TIMESTAMPTZ DEFAULT NOW(),
+      expires_at TIMESTAMPTZ,
+      verified_by TEXT,
+      qr_code TEXT,
+      status TEXT DEFAULT 'active'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_identity_worker ON worker_identities(worker_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_identity_hash ON worker_identities(identity_hash)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
