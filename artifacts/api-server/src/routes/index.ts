@@ -60,6 +60,7 @@ import safetyRouter from "./safety.js";
 import competitorsRouter from "./competitors.js";
 import countryConfigRouter from "./country-config.js";
 import fraudRouter from "./fraud.js";
+import translateRouter from "./translate.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -123,5 +124,6 @@ router.use(safetyRouter);
 router.use(competitorsRouter);
 router.use(countryConfigRouter);
 router.use(fraudRouter);
+router.use(translateRouter);
 
 export default router;

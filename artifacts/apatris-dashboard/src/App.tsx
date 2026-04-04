@@ -66,6 +66,7 @@ import SafetyMonitor from "@/pages/SafetyMonitor";
 import CompetitorMonitor from "@/pages/CompetitorMonitor";
 import CountryPayroll from "@/pages/CountryPayroll";
 import FraudDetection from "@/pages/FraudDetection";
+import TranslationEngine from "@/pages/TranslationEngine";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -263,6 +264,9 @@ function Router() {
       </Route>
       <Route path="/fraud">
         {() => <ProtectedRoute component={FraudDetection} />}
+      </Route>
+      <Route path="/translate">
+        {() => <ProtectedRoute component={TranslationEngine} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

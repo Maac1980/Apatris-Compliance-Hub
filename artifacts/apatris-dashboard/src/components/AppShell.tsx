@@ -141,6 +141,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/history",         label: "History",    icon: History },
       { path: "/system-logs",     label: "Logs",       icon: FileText },
       { path: "/google",           label: "Google",     icon: Settings },
+      { path: "/translate",        label: "Translate",  icon: Globe },
       { path: "/admin-settings",  label: "Settings",   icon: Settings },
     ],
   },

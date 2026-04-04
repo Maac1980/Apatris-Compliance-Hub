@@ -1483,6 +1483,29 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_fraud_tenant ON fraud_alerts(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_fraud_status ON fraud_alerts(status)");
 
+  // translation_cache
+  await execute(`
+    CREATE TABLE IF NOT EXISTS translation_cache (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      source_text TEXT NOT NULL,
+      source_lang TEXT NOT NULL DEFAULT 'en',
+      target_lang TEXT NOT NULL,
+      translated_text TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_translation_cache ON translation_cache(source_lang, target_lang, source_text)");
+
+  // Add preferred_language to workers if missing
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='preferred_language') THEN
+        ALTER TABLE workers ADD COLUMN preferred_language TEXT DEFAULT 'en';
+      END IF;
+    END $$;
+  `);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
