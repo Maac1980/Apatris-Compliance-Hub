@@ -69,6 +69,7 @@ import marginsRouter from "./margins.js";
 import geoRouter from "./geo.js";
 import signalsRouter from "./signals.js";
 import identityRouter from "./identity.js";
+import guaranteesRouter from "./guarantees.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -141,5 +142,6 @@ router.use(marginsRouter);
 router.use(geoRouter);
 router.use(signalsRouter);
 router.use(identityRouter);
+router.use(guaranteesRouter);
 
 export default router;

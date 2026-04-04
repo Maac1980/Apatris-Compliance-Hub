@@ -75,6 +75,7 @@ import MarginAnalysis from "@/pages/MarginAnalysis";
 import GeoIntelligence from "@/pages/GeoIntelligence";
 import MarketSignals from "@/pages/MarketSignals";
 import WorkerIdentity from "@/pages/WorkerIdentity";
+import ComplianceGuarantees from "@/pages/ComplianceGuarantees";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -299,6 +300,9 @@ function Router() {
       </Route>
       <Route path="/identity">
         {() => <ProtectedRoute component={WorkerIdentity} />}
+      </Route>
+      <Route path="/guarantees">
+        {() => <ProtectedRoute component={ComplianceGuarantees} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

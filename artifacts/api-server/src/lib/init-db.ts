@@ -1698,6 +1698,42 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_identity_worker ON worker_identities(worker_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_identity_hash ON worker_identities(identity_hash)");
 
+  // compliance_guarantees
+  await execute(`
+    CREATE TABLE IF NOT EXISTS compliance_guarantees (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_id UUID,
+      company_name TEXT,
+      guarantee_start DATE,
+      guarantee_end DATE,
+      max_coverage_eur NUMERIC(12,2) DEFAULT 0,
+      incidents INTEGER DEFAULT 0,
+      fines_covered NUMERIC(12,2) DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_guarantee_tenant ON compliance_guarantees(tenant_id)");
+
+  // compliance_incidents
+  await execute(`
+    CREATE TABLE IF NOT EXISTS compliance_incidents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      guarantee_id UUID REFERENCES compliance_guarantees(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      incident_type TEXT NOT NULL,
+      fine_amount NUMERIC(10,2) DEFAULT 0,
+      covered BOOLEAN DEFAULT TRUE,
+      resolution TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_comp_incidents_guarantee ON compliance_incidents(guarantee_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
