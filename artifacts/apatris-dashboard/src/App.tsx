@@ -71,6 +71,7 @@ import Messaging from "@/pages/Messaging";
 import InsuranceManagement from "@/pages/InsuranceManagement";
 import SkillsGap from "@/pages/SkillsGap";
 import CareerPaths from "@/pages/CareerPaths";
+import MarginAnalysis from "@/pages/MarginAnalysis";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -283,6 +284,9 @@ function Router() {
       </Route>
       <Route path="/careers">
         {() => <ProtectedRoute component={CareerPaths} />}
+      </Route>
+      <Route path="/margins">
+        {() => <ProtectedRoute component={MarginAnalysis} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

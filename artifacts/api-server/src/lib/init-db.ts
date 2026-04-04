@@ -1617,6 +1617,29 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_tenant ON career_paths(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_worker ON career_paths(worker_id)");
 
+  // margin_analysis
+  await execute(`
+    CREATE TABLE IF NOT EXISTS margin_analysis (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      company_id UUID,
+      company_name TEXT,
+      worker_id UUID,
+      worker_name TEXT,
+      month INTEGER,
+      year INTEGER,
+      revenue NUMERIC(12,2) DEFAULT 0,
+      worker_cost NUMERIC(12,2) DEFAULT 0,
+      housing_cost NUMERIC(12,2) DEFAULT 0,
+      admin_cost NUMERIC(12,2) DEFAULT 0,
+      gross_margin NUMERIC(12,2) DEFAULT 0,
+      gross_margin_pct NUMERIC(5,2) DEFAULT 0,
+      flag TEXT DEFAULT 'healthy',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_margin_tenant ON margin_analysis(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

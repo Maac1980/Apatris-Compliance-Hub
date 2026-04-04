@@ -51,6 +51,7 @@ import { MessagingTab } from "@/components/tabs/MessagingTab";
 import { InsuranceTab } from "@/components/tabs/InsuranceTab";
 import { SkillsGapTab } from "@/components/tabs/SkillsGapTab";
 import { CareerTab } from "@/components/tabs/CareerTab";
+import { MarginTab } from "@/components/tabs/MarginTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -307,6 +308,10 @@ export function DashboardPage() {
       // ── CAREER PATHS ────────────────────────────────────────────────────
       case "careers":
         return <CareerTab />;
+
+      // ── MARGINS ─────────────────────────────────────────────────────────
+      case "margins":
+        return <MarginTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
