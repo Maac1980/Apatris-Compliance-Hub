@@ -1506,6 +1506,39 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // messages
+  await execute(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      thread_id UUID,
+      sender_id TEXT NOT NULL,
+      sender_name TEXT,
+      receiver_id TEXT NOT NULL,
+      receiver_name TEXT,
+      message TEXT NOT NULL,
+      encrypted BOOLEAN DEFAULT TRUE,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id)");
+
+  // message_threads
+  await execute(`
+    CREATE TABLE IF NOT EXISTS message_threads (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      participant_ids JSONB DEFAULT '[]',
+      participant_names JSONB DEFAULT '[]',
+      last_message TEXT,
+      last_message_at TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_msg_threads_tenant ON message_threads(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

@@ -47,6 +47,7 @@ import { CompetitorTab } from "@/components/tabs/CompetitorTab";
 import { CountryTab } from "@/components/tabs/CountryTab";
 import { FraudTab } from "@/components/tabs/FraudTab";
 import { TranslateTab } from "@/components/tabs/TranslateTab";
+import { MessagingTab } from "@/components/tabs/MessagingTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -287,6 +288,10 @@ export function DashboardPage() {
       // ── TRANSLATE ───────────────────────────────────────────────────────
       case "translate":
         return <TranslateTab />;
+
+      // ── MESSAGES ────────────────────────────────────────────────────────
+      case "messages":
+        return <MessagingTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
