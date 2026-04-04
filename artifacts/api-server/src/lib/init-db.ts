@@ -2090,6 +2090,38 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_deployments_tenant ON deployments(tenant_id)");
 
+  // knowledge_nodes (LightRAG)
+  await execute(`
+    CREATE TABLE IF NOT EXISTS knowledge_nodes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      entity_type TEXT NOT NULL,
+      entity_id UUID,
+      entity_name TEXT,
+      content TEXT NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_kn_tenant ON knowledge_nodes(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_kn_type ON knowledge_nodes(entity_type)");
+
+  // agent_queries
+  await execute(`
+    CREATE TABLE IF NOT EXISTS agent_queries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      user_id TEXT,
+      query TEXT NOT NULL,
+      agents_used JSONB DEFAULT '[]',
+      results JSONB DEFAULT '{}',
+      final_answer TEXT,
+      response_time_ms INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_aq_tenant ON agent_queries(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

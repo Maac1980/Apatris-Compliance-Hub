@@ -80,6 +80,7 @@ import developerRouter from "./developer.js";
 import intelligenceFeedRouter from "./intelligence-feed.js";
 import wellnessRouter from "./wellness.js";
 import deploymentsRouter from "./deployments.js";
+import aiCopilotRouter from "./ai-copilot.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -163,5 +164,6 @@ router.use(developerRouter);
 router.use(intelligenceFeedRouter);
 router.use(wellnessRouter);
 router.use(deploymentsRouter);
+router.use(aiCopilotRouter);
 
 export default router;

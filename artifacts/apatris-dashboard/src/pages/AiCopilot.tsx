@@ -1,138 +1,103 @@
-import { useState, useRef, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { Bot, Send, Loader2, Sparkles, User } from "lucide-react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { Sparkles, Send, Brain, Database, Zap } from "lucide-react";
 
-const API = "/api";
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
 }
 
-interface Message { role: "user" | "assistant"; content: string; source?: string }
+const QUICK_QUERIES = [
+  "Who is available today?", "Any expiring permits this week?", "What's our average margin?",
+  "Which workers are on bench?", "Show payroll summary for this month", "Any compliance alerts?",
+];
 
 export default function AiCopilot() {
-  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<{ answer: string; agentsUsed: string[]; responseTimeMs: number } | null>(null);
 
-  const QUICK_QUESTIONS = [
-    t("aiCopilot.q1"),
-    t("aiCopilot.q2"),
-    t("aiCopilot.q3"),
-    t("aiCopilot.q4"),
-    t("aiCopilot.q5"),
-  ];
+  const { data: status } = useQuery({ queryKey: ["ai-status"], queryFn: async () => { const r = await fetch(`${import.meta.env.BASE_URL}api/ai/status`, { headers: authHeaders() }); if (!r.ok) return {}; return r.json(); } });
+  const { data: history } = useQuery({ queryKey: ["ai-queries"], queryFn: async () => { const r = await fetch(`${import.meta.env.BASE_URL}api/ai/queries`, { headers: authHeaders() }); if (!r.ok) return { queries: [] }; return r.json(); } });
 
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: t("aiCopilot.welcome"), source: "system" },
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const askMutation = useMutation({
+    mutationFn: async (q: string) => { const r = await fetch(`${import.meta.env.BASE_URL}api/ai/query`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ query: q }) }); if (!r.ok) throw new Error("Failed"); return r.json(); },
+    onSuccess: (d) => { setAnswer(d); queryClient.invalidateQueries({ queryKey: ["ai-queries", "ai-status"] }); },
+    onError: (err) => toast({ description: err instanceof Error ? err.message : "Failed", variant: "destructive" }),
+  });
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  const indexMutation = useMutation({
+    mutationFn: async () => { const r = await fetch(`${import.meta.env.BASE_URL}api/ai/index`, { method: "POST", headers: authHeaders() }); if (!r.ok) throw new Error("Failed"); return r.json(); },
+    onSuccess: (d) => { toast({ description: `Indexed ${d.indexed} nodes` }); queryClient.invalidateQueries({ queryKey: ["ai-status"] }); },
+  });
 
-  const ask = async (question: string) => {
-    if (!question.trim()) return;
-    setMessages(prev => [...prev, { role: "user", content: question }]);
-    setInput("");
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API}/analytics/copilot`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ question }),
-      });
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: "assistant", content: data.answer ?? data.error ?? "No response", source: data.source }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: t("aiCopilot.error") }]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const s = status ?? {};
 
   return (
-    <div className="flex flex-col h-full max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="p-6 pb-3">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-red-500" /> {t("aiCopilot.title")}
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">{t("aiCopilot.subtitle")}</p>
+    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2"><Sparkles className="w-7 h-7 text-[#C41E18]" /><h1 className="text-3xl font-bold text-white">AI Copilot</h1></div>
+        <p className="text-gray-400">6 sub-agents + knowledge graph — ask anything about your workforce</p>
       </div>
 
-      {/* Quick questions */}
-      {messages.length <= 1 && (
-        <div className="px-6 pb-4 flex flex-wrap gap-2">
-          {QUICK_QUESTIONS.map(q => (
-            <button key={q} onClick={() => ask(q)}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700 border border-slate-700/50 transition-colors">
-              {q}
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4"><p className="text-xs text-gray-400 font-mono uppercase mb-1">Knowledge Nodes</p><p className="text-2xl font-bold text-indigo-400">{s.knowledgeGraph?.totalNodes ?? 0}</p></div>
+        <div className="bg-slate-800 rounded-xl p-4"><p className="text-xs text-gray-400 font-mono uppercase mb-1">Queries</p><p className="text-2xl font-bold text-white">{s.queries?.total ?? 0}</p></div>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4"><p className="text-xs text-gray-400 font-mono uppercase mb-1">Avg Response</p><p className="text-2xl font-bold text-emerald-400">{s.queries?.avgResponseMs ?? 0}ms</p></div>
+        <div className="bg-slate-800 rounded-xl p-4"><p className="text-xs text-gray-400 font-mono uppercase mb-1">Agents</p><p className="text-2xl font-bold text-white">{(s.agents ?? []).length}</p>
+          <button onClick={() => indexMutation.mutate()} disabled={indexMutation.isPending} className="mt-1 text-[9px] text-[#C41E18] font-bold">{indexMutation.isPending ? "Indexing..." : "Re-index"}</button>
+        </div>
+      </div>
+
+      {/* Query box */}
+      <div className="bg-slate-900 border border-indigo-500/20 rounded-xl p-4 mb-4">
+        <div className="flex gap-3 mb-3">
+          <textarea value={question} onChange={e => setQuestion(e.target.value)} rows={2} placeholder="Ask anything about your workforce..."
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && question.trim()) { e.preventDefault(); askMutation.mutate(question); } }}
+            className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-500 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+          <button onClick={() => askMutation.mutate(question)} disabled={!question.trim() || askMutation.isPending}
+            className="px-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50 self-end">
+            {askMutation.isPending ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <Send className="w-5 h-5" />}
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_QUERIES.map(q => (
+            <button key={q} onClick={() => { setQuestion(q); askMutation.mutate(q); }}
+              className="px-2.5 py-1 bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold hover:bg-slate-700 hover:text-white">
+              <Zap className="w-2.5 h-2.5 inline mr-1" />{q}
             </button>
           ))}
         </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-            {msg.role === "assistant" && (
-              <div className="w-8 h-8 rounded-lg bg-red-900/40 flex items-center justify-center shrink-0 mt-0.5">
-                <Bot className="w-4 h-4 text-red-400" />
-              </div>
-            )}
-            <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === "user"
-                ? "bg-red-900/40 text-white rounded-br-sm"
-                : "bg-slate-800/80 text-slate-200 border border-slate-700/50 rounded-bl-sm"
-            }`}>
-              {msg.content}
-              {msg.source && msg.role === "assistant" && (
-                <div className="text-[9px] text-slate-500 mt-2 uppercase tracking-wider">
-                  {msg.source === "ai" ? t("aiCopilot.poweredBy") : msg.source === "rules" ? t("aiCopilot.rulesBased") : ""}
-                </div>
-              )}
-            </div>
-            {msg.role === "user" && (
-              <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                <User className="w-4 h-4 text-slate-300" />
-              </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-900/40 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-red-400" />
-            </div>
-            <div className="bg-slate-800/80 rounded-2xl px-4 py-3 border border-slate-700/50 rounded-bl-sm">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-slate-700/50">
-        <form onSubmit={(e) => { e.preventDefault(); ask(input); }} className="flex gap-3">
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder={t("aiCopilot.placeholder")}
-            disabled={loading}
-            className="flex-1 bg-slate-800 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-red-500/50 disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="px-4 py-3 rounded-xl bg-red-900/60 text-red-400 font-bold disabled:opacity-30 hover:bg-red-900/80 transition-colors"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
+      {/* Answer */}
+      {answer && (
+        <div className="bg-slate-900 border border-emerald-500/20 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="w-4 h-4 text-indigo-400" />
+            <div className="flex gap-1">{answer.agentsUsed.map(a => <span key={a} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded text-[9px] font-bold">{a}</span>)}</div>
+            <span className="text-[9px] text-slate-600 font-mono ml-auto">{answer.responseTimeMs}ms</span>
+          </div>
+          <p className="text-sm text-white whitespace-pre-wrap">{answer.answer}</p>
+        </div>
+      )}
+
+      {/* Query history */}
+      <h3 className="text-sm font-bold text-white mb-2">Recent Queries</h3>
+      <div className="space-y-2">
+        {(history?.queries ?? []).slice(0, 10).map((q: any) => (
+          <div key={q.id} className="bg-slate-900 border border-slate-700 rounded-lg p-3">
+            <p className="text-xs font-bold text-white mb-1">{q.query}</p>
+            <p className="text-[10px] text-slate-400 line-clamp-2">{q.final_answer?.slice(0, 150)}</p>
+            <div className="flex items-center gap-2 mt-1 text-[9px] text-slate-600">
+              <span className="font-mono">{q.response_time_ms}ms</span>
+              {(typeof q.agents_used === "string" ? JSON.parse(q.agents_used) : q.agents_used || []).map((a: string) => <span key={a} className="text-indigo-400">{a}</span>)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
