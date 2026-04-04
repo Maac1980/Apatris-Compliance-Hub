@@ -71,9 +71,9 @@ async function seedRegulatoryData() {
   console.log("[Regulatory] Seeded 5 sample regulatory updates.");
 }
 
-// Init tables on import
+// Init tables on import; seed demo data only in non-production
 ensureRegulatoryTable()
-  .then(() => seedRegulatoryData())
+  .then(() => process.env.NODE_ENV !== "production" ? seedRegulatoryData() : undefined)
   .catch((err) => console.error("[Regulatory] Table init/seed failed:", err));
 ensureImmigrationTable().catch((err) => console.error("[Immigration] Table init failed:", err));
 

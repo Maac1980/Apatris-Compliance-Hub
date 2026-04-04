@@ -538,12 +538,12 @@ export async function initializeDatabase(): Promise<void> {
     );
   }
 
-  // ── Seed demo workers if table is empty ────────────────────────────────
+  // ── Seed demo workers if table is empty (non-production only) ──────────
   const workerCount = parseInt(
     (await query<{ count: string }>("SELECT count(*)::text AS count FROM workers"))[0]?.count ?? "0", 10
   );
 
-  if (workerCount < 6 && defaultTenantId) {
+  if (workerCount < 6 && defaultTenantId && process.env.NODE_ENV !== "production") {
     console.log("[init-db] Seeding demo workers…");
     const workers = [
       {

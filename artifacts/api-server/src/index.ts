@@ -25,13 +25,15 @@ const port = Number(process.env["PORT"] || "8080");
     await initializeDatabase();
     console.log("[Startup] Database initialized.");
 
-    // Seed sample data if tables are empty
-    const { seedSampleData } = await import("./lib/seed.js");
-    await seedSampleData();
-
-    // Comprehensive seed data
-    const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
-    await seedComprehensiveData();
+    // Seed demo data only in non-production environments
+    if (process.env.NODE_ENV !== "production") {
+      const { seedSampleData } = await import("./lib/seed.js");
+      await seedSampleData();
+      const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
+      await seedComprehensiveData();
+    } else {
+      console.log("[Startup] Production mode — skipping demo data seeders.");
+    }
   } catch (err) {
     console.error("[Startup] Database init failed:", err instanceof Error ? err.message : err);
   }
