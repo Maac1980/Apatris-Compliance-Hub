@@ -62,6 +62,7 @@ import { LegalKBTab } from "@/components/tabs/LegalKBTab";
 import { BillingTab } from "@/components/tabs/BillingTab";
 import { PostedNotifTab } from "@/components/tabs/PostedNotifTab";
 import { EsspassTab } from "@/components/tabs/EsspassTab";
+import { DeveloperTab } from "@/components/tabs/DeveloperTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -362,6 +363,10 @@ export function DashboardPage() {
       // ── ESSPASS ─────────────────────────────────────────────────────────
       case "esspass":
         return <EsspassTab />;
+
+      // ── DEVELOPER ───────────────────────────────────────────────────────
+      case "developer":
+        return <DeveloperTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

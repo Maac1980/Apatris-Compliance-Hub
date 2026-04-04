@@ -1965,6 +1965,52 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_esspass_tenant ON esspass_records(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_esspass_worker ON esspass_records(worker_id)");
 
+  // api_keys
+  await execute(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      key_prefix TEXT,
+      permissions JSONB DEFAULT '["read_workers"]',
+      last_used TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      status TEXT DEFAULT 'active'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_api_keys_tenant ON api_keys(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)");
+
+  // webhooks
+  await execute(`
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      events JSONB DEFAULT '[]',
+      secret TEXT,
+      status TEXT DEFAULT 'active',
+      last_triggered TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_webhooks_tenant ON webhooks(tenant_id)");
+
+  // webhook_logs
+  await execute(`
+    CREATE TABLE IF NOT EXISTS webhook_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      webhook_id UUID REFERENCES webhooks(id) ON DELETE CASCADE,
+      event TEXT NOT NULL,
+      payload JSONB DEFAULT '{}',
+      response_status INTEGER,
+      delivered_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook ON webhook_logs(webhook_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

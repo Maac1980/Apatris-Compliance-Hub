@@ -76,6 +76,7 @@ import legalKbRouter from "./legal-kb.js";
 import saasBillingRouter from "./saas-billing.js";
 import postedNotificationsRouter from "./posted-notifications.js";
 import esspassRouter from "./esspass.js";
+import developerRouter from "./developer.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -155,5 +156,6 @@ router.use(legalKbRouter);
 router.use(saasBillingRouter);
 router.use(postedNotificationsRouter);
 router.use(esspassRouter);
+router.use(developerRouter);
 
 export default router;
