@@ -65,6 +65,7 @@ import { EsspassTab } from "@/components/tabs/EsspassTab";
 import { DeveloperTab } from "@/components/tabs/DeveloperTab";
 import { IntelFeedTab } from "@/components/tabs/IntelFeedTab";
 import { WellnessTab } from "@/components/tabs/WellnessTab";
+import { DeploymentTab } from "@/components/tabs/DeploymentTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -377,6 +378,10 @@ export function DashboardPage() {
       // ── WELLNESS ────────────────────────────────────────────────────────
       case "wellness":
         return <WellnessTab />;
+
+      // ── DEPLOYMENTS ─────────────────────────────────────────────────────
+      case "deploy":
+        return <DeploymentTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

@@ -117,6 +117,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/roi",            label: "ROI Dashboard", icon: Briefcase },
       { path: "/guarantees",     label: "Guarantees",    icon: Briefcase },
       { path: "/frameworks",     label: "Frameworks",    icon: Briefcase },
+      { path: "/deploy",         label: "15-Min Deploy", icon: Briefcase },
       { path: "/clients",       label: "Clients",       icon: Building2 },
       { path: "/job-board",     label: "Job Board",     icon: Briefcase },
       { path: "/applications",  label: "Applications",  icon: UserPlus },

@@ -2066,6 +2066,30 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_wellness_tenant ON financial_wellness(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_wellness_worker ON financial_wellness(worker_id)");
 
+  // deployments — 15-minute guarantee
+  await execute(`
+    CREATE TABLE IF NOT EXISTS deployments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      job_request_id UUID,
+      worker_id UUID,
+      worker_name TEXT,
+      company_id UUID,
+      company_name TEXT,
+      started_at TIMESTAMPTZ DEFAULT NOW(),
+      matched_at TIMESTAMPTZ,
+      contract_sent_at TIMESTAMPTZ,
+      contract_signed_at TIMESTAMPTZ,
+      worker_notified_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      total_minutes NUMERIC(8,2) DEFAULT 0,
+      status TEXT DEFAULT 'in_progress',
+      sla_met BOOLEAN DEFAULT FALSE,
+      timeline JSONB DEFAULT '[]'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_deployments_tenant ON deployments(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

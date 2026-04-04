@@ -79,6 +79,7 @@ import esspassRouter from "./esspass.js";
 import developerRouter from "./developer.js";
 import intelligenceFeedRouter from "./intelligence-feed.js";
 import wellnessRouter from "./wellness.js";
+import deploymentsRouter from "./deployments.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -161,5 +162,6 @@ router.use(esspassRouter);
 router.use(developerRouter);
 router.use(intelligenceFeedRouter);
 router.use(wellnessRouter);
+router.use(deploymentsRouter);
 
 export default router;
