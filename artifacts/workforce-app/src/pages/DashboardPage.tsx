@@ -44,6 +44,7 @@ import { SalaryBenchTab } from "@/components/tabs/SalaryBenchTab";
 import { LegalTab } from "@/components/tabs/LegalTab";
 import { SafetyTab } from "@/components/tabs/SafetyTab";
 import { CompetitorTab } from "@/components/tabs/CompetitorTab";
+import { CountryTab } from "@/components/tabs/CountryTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -272,6 +273,10 @@ export function DashboardPage() {
       // ── COMPETITORS ─────────────────────────────────────────────────────
       case "competitors":
         return <CompetitorTab />;
+
+      // ── COUNTRY RULES ───────────────────────────────────────────────────
+      case "countrypay":
+        return <CountryTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

@@ -58,6 +58,7 @@ import salaryRouter from "./salary.js";
 import legalRouter from "./legal.js";
 import safetyRouter from "./safety.js";
 import competitorsRouter from "./competitors.js";
+import countryConfigRouter from "./country-config.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -119,5 +120,6 @@ router.use(salaryRouter);
 router.use(legalRouter);
 router.use(safetyRouter);
 router.use(competitorsRouter);
+router.use(countryConfigRouter);
 
 export default router;

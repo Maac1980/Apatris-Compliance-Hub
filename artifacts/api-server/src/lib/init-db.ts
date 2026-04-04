@@ -1421,6 +1421,48 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_competitor_tenant ON competitor_intel(tenant_id)");
 
+  // country_configs
+  await execute(`
+    CREATE TABLE IF NOT EXISTS country_configs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      country_code TEXT NOT NULL,
+      country_name TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      min_wage_hourly NUMERIC(10,2) DEFAULT 0,
+      min_wage_monthly NUMERIC(10,2) DEFAULT 0,
+      social_security_employee NUMERIC(5,2) DEFAULT 0,
+      social_security_employer NUMERIC(5,2) DEFAULT 0,
+      income_tax_rate NUMERIC(5,2) DEFAULT 0,
+      posted_worker_rules TEXT,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_country_code ON country_configs(country_code) WHERE tenant_id IS NULL");
+
+  // Seed 7 countries if empty
+  const ccCount = await query<{count:string}>("SELECT COUNT(*) AS count FROM country_configs");
+  if (parseInt(ccCount[0]?.count ?? "0") < 7) {
+    const countries = [
+      { code: "PL", name: "Poland", cur: "PLN", minH: 31.40, minM: 4666, ssEmp: 13.71, ssEmpl: 20.48, tax: 12, pwd: "Posted from PL: A1 certificate required. Worker retains Polish ZUS. Minimum terms of host country apply after 12 months (extendable to 18).", notes: "Base country for Apatris. ZUS DRA filed monthly." },
+      { code: "NL", name: "Netherlands", cur: "EUR", minH: 14.06, minM: 2070, ssEmp: 27.65, ssEmpl: 18.15, tax: 36.97, pwd: "Posted to NL: Dutch minimum wage applies from day 1. WagwEU registration required. A1 from sending country. Max 12 months standard posting.", notes: "WagwEU notification mandatory. Dutch TWV/GVVA for non-EU workers." },
+      { code: "BE", name: "Belgium", cur: "EUR", minH: 13.29, minM: 1994.18, ssEmp: 13.07, ssEmpl: 25, tax: 25, pwd: "Posted to BE: Limosa declaration mandatory before posting. Belgian minimum terms from day 1. A1 required. Joint committee rates may apply.", notes: "Limosa declaration via socialsecurity.be. Belgian Single Permit for non-EU." },
+      { code: "LT", name: "Lithuania", cur: "EUR", minH: 5.65, minM: 924, ssEmp: 19.5, ssEmpl: 1.77, tax: 20, pwd: "Posted to LT: Registration with State Labour Inspectorate. Lithuanian minimum terms apply. A1 from sending country required.", notes: "Sodra contributions. Work permits via Migration Department." },
+      { code: "SK", name: "Slovakia", cur: "EUR", minH: 5.47, minM: 816, ssEmp: 13.4, ssEmpl: 35.2, tax: 19, pwd: "Posted to SK: Notification to National Labour Inspectorate. Slovak minimum conditions apply. A1 required for social security.", notes: "High employer social security. Work permits via Ministry of Labour." },
+      { code: "CZ", name: "Czech Republic", cur: "CZK", minH: 113.50, minM: 18900, ssEmp: 11, ssEmpl: 33.8, tax: 15, pwd: "Posted to CZ: Registration with Labour Office. Czech minimum terms apply from day 1. A1 from sending country.", notes: "ČSSZ contributions. Employee card for non-EU workers." },
+      { code: "RO", name: "Romania", cur: "RON", minH: 29.09, minM: 4050, ssEmp: 25, ssEmpl: 2.25, tax: 10, pwd: "Posted to RO: Notification to territorial labour inspectorate. Romanian minimum conditions apply. A1 required.", notes: "CAS 25% employee. Low employer contributions." },
+    ];
+    for (const c of countries) {
+      await execute(
+        `INSERT INTO country_configs (country_code, country_name, currency, min_wage_hourly, min_wage_monthly, social_security_employee, social_security_employer, income_tax_rate, posted_worker_rules, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT DO NOTHING`,
+        [c.code, c.name, c.cur, c.minH, c.minM, c.ssEmp, c.ssEmpl, c.tax, c.pwd, c.notes]
+      );
+    }
+    console.log("[init-db] Seeded 7 country configurations.");
+  }
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

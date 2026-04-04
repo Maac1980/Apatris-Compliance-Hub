@@ -64,6 +64,7 @@ import RevenueForecast from "@/pages/RevenueForecast";
 import LegalMonitor from "@/pages/LegalMonitor";
 import SafetyMonitor from "@/pages/SafetyMonitor";
 import CompetitorMonitor from "@/pages/CompetitorMonitor";
+import CountryPayroll from "@/pages/CountryPayroll";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -255,6 +256,9 @@ function Router() {
       </Route>
       <Route path="/competitors">
         {() => <ProtectedRoute component={CompetitorMonitor} />}
+      </Route>
+      <Route path="/country-payroll">
+        {() => <ProtectedRoute component={CountryPayroll} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
