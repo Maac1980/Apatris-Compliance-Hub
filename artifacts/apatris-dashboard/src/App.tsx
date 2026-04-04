@@ -61,6 +61,7 @@ import TrustScores from "@/pages/TrustScores";
 import ChurnPrediction from "@/pages/ChurnPrediction";
 import HousingManagement from "@/pages/HousingManagement";
 import RevenueForecast from "@/pages/RevenueForecast";
+import LegalMonitor from "@/pages/LegalMonitor";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -243,6 +244,9 @@ function Router() {
       </Route>
       <Route path="/revenue">
         {() => <ProtectedRoute component={RevenueForecast} />}
+      </Route>
+      <Route path="/legal">
+        {() => <ProtectedRoute component={LegalMonitor} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

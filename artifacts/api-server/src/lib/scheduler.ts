@@ -288,7 +288,8 @@ export function startScheduler(): void {
     `[Scheduler] Daily compliance scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
   );
   setTimeout(function daily() {
-    runDailyScan()
+    runLegalScanJob()
+      .then(() => runDailyScan())
       .then(() => runImmigrationAlerts())
       .then(() => runBenchAlerts())
       .then(() => runFinesScan())
@@ -298,6 +299,18 @@ export function startScheduler(): void {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
   }, msToFirst);
+}
+
+// Legal scan — runs first in daily chain
+async function runLegalScanJob(): Promise<void> {
+  try {
+    const { runLegalScan } = await import("../routes/legal.js");
+    const tenantId = getDefaultTenantId();
+    if (!tenantId) return;
+    await runLegalScan(tenantId);
+  } catch (err) {
+    console.error("[Scheduler] Legal scan failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 // Churn prediction — runs after trust scores
