@@ -1597,6 +1597,26 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_skill_demands_tenant ON skill_demands(tenant_id)");
 
+  // career_paths
+  await execute(`
+    CREATE TABLE IF NOT EXISTS career_paths (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID NOT NULL,
+      worker_name TEXT NOT NULL DEFAULT '',
+      current_role TEXT,
+      current_certifications TEXT,
+      recommended_next_cert TEXT,
+      estimated_salary_increase NUMERIC(8,2) DEFAULT 0,
+      time_to_achieve TEXT,
+      steps JSONB DEFAULT '[]',
+      progress INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_tenant ON career_paths(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_career_paths_worker ON career_paths(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

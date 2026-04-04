@@ -131,6 +131,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/competitors",  label: "Competitors",   icon: Award },
       { path: "/fraud",        label: "Fraud Detect",  icon: Shield },
       { path: "/skills-gap",   label: "Skills Gap",    icon: Award },
+      { path: "/careers",      label: "Career Paths",  icon: Award },
     ],
   },
   {

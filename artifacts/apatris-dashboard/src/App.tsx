@@ -70,6 +70,7 @@ import TranslationEngine from "@/pages/TranslationEngine";
 import Messaging from "@/pages/Messaging";
 import InsuranceManagement from "@/pages/InsuranceManagement";
 import SkillsGap from "@/pages/SkillsGap";
+import CareerPaths from "@/pages/CareerPaths";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -279,6 +280,9 @@ function Router() {
       </Route>
       <Route path="/skills-gap">
         {() => <ProtectedRoute component={SkillsGap} />}
+      </Route>
+      <Route path="/careers">
+        {() => <ProtectedRoute component={CareerPaths} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

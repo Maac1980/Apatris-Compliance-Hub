@@ -64,6 +64,7 @@ import translateRouter from "./translate.js";
 import messagingRouter from "./messaging.js";
 import insuranceRouter from "./insurance.js";
 import skillsGapRouter from "./skills-gap.js";
+import careersRouter from "./careers.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -131,5 +132,6 @@ router.use(translateRouter);
 router.use(messagingRouter);
 router.use(insuranceRouter);
 router.use(skillsGapRouter);
+router.use(careersRouter);
 
 export default router;

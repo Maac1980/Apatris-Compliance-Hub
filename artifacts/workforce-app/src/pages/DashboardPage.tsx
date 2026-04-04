@@ -50,6 +50,7 @@ import { TranslateTab } from "@/components/tabs/TranslateTab";
 import { MessagingTab } from "@/components/tabs/MessagingTab";
 import { InsuranceTab } from "@/components/tabs/InsuranceTab";
 import { SkillsGapTab } from "@/components/tabs/SkillsGapTab";
+import { CareerTab } from "@/components/tabs/CareerTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -302,6 +303,10 @@ export function DashboardPage() {
       // ── SKILLS GAP ──────────────────────────────────────────────────────
       case "skillsgap":
         return <SkillsGapTab />;
+
+      // ── CAREER PATHS ────────────────────────────────────────────────────
+      case "careers":
+        return <CareerTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":
