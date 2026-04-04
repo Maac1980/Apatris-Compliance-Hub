@@ -1,10 +1,11 @@
 import { Router } from "express";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
 // GET /api/settings/status
 // Returns non-secret diagnostics about server configuration.
-router.get("/settings/status", (_req, res) => {
+router.get("/settings/status", requireAuth, requireRole("Admin"), (_req, res) => {
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
   const smtpHost = process.env.SMTP_HOST;

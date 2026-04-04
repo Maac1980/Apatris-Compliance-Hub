@@ -4,10 +4,11 @@ import { getAuditLog } from "../lib/audit-log.js";
 import { getSnapshots, saveSnapshot } from "../lib/snapshots-db.js";
 import { fetchAllWorkers } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
-router.get("/notifications/history", async (_req, res) => {
+router.get("/notifications/history", requireAuth, requireRole("Admin", "Executive"), async (_req, res) => {
   try {
     const entries = await query(
       `SELECT * FROM notification_log ORDER BY created_at DESC LIMIT 200`
@@ -18,7 +19,7 @@ router.get("/notifications/history", async (_req, res) => {
   }
 });
 
-router.get("/audit-log", (_req, res) => {
+router.get("/audit-log", requireAuth, requireRole("Admin", "Executive"), (_req, res) => {
   try {
     res.json({ entries: getAuditLog(200) });
   } catch (err) {
@@ -26,7 +27,7 @@ router.get("/audit-log", (_req, res) => {
   }
 });
 
-router.get("/compliance/trend", async (req, res) => {
+router.get("/compliance/trend", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     res.json({ snapshots: await getSnapshots(req.tenantId!, 30) });
   } catch (err) {
@@ -34,7 +35,7 @@ router.get("/compliance/trend", async (req, res) => {
   }
 });
 
-router.post("/compliance/snapshot", async (req, res) => {
+router.post("/compliance/snapshot", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
     const workers = rows.map(mapRowToWorker);

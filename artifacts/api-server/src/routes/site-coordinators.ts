@@ -2,11 +2,12 @@ import { Router } from "express";
 import {
   listCoordinators, addCoordinator, updateCoordinator, removeCoordinator
 } from "../lib/coordinators-db.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
 // GET /api/site-coordinators
-router.get("/site-coordinators", async (req, res) => {
+router.get("/site-coordinators", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const list = (await listCoordinators(req.tenantId!)).map(({ passwordHash: _, ...c }) => c);
     res.json({ coordinators: list });
@@ -16,7 +17,7 @@ router.get("/site-coordinators", async (req, res) => {
 });
 
 // POST /api/site-coordinators
-router.post("/site-coordinators", async (req, res) => {
+router.post("/site-coordinators", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     const { name, email, password, assignedSite, alertEmail } = req.body as Record<string, string>;
     if (!name || !email || !password || !assignedSite) {
@@ -31,7 +32,7 @@ router.post("/site-coordinators", async (req, res) => {
 });
 
 // PATCH /api/site-coordinators/:id
-router.patch("/site-coordinators/:id", async (req, res) => {
+router.patch("/site-coordinators/:id", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     const updates = req.body as Record<string, string>;
     const coord = await updateCoordinator(req.params.id, updates, req.tenantId!);
@@ -43,7 +44,7 @@ router.patch("/site-coordinators/:id", async (req, res) => {
 });
 
 // DELETE /api/site-coordinators/:id
-router.delete("/site-coordinators/:id", async (req, res) => {
+router.delete("/site-coordinators/:id", requireAuth, requireRole("Admin"), async (req, res) => {
   try {
     await removeCoordinator(req.params.id, req.tenantId!);
     res.json({ success: true });
