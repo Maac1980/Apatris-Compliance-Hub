@@ -52,6 +52,7 @@ import { InsuranceTab } from "@/components/tabs/InsuranceTab";
 import { SkillsGapTab } from "@/components/tabs/SkillsGapTab";
 import { CareerTab } from "@/components/tabs/CareerTab";
 import { MarginTab } from "@/components/tabs/MarginTab";
+import { GeoTab } from "@/components/tabs/GeoTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -312,6 +313,10 @@ export function DashboardPage() {
       // ── MARGINS ─────────────────────────────────────────────────────────
       case "margins":
         return <MarginTab />;
+
+      // ── GEO INTELLIGENCE ────────────────────────────────────────────────
+      case "geo":
+        return <GeoTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

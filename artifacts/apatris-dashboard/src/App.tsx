@@ -72,6 +72,7 @@ import InsuranceManagement from "@/pages/InsuranceManagement";
 import SkillsGap from "@/pages/SkillsGap";
 import CareerPaths from "@/pages/CareerPaths";
 import MarginAnalysis from "@/pages/MarginAnalysis";
+import GeoIntelligence from "@/pages/GeoIntelligence";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -287,6 +288,9 @@ function Router() {
       </Route>
       <Route path="/margins">
         {() => <ProtectedRoute component={MarginAnalysis} />}
+      </Route>
+      <Route path="/geo">
+        {() => <ProtectedRoute component={GeoIntelligence} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

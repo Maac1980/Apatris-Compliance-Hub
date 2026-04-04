@@ -1640,6 +1640,23 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_margin_tenant ON margin_analysis(tenant_id)");
 
+  // geo_data
+  await execute(`
+    CREATE TABLE IF NOT EXISTS geo_data (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      worker_id UUID,
+      worker_name TEXT,
+      latitude NUMERIC(10,7),
+      longitude NUMERIC(10,7),
+      site TEXT,
+      recorded_at TIMESTAMPTZ DEFAULT NOW(),
+      source TEXT DEFAULT 'gps_checkin'
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_geo_tenant ON geo_data(tenant_id)");
+  await execute("CREATE INDEX IF NOT EXISTS idx_geo_worker ON geo_data(worker_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

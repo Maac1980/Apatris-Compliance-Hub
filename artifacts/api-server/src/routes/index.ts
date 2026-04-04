@@ -66,6 +66,7 @@ import insuranceRouter from "./insurance.js";
 import skillsGapRouter from "./skills-gap.js";
 import careersRouter from "./careers.js";
 import marginsRouter from "./margins.js";
+import geoRouter from "./geo.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -135,5 +136,6 @@ router.use(insuranceRouter);
 router.use(skillsGapRouter);
 router.use(careersRouter);
 router.use(marginsRouter);
+router.use(geoRouter);
 
 export default router;
