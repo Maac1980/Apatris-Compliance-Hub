@@ -63,6 +63,7 @@ import HousingManagement from "@/pages/HousingManagement";
 import RevenueForecast from "@/pages/RevenueForecast";
 import LegalMonitor from "@/pages/LegalMonitor";
 import SafetyMonitor from "@/pages/SafetyMonitor";
+import CompetitorMonitor from "@/pages/CompetitorMonitor";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -251,6 +252,9 @@ function Router() {
       </Route>
       <Route path="/safety">
         {() => <ProtectedRoute component={SafetyMonitor} />}
+      </Route>
+      <Route path="/competitors">
+        {() => <ProtectedRoute component={CompetitorMonitor} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

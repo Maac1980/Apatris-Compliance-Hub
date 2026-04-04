@@ -48,10 +48,11 @@ const port = Number(process.env["PORT"] || "8080");
 
   // Weekly report + monthly invoices — non-fatal
   try {
-    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts } = await import("./lib/scheduler.js");
+    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan } = await import("./lib/scheduler.js");
     startWeeklyReport();
     startMonthlyInvoices();
     startWeeklyMoodPrompts();
+    startWeeklyCompetitorScan();
   } catch {}
 
   server.listen(port, "0.0.0.0", () => {

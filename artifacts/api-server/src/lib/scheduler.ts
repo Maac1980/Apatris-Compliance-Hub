@@ -486,6 +486,26 @@ export function startWeeklyMoodPrompts(): void {
   }, ms);
 }
 
+// Weekly competitor scan — every Monday at 10:00
+export function startWeeklyCompetitorScan(): void {
+  function msUntilNextMonday10am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setDate(now.getDate() + ((8 - now.getDay()) % 7 || 7));
+    next.setHours(10, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 7);
+    return next.getTime() - now.getTime();
+  }
+  const ms = msUntilNextMonday10am();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  console.log(`[Scheduler] Weekly competitor scan scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 10:00).`);
+  setTimeout(function compWeekly() {
+    import("../routes/competitors.js").then(m => m.runCompetitorScan(getDefaultTenantId()!)).catch(err =>
+      console.error("[Scheduler] Competitor scan error:", err)
+    ).finally(() => setTimeout(compWeekly, WEEK_MS));
+  }, ms);
+}
+
 // Schedule weekly report — every Monday at 07:00
 export function startWeeklyReport(): void {
   if (!isMailConfigured()) {

@@ -1401,6 +1401,26 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_safety_scores_tenant ON safety_scores(tenant_id)");
 
+  // competitor_intel
+  await execute(`
+    CREATE TABLE IF NOT EXISTS competitor_intel (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      competitor_name TEXT,
+      country TEXT NOT NULL,
+      role_type TEXT NOT NULL,
+      their_rate NUMERIC(8,2) DEFAULT 0,
+      our_rate NUMERIC(8,2) DEFAULT 0,
+      currency TEXT DEFAULT 'EUR',
+      source TEXT DEFAULT 'ai_scan',
+      analysis TEXT,
+      recommendation TEXT,
+      status TEXT DEFAULT 'competitive',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_competitor_tenant ON competitor_intel(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
