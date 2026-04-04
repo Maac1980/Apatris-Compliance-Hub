@@ -2,6 +2,7 @@ import { query, queryOne, execute } from "./db.js";
 import { getDefaultTenantId } from "./tenant.js";
 
 export async function seedComprehensiveData(): Promise<void> {
+  if (process.env.NODE_ENV === "production") { console.log("[seed-full] Production — skipping."); return; }
   const tenantId = getDefaultTenantId();
   if (!tenantId) { console.log("[seed-full] No tenant ID — skipping."); return; }
 

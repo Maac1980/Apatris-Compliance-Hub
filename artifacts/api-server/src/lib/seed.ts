@@ -1,6 +1,7 @@
 import { query, execute } from "./db.js";
 
 export async function seedSampleData(): Promise<void> {
+  if (process.env.NODE_ENV === "production") { console.log("[seed] Production — skipping."); return; }
   try {
     // Check if workers table has < 5 rows
     const countRows = await query<{ count: string }>("SELECT COUNT(*) AS count FROM workers");

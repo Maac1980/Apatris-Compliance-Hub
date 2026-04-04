@@ -1306,9 +1306,9 @@ export async function initializeDatabase(): Promise<void> {
   await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_tenant ON worker_housing(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_worker_housing_worker ON worker_housing(worker_id)");
 
-  // Seed hostels if empty
+  // Seed hostels if empty (non-production only)
   const hostelCount = await query<{count:string}>("SELECT COUNT(*) AS count FROM hostels");
-  if (parseInt(hostelCount[0]?.count ?? "0") < 3 && defaultTenantId) {
+  if (parseInt(hostelCount[0]?.count ?? "0") < 3 && defaultTenantId && process.env.NODE_ENV !== "production") {
     const hostels = [
       { name: "Apatris House Warsaw", addr: "ul. Kolejowa 12", city: "Warsaw", country: "PL", rooms: 15, cost: 0, owner: "owned", notes: "Main Apatris-owned accommodation. 60 beds." },
       { name: "Apatris House Gdansk", addr: "ul. Portowa 8", city: "Gdansk", country: "PL", rooms: 10, cost: 0, owner: "owned", notes: "Shipyard worker housing. 40 beds." },
@@ -1862,9 +1862,9 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_legal_queries_tenant ON legal_queries(tenant_id)");
 
-  // Seed knowledge base if empty
+  // Seed knowledge base if empty (non-production only)
   const kbCount = await query<{count:string}>("SELECT COUNT(*) AS count FROM legal_knowledge");
-  if (parseInt(kbCount[0]?.count ?? "0") < 5) {
+  if (parseInt(kbCount[0]?.count ?? "0") < 5 && process.env.NODE_ENV !== "production") {
     const articles = [
       { cat: "TRC", title: "Art. 108 — Stamp in Passport Protection", content: "Under Art. 108 of the Act on Foreigners (Ustawa o cudzoziemcach), if a foreigner has submitted a TRC application before the expiry of their current stay, their stay is considered legal until a final decision is made. The stamp in the passport (stempel w paszporcie) serves as proof of legal stay and the right to work. This protection applies regardless of how long the decision takes.", source: "https://mos.cudzoziemcy.gov.pl", sourceName: "MOS Cudzoziemcy", lang: "en", tags: ["TRC", "stamp", "legal stay", "Art. 108"] },
       { cat: "TRC", title: "Karta Pobytu — Required Documents", content: "To apply for a Temporary Residence Card (Karta Pobytu Czasowego) and work permit (zezwolenie na pracę), a foreigner needs: valid passport, 4 photos, proof of accommodation, health insurance, employer's information letter (informacja starosty), work contract or promise of employment, proof of stable income, and payment of 440 PLN fee.", source: "https://migrant.poznan.uw.gov.pl", sourceName: "Poznan Voivodeship", lang: "en", tags: ["TRC", "documents", "application"] },
