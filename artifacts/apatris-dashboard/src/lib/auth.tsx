@@ -34,6 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const logout = useCallback((expired = false) => {
+    // Revoke server-side tokens (best-effort, don't block on failure)
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      fetch(`${import.meta.env.BASE_URL}api/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+      }).catch(() => {});
+    }
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TOKEN_KEY);

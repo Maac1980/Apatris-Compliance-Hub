@@ -439,14 +439,39 @@ router.post("/auth/refresh", async (req, res) => {
 });
 
 // ─── POST /api/auth/logout ──────────────────────────────────────────────────
-// Revoke the provided refresh token
+// Revoke all refresh tokens for the authenticated user (or the provided token)
 router.post("/auth/logout", async (req, res) => {
   try {
-    const { refreshToken } = req.body as { refreshToken?: string };
-    if (refreshToken) {
-      const hash = hashToken(refreshToken);
-      await execute("UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1", [hash]);
+    // Try to identify the user from JWT (cookie or header) to revoke all their tokens
+    const cookieToken = req.cookies?.apatris_jwt;
+    const authHeader = req.headers.authorization;
+    const token = cookieToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+
+    if (token) {
+      try {
+        const payload = jwt.verify(token, JWT_SECRET) as { email: string };
+        // Revoke ALL refresh tokens for this user — full logout
+        await execute(
+          "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_email = $1 AND revoked_at IS NULL",
+          [payload.email]
+        );
+      } catch {
+        // Token expired/invalid — fall back to revoking just the provided refresh token
+        const { refreshToken } = req.body as { refreshToken?: string };
+        if (refreshToken) {
+          const hash = hashToken(refreshToken);
+          await execute("UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1", [hash]);
+        }
+      }
+    } else {
+      // No JWT at all — revoke the provided refresh token if any
+      const { refreshToken } = req.body as { refreshToken?: string };
+      if (refreshToken) {
+        const hash = hashToken(refreshToken);
+        await execute("UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1", [hash]);
+      }
     }
+
     clearJwtCookie(res);
     return res.json({ success: true });
   } catch {

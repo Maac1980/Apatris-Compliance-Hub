@@ -6,8 +6,19 @@ import { fetchAllWorkers } from "./workers-db.js";
 import { mapRowToWorker, type Worker } from "./compliance.js";
 import { saveSnapshot } from "./snapshots-db.js";
 import { getCoordinatorForSite } from "./coordinators-db.js";
+import { execute } from "./db.js";
 
 const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Clean up expired/revoked refresh tokens older than 7 days (runs daily with the scan)
+async function cleanupExpiredTokens(): Promise<void> {
+  try {
+    await execute("DELETE FROM refresh_tokens WHERE (expires_at < NOW() OR revoked_at IS NOT NULL) AND COALESCE(revoked_at, expires_at) < NOW() - INTERVAL '7 days'");
+    console.log("[Scheduler] Expired refresh tokens cleaned up.");
+  } catch (err) {
+    console.error("[Scheduler] Token cleanup failed:", err instanceof Error ? err.message : err);
+  }
+}
 
 // In-memory log of recent alerts (last 100)
 export const alertLog: Array<{
@@ -288,7 +299,8 @@ export function startScheduler(): void {
     `[Scheduler] Daily compliance scan scheduled in ${Math.round(msToFirst / 1000 / 60)} minutes (08:00 server time).`
   );
   setTimeout(function daily() {
-    runFraudScanJob()
+    cleanupExpiredTokens()
+      .then(() => runFraudScanJob())
       .then(() => runLegalScanJob())
       .then(() => runDailyScan())
       .then(() => runImmigrationAlerts())

@@ -43,11 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const token = localStorage.getItem("wf_jwt");
+    if (token) {
+      const API = import.meta.env.VITE_API_URL ?? "";
+      fetch(`${API}api/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+      }).catch(() => {});
+    }
     setRole(null);
     setUser(null);
     localStorage.removeItem("wf_role");
     localStorage.removeItem("wf_name");
     localStorage.removeItem("wf_jwt");
+    localStorage.removeItem("wf_refreshToken");
   };
 
   return (
