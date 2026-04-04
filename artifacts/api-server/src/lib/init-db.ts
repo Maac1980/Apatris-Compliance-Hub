@@ -2011,6 +2011,37 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook ON webhook_logs(webhook_id)");
 
+  // market_intelligence
+  await execute(`
+    CREATE TABLE IF NOT EXISTS market_intelligence (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
+      report_type TEXT NOT NULL,
+      country TEXT,
+      role_type TEXT,
+      data_points JSONB DEFAULT '{}',
+      insights TEXT,
+      period_start DATE,
+      period_end DATE,
+      is_anonymised BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_mkt_intel_type ON market_intelligence(report_type)");
+
+  // intelligence_subscribers
+  await execute(`
+    CREATE TABLE IF NOT EXISTS intelligence_subscribers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      company TEXT,
+      subscription_type TEXT DEFAULT 'basic',
+      api_key TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

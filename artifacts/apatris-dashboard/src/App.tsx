@@ -83,6 +83,7 @@ import SaaSBilling from "@/pages/SaaSBilling";
 import PostedNotifications from "@/pages/PostedNotifications";
 import EsspassPage from "@/pages/EsspassPage";
 import DeveloperPortal from "@/pages/DeveloperPortal";
+import IntelligenceFeed from "@/pages/IntelligenceFeed";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
@@ -331,6 +332,9 @@ function Router() {
       </Route>
       <Route path="/developer">
         {() => <ProtectedRoute component={DeveloperPortal} />}
+      </Route>
+      <Route path="/intelligence-feed">
+        {() => <ProtectedRoute component={IntelligenceFeed} />}
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">

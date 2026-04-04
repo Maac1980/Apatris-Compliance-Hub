@@ -77,6 +77,7 @@ import saasBillingRouter from "./saas-billing.js";
 import postedNotificationsRouter from "./posted-notifications.js";
 import esspassRouter from "./esspass.js";
 import developerRouter from "./developer.js";
+import intelligenceFeedRouter from "./intelligence-feed.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -157,5 +158,6 @@ router.use(saasBillingRouter);
 router.use(postedNotificationsRouter);
 router.use(esspassRouter);
 router.use(developerRouter);
+router.use(intelligenceFeedRouter);
 
 export default router;
