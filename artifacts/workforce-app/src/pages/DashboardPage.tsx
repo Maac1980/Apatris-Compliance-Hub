@@ -40,6 +40,7 @@ import { TrustTab } from "@/components/tabs/TrustTab";
 import { ChurnTab } from "@/components/tabs/ChurnTab";
 import { HousingTab } from "@/components/tabs/HousingTab";
 import { RevenueTab } from "@/components/tabs/RevenueTab";
+import { SalaryBenchTab } from "@/components/tabs/SalaryBenchTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -252,6 +253,10 @@ export function DashboardPage() {
       // ── REVENUE ─────────────────────────────────────────────────────────
       case "revenue":
         return <RevenueTab />;
+
+      // ── SALARY BENCHMARK ────────────────────────────────────────────────
+      case "salarybench":
+        return <SalaryBenchTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

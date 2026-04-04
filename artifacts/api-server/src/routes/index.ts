@@ -54,6 +54,7 @@ import trustRouter from "./trust.js";
 import churnRouter from "./churn.js";
 import housingRouter from "./housing.js";
 import revenueRouter from "./revenue.js";
+import salaryRouter from "./salary.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -111,5 +112,6 @@ router.use(trustRouter);
 router.use(churnRouter);
 router.use(housingRouter);
 router.use(revenueRouter);
+router.use(salaryRouter);
 
 export default router;

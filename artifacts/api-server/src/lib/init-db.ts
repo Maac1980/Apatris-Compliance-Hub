@@ -1325,6 +1325,25 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_revenue_tenant ON revenue_forecasts(tenant_id)");
 
+  // salary_benchmarks
+  await execute(`
+    CREATE TABLE IF NOT EXISTS salary_benchmarks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      role_type TEXT NOT NULL,
+      country TEXT NOT NULL,
+      experience_level TEXT,
+      min_rate NUMERIC(8,2) DEFAULT 0,
+      max_rate NUMERIC(8,2) DEFAULT 0,
+      avg_rate NUMERIC(8,2) DEFAULT 0,
+      currency TEXT DEFAULT 'EUR',
+      source TEXT DEFAULT 'ai_prediction',
+      recommendation TEXT,
+      calculated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await execute("CREATE INDEX IF NOT EXISTS idx_salary_bench_tenant ON salary_benchmarks(tenant_id)");
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

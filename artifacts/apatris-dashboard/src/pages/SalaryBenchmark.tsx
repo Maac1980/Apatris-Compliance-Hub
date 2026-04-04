@@ -1,142 +1,152 @@
-import { useState } from "react";
-import { TrendingUp, Download, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { TrendingUp, Brain, ArrowUp, ArrowDown, Minus, Search } from "lucide-react";
 
-interface BenchmarkRole {
-  role: string;
-  apatrisRate: number;
-  marketRate: number;
-  difference: number;
-  diffPercent: number;
-  status: "Competitive" | "Below Market" | "Above Market";
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_jwt");
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
 }
 
-const BENCHMARK_DATA: BenchmarkRole[] = [
-  { role: "TIG Welder (certified)", apatrisRate: 35, marketRate: 32, difference: 3, diffPercent: 9.4, status: "Above Market" },
-  { role: "MIG Welder", apatrisRate: 30, marketRate: 30, difference: 0, diffPercent: 0, status: "Competitive" },
-  { role: "ARC Welder", apatrisRate: 28, marketRate: 29, difference: -1, diffPercent: -3.4, status: "Below Market" },
-  { role: "Pipe Fitter", apatrisRate: 32, marketRate: 31, difference: 1, diffPercent: 3.2, status: "Competitive" },
-  { role: "General Helper / Labourer", apatrisRate: 23, marketRate: 25, difference: -2, diffPercent: -8.0, status: "Below Market" },
-  { role: "Site Foreman", apatrisRate: 42, marketRate: 40, difference: 2, diffPercent: 5.0, status: "Above Market" },
-  { role: "Quality Inspector", apatrisRate: 38, marketRate: 37, difference: 1, diffPercent: 2.7, status: "Competitive" },
-  { role: "Safety Officer (BHP)", apatrisRate: 36, marketRate: 35, difference: 1, diffPercent: 2.9, status: "Competitive" },
+const ROLES = ["TIG Welder", "MIG Welder", "MAG Welder", "MMA Welder", "Electrician", "Scaffolder", "Forklift Operator", "Fabricator"];
+const COUNTRIES = [
+  { code: "PL", name: "Poland" }, { code: "NL", name: "Netherlands" }, { code: "BE", name: "Belgium" },
+  { code: "LT", name: "Lithuania" }, { code: "SK", name: "Slovakia" }, { code: "CZ", name: "Czech Republic" }, { code: "RO", name: "Romania" },
 ];
 
-const STATUS_BADGE: Record<string, string> = {
-  "Competitive":  "bg-emerald-900/50 text-emerald-400 border-emerald-500/30",
-  "Below Market": "bg-red-900/50 text-red-400 border-red-500/30",
-  "Above Market": "bg-blue-900/50 text-blue-400 border-blue-500/30",
-};
+interface Comparison {
+  workerId: string; name: string; role: string; site: string; country: string;
+  currentRate: number; marketAvg: number; difference: number; percentDiff: number; status: string;
+}
 
 export default function SalaryBenchmark() {
   const { toast } = useToast();
-  const [data] = useState<BenchmarkRole[]>(BENCHMARK_DATA);
+  const queryClient = useQueryClient();
+  const [role, setRole] = useState("TIG Welder");
+  const [country, setCountry] = useState("PL");
+  const [prediction, setPrediction] = useState<any>(null);
 
-  const handleExport = () => {
-    const header = "Role,Apatris Rate (PLN/h),Market Rate (PLN/h),Difference,Diff %,Status\n";
-    const rows = data.map(r =>
-      `"${r.role}",${r.apatrisRate},${r.marketRate},${r.difference},${r.diffPercent}%,"${r.status}"`
-    ).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "salary_benchmark_poland_2026.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: "CSV downloaded" });
-  };
+  const { data: compData, isLoading } = useQuery({
+    queryKey: ["salary-compare-all"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/salary/compare-all`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json() as Promise<{ comparisons: Comparison[]; underpaid: number; overpaid: number; atMarket: number }>;
+    },
+  });
 
-  const avgApatris = Math.round(data.reduce((s, r) => s + r.apatrisRate, 0) / data.length * 10) / 10;
-  const avgMarket = Math.round(data.reduce((s, r) => s + r.marketRate, 0) / data.length * 10) / 10;
-  const competitive = data.filter(r => r.status === "Competitive" || r.status === "Above Market").length;
+  const predictMutation = useMutation({
+    mutationFn: async (body: Record<string, string>) => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/salary/predict`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: (data) => { setPrediction(data.prediction); toast({ description: `Market rate: ${data.prediction.avgRate} EUR/h` }); queryClient.invalidateQueries({ queryKey: ["salary-benchmarks"] }); },
+    onError: (err) => { toast({ description: err instanceof Error ? err.message : "Failed", variant: "destructive" }); },
+  });
+
+  const comparisons = compData?.comparisons ?? [];
+  const fmtEur = (n: number) => `€${n.toFixed(2)}`;
 
   return (
-    <div className="p-4 md:p-6 min-h-screen overflow-y-auto pb-24 bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-red-500" /> Salary Benchmark
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">Polish market rate comparison &mdash; Q1 2026 data (GUS / Pracuj.pl / Randstad)</p>
+    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <TrendingUp className="w-7 h-7 text-[#C41E18]" />
+          <h1 className="text-3xl font-bold text-white">Salary Prediction AI</h1>
         </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition-colors"
-        >
-          <Download className="w-4 h-4" /> Export CSV
-        </button>
+        <p className="text-gray-400">AI-powered market rate analysis across 7 EU countries</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <span className="text-xs text-slate-400 uppercase tracking-wide">Avg. Apatris Rate</span>
-          <p className="text-2xl font-bold text-white mt-1">{avgApatris} <span className="text-sm text-slate-400">PLN/h</span></p>
+      {/* AI Prediction form */}
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 mb-6">
+        <h3 className="text-sm font-bold text-white mb-3">Predict Market Rate</h3>
+        <div className="flex flex-wrap gap-3 mb-3">
+          <select value={role} onChange={e => setRole(e.target.value)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C41E18]">
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select value={country} onChange={e => setCountry(e.target.value)}
+            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#C41E18]">
+            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </select>
+          <button onClick={() => predictMutation.mutate({ roleType: role, country })} disabled={predictMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-[#C41E18] text-white rounded-lg text-sm font-bold hover:bg-[#a51914] disabled:opacity-50">
+            {predictMutation.isPending ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Brain className="w-4 h-4" />}
+            Predict
+          </button>
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <span className="text-xs text-slate-400 uppercase tracking-wide">Avg. Market Rate</span>
-          <p className="text-2xl font-bold text-white mt-1">{avgMarket} <span className="text-sm text-slate-400">PLN/h</span></p>
+
+        {prediction && (
+          <div className="bg-slate-800 rounded-lg p-4 grid grid-cols-3 gap-4">
+            <div><p className="text-xs text-slate-500">Min Rate</p><p className="text-lg font-bold text-white font-mono">{fmtEur(prediction.minRate)}/h</p></div>
+            <div><p className="text-xs text-slate-500">Average</p><p className="text-lg font-bold text-emerald-400 font-mono">{fmtEur(prediction.avgRate)}/h</p></div>
+            <div><p className="text-xs text-slate-500">Max Rate</p><p className="text-lg font-bold text-white font-mono">{fmtEur(prediction.maxRate)}/h</p></div>
+            <div className="col-span-3"><p className="text-xs text-slate-400">{prediction.recommendation}</p></div>
+          </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <p className="text-xs text-gray-400 font-mono uppercase mb-1">Underpaid</p>
+          <p className="text-2xl font-bold text-red-400">{compData?.underpaid ?? 0}</p>
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <span className="text-xs text-slate-400 uppercase tracking-wide">Competitive Roles</span>
-          <p className="text-2xl font-bold text-emerald-400 mt-1">{competitive} / {data.length}</p>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+          <p className="text-xs text-gray-400 font-mono uppercase mb-1">At Market</p>
+          <p className="text-2xl font-bold text-emerald-400">{compData?.atMarket ?? 0}</p>
+        </div>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+          <p className="text-xs text-gray-400 font-mono uppercase mb-1">Overpaid</p>
+          <p className="text-2xl font-bold text-amber-400">{compData?.overpaid ?? 0}</p>
         </div>
       </div>
 
-      {/* Benchmark Table */}
-      <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-x-auto">
-        <table className="w-full min-w-[600px]">
-          <thead>
-            <tr className="border-b border-slate-700/50">
-              <th className="p-3 text-left text-xs text-slate-400 font-mono uppercase tracking-wide">Role</th>
-              <th className="p-3 text-center text-xs text-slate-400 font-mono uppercase tracking-wide">Apatris (PLN/h)</th>
-              <th className="p-3 text-center text-xs text-slate-400 font-mono uppercase tracking-wide">Market (PLN/h)</th>
-              <th className="p-3 text-center text-xs text-slate-400 font-mono uppercase tracking-wide">Difference</th>
-              <th className="p-3 text-center text-xs text-slate-400 font-mono uppercase tracking-wide">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(r => (
-              <tr key={r.role} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                <td className="p-3 text-sm text-white font-medium">{r.role}</td>
-                <td className="p-3 text-center">
-                  <span className="text-sm font-bold text-white">{r.apatrisRate}</span>
-                </td>
-                <td className="p-3 text-center">
-                  <span className="text-sm text-slate-300">{r.marketRate}</span>
-                </td>
-                <td className="p-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {r.difference > 0 ? (
-                      <ArrowUp className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : r.difference < 0 ? (
-                      <ArrowDown className="w-3.5 h-3.5 text-red-400" />
-                    ) : (
-                      <Minus className="w-3.5 h-3.5 text-slate-500" />
-                    )}
-                    <span className={`text-sm font-mono ${r.difference > 0 ? "text-emerald-400" : r.difference < 0 ? "text-red-400" : "text-slate-400"}`}>
-                      {r.difference > 0 ? "+" : ""}{r.difference} ({r.diffPercent > 0 ? "+" : ""}{r.diffPercent}%)
-                    </span>
-                  </div>
-                </td>
-                <td className="p-3 text-center">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase border ${STATUS_BADGE[r.status]}`}>
-                    {r.status}
-                  </span>
-                </td>
+      {/* Comparison table */}
+      {isLoading ? (
+        <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-2 border-[#C41E18] border-t-transparent rounded-full" /></div>
+      ) : (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-700 bg-slate-800/50">
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Worker</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Role</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Country</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Current</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Market</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Diff</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-400 uppercase">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Footer note */}
-      <p className="mt-4 text-xs text-slate-500">
-        Market data sourced from GUS (Central Statistical Office), Pracuj.pl, and Randstad salary surveys for the welding &amp; construction sector in Poland, Q1 2026.
-        Rates shown are gross hourly rates for umowa zlecenie contracts.
-      </p>
+            </thead>
+            <tbody>
+              {comparisons.map(c => (
+                <tr key={c.workerId} className="border-b border-slate-800 hover:bg-slate-800/40">
+                  <td className="px-4 py-3 font-medium text-white">{c.name}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">{c.role}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs font-mono">{c.country}</td>
+                  <td className="px-4 py-3 text-white font-mono text-xs">{fmtEur(c.currentRate)}/h</td>
+                  <td className="px-4 py-3 text-slate-300 font-mono text-xs">{fmtEur(c.marketAvg)}/h</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-bold font-mono flex items-center gap-1 ${c.percentDiff > 0 ? "text-amber-400" : c.percentDiff < 0 ? "text-red-400" : "text-emerald-400"}`}>
+                      {c.percentDiff > 0 ? <ArrowUp className="w-3 h-3" /> : c.percentDiff < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                      {c.percentDiff > 0 ? "+" : ""}{c.percentDiff}%
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      c.status === "underpaid" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                      c.status === "overpaid" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                      "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    }`}>{c.status === "market_rate" ? "MARKET" : c.status.toUpperCase()}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
