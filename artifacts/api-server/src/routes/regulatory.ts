@@ -6,47 +6,7 @@ const router = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ─── Regulatory Updates Table (auto-created) ────────────────────────────────
-
-async function ensureRegulatoryTable() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS regulatory_updates (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      source TEXT NOT NULL DEFAULT '',
-      title TEXT NOT NULL DEFAULT '',
-      summary TEXT NOT NULL DEFAULT '',
-      full_text TEXT DEFAULT '',
-      category TEXT NOT NULL DEFAULT 'labor_law',
-      severity TEXT NOT NULL DEFAULT 'info',
-      fine_amount TEXT,
-      workers_affected INTEGER DEFAULT 0,
-      cost_impact TEXT,
-      deadline_change TEXT,
-      action_required JSONB DEFAULT '[]'::jsonb,
-      source_urls JSONB DEFAULT '[]'::jsonb,
-      fetched_at TIMESTAMPTZ DEFAULT NOW(),
-      read_by_admin BOOLEAN DEFAULT false,
-      email_sent BOOLEAN DEFAULT false
-    );
-  `);
-}
-
-async function ensureImmigrationTable() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS immigration_searches (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      tenant_id UUID,
-      user_email TEXT,
-      question TEXT NOT NULL,
-      language TEXT DEFAULT 'en',
-      answer TEXT,
-      sources JSONB DEFAULT '[]'::jsonb,
-      confidence REAL DEFAULT 0,
-      action_items JSONB DEFAULT '[]'::jsonb,
-      searched_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `);
-}
+// Tables regulatory_updates and immigration_searches are created by init-db.ts at startup
 
 // ─── Seed sample regulatory data if table is empty ──────────────────────────
 
@@ -71,11 +31,10 @@ async function seedRegulatoryData() {
   console.log("[Regulatory] Seeded 5 sample regulatory updates.");
 }
 
-// Init tables on import; seed demo data only in non-production
-ensureRegulatoryTable()
-  .then(() => process.env.NODE_ENV !== "production" ? seedRegulatoryData() : undefined)
-  .catch((err) => console.error("[Regulatory] Table init/seed failed:", err));
-ensureImmigrationTable().catch((err) => console.error("[Immigration] Table init failed:", err));
+// Seed demo data only in non-production (tables created by init-db.ts)
+if (process.env.NODE_ENV !== "production") {
+  seedRegulatoryData().catch((err) => console.error("[Regulatory] Seed failed:", err));
+}
 
 // ─── Regulatory Intelligence Endpoints ───────────────────────────────────────
 

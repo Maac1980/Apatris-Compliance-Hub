@@ -2122,6 +2122,99 @@ export async function initializeDatabase(): Promise<void> {
   `);
   await execute("CREATE INDEX IF NOT EXISTS idx_aq_tenant ON agent_queries(tenant_id)");
 
+  // ── Tables previously created lazily in route files (consolidated here) ───
+  await execute(`CREATE TABLE IF NOT EXISTS hours_log (
+    id SERIAL PRIMARY KEY, worker_name TEXT NOT NULL, month TEXT NOT NULL,
+    hours NUMERIC(6,1) NOT NULL, note TEXT, status TEXT NOT NULL DEFAULT 'submitted',
+    submitted_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS ai_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), action TEXT NOT NULL,
+    input_summary TEXT, output_summary TEXT, model TEXT, confidence REAL,
+    human_override BOOLEAN DEFAULT false, actor TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS worker_skills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID,
+    worker_id TEXT NOT NULL, category TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    assessed_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(worker_id, category)
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS shifts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), site_name TEXT NOT NULL,
+    shift_date DATE NOT NULL, shift_slot TEXT NOT NULL CHECK (shift_slot IN ('morning','afternoon','night')),
+    worker_ids JSONB DEFAULT '[]', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS worker_availability (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), worker_id TEXT NOT NULL,
+    available_date DATE NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(worker_id, available_date)
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS job_applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), job_id UUID, worker_id TEXT,
+    worker_name TEXT, worker_email TEXT, stage TEXT DEFAULT 'New',
+    match_score REAL DEFAULT 0, notes TEXT, applied_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS clients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL,
+    contact_person TEXT, email TEXT, phone TEXT, nip TEXT, address TEXT,
+    billing_rate NUMERIC(10,2), created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS job_postings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), title TEXT NOT NULL,
+    description TEXT, requirements TEXT, location TEXT,
+    salary_min NUMERIC(10,2), salary_max NUMERIC(10,2), contract_type TEXT,
+    is_published BOOLEAN DEFAULT false, closing_date DATE, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_updates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), source TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '', summary TEXT NOT NULL DEFAULT '',
+    full_text TEXT DEFAULT '', category TEXT NOT NULL DEFAULT 'labor_law',
+    severity TEXT NOT NULL DEFAULT 'info', fine_amount TEXT, workers_affected INTEGER DEFAULT 0,
+    cost_impact TEXT, deadline_change TEXT, action_required JSONB DEFAULT '[]'::jsonb,
+    source_urls JSONB DEFAULT '[]'::jsonb, fetched_at TIMESTAMPTZ DEFAULT NOW(),
+    read_by_admin BOOLEAN DEFAULT false, email_sent BOOLEAN DEFAULT false
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS immigration_searches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID, user_email TEXT,
+    question TEXT NOT NULL, language TEXT DEFAULT 'en', answer TEXT,
+    sources JSONB DEFAULT '[]'::jsonb, confidence REAL DEFAULT 0,
+    action_items JSONB DEFAULT '[]'::jsonb, searched_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS trc_cases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id TEXT NOT NULL,
+    worker_id TEXT, worker_name TEXT NOT NULL, nationality TEXT, passport_number TEXT,
+    case_type TEXT NOT NULL DEFAULT 'Type A', status TEXT NOT NULL DEFAULT 'intake',
+    voivodeship TEXT, employer_name TEXT, employer_nip TEXT, start_date DATE,
+    expiry_date DATE, notes TEXT, assigned_to TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS trc_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES trc_cases(id) ON DELETE CASCADE,
+    doc_type TEXT NOT NULL, file_name TEXT, file_url TEXT,
+    status TEXT NOT NULL DEFAULT 'pending', notes TEXT,
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(), reviewed_at TIMESTAMPTZ
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS trc_case_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES trc_cases(id) ON DELETE CASCADE,
+    author TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='tenant_id') THEN ALTER TABLE invoices ADD COLUMN tenant_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='sent_at') THEN ALTER TABLE invoices ADD COLUMN sent_at TIMESTAMPTZ; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='issue_date') THEN ALTER TABLE invoices ADD COLUMN issue_date DATE DEFAULT CURRENT_DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='amount_net') THEN ALTER TABLE invoices ADD COLUMN amount_net NUMERIC(12,2) DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='amount_gross') THEN ALTER TABLE invoices ADD COLUMN amount_gross NUMERIC(12,2) DEFAULT 0; END IF;
+      END $$;
+    `);
+  } catch { /* invoices table may not exist yet */ }
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

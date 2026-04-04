@@ -4,21 +4,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
-export async function initHoursTable(): Promise<void> {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS hours_log (
-      id          SERIAL PRIMARY KEY,
-      worker_name TEXT NOT NULL,
-      month       TEXT NOT NULL,   -- e.g. '2026-03'
-      hours       NUMERIC(6,1) NOT NULL,
-      note        TEXT,
-      status      TEXT NOT NULL DEFAULT 'submitted',  -- submitted | approved | rejected
-      submitted_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at   TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-  console.log("[Hours] Table ready.");
-}
+// Table hours_log is created by init-db.ts at startup
 
 // POST /hours — T5 submits their hours for a month
 router.post("/hours", requireAuth, async (req, res) => {

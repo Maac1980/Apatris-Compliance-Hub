@@ -6,23 +6,7 @@ const router = Router();
 
 // ═══ TABLE SETUP ═════════════════════════════════════════════════════════════
 
-async function ensureTables() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS ai_audit_log (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      action TEXT NOT NULL,
-      input_summary TEXT,
-      output_summary TEXT,
-      model TEXT,
-      confidence REAL,
-      human_override BOOLEAN DEFAULT false,
-      actor TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}
-
-ensureTables().catch(err => console.error("[AI-Audit] Table creation error:", err.message));
+// Table ai_audit_log is created by init-db.ts at startup
 
 // ═══ ENDPOINTS ═══════════════════════════════════════════════════════════════
 

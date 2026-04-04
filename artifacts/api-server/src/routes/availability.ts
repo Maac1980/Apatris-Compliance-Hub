@@ -6,19 +6,7 @@ const router = Router();
 
 // ═══ TABLE SETUP ═════════════════════════════════════════════════════════════
 
-async function ensureTables() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS worker_availability (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      worker_id TEXT NOT NULL,
-      available_date DATE NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(worker_id, available_date)
-    )
-  `);
-}
-
-ensureTables().catch(err => console.error("[Availability] Table creation error:", err.message));
+// Table worker_availability is created by init-db.ts at startup
 
 // ═══ ENDPOINTS ═══════════════════════════════════════════════════════════════
 

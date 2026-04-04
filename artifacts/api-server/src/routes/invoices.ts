@@ -7,30 +7,7 @@ import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
 
-// Ensure schema upgrades
-(async () => {
-  try {
-    await execute(`
-      DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='tenant_id') THEN
-          ALTER TABLE invoices ADD COLUMN tenant_id UUID;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='sent_at') THEN
-          ALTER TABLE invoices ADD COLUMN sent_at TIMESTAMPTZ;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='issue_date') THEN
-          ALTER TABLE invoices ADD COLUMN issue_date DATE DEFAULT CURRENT_DATE;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='amount_net') THEN
-          ALTER TABLE invoices ADD COLUMN amount_net NUMERIC(12,2) DEFAULT 0;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='amount_gross') THEN
-          ALTER TABLE invoices ADD COLUMN amount_gross NUMERIC(12,2) DEFAULT 0;
-        END IF;
-      END $$;
-    `);
-  } catch (err) { console.error("[invoices] Schema upgrade error:", err); }
-})();
+// Invoice schema upgrades (tenant_id, sent_at, etc.) are applied by init-db.ts at startup
 
 // Auto-increment invoice number: INV-YYYY-NNN
 async function nextInvoiceNumber(): Promise<string> {

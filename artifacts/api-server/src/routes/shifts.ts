@@ -6,21 +6,7 @@ const router = Router();
 
 // ═══ TABLE SETUP ═════════════════════════════════════════════════════════════
 
-async function ensureTables() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS shifts (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      site_name TEXT NOT NULL,
-      shift_date DATE NOT NULL,
-      shift_slot TEXT NOT NULL CHECK (shift_slot IN ('morning', 'afternoon', 'night')),
-      worker_ids JSONB DEFAULT '[]',
-      notes TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}
-
-ensureTables().catch(err => console.error("[Shifts] Table creation error:", err.message));
+// Table shifts is created by init-db.ts at startup
 
 // ═══ ENDPOINTS ═══════════════════════════════════════════════════════════════
 

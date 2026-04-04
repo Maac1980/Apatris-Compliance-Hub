@@ -6,53 +6,7 @@ const router = Router();
 
 // ═══ TABLE SETUP ═════════════════════════════════════════════════════════════
 
-async function ensureTables() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS trc_cases (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      tenant_id TEXT NOT NULL,
-      worker_id TEXT,
-      worker_name TEXT NOT NULL,
-      nationality TEXT,
-      passport_number TEXT,
-      case_type TEXT NOT NULL DEFAULT 'Type A',
-      status TEXT NOT NULL DEFAULT 'intake',
-      voivodeship TEXT,
-      employer_name TEXT,
-      employer_nip TEXT,
-      start_date DATE,
-      expiry_date DATE,
-      notes TEXT,
-      assigned_to TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-  await execute(`
-    CREATE TABLE IF NOT EXISTS trc_documents (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      case_id UUID NOT NULL REFERENCES trc_cases(id) ON DELETE CASCADE,
-      doc_type TEXT NOT NULL,
-      file_name TEXT,
-      file_url TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      notes TEXT,
-      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-      reviewed_at TIMESTAMPTZ
-    )
-  `);
-  await execute(`
-    CREATE TABLE IF NOT EXISTS trc_case_notes (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      case_id UUID NOT NULL REFERENCES trc_cases(id) ON DELETE CASCADE,
-      author TEXT NOT NULL,
-      content TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}
-
-ensureTables().catch(err => console.error("[TRC] Table creation error:", err.message));
+// Tables trc_cases, trc_documents, trc_case_notes are created by init-db.ts at startup
 
 // ═══ CASES ═══════════════════════════════════════════════════════════════════
 

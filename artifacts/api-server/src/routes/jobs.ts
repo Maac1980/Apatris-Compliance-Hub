@@ -4,25 +4,7 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
-(async () => {
-  try {
-    await execute(`
-      CREATE TABLE IF NOT EXISTS job_postings (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title TEXT NOT NULL,
-        description TEXT,
-        requirements TEXT,
-        location TEXT,
-        salary_min NUMERIC(10,2),
-        salary_max NUMERIC(10,2),
-        contract_type TEXT,
-        is_published BOOLEAN DEFAULT false,
-        closing_date DATE,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-  } catch (err) { console.error("[jobs] Table creation error:", err); }
-})();
+// Table job_postings is created by init-db.ts at startup
 
 // GET /jobs — public, only published jobs
 router.get("/jobs", async (_req, res) => {

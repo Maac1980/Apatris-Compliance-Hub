@@ -4,24 +4,7 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
-(async () => {
-  try {
-    await execute(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        contact_person TEXT,
-        email TEXT,
-        phone TEXT,
-        nip TEXT,
-        address TEXT,
-        billing_rate NUMERIC(10,2),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-  } catch (err) { console.error("[clients] Table creation error:", err); }
-})();
+// Table clients is created by init-db.ts at startup
 
 // GET /clients — list all
 router.get("/clients", async (_req, res) => {

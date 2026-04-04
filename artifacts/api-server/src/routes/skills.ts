@@ -6,21 +6,7 @@ const router = Router();
 
 // ═══ TABLE SETUP ═════════════════════════════════════════════════════════════
 
-async function ensureTables() {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS worker_skills (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      tenant_id UUID,
-      worker_id TEXT NOT NULL,
-      category TEXT NOT NULL,
-      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-      assessed_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(worker_id, category)
-    )
-  `);
-}
-
-ensureTables().catch(err => console.error("[Skills] Table creation error:", err.message));
+// Table worker_skills is created by init-db.ts at startup
 
 // ═══ ENDPOINTS ═══════════════════════════════════════════════════════════════
 
