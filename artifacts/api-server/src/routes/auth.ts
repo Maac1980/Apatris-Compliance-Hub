@@ -88,7 +88,7 @@ function clearJwtCookie(res: Response) {
 }
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
-const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");

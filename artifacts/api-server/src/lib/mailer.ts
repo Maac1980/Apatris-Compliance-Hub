@@ -157,7 +157,7 @@ export async function sendOtpEmail(to: string, name: string, otp: string): Promi
           <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:800;">Two-Factor Login Code</h1>
         </td></tr>
         <tr><td style="padding:36px 32px;text-align:center;">
-          <p style="color:#94a3b8;font-size:14px;margin:0 0 28px;">Hi ${name}, use the code below to complete your login. It expires in <strong style="color:#f1f5f9;">5 minutes</strong>.</p>
+          <p style="color:#94a3b8;font-size:14px;margin:0 0 28px;">Hi ${name}, use the code below to complete your login. It expires in <strong style="color:#f1f5f9;">10 minutes</strong>.</p>
           <div style="display:inline-block;background:#0f172a;border:2px solid #C41E18;border-radius:12px;padding:20px 40px;margin-bottom:28px;">
             <span style="font-size:40px;font-weight:900;letter-spacing:14px;color:#ffffff;font-family:monospace;">${otp}</span>
           </div>
