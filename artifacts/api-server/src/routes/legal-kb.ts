@@ -8,8 +8,8 @@ const router = Router();
 router.get("/legal-kb/articles", requireAuth, async (req, res) => {
   try {
     const { category } = req.query as Record<string, string>;
-    let sql = "SELECT * FROM legal_knowledge WHERE 1=1";
-    const params: unknown[] = [];
+    let sql = "SELECT * FROM legal_knowledge WHERE tenant_id = $1";
+    const params: unknown[] = [req.tenantId!];
     if (category) { params.push(category); sql += ` AND category = $${params.length}`; }
     sql += " ORDER BY category, title";
     res.json({ articles: await query(sql, params) });
@@ -19,7 +19,7 @@ router.get("/legal-kb/articles", requireAuth, async (req, res) => {
 // GET /api/legal-kb/categories
 router.get("/legal-kb/categories", requireAuth, async (req, res) => {
   try {
-    const rows = await query<Record<string, any>>("SELECT category, COUNT(*) AS count FROM legal_knowledge GROUP BY category ORDER BY category");
+    const rows = await query<Record<string, any>>("SELECT category, COUNT(*) AS count FROM legal_knowledge WHERE tenant_id = $1 GROUP BY category ORDER BY category", [req.tenantId!]);
     res.json({ categories: rows });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
 });
@@ -45,7 +45,7 @@ router.post("/legal-kb/query", requireAuth, async (req, res) => {
 
     // Search knowledge base for relevant articles
     const searchTerms = question.toLowerCase().split(" ").filter(w => w.length > 3);
-    let relevantArticles = await query<Record<string, any>>("SELECT * FROM legal_knowledge ORDER BY category");
+    let relevantArticles = await query<Record<string, any>>("SELECT * FROM legal_knowledge WHERE tenant_id = $1 ORDER BY category", [req.tenantId!]);
 
     // Simple relevance scoring
     const scored = relevantArticles.map(a => {

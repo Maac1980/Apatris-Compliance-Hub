@@ -52,7 +52,9 @@ router.get("/invoices", requireAuth, async (req, res) => {
       `SELECT i.*, c.company_name AS company_name_live
        FROM invoices i
        LEFT JOIN crm_companies c ON c.id = i.client_id
-       ORDER BY i.created_at DESC`
+       WHERE i.tenant_id = $1
+       ORDER BY i.created_at DESC`,
+      [req.tenantId!]
     );
     // Calculate overdue
     const now = new Date();
@@ -100,7 +102,7 @@ router.post("/invoices", requireAuth, requireRole("Admin", "Executive", "LegalHe
 // GET /invoices/:id
 router.get("/invoices/:id", requireAuth, async (req, res) => {
   try {
-    const row = await queryOne("SELECT * FROM invoices WHERE id = $1", [req.params.id]);
+    const row = await queryOne("SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
     if (!row) return res.status(404).json({ error: "Not found" });
     res.json({ invoice: row });
   } catch (err) {
@@ -125,8 +127,8 @@ router.patch("/invoices/:id", requireAuth, requireRole("Admin", "Executive", "Le
     if (body.status === "paid") sets.push("paid_at = NOW()");
     if (body.status === "sent") sets.push("sent_at = NOW()");
     if (sets.length === 0) return res.status(400).json({ error: "No fields" });
-    vals.push(req.params.id);
-    const row = await queryOne(`UPDATE invoices SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`, vals);
+    vals.push(req.params.id, req.tenantId!);
+    const row = await queryOne(`UPDATE invoices SET ${sets.join(", ")} WHERE id = $${idx} AND tenant_id = $${idx + 1} RETURNING *`, vals);
     if (!row) return res.status(404).json({ error: "Not found" });
     res.json({ invoice: row });
   } catch (err) {
@@ -137,13 +139,13 @@ router.patch("/invoices/:id", requireAuth, requireRole("Admin", "Executive", "Le
 // POST /invoices/:id/send — generate HTML invoice and email to client
 router.post("/invoices/:id/send", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
-    const inv = await queryOne<Record<string, any>>("SELECT * FROM invoices WHERE id = $1", [req.params.id]);
+    const inv = await queryOne<Record<string, any>>("SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
     if (!inv) return res.status(404).json({ error: "Not found" });
 
     // Get client email from CRM
     let clientEmail = (req.body as any)?.email;
     if (!clientEmail && inv.client_id) {
-      const company = await queryOne<Record<string, any>>("SELECT contact_email FROM crm_companies WHERE id = $1", [inv.client_id]);
+      const company = await queryOne<Record<string, any>>("SELECT contact_email FROM crm_companies WHERE id = $1 AND tenant_id = $2", [inv.client_id, req.tenantId!]);
       clientEmail = company?.contact_email;
     }
     if (!clientEmail) return res.status(400).json({ error: "No client email — set contact_email on the CRM company" });
@@ -269,7 +271,7 @@ router.post("/invoices/auto-send", requireAuth, requireRole("Admin", "Executive"
 // DELETE /invoices/:id
 router.delete("/invoices/:id", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
-    const row = await queryOne("DELETE FROM invoices WHERE id = $1 RETURNING id", [req.params.id]);
+    const row = await queryOne("DELETE FROM invoices WHERE id = $1 AND tenant_id = $2 RETURNING id", [req.params.id, req.tenantId!]);
     if (!row) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
   } catch (err) {

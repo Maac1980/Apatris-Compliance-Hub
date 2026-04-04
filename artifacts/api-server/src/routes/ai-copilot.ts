@@ -27,7 +27,7 @@ const AGENTS: Record<string, { name: string; keywords: string[]; queryFn: (tenan
   immigration: {
     name: "Immigration Agent", keywords: ["immigra", "visa", "work permit", "trc", "a1", "posted", "foreign"],
     queryFn: async (tenantId, q) => {
-      const kb = await query<Record<string, any>>("SELECT title, content FROM legal_knowledge WHERE category IN ('TRC','Work Permit','A1 Certificate','Posted Workers') LIMIT 5");
+      const kb = await query<Record<string, any>>("SELECT title, content FROM legal_knowledge WHERE tenant_id = $1 AND category IN ('TRC','Work Permit','A1 Certificate','Posted Workers') LIMIT 5", [tenantId]);
       return kb.map(a => `[${a.title}]: ${a.content.slice(0, 150)}`).join("\n");
     },
   },
@@ -45,7 +45,7 @@ const AGENTS: Record<string, { name: string; keywords: string[]; queryFn: (tenan
   legal: {
     name: "Legal Agent", keywords: ["law", "legal", "regulation", "kodeks", "gdpr", "rodo", "pit", "contract"],
     queryFn: async (tenantId, q) => {
-      const articles = await query<Record<string, any>>("SELECT title, content FROM legal_knowledge ORDER BY category LIMIT 10");
+      const articles = await query<Record<string, any>>("SELECT title, content FROM legal_knowledge WHERE tenant_id = $1 ORDER BY category LIMIT 10", [tenantId]);
       const relevant = articles.filter(a => q.toLowerCase().split(" ").some(w => w.length > 3 && (a.title + a.content).toLowerCase().includes(w)));
       return relevant.length > 0 ? relevant.map(a => `[${a.title}]: ${a.content.slice(0, 200)}`).join("\n") : "No matching legal articles found.";
     },

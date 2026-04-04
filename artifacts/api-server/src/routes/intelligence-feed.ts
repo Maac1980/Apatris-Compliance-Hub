@@ -64,7 +64,7 @@ router.post("/intelligence/generate", requireAuth, requireRole("Admin", "Executi
 // GET /api/intelligence/reports
 router.get("/intelligence/reports", requireAuth, async (req, res) => {
   try {
-    const rows = await query("SELECT * FROM market_intelligence ORDER BY created_at DESC LIMIT 50");
+    const rows = await query("SELECT * FROM market_intelligence WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50", [req.tenantId!]);
     res.json({ reports: rows, reportTypes: REPORT_TYPES });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
 });
@@ -72,7 +72,7 @@ router.get("/intelligence/reports", requireAuth, async (req, res) => {
 // GET /api/intelligence/reports/:id
 router.get("/intelligence/reports/:id", requireAuth, async (req, res) => {
   try {
-    const row = await queryOne("SELECT * FROM market_intelligence WHERE id = $1", [req.params.id]);
+    const row = await queryOne("SELECT * FROM market_intelligence WHERE id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
     if (!row) return res.status(404).json({ error: "Not found" });
     res.json({ report: row });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }

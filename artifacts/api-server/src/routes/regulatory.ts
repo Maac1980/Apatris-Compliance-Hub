@@ -35,6 +35,7 @@ async function ensureImmigrationTable() {
   await execute(`
     CREATE TABLE IF NOT EXISTS immigration_searches (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID,
       user_email TEXT,
       question TEXT NOT NULL,
       language TEXT DEFAULT 'en',
@@ -232,8 +233,8 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
 
     const userEmail = (req as any).user?.email ?? "unknown";
     await query(
-      `INSERT INTO immigration_searches (user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb)`,
-      [userEmail, searchQuery, language, parsed.answer ?? "", JSON.stringify(parsed.sources ?? []), parsed.confidence ?? 0, JSON.stringify(parsed.actionItems ?? [])]
+      `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
+      [req.tenantId!, userEmail, searchQuery, language, parsed.answer ?? "", JSON.stringify(parsed.sources ?? []), parsed.confidence ?? 0, JSON.stringify(parsed.actionItems ?? [])]
     );
 
     res.json({
@@ -247,9 +248,9 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
   }
 });
 
-router.get("/immigration/history", requireAuth, async (_req: Request, res: Response) => {
+router.get("/immigration/history", requireAuth, async (req: Request, res: Response) => {
   try {
-    const rows = await query(`SELECT id, question, language, confidence, searched_at FROM immigration_searches ORDER BY searched_at DESC LIMIT 50`);
+    const rows = await query(`SELECT id, question, language, confidence, searched_at FROM immigration_searches WHERE tenant_id = $1 ORDER BY searched_at DESC LIMIT 50`, [req.tenantId!]);
     res.json({ history: rows });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -259,7 +260,7 @@ router.get("/immigration/history", requireAuth, async (_req: Request, res: Respo
 router.get("/immigration/history/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     if (!UUID_RE.test(req.params.id)) return res.status(400).json({ error: "Invalid ID format" });
-    const rows = await query(`SELECT * FROM immigration_searches WHERE id = $1::uuid`, [req.params.id]);
+    const rows = await query(`SELECT * FROM immigration_searches WHERE id = $1::uuid AND tenant_id = $2`, [req.params.id, req.tenantId!]);
     if (rows.length === 0) return res.status(404).json({ error: "Not found" });
     res.json(rows[0]);
   } catch (err: any) {

@@ -8,10 +8,11 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 
 const router = Router();
 
-router.get("/notifications/history", requireAuth, requireRole("Admin", "Executive"), async (_req, res) => {
+router.get("/notifications/history", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const entries = await query(
-      `SELECT * FROM notification_log ORDER BY created_at DESC LIMIT 200`
+      `SELECT * FROM notification_log WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 200`,
+      [req.tenantId!]
     );
     res.json({ entries });
   } catch (err) {
