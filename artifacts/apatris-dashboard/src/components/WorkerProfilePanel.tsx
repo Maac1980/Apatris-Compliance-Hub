@@ -528,6 +528,88 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   });
   const payrollRecords: any[] = payrollHistoryData?.records ?? [];
 
+  const fmtPln = (n: number) => Number(n ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Generate a single-month payslip PDF for download
+  const generateMonthlyPayslip = (r: any) => {
+    if (!worker) return;
+    const w = worker as any;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(196, 30, 24);
+    doc.text("APATRIS SP. Z O.O.", 105, 18, { align: "center" });
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`PAYSLIP / ROZLICZENIE — ${r.monthYear}`, 105, 25, { align: "center" });
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("NIP: 5252828706 · ul. Chłodna 51, 00-867 Warszawa", 105, 30, { align: "center" });
+
+    // Worker info
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
+    const y = 40;
+    doc.text(`Worker: ${w.name}`, 14, y);
+    doc.text(`Site: ${w.assignedSite || r.site || "—"}`, 14, y + 5);
+    doc.text(`PESEL: ${w.pesel || "—"}`, 120, y);
+    doc.text(`IBAN: ${w.iban || "—"}`, 120, y + 5);
+
+    // Payroll table
+    autoTable(doc, {
+      startY: y + 12,
+      head: [["Description", "Value"]],
+      body: [
+        ["Period / Okres", r.monthYear],
+        ["Hours Worked / Godziny", `${Number(r.totalHours ?? 0)} h`],
+        ["Hourly Rate / Stawka", `${fmtPln(r.hourlyRate)} PLN`],
+        ["Gross Pay / Brutto", `${fmtPln(r.grossPayout ?? Number(r.hourlyRate ?? 0) * Number(r.totalHours ?? 0))} PLN`],
+        ["Advances / Zaliczki", `${fmtPln(r.advancesDeducted)} PLN`],
+        ["Penalties / Kary", `${fmtPln(r.penaltiesDeducted)} PLN`],
+        ["Net Pay / Netto", `${fmtPln(r.finalNettoPayout)} PLN`],
+      ],
+      headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold", fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+      styles: { cellPadding: 3 },
+    });
+
+    // Footer
+    const finalY = (doc as any).lastAutoTable?.finalY ?? 120;
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("This is an auto-generated payslip from the Apatris Compliance Platform.", 105, finalY + 10, { align: "center" });
+    doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, 105, finalY + 14, { align: "center" });
+
+    doc.save(`payslip_${w.name?.replace(/\s+/g, "_")}_${r.monthYear}.pdf`);
+  };
+
+  // Email payslip for a specific month
+  const emailMonthlyPayslip = async (r: any) => {
+    if (!worker) return;
+    const w = worker as any;
+    if (!w.email) { toast({ title: "No email", description: "This worker has no email address configured.", variant: "destructive" }); return; }
+    try {
+      const token = localStorage.getItem("apatris_jwt");
+      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/send-payslip`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workerName: w.name, workerEmail: w.email, monthYear: r.monthYear, site: w.assignedSite ?? r.site ?? "",
+          totalHours: Number(r.totalHours ?? 0), hourlyRate: Number(r.hourlyRate ?? 0),
+          grossPayout: Number(r.grossPayout ?? Number(r.hourlyRate ?? 0) * Number(r.totalHours ?? 0)),
+          advancesDeducted: Number(r.advancesDeducted ?? 0), penaltiesDeducted: Number(r.penaltiesDeducted ?? 0),
+          finalNettoPayout: Number(r.finalNettoPayout ?? 0),
+        }),
+      });
+      if (res.ok) { toast({ title: "Payslip Sent", description: `Payslip emailed to ${w.email}` }); }
+      else { toast({ title: "Send Failed", description: "Could not send payslip email. Check SMTP config.", variant: "destructive" }); }
+    } catch { toast({ title: "Error", description: "Failed to send payslip", variant: "destructive" }); }
+  };
+
   const handlePrintFinalSettlement = () => {
     if (!worker) return;
     const w = worker as any;
@@ -1106,6 +1188,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                               <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Rate</th>
                               <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Deductions</th>
                               <th className="px-3 py-2 text-right font-bold text-green-400 uppercase tracking-wider">Netto</th>
+                              <th className="px-3 py-2 text-center font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-700/50">
@@ -1119,6 +1202,24 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                                 </td>
                                 <td className="px-3 py-2 text-right font-mono font-bold text-green-400">
                                   {Number(r.finalNettoPayout ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      title="Download Payslip PDF"
+                                      onClick={(e) => { e.stopPropagation(); generateMonthlyPayslip(r); }}
+                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      title="Email Payslip"
+                                      onClick={(e) => { e.stopPropagation(); emailMonthlyPayslip(r); }}
+                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors"
+                                    >
+                                      <Mail className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}

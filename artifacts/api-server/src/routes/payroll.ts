@@ -454,4 +454,27 @@ router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive")
   }
 });
 
+// ─── POST /payroll/send-payslip ──────────────────────────────────────────────
+// Send a single payslip email for a specific worker + month
+router.post("/payroll/send-payslip", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+  try {
+    const { workerName, workerEmail, monthYear, site, totalHours, hourlyRate, grossPayout, advancesDeducted, penaltiesDeducted, finalNettoPayout } = req.body as Record<string, any>;
+    if (!workerName || !workerEmail || !monthYear) {
+      return res.status(400).json({ error: "workerName, workerEmail, monthYear required" });
+    }
+    if (!isMailConfigured()) {
+      return res.status(503).json({ error: "SMTP not configured" });
+    }
+    await sendPayslipEmail({
+      workerName, workerEmail, monthYear, site: site ?? "",
+      totalHours: Number(totalHours ?? 0), hourlyRate: Number(hourlyRate ?? 0),
+      grossPayout: Number(grossPayout ?? 0), advancesDeducted: Number(advancesDeducted ?? 0),
+      penaltiesDeducted: Number(penaltiesDeducted ?? 0), finalNettoPayout: Number(finalNettoPayout ?? 0),
+    });
+    res.json({ success: true, sentTo: workerEmail });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to send payslip" });
+  }
+});
+
 export default router;
