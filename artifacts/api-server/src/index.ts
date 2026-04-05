@@ -33,6 +33,8 @@ const port = Number(process.env["PORT"] || "8080");
         await seedSampleData();
         const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
         await seedComprehensiveData();
+        const { seedModuleDemoData } = await import("./lib/seed-modules.js");
+        await seedModuleDemoData();
       } else {
         console.log("[Startup] Production mode — skipping demo data seeders.");
       }
