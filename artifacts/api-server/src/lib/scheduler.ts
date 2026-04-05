@@ -497,25 +497,25 @@ async function sendWeeklyReport(): Promise<void> {
 }
 
 // Monthly invoice generation — 1st of every month at 06:00
-// NOTE: A fixed 30-day setTimeout overflows the 32-bit limit (2,147,483,647 ms)
-// so we recalculate the delay to the next 1st-of-month each time.
+// Uses a daily check instead of long setTimeout to avoid 32-bit overflow
+// (any delay > 24.8 days overflows and fires immediately)
 export function startMonthlyInvoices(): void {
-  function msUntilNextFirst6am(): number {
+  const CHECK_INTERVAL = 12 * 60 * 60 * 1000; // Check every 12 hours (safe for 32-bit)
+  let lastRunMonth = -1;
+
+  function checkAndRun() {
     const now = new Date();
-    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 6, 0, 0, 0);
-    if (next.getTime() - now.getTime() < 60_000) {
-      // Less than a minute away — target the following month
-      next.setMonth(next.getMonth() + 1);
+    if (now.getDate() === 1 && now.getHours() >= 6 && lastRunMonth !== now.getMonth()) {
+      lastRunMonth = now.getMonth();
+      import("../routes/invoices.js").then(m => m.runMonthlyInvoiceGeneration()).catch(err =>
+        console.error("[Scheduler] Monthly invoice error:", err)
+      );
     }
-    return next.getTime() - now.getTime();
   }
-  const ms = msUntilNextFirst6am();
-  console.log(`[Scheduler] Monthly invoice generation scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (1st of month 06:00).`);
-  setTimeout(function monthly() {
-    import("../routes/invoices.js").then(m => m.runMonthlyInvoiceGeneration()).catch(err =>
-      console.error("[Scheduler] Monthly invoice error:", err)
-    ).finally(() => setTimeout(monthly, msUntilNextFirst6am()));
-  }, ms);
+
+  console.log("[Scheduler] Monthly invoice generation: checking every 12h (runs 1st of month at 06:00).");
+  checkAndRun(); // Check immediately on startup
+  setInterval(checkAndRun, CHECK_INTERVAL);
 }
 
 // Weekly mood prompts — every Monday at 09:00
