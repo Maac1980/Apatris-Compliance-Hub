@@ -2232,6 +2232,15 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* invoices table may not exist yet */ }
 
+  // OTP sessions — stored in DB so they work across multiple Fly.io machines
+  await execute(`CREATE TABLE IF NOT EXISTS otp_sessions (
+    session TEXT PRIMARY KEY,
+    otp_hash TEXT NOT NULL,
+    user_data JSONB NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",

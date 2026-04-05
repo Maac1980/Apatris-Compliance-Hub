@@ -47,19 +47,46 @@ function getRequiredSecret(envKey: string): string | null {
   return value;
 }
 
-// In-memory OTP store: session → { otp, expires, userData }
-export const otpStore = new Map<string, {
-  otp: string;
-  expires: number;
-  userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string };
-}>();
+// Database-backed OTP store (works across multiple Fly.io machines)
+// Hash OTP before storing so it's not in plaintext in the DB
+function hashOtp(otp: string): string {
+  return crypto.createHash("sha256").update(otp).digest("hex");
+}
 
-// Clean up expired OTPs every 10 minutes
+async function storeOtpSession(session: string, otp: string, userData: Record<string, unknown>, expiresMs: number): Promise<void> {
+  const expiresAt = new Date(Date.now() + expiresMs);
+  await execute(
+    "INSERT INTO otp_sessions (session, otp_hash, user_data, expires_at) VALUES ($1,$2,$3,$4) ON CONFLICT (session) DO UPDATE SET otp_hash=$2, user_data=$3, expires_at=$4",
+    [session, hashOtp(otp), JSON.stringify(userData), expiresAt]
+  );
+}
+
+async function verifyOtpSession(session: string, otp: string): Promise<{ ok: boolean; userData?: any; error?: string }> {
+  const row = await queryOne<{ otp_hash: string; user_data: any; expires_at: string }>(
+    "DELETE FROM otp_sessions WHERE session = $1 RETURNING otp_hash, user_data, expires_at",
+    [session]
+  );
+  if (!row) return { ok: false, error: "Session not found. Please log in again." };
+  if (new Date(row.expires_at) < new Date()) return { ok: false, error: "Code expired. Please log in again." };
+  if (row.otp_hash !== hashOtp(otp.trim())) return { ok: false, error: "Invalid code. Please try again." };
+  return { ok: true, userData: typeof row.user_data === "string" ? JSON.parse(row.user_data) : row.user_data };
+}
+
+async function deleteOtpSession(session: string): Promise<void> {
+  await execute("DELETE FROM otp_sessions WHERE session = $1", [session]).catch(() => {});
+}
+
+// Legacy export for face-auth compatibility
+export const otpStore = {
+  set: (session: string, data: { otp: string; expires: number; userData: any }) => {
+    storeOtpSession(session, data.otp, data.userData, data.expires - Date.now()).catch(console.error);
+  },
+  delete: (session: string) => { deleteOtpSession(session).catch(console.error); },
+};
+
+// Clean up expired OTP sessions every 10 minutes
 setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of otpStore) {
-    if (val.expires < now) otpStore.delete(key);
-  }
+  execute("DELETE FROM otp_sessions WHERE expires_at < NOW()").catch(() => {});
 }, 10 * 60 * 1000);
 
 function signToken(userData: { email: string; name: string; role: string; assignedSite?: string; tenantId?: string; tenantSlug?: string }) {
@@ -138,16 +165,12 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
 
       const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
       const session = crypto.randomBytes(24).toString("hex");
-      otpStore.set(session, {
-        otp,
-        expires: Date.now() + OTP_EXPIRY_MS,
-        userData,
-      });
+      await storeOtpSession(session, otp, userData, OTP_EXPIRY_MS);
 
       try {
         await sendOtpEmail(user.email, user.name, otp);
       } catch (err) {
-        otpStore.delete(session);
+        await deleteOtpSession(session);
         console.error("[Auth] Failed to send OTP email:", err instanceof Error ? err.message : err);
         return res.status(503).json({ error: "We could not send your verification code. Please try again or contact the administrator." });
       }
@@ -191,30 +214,19 @@ router.post("/auth/verify-otp", authLimiter, async (req, res) => {
       return res.status(400).json({ error: "Session and OTP code are required" });
     }
 
-    const entry = otpStore.get(session);
+    const result = await verifyOtpSession(session, otp);
 
-    if (!entry) {
-      return res.status(401).json({ error: "Session not found. Please log in again." });
+    if (!result.ok) {
+      return res.status(401).json({ error: result.error });
     }
 
-    if (entry.expires < Date.now()) {
-      otpStore.delete(session);
-      return res.status(401).json({ error: "Code expired. Please log in again." });
-    }
-
-    if (entry.otp !== otp.trim()) {
-      return res.status(401).json({ error: "Invalid code. Please try again." });
-    }
-
-    otpStore.delete(session);
-
-    const accessToken = signToken(entry.userData);
-    const refreshToken = await createRefreshToken(entry.userData);
+    const accessToken = signToken(result.userData);
+    const refreshToken = await createRefreshToken(result.userData);
 
     appendAuditLog({
       timestamp: new Date().toISOString(),
-      actor: entry.userData.name,
-      actorEmail: entry.userData.email,
+      actor: result.userData.name,
+      actorEmail: result.userData.email,
       action: "ADMIN_LOGIN",
       workerId: "—",
       workerName: "—",
@@ -222,7 +234,7 @@ router.post("/auth/verify-otp", authLimiter, async (req, res) => {
     });
 
     setJwtCookie(res, accessToken);
-    return res.json({ ...entry.userData, jwt: accessToken, refreshToken });
+    return res.json({ ...result.userData, jwt: accessToken, refreshToken });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";
     return res.status(500).json({ error: message });
