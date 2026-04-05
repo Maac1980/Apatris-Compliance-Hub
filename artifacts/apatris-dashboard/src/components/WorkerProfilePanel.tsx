@@ -503,9 +503,25 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const { data: payrollHistoryData } = useQuery<{ records: any[] }>({
     queryKey: ["payroll-history", workerId],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/history/${workerId}`);
-      if (!res.ok) throw new Error("Failed to load payroll history");
-      return res.json();
+      const token = localStorage.getItem("apatris_jwt");
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${import.meta.env.BASE_URL}api/payroll/history/${workerId}`, { headers });
+      if (!res.ok) return { records: [] };
+      const json = await res.json();
+      // Normalize snake_case DB columns to camelCase + safe numbers
+      const rows = (json.records ?? []).map((r: any) => ({
+        id: r.id,
+        monthYear: r.month ?? r.monthYear ?? "—",
+        totalHours: Number(r.hours ?? r.totalHours ?? 0),
+        hourlyRate: Number(r.hourly_rate ?? r.hourlyRate ?? 0),
+        grossPayout: Number(r.gross ?? r.grossPayout ?? 0),
+        advancesDeducted: Number(r.advance ?? r.advancesDeducted ?? 0),
+        penaltiesDeducted: Number(r.penalties ?? r.penaltiesDeducted ?? 0),
+        finalNettoPayout: Number(r.netto ?? r.finalNettoPayout ?? 0),
+        site: r.site ?? "",
+        workerName: r.worker_name ?? r.workerName ?? "",
+      }));
+      return { records: rows };
     },
     enabled: !!workerId && isAdmin && activeTab === "payroll-history",
     staleTime: 30_000,
@@ -1069,9 +1085,9 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       {/* Summary totals */}
                       <div className="grid grid-cols-3 gap-2">
                         {[
-                          { label: "Lifetime Hours", value: `${payrollRecords.reduce((s, r) => s + r.totalHours, 0).toLocaleString("pl-PL")} h`, color: "text-blue-400" },
-                          { label: "Total Advances", value: `${payrollRecords.reduce((s, r) => s + r.advancesDeducted, 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-orange-400" },
-                          { label: "Total Netto Paid", value: `${payrollRecords.reduce((s, r) => s + r.finalNettoPayout, 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-green-400" },
+                          { label: "Lifetime Hours", value: `${payrollRecords.reduce((s, r) => s + Number(r.totalHours ?? 0), 0).toLocaleString("pl-PL")} h`, color: "text-blue-400" },
+                          { label: "Total Advances", value: `${payrollRecords.reduce((s, r) => s + Number(r.advancesDeducted ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-orange-400" },
+                          { label: "Total Netto Paid", value: `${payrollRecords.reduce((s, r) => s + Number(r.finalNettoPayout ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-green-400" },
                         ].map((c) => (
                           <div key={c.label} className="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-center">
                             <p className={`text-sm font-mono font-bold ${c.color}`}>{c.value}</p>
@@ -1097,12 +1113,12 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                               <tr key={r.id} className="hover:bg-slate-700/20 transition-colors">
                                 <td className="px-3 py-2 font-mono text-white">{r.monthYear}</td>
                                 <td className="px-3 py-2 text-right font-mono text-blue-400">{r.totalHours}</td>
-                                <td className="px-3 py-2 text-right font-mono text-gray-300">{r.hourlyRate.toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-mono text-gray-300">{Number(r.hourlyRate ?? 0).toFixed(2)}</td>
                                 <td className="px-3 py-2 text-right font-mono text-orange-400">
-                                  {(r.advancesDeducted + r.penaltiesDeducted) > 0 ? `- ${(r.advancesDeducted + r.penaltiesDeducted).toLocaleString("pl-PL", { minimumFractionDigits: 2 })}` : "—"}
+                                  {(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)) > 0 ? `- ${(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)).toLocaleString("pl-PL", { minimumFractionDigits: 2 })}` : "—"}
                                 </td>
                                 <td className="px-3 py-2 text-right font-mono font-bold text-green-400">
-                                  {r.finalNettoPayout.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
+                                  {Number(r.finalNettoPayout ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
                                 </td>
                               </tr>
                             ))}
