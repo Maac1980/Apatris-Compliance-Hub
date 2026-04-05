@@ -100,9 +100,14 @@ export function AddWorkerModal({ isOpen, onClose, onCreated }: Props) {
       if (zusStatus) body.zusStatus = zusStatus;
       if (iban.trim()) body.iban = iban.trim().toUpperCase().replace(/\s/g, "");
 
+      const token = localStorage.getItem("apatris_jwt");
       const res = await fetch(`${import.meta.env.BASE_URL}api/workers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       if (!res.ok) {

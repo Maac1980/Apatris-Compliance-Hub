@@ -82,6 +82,12 @@ const FIELD_MAP: Record<string, string> = {
   nip: "nip",
   pit2: "pit2",
 
+  // Additional frontend fields
+  name: "full_name",
+  oswiadczenieExpiry: "oswiadczenie_expiry",
+  visaType: "visa_type",
+  zusStatus: "zus_status",
+
   // snake_case pass-through (already DB column names)
   full_name: "full_name",
   assigned_site: "assigned_site",
@@ -129,6 +135,9 @@ const MUTABLE_COLUMNS = new Set([
   "pesel",
   "nip",
   "pit2",
+  "oswiadczenie_expiry",
+  "visa_type",
+  "zus_status",
 ]);
 
 // ---------------------------------------------------------------------------

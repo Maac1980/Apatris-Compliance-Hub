@@ -386,6 +386,27 @@ router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive
   }
 });
 
+// POST /workers — create a single worker from JSON body
+router.post("/workers", requireAuth, requireRole("Admin", "Executive", "TechOps", "Coordinator"), async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.name && !body.fullName && !body.full_name) {
+      return res.status(400).json({ error: "Worker name is required (send as 'name', 'fullName', or 'full_name')" });
+    }
+    // Normalise 'name' → 'fullName' so FIELD_MAP picks it up
+    if (body.name && !body.fullName) { body.fullName = body.name; delete body.name; }
+    const newRecord = await createWorker(body as any, req.tenantId!);
+    const row = await fetchWorkerById(newRecord.id, req.tenantId!);
+    const mapped = mapRowToWorker(row!);
+    appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "CREATE_WORKER", workerId: newRecord.id, workerName: mapped.name, note: `Worker created with fields: ${Object.keys(body).join(", ")}` });
+    res.status(201).json(mapped);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[workers/create] Error:", message);
+    res.status(500).json({ error: message });
+  }
+});
+
 // GET /workers/:id
 router.get("/workers/:id", requireAuth, async (req, res) => {
   try {
