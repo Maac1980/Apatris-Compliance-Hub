@@ -38,7 +38,18 @@ export default function ClientManagement() {
       const res = await fetch(`${BASE}api/clients`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch clients");
       const json = await res.json();
-      return Array.isArray(json) ? json : (json.clients ?? []);
+      const rows = Array.isArray(json) ? json : (json.clients ?? []);
+      // Normalize snake_case DB columns to camelCase frontend
+      return rows.map((r: any) => ({
+        id: r.id,
+        name: r.name ?? "",
+        contactPerson: r.contact_person ?? r.contactPerson ?? "",
+        email: r.email ?? "",
+        phone: r.phone ?? "",
+        nip: r.nip ?? "",
+        billingRate: Number(r.billing_rate ?? r.billingRate ?? 0),
+        currency: r.currency ?? "PLN",
+      }));
     },
   });
 
@@ -46,8 +57,17 @@ export default function ClientManagement() {
     mutationFn: async () => {
       const url = editId ? `${BASE}api/clients/${editId}` : `${BASE}api/clients`;
       const method = editId ? "PATCH" : "POST";
-      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(form) });
-      if (!res.ok) throw new Error("Failed to save client");
+      // Convert camelCase form fields to snake_case for API
+      const body = {
+        name: form.name,
+        contact_person: form.contactPerson,
+        email: form.email,
+        phone: form.phone,
+        nip: form.nip,
+        billing_rate: form.billingRate || null,
+      };
+      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as any).error ?? "Failed to save client"); }
       return res.json();
     },
     onSuccess: () => {

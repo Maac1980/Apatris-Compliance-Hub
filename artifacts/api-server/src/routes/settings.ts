@@ -34,11 +34,7 @@ router.get("/settings/status", requireAuth, requireRole("Admin"), (_req, res) =>
 router.post("/settings/seed-demo", requireAuth, requireRole("Admin"), async (_req, res) => {
   try {
     const { seedModuleDemoData } = await import("../lib/seed-modules.js");
-    // Temporarily allow in production for this explicit admin action
-    const origEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "development";
-    await seedModuleDemoData();
-    process.env.NODE_ENV = origEnv;
+    await seedModuleDemoData(true); // force=true bypasses NODE_ENV check for explicit admin action
     res.json({ success: true, message: "Demo data seeded for dashboard modules." });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Seeding failed" });

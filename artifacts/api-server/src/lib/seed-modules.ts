@@ -13,8 +13,8 @@ import { getDefaultTenantId } from "./tenant.js";
  * DELETE FROM posting_assignments WHERE notes LIKE '[DEMO]%';
  * DELETE FROM consent_records WHERE ip_address = 'demo-seed';
  */
-export async function seedModuleDemoData(): Promise<void> {
-  if (process.env.NODE_ENV === "production") return;
+export async function seedModuleDemoData(force = false): Promise<void> {
+  if (!force && process.env.NODE_ENV === "production") return;
 
   const tenantId = getDefaultTenantId();
   if (!tenantId) { console.log("[seed-modules] No tenant — skipping."); return; }
@@ -53,10 +53,14 @@ export async function seedModuleDemoData(): Promise<void> {
   ];
 
   for (const c of clients) {
-    await execute(
-      "INSERT INTO clients (name, contact_person, email, phone, nip, billing_rate) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING",
-      [c.name, c.contact, c.email, c.phone, c.nip, c.rate]
-    );
+    // Check by name to avoid duplicates on re-seed
+    const exists = await queryOne<{ id: string }>("SELECT id FROM clients WHERE name = $1", [c.name]);
+    if (!exists) {
+      await execute(
+        "INSERT INTO clients (name, contact_person, email, phone, nip, billing_rate) VALUES ($1,$2,$3,$4,$5,$6)",
+        [c.name, c.contact, c.email, c.phone, c.nip, c.rate]
+      );
+    }
   }
   console.log(`[seed-modules] Clients: ${clients.length} records`);
 
