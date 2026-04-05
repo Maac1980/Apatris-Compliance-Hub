@@ -57,7 +57,7 @@ export default function ImmigrationSearch() {
         body: JSON.stringify({ query: searchQuery, language }),
       });
       const data = await res.json();
-      setResult(data);
+      setResult({ ...data, actionItems: data.actionItems ?? data.action_items ?? [], sources: data.sources ?? [] });
     } catch (err) {
       console.error("[ImmigrationSearch] Search failed:", err);
       toast({ title: isPl ? "Blad wyszukiwania" : "Search Failed", description: isPl ? "Nie udalo sie przeprowadzic wyszukiwania. Sprobuj ponownie." : "Search failed. Please try again.", variant: "destructive" });
@@ -200,23 +200,23 @@ export default function ImmigrationSearch() {
             </div>
 
             {/* Action Items */}
-            {result.actionItems.length > 0 && (
+            {(result.actionItems ?? []).length > 0 && (
               <div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
                 <div className="text-xs font-bold text-amber-400 mb-2">
                   {isPl ? "Wymagane dzialania:" : "Action Required:"}
                 </div>
-                {result.actionItems.map((a, i) => (
+                {(result.actionItems ?? []).map((a, i) => (
                   <div key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-amber-500/50 mb-1.5">{a}</div>
                 ))}
               </div>
             )}
 
             {/* Sources */}
-            {result.sources.length > 0 && (
+            {(result.sources ?? []).length > 0 && (
               <div className="mt-4">
                 <div className="text-xs font-bold text-muted-foreground mb-2">{isPl ? "Zrodla:" : "Sources:"}</div>
                 <div className="flex flex-wrap gap-2">
-                  {result.sources.map((s, i) => (
+                  {(result.sources ?? []).map((s, i) => (
                     <a
                       key={i}
                       href={s.url}

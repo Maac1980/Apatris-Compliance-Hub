@@ -32,7 +32,8 @@ export default function CareerPaths() {
 
   const paths = data?.paths ?? [];
   const selected = paths.find(p => p.worker_id === selectedId);
-  const steps = selected ? (typeof selected.steps === "string" ? JSON.parse(selected.steps) : selected.steps) : [];
+  const _steps = selected ? (typeof selected.steps === "string" ? (() => { try { return JSON.parse(selected.steps); } catch { return []; } })() : selected.steps) : [];
+  const steps = Array.isArray(_steps) ? _steps : [];
 
   return (
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">

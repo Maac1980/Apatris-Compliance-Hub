@@ -57,7 +57,8 @@ export default function TrustScores() {
   const tiers = { platinum: scores.filter((s: TrustScore) => s.score >= 90).length, gold: scores.filter((s: TrustScore) => s.score >= 75 && s.score < 90).length, silver: scores.filter((s: TrustScore) => s.score >= 50 && s.score < 75).length, bronze: scores.filter((s: TrustScore) => s.score < 50).length };
 
   const selected = scores.find((s: TrustScore) => s.worker_id === selectedId);
-  const breakdown = selected ? (typeof selected.breakdown === "string" ? JSON.parse(selected.breakdown) : selected.breakdown) : null;
+  const _bd = selected ? (typeof selected.breakdown === "string" ? (() => { try { return JSON.parse(selected.breakdown); } catch { return null; } })() : selected.breakdown) : null;
+  const breakdown = _bd && typeof _bd === "object" && !Array.isArray(_bd) ? _bd : null;
   const history = (historyData?.history ?? []).reverse();
   const chartData = history.map((h: TrustScore) => ({ date: new Date(h.calculated_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }), score: h.score }));
 

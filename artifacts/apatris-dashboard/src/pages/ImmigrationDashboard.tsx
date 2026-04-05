@@ -514,7 +514,7 @@ export default function ImmigrationDashboard() {
               ) : !historyData?.permits?.length ? (
                 <p className="text-slate-500 text-center py-10">No permit records found</p>
               ) : (
-                historyData.permits.map(h => {
+                (historyData?.permits ?? []).map(h => {
                   const days = daysRemaining(h.expiry_date);
                   const zone = colourZone(days, h.status);
                   return (
@@ -637,7 +637,7 @@ export default function ImmigrationDashboard() {
                             <div>
                               <p className="text-xs text-slate-500 mb-1.5">Action Items</p>
                               <ul className="space-y-1">
-                                {prediction.action_items.map((item: string, i: number) => (
+                                {(prediction.action_items ?? []).map((item: string, i: number) => (
                                   <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
                                     <span className="text-indigo-400 mt-0.5">•</span>
                                     {item}

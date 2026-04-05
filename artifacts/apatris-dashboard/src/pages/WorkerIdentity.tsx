@@ -63,7 +63,8 @@ export default function WorkerIdentity() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {identities.map(id => {
-            const certs = typeof id.certifications === "string" ? JSON.parse(id.certifications) : (id.certifications || []);
+            const _certs = typeof id.certifications === "string" ? (() => { try { return JSON.parse(id.certifications); } catch { return []; } })() : id.certifications;
+            const certs = Array.isArray(_certs) ? _certs : [];
             return (
               <div key={id.id} className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
                 <div className="bg-[#C41E18] px-4 py-3 flex items-center justify-between">

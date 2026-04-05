@@ -94,7 +94,8 @@ export default function ChurnPrediction() {
         <div className="space-y-3">
           {predictions.map(p => {
             const rs = RISK_STYLES[p.risk_level] || RISK_STYLES.low;
-            const sigs = typeof p.signals === "string" ? JSON.parse(p.signals) : (p.signals || []);
+            const parsedSigs = typeof p.signals === "string" ? (() => { try { return JSON.parse(p.signals); } catch { return []; } })() : p.signals;
+            const sigs = Array.isArray(parsedSigs) ? parsedSigs : [];
             return (
               <div key={p.id} className={`rounded-xl border p-4 ${rs.bg}`}>
                 <div className="flex items-start justify-between mb-2">

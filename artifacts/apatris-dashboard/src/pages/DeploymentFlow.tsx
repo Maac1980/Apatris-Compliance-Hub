@@ -66,7 +66,8 @@ export default function DeploymentFlow() {
       ) : (
         <div className="space-y-3">
           {deployments.map((d: any) => {
-            const tl = typeof d.timeline === "string" ? JSON.parse(d.timeline) : (d.timeline || []);
+            const _tl = typeof d.timeline === "string" ? (() => { try { return JSON.parse(d.timeline); } catch { return []; } })() : d.timeline;
+            const tl = Array.isArray(_tl) ? _tl : [];
             return (
               <div key={d.id} className={`rounded-xl border p-4 ${d.sla_met ? "bg-emerald-500/5 border-emerald-500/15" : "bg-amber-500/5 border-amber-500/15"}`}>
                 <div className="flex items-center justify-between mb-2">

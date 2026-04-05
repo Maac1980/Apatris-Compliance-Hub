@@ -115,7 +115,7 @@ function PayrollTab() {
 
   return (
     <div className="space-y-3">
-      {data.commits.map((c: any) => {
+      {(data?.commits ?? []).map((c: any) => {
         const isOpen = expanded === c.id;
         return (
           <div key={c.id} className="glass-panel rounded-xl tech-border overflow-hidden">
@@ -181,7 +181,7 @@ function PayrollTab() {
                           </tr>
                         </thead>
                         <tbody>
-                          {detail.snapshots.map((s: any, i: number) => (
+                          {(detail?.snapshots ?? []).map((s: any, i: number) => (
                             <tr key={i} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                               <td className="px-3 py-2 text-sm font-medium text-white">{s.worker_name}</td>
                               <td className="px-3 py-2 text-xs text-red-400 font-mono">{s.site || "—"}</td>
