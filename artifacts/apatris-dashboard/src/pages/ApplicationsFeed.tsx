@@ -33,18 +33,28 @@ export default function ApplicationsFeed() {
       const res = await fetch(`${BASE}api/applications`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch applications");
       const json = await res.json();
-      return Array.isArray(json) ? json : (json.applications ?? []);
+      const rows = Array.isArray(json) ? json : (json.applications ?? []);
+      return rows.map((r: any) => ({
+        id: r.id,
+        name: r.worker_name ?? r.name ?? "",
+        email: r.worker_email ?? r.email ?? "",
+        phone: r.phone ?? "",
+        nationality: r.nationality ?? "",
+        jobApplied: r.job_title ?? r.jobApplied ?? "—",
+        appliedDate: r.applied_at ?? r.appliedDate ?? "",
+        status: (r.stage ?? r.status ?? "new").toLowerCase(),
+      }));
     },
   });
 
   const moveToScreening = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${BASE}api/applications/${id}`, {
+      const res = await fetch(`${BASE}api/applications/${id}/stage`, {
         method: "PATCH",
         headers: authHeaders(),
-        body: JSON.stringify({ status: "screening" }),
+        body: JSON.stringify({ stage: "Screening" }),
       });
-      if (!res.ok) throw new Error("Failed to update");
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as any).error ?? "Failed to update"); }
       return res.json();
     },
     onSuccess: () => {
@@ -54,11 +64,12 @@ export default function ApplicationsFeed() {
     onError: () => toast({ title: "Error", description: "Failed to update application", variant: "destructive" }),
   });
 
-  const filtered = filter === "all" ? applications : applications.filter((a) => a.status === filter);
+  const filtered = filter === "all" ? applications : applications.filter((a) => a.status.toLowerCase() === filter);
   const todayCount = applications.filter((a) => {
+    if (!a.appliedDate) return false;
     const d = new Date(a.appliedDate);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
+    if (isNaN(d.getTime())) return false;
+    return d.toDateString() === new Date().toDateString();
   }).length;
 
   const statusBadge = (status: string) => {
@@ -127,7 +138,7 @@ export default function ApplicationsFeed() {
                       <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {app.email}</span>
                       <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {app.phone}</span>
                       <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> {app.nationality}</span>
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(app.appliedDate).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {app.appliedDate ? new Date(app.appliedDate).toLocaleDateString("en-GB") : "—"}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Applied for: <span className="text-foreground font-medium">{app.jobApplied}</span>
