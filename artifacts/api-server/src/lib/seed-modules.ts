@@ -201,6 +201,61 @@ export async function seedModuleDemoData(force = false): Promise<void> {
       );
     }
     console.log("[seed-modules] GDPR Consents: 20 records");
+
+    // ═══ 7. DOCUMENT WORKFLOWS (10 records) ════════════════════════════
+    const docTypes = ["BHP Certificate", "TRC Renewal", "Medical Exam", "Passport Scan", "Work Permit", "Safety Training", "UDT Certificate", "Contract Copy", "A1 Certificate", "PESEL Registration"];
+    const docStatuses = ["uploaded", "under_review", "approved", "approved", "under_review", "rejected", "approved", "uploaded", "under_review", "approved"];
+    const dwCount = await query<{ count: string }>("SELECT COUNT(*) AS count FROM document_workflows WHERE tenant_id = $1", [tenantId]);
+    if (parseInt(dwCount[0]?.count ?? "0") < 5) {
+      for (let i = 0; i < Math.min(10, workers.length); i++) {
+        const w = workers[i % workers.length];
+        await execute(
+          `INSERT INTO document_workflows (tenant_id, worker_id, worker_name, document_type, status, file_name, uploaded_by, version, notes)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [tenantId, w.id, w.full_name, docTypes[i], docStatuses[i], `[DEMO] ${docTypes[i].toLowerCase().replace(/ /g, "_")}_${w.full_name.split(" ")[1]?.toLowerCase() ?? "doc"}.pdf`, "Admin", 1, "[DEMO] Auto-seeded document workflow"]
+        );
+      }
+      console.log("[seed-modules] Document Workflows: 10 records");
+    }
+
+    // ═══ 8. CONTRACTS (10 records) ═════════════════════════════════════
+    const contractTypes = ["umowa_zlecenie", "umowa_zlecenie", "umowa_o_prace", "umowa_zlecenie", "b2b", "umowa_zlecenie", "umowa_o_prace", "umowa_zlecenie", "b2b", "umowa_zlecenie"];
+    const contractStatuses = ["active", "active", "active", "pending_signature", "active", "draft", "active", "active", "pending_signature", "terminated"];
+    const cCount = await query<{ count: string }>("SELECT COUNT(*) AS count FROM contracts WHERE tenant_id = $1", [tenantId]);
+    if (parseInt(cCount[0]?.count ?? "0") < 5) {
+      for (let i = 0; i < Math.min(10, workers.length); i++) {
+        const w = workers[i % workers.length];
+        await execute(
+          `INSERT INTO contracts (tenant_id, worker_id, worker_name, contract_type, status, start_date, end_date, hourly_rate, notes)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [tenantId, w.id, w.full_name, contractTypes[i], contractStatuses[i], "2026-01-01", "2026-12-31", 28 + i * 1.5, "[DEMO] Auto-seeded contract"]
+        );
+      }
+      console.log("[seed-modules] Contracts: 10 records");
+    }
+
+    // ═══ 9. GENERATED CONTRACTS — AI templates (6 records) ═════════════
+    const gcCount = await query<{ count: string }>("SELECT COUNT(*) AS count FROM generated_contracts WHERE tenant_id = $1", [tenantId]);
+    if (parseInt(gcCount[0]?.count ?? "0") < 3) {
+      const templates = [
+        { type: "Umowa Zlecenie", worker: workers[0], company: "Remontowa Shiprepair Yard" },
+        { type: "Umowa o Pracę", worker: workers[1], company: "Energomontaż Północ" },
+        { type: "B2B", worker: workers[2], company: "Heerema Marine Contractors" },
+        { type: "Umowa Zlecenie", worker: workers[3 % workers.length], company: "BESIX Group" },
+        { type: "Umowa o Pracę", worker: workers[4 % workers.length], company: "Damen Shipyards" },
+        { type: "Umowa Zlecenie", worker: workers[5 % workers.length], company: "Jan De Nul Group" },
+      ];
+      for (const t of templates) {
+        const html = `<html><body><h1>[DEMO] ${t.type}</h1><p>Worker: ${t.worker.full_name}</p><p>Company: ${t.company}</p><p>Rate: 32.00 PLN/h</p><p>Period: 01.01.2026 – 31.12.2026</p><p>This is a demo contract template generated for testing purposes.</p></body></html>`;
+        await execute(
+          `INSERT INTO generated_contracts (tenant_id, worker_id, worker_name, company_name, contract_type, status, contract_html)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [tenantId, t.worker.id, t.worker.full_name, t.company, t.type, "draft", html]
+        );
+      }
+      console.log("[seed-modules] Generated Contracts: 6 records");
+    }
+
   } else {
     console.log("[seed-modules] No workers found — skipping posted workers and GDPR data.");
   }
