@@ -1534,6 +1534,21 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // Add oswiadczenie_expiry, visa_type, zus_status to workers if missing
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='oswiadczenie_expiry') THEN
+        ALTER TABLE workers ADD COLUMN oswiadczenie_expiry DATE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='visa_type') THEN
+        ALTER TABLE workers ADD COLUMN visa_type TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='zus_status') THEN
+        ALTER TABLE workers ADD COLUMN zus_status TEXT;
+      END IF;
+    END $$;
+  `);
+
   // messages
   await execute(`
     CREATE TABLE IF NOT EXISTS messages (
