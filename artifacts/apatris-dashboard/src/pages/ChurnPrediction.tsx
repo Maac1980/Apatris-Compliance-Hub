@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { UserMinus, AlertTriangle, Play, CheckCircle2 } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Prediction { id: string; worker_name: string; churn_probability: number; risk_level: string; signals: any; recommended_action: string; predicted_leave_date: string | null; }
 

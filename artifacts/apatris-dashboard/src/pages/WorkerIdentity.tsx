@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Fingerprint, Plus, ExternalLink, X, Award } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Identity { id: string; worker_id: string; full_name: string; specialization: string; identity_hash: string; trust_score: number; trust_level: string; compliance_status: string; qr_code: string; issued_at: string; certifications: any; }
 

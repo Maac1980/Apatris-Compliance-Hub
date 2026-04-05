@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Heart, Play, AlertTriangle } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 function scoreColor(s: number) { return s >= 70 ? "text-emerald-400" : s >= 40 ? "text-amber-400" : "text-red-400"; }
 function scoreBg(s: number) { return s >= 70 ? "bg-emerald-500" : s >= 40 ? "bg-amber-500" : "bg-red-500"; }

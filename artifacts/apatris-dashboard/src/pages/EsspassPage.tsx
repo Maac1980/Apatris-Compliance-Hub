@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Fingerprint, Plus, CheckCircle2, Clock, AlertTriangle, Wifi, WifiOff } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface EsspassRecord { id: string; worker_name: string; worker_name_live: string | null; esspass_id: string | null; social_security_country: string; a1_certificate_ref: string | null; valid_from: string | null; valid_until: string | null; verification_status: string; assigned_site: string | null; }
 
@@ -96,7 +93,7 @@ export default function EsspassPage() {
       )}
 
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Add ESSPASS Record</h3>
             <div className="space-y-3">

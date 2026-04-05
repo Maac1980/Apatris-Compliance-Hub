@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Plus, AlertTriangle, CheckCircle2, DollarSign, Users } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Policy { id: string; policy_name: string; provider: string | null; policy_type: string; coverage_amount: string; premium_monthly: string; start_date: string | null; end_date: string | null; status: string; workers_covered: number; open_claims: string; }
 interface Claim { id: string; worker_name: string | null; policy_name: string | null; incident_date: string | null; description: string; amount_claimed: string; status: string; }
@@ -115,7 +112,7 @@ export default function InsuranceManagement() {
       )}
 
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Add Policy</h3>
             <div className="space-y-3">

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   ArrowLeft, History, BarChart3, Activity,
   ChevronDown, ChevronRight, Download, TrendingUp, Users,
@@ -8,12 +9,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
-const BASE = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 function api<T>(path: string): Promise<T> {
   return fetch(`${BASE}${path}`, { headers: authHeaders() }).then((r) => {

@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Search, Globe, BookOpen, ExternalLink, Loader2, History, Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
-const BASE = import.meta.env.BASE_URL;
 
 interface SearchResult {
   answer: string;

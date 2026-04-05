@@ -1,14 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Briefcase, X, Search, Plus, Building2, ChevronRight, Users, DollarSign, TrendingUp,
 } from "lucide-react";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 const STAGES = ["Lead", "Contacted", "Proposal Sent", "Negotiation", "Active", "Lost"];
 const STAGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -233,7 +230,7 @@ export default function CrmPage() {
 
       {/* Add Company Dialog */}
       {showAddCompany && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAddCompany(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAddCompany(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Add Company</h3>
             <div className="space-y-3">
@@ -252,7 +249,7 @@ export default function CrmPage() {
 
       {/* Add Deal Dialog */}
       {showAddDeal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAddDeal(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAddDeal(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">New Deal</h3>
             <div className="space-y-3">
@@ -286,7 +283,7 @@ export default function CrmPage() {
 
       {/* Company Side Panel */}
       {selectedCompanyId && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedCompanyId(null)}>
+        <div className="fixed inset-0 z-[250] flex justify-end" onClick={() => setSelectedCompanyId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between z-10">

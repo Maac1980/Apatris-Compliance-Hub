@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, ChevronRight, X, Play, TrendingUp } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface CareerPath { id: string; worker_id: string; worker_name: string; current_role: string; recommended_next_cert: string; estimated_salary_increase: string; time_to_achieve: string; steps: any; progress: number; }
 
@@ -83,7 +80,7 @@ export default function CareerPaths() {
 
       {/* Career ladder detail */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedId(null)}>
+        <div className="fixed inset-0 z-[250] flex justify-end" onClick={() => setSelectedId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between z-10">

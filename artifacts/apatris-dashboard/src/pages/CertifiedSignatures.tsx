@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { FileSignature, Send, CheckCircle2, Eye, Clock, X, Download, Plus } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface CertSig {
   id: string; contract_id: string; contract_title: string | null; worker_name: string; worker_email: string;
@@ -150,7 +147,7 @@ export default function CertifiedSignatures() {
       )}
 
       {showSend && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSend(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowSend(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Send for Certified Signature</h3>
             <div className="space-y-3">

@@ -1,14 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   ClipboardCheck, X, Search, UserPlus, CheckCircle2, Circle, ChevronRight, AlertTriangle, PartyPopper,
 } from "lucide-react";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface WorkerProgress {
   worker_id: string;
@@ -178,7 +175,7 @@ export default function OnboardingPage() {
 
       {/* Init dialog */}
       {showInitDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowInitDialog(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowInitDialog(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Initialize Onboarding</h3>
             <div className="space-y-3">
@@ -251,7 +248,7 @@ export default function OnboardingPage() {
 
       {/* Side Panel — Step Checklist */}
       {selectedWorkerId && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedWorkerId(null)}>
+        <div className="fixed inset-0 z-[250] flex justify-end" onClick={() => setSelectedWorkerId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl"

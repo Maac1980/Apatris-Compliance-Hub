@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, CheckCircle2, X, Link, Calendar, Mail, HardDrive, Video, Plus } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Status { configured: boolean; connected: boolean; email: string | null; connectedAt: string | null; }
 interface CalEvent { id: string; summary: string; start: { dateTime?: string; date?: string }; htmlLink: string; hangoutLink?: string; }
@@ -144,7 +141,7 @@ export default function GoogleWorkspace() {
 
       {/* Create event dialog */}
       {showEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowEvent(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowEvent(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">New Calendar Event</h3>
             <div className="space-y-3">

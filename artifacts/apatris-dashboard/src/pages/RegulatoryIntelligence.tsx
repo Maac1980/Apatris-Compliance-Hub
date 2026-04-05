@@ -1,17 +1,13 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Scale, AlertTriangle, Info, RefreshCw, ExternalLink,
   CheckCircle, ChevronDown, ChevronUp, Shield,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
-const BASE = import.meta.env.BASE_URL;
 
 interface RegulatoryUpdate {
   id: string;

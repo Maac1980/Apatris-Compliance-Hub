@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 const PLAN_STYLES: Record<string, { color: string; bg: string }> = {
   starter: { color: "text-blue-400", bg: "border-blue-500/20" },

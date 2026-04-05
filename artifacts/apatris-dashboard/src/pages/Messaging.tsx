@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Send, X, ChevronRight } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Thread { id: string; participant_names: any; last_message: string | null; last_message_at: string; }
 interface Message { id: string; sender_name: string; sender_id: string; message: string; read_at: string | null; created_at: string; }
@@ -133,7 +130,7 @@ export default function Messaging() {
 
       {/* New message dialog */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowNew(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowNew(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">New Message</h3>
             <input placeholder="Recipient email or name" value={newTo} onChange={e => setNewTo(e.target.value)}

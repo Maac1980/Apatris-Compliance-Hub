@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Award, Play, TrendingUp, Users, AlertTriangle } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Gap { id: string; skill_name: string; certification_name: string; demand_level: string; current_pool_count: number; shortage_count: number; avg_premium_rate: string; recommendation: string; }
 interface Rec { certification: string; skill: string; shortage: number; premiumPerHour: number; estimatedMonthlyRevenue: number; demandLevel: string; }

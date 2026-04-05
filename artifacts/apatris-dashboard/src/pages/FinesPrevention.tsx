@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertTriangle, CheckCircle2, Play, TrendingUp } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Prediction { id: string; worker_name: string; risk_type: string; risk_description: string; predicted_fine_min: string; predicted_fine_max: string; probability: string; priority: string; due_date: string | null; }
 interface Summary { activeRisks: number; outstandingFines: number; criticalRisks: number; resolvedRisks: number; finesPrevented: number; }

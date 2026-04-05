@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Users, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 
 const API = "/api";
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface DayAvailability {
   date: string;

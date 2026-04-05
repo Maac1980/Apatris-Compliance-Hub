@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart3, Play, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Margin { id: string; company_name: string; worker_name: string; revenue: string; worker_cost: string; housing_cost: string; admin_cost: string; gross_margin: string; gross_margin_pct: string; flag: string; }
 

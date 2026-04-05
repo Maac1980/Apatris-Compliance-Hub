@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { FileSignature, Plus, Download, Send, Eye, CheckCircle2, Clock } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface GenContract { id: string; worker_name: string; company_name: string; contract_type: string; status: string; generated_at: string; contract_html: string; }
 
@@ -137,7 +134,7 @@ export default function ContractGenerator() {
 
       {/* Generate dialog */}
       {showGen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowGen(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowGen(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Generate Contract</h3>
             <div className="space-y-3">
@@ -183,7 +180,7 @@ export default function ContractGenerator() {
 
       {/* Preview modal */}
       {preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setPreview(null)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70" onClick={() => setPreview(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-slate-900 px-4 py-3 flex items-center justify-between rounded-t-xl">
               <p className="text-sm font-bold text-white">Contract Preview</p>

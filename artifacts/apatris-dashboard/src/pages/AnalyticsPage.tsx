@@ -2,12 +2,9 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, AlertTriangle, TrendingUp, Shield, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 
 const API = "/api";
-function authHeaders() {
-  const token = localStorage.getItem("apatris_jwt");
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-}
 
 interface HeatmapSite {
   site: string; total: number; compliant: number; warning: number;

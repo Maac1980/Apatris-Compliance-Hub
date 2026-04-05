@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Radio, Play, Plus, Download } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 const REPORT_TYPES = [{ id: "demand_trends", label: "Demand Trends" }, { id: "rate_movements", label: "Rate Movements" }, { id: "certification_gaps", label: "Certification Gaps" }, { id: "seasonal_patterns", label: "Seasonal Patterns" }, { id: "compliance_rates", label: "Compliance Rates" }];
 
@@ -92,7 +89,7 @@ export default function IntelligenceFeed() {
       )}
 
       {showAddSub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAddSub(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAddSub(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Add Subscriber</h3>
             <div className="space-y-3">

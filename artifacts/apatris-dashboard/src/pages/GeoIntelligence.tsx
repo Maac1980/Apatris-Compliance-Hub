@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Play, AlertTriangle, Users, Navigation } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Site { name: string; count: number; lat: number | null; lng: number | null; }
 interface Suggestion { worker: string; fromSite: string; toSite: string; reason: string; distanceKm: number; }

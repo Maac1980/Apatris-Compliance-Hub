@@ -2,12 +2,9 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FileCheck, Clock, XCircle, CheckCircle2, Upload, Loader2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 
 const API = "/api";
-function authHeaders() {
-  const token = localStorage.getItem("apatris_jwt");
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-}
 
 interface WorkflowDoc {
   id: string; workerName: string; documentType: string; status: string;

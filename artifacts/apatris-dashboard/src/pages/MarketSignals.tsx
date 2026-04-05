@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Radio, Play, CheckCircle2, AlertTriangle, TrendingUp, Zap } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Signal { id: string; signal_type: string; country: string; role_type: string | null; signal_strength: string; description: string; recommended_action: string; detected_at: string; expires_at: string | null; }
 

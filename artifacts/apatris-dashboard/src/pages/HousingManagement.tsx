@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Plus, AlertTriangle, Users, DollarSign, Building2 } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Hostel { id: string; name: string; address: string | null; city: string | null; country: string; owner_type: string; cost_per_bed_monthly: string; total_capacity: string; total_occupancy: string; room_count: string; }
 interface Summary { totalHostels: number; ownedHostels: number; thirdPartyHostels: number; monthlyThirdPartyCost: number; unhousedWorkers: number; capacityAlerts: Array<{ name: string; occupancy: string }>; }
@@ -127,7 +124,7 @@ export default function HousingManagement() {
       )}
 
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">Add Hostel</h3>
             <div className="space-y-3">

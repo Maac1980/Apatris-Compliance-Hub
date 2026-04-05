@@ -2,15 +2,12 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   ArrowLeft, ShieldAlert, AlertTriangle, CheckCircle2, Clock,
   Plus, Trash2, RefreshCcw, Loader2, XCircle, X
 } from "lucide-react";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 type ComplianceStatus = "GREEN" | "YELLOW" | "RED" | "EXPIRED";
 
@@ -114,7 +111,7 @@ function AddDocumentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white uppercase tracking-wider">Add Document</h3>

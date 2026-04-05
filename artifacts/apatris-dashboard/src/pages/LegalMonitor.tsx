@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Scale, Play, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface LegalUpdate { id: string; source: string; title: string; summary: string; impact_level: string; affected_areas: any; affected_workers_estimate: number; published_date: string | null; url: string | null; status: string; acknowledged_by: string | null; }
 

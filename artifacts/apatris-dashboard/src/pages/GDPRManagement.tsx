@@ -1,15 +1,11 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Shield, Download, Plus, Loader2, CheckCircle2, Clock, XCircle, User,
 } from "lucide-react";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
-const BASE = import.meta.env.BASE_URL;
 
 interface ConsentRecord {
   id: string;

@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, Users, DollarSign, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 export default function RevenueForecast() {
   const { data: forecast } = useQuery({

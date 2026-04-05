@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertTriangle, CheckCircle2, Brain, Eye } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Incident { id: string; worker_name: string | null; site: string; incident_type: string; severity: string; description: string | null; ai_analysis: any; status: string; reported_at: string; }
 interface SiteScore { site: string; score: number; totalIncidents: number; openIncidents: number; critical: number; zone: string; }

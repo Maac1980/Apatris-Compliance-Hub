@@ -2,12 +2,9 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FileSignature, Plus, Download, Users, ChevronRight, Loader2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 
 const API = "/api";
-function authHeaders() {
-  const token = localStorage.getItem("apatris_jwt");
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-}
 
 interface Contract {
   id: string; worker_name: string; contract_type: string; status: string;

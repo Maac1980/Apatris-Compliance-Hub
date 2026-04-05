@@ -1,15 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
   Bell, Send, Phone, MessageSquare,
 } from "lucide-react";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 const PERMIT_TYPES = ["TRC", "Work Permit", "Visa", "A1", "Passport"] as const;
 const STATUSES = ["active", "expired", "pending", "revoked"] as const;
@@ -490,7 +487,7 @@ export default function ImmigrationDashboard() {
 
       {/* Side Panel — Worker Permit History */}
       {selectedWorkerId && (
-        <div className="fixed inset-0 flex justify-end" style={{ zIndex: 250 }} onClick={() => setSelectedWorkerId(null)}>
+        <div className="fixed inset-0 z-[250] flex justify-end" onClick={() => setSelectedWorkerId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl"

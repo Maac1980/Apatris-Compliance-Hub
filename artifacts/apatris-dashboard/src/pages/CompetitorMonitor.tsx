@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Play, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface CompIntel { country: string; role_type: string; their_rate: string; our_rate: string; status: string; recommendation: string; }
 const COUNTRIES = [{ code: "", name: "All" }, { code: "PL", name: "Poland" }, { code: "NL", name: "Netherlands" }, { code: "BE", name: "Belgium" }, { code: "LT", name: "Lithuania" }];

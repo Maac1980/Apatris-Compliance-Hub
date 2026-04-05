@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Globe, Calculator } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Country { country_code: string; country_name: string; currency: string; min_wage_hourly: string; min_wage_monthly: string; social_security_employee: string; social_security_employer: string; income_tax_rate: string; posted_worker_rules: string; notes: string; }
 interface Comparison { country: string; code: string; currency: string; grossEur: number; netEur: number; totalCostEur: number; ssEmployeePercent: number; ssEmployerPercent: number; taxPercent: number; }

@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ShieldCheck, Plus, CheckCircle2, AlertTriangle, ChevronRight, X } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface Guarantee { id: string; company_name: string; guarantee_start: string; guarantee_end: string; max_coverage_eur: string; incidents: number; fines_covered: string; status: string; incident_count: string; total_covered: string; }
 
@@ -102,7 +99,7 @@ export default function ComplianceGuarantees() {
 
       {/* Detail panel */}
       {selectedId && detailData && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedId(null)}>
+        <div className="fixed inset-0 z-[250] flex justify-end" onClick={() => setSelectedId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between z-10">
@@ -137,7 +134,7 @@ export default function ComplianceGuarantees() {
       )}
 
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50" onClick={() => setShowAdd(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">New Compliance Guarantee</h3>
             <div className="space-y-3">

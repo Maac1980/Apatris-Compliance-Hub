@@ -2,11 +2,8 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { SmilePlus, AlertTriangle, TrendingUp, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { authHeaders, BASE } from "@/lib/api";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 const EMOJIS = ["", "😢", "😔", "😐", "🙂", "😃"];
 

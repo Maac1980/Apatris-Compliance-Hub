@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { authHeaders, BASE } from "@/lib/api";
 import {
   Calculator, CheckCircle2, Loader2, AlertTriangle,
   ChevronDown, Calendar, DollarSign, Users, TrendingDown, FileCheck,
@@ -12,10 +13,6 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollRowSkeleton } from "@/components/Skeleton";
 
-function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("apatris_jwt");
-  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
-}
 
 interface PayrollWorker {
   id: string;
