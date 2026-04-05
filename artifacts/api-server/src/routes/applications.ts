@@ -48,4 +48,37 @@ router.patch("/applications/:id/stage", requireAuth, async (req, res) => {
   }
 });
 
+// GET /applications/:id — single application with job details
+router.get("/applications/:id", requireAuth, async (req, res) => {
+  try {
+    const row = await queryOne(
+      `SELECT ja.*, jp.title AS job_title, jp.location AS job_location, jp.description AS job_description
+       FROM job_applications ja
+       LEFT JOIN job_postings jp ON jp.id = ja.job_id
+       WHERE ja.id = $1`,
+      [req.params.id]
+    );
+    if (!row) { res.status(404).json({ error: "Application not found" }); return; }
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+// PATCH /applications/:id/notes — update notes
+router.patch("/applications/:id/notes", requireAuth, async (req, res) => {
+  try {
+    const { notes } = req.body;
+    if (notes === undefined) { res.status(400).json({ error: "notes field required" }); return; }
+    const row = await queryOne(
+      "UPDATE job_applications SET notes = $1 WHERE id = $2 RETURNING *",
+      [notes, req.params.id]
+    );
+    if (!row) { res.status(404).json({ error: "Application not found" }); return; }
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 export default router;
