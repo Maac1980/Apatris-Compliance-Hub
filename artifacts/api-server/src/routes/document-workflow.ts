@@ -156,6 +156,25 @@ router.post(
   }
 );
 
+// GET /api/workflows/all — all documents, all statuses (MUST be before :id route)
+router.get(
+  "/workflows/all",
+  requireAuth,
+  requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"),
+  async (req, res) => {
+    try {
+      const { query: dbQuery } = await import("../lib/db.js");
+      const rows = await dbQuery(
+        `SELECT * FROM document_workflows WHERE tenant_id = $1 ORDER BY uploaded_at DESC`,
+        [req.tenantId!]
+      );
+      res.json({ documents: rows, count: rows.length });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Fetch failed" });
+    }
+  }
+);
+
 // ── Get document by ID ─────────────────────────────────────────────────────
 // GET /api/workflows/:id
 router.get("/workflows/:id", requireAuth, async (req, res) => {
@@ -180,25 +199,6 @@ router.get("/workflows/worker/:workerId", requireAuth, async (req, res) => {
 });
 
 // ── Pending review queue ───────────────────────────────────────────────────
-// GET /api/workflows/all — all documents, all statuses
-router.get(
-  "/workflows/all",
-  requireAuth,
-  requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"),
-  async (req, res) => {
-    try {
-      const { query: dbQuery } = await import("../lib/db.js");
-      const rows = await dbQuery(
-        `SELECT * FROM document_workflows WHERE tenant_id = $1 ORDER BY uploaded_at DESC`,
-        [req.tenantId!]
-      );
-      res.json({ documents: rows, count: rows.length });
-    } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : "Fetch failed" });
-    }
-  }
-);
-
 // GET /api/workflows/queue/pending
 router.get(
   "/workflows/queue/pending",
