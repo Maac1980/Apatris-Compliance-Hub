@@ -75,7 +75,16 @@ export default function Login() {
     const result = await verifyOtp(otpSession, code);
     setLoading(false);
     if (!result.ok) {
-      setError(result.error || "Invalid code");
+      const msg = result.error || "Invalid code";
+      // If expired or session lost, auto-return to login with clear message
+      if (msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("session not found")) {
+        sessionStorage.removeItem("otp_session");
+        sessionStorage.removeItem("otp_email");
+        setScreen("login");
+        setError("Your verification code expired. Please log in again to receive a new code.");
+        return;
+      }
+      setError(msg);
       setOtp(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
       return;

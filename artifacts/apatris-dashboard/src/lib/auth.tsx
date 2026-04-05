@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Auto-refresh access token before it expires (every 12 min) ──────────
   useEffect(() => {
     if (!user) return;
-    const REFRESH_INTERVAL_MS = 12 * 60 * 1000; // 12 minutes (token lives 15 min)
+    const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes (token lives 15 min — 5 min safety buffer)
 
     async function refreshAccessToken() {
       const rt = localStorage.getItem(REFRESH_KEY);

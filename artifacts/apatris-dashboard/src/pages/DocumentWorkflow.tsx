@@ -26,15 +26,29 @@ export default function DocumentWorkflow() {
   const load = () => {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/workflows/queue/pending`, { headers: authHeaders() }).then(r => r.json()),
-      fetch(`${API}/workflows/stats`, { headers: authHeaders() }).then(r => r.json()),
+      fetch(`${API}/workflows/all`, { headers: authHeaders() }).then(r => r.ok ? r.json() : { documents: [] }),
+      fetch(`${API}/workflows/stats`, { headers: authHeaders() }).then(r => r.ok ? r.json() : { stats: {} }),
     ]).then(([q, s]) => {
-      setDocs(q.documents ?? []);
-      setStats(s.stats ?? stats);
+      const rawDocs = (q.documents ?? []).map((d: any) => ({
+        id: d.id,
+        workerName: d.worker_name ?? d.workerName ?? "",
+        documentType: d.document_type ?? d.documentType ?? "",
+        status: d.status ?? "uploaded",
+        fileName: d.file_name ?? d.fileName ?? null,
+        uploadedBy: d.uploaded_by ?? d.uploadedBy ?? "",
+        uploadedAt: d.uploaded_at ?? d.uploadedAt ?? "",
+        reviewerName: d.reviewer_name ?? d.reviewerName ?? null,
+        reviewedAt: d.reviewed_at ?? d.reviewedAt ?? null,
+        reviewComment: d.review_comment ?? d.reviewComment ?? null,
+        rejectionReason: d.rejection_reason ?? d.rejectionReason ?? null,
+        version: d.version ?? 1,
+        expiryDate: d.expiry_date ?? d.expiryDate ?? null,
+      }));
+      setDocs(rawDocs);
+      setStats(s.stats ?? { uploaded: 0, under_review: 0, approved: 0, rejected: 0, resubmit_requested: 0 });
     }).catch(() => {
       setDocs([]);
       setStats({ uploaded: 0, under_review: 0, approved: 0, rejected: 0, resubmit_requested: 0 });
-      toast({ title: "Error", description: "Failed to load documents", variant: "destructive" });
     }).finally(() => setLoading(false));
   };
 
@@ -92,10 +106,35 @@ export default function DocumentWorkflow() {
         ))}
       </div>
 
-      {/* Queue */}
-      {loading ? (
+      {/* Filter tabs */}
+      <div className="flex gap-2">
+        {[
+          { key: "all", label: "All" },
+          { key: "uploaded", label: "Uploaded" },
+          { key: "under_review", label: "Under Review" },
+          { key: "approved", label: "Approved" },
+          { key: "rejected", label: "Rejected" },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+              filter === f.key
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
+            }`}
+          >
+            {f.label} {f.key !== "all" && `(${docs.filter(d => d.status === f.key).length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Document list */}
+      {(() => {
+        const filtered = filter === "all" ? docs : docs.filter(d => d.status === filter);
+        return loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
-      ) : docs.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
           <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
           <p className="text-sm font-bold text-white">{t("docWorkflow.allReviewed")}</p>
@@ -103,7 +142,7 @@ export default function DocumentWorkflow() {
         </div>
       ) : (
         <div className="space-y-3">
-          {docs.map(doc => (
+          {filtered.map(doc => (
             <div key={doc.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">{statusIcon[doc.status] ?? <FileCheck className="w-4 h-4 text-slate-400" />}</div>
@@ -117,7 +156,7 @@ export default function DocumentWorkflow() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
-                    {doc.fileName ?? t("docWorkflow.noFile")} · v{doc.version} · {t("docWorkflow.uploadedBy")} {doc.uploadedBy} · {new Date(doc.uploadedAt).toLocaleDateString("en-GB")}
+                    {doc.fileName ?? t("docWorkflow.noFile")} · v{doc.version} · {t("docWorkflow.uploadedBy")} {doc.uploadedBy} · {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("en-GB") : "—"}
                     {doc.expiryDate ? ` · ${t("docWorkflow.expires")} ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}` : ""}
                   </div>
                 </div>
@@ -137,7 +176,8 @@ export default function DocumentWorkflow() {
             </div>
           ))}
         </div>
-      )}
+      );
+      })()}
     </div>
   );
 }
