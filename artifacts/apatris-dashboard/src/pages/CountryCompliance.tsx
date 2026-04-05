@@ -140,7 +140,7 @@ export default function CountryCompliance() {
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Requirements:</p>
                 <ul className="space-y-2">
-                  {rules.requirements.map((req, i) => (
+                  {(rules.requirements ?? []).map((req, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> {req}
                     </li>

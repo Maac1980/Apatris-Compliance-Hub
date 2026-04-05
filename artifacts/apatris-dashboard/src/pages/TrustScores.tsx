@@ -129,7 +129,7 @@ export default function TrustScores() {
               {breakdown && (
                 <div className="space-y-2 mb-6">
                   <h3 className="text-sm font-bold text-white mb-3">Score Breakdown</h3>
-                  {Object.entries(breakdown).map(([key, val]: [string, any]) => (
+                  {Object.entries(breakdown ?? {}).map(([key, val]: [string, any]) => (
                     <div key={key} className="bg-slate-800 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs font-bold text-white capitalize">{key}</p>

@@ -131,13 +131,13 @@ export default function SafetyMonitor() {
                 {analysis && (
                   <div className="mt-3 bg-slate-900/50 rounded-lg p-3 border border-indigo-500/10">
                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">AI Safety Analysis</p>
-                    {analysis.violations_found?.length > 0 && (
-                      <div className="mb-2">{analysis.violations_found.map((v: string, i: number) => (
+                    {(analysis.violations_found ?? []).length > 0 && (
+                      <div className="mb-2">{(analysis.violations_found ?? []).map((v: string, i: number) => (
                         <span key={i} className="inline-block mr-1.5 mb-1 px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[9px] font-bold">{v}</span>
                       ))}</div>
                     )}
-                    {analysis.recommended_actions?.length > 0 && (
-                      <ul className="space-y-0.5">{analysis.recommended_actions.map((a: string, i: number) => (
+                    {(analysis.recommended_actions ?? []).length > 0 && (
+                      <ul className="space-y-0.5">{(analysis.recommended_actions ?? []).map((a: string, i: number) => (
                         <li key={i} className="text-[10px] text-slate-400 flex items-start gap-1.5"><CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 mt-0.5 flex-shrink-0" />{a}</li>
                       ))}</ul>
                     )}

@@ -490,7 +490,7 @@ export default function ImmigrationDashboard() {
 
       {/* Side Panel — Worker Permit History */}
       {selectedWorkerId && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedWorkerId(null)}>
+        <div className="fixed inset-0 flex justify-end" style={{ zIndex: 250 }} onClick={() => setSelectedWorkerId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             className="relative w-full max-w-lg bg-slate-900 border-l border-slate-700 h-full overflow-y-auto shadow-2xl"
