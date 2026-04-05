@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE } from "@/lib/api";
 import {
-  UserPlus, Loader2, Mail, Phone, Globe, Calendar, ArrowRight, Eye,
+  UserPlus, Loader2, Mail, Phone, Globe, Calendar, ArrowRight, Users,
 } from "lucide-react";
 
 
@@ -21,7 +22,8 @@ interface Application {
 export default function ApplicationsFeed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "contacted" | "screening">("all");
+  const [, setLocation] = useLocation();
+  const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "contacted">("all");
 
   const { data: applications = [], isLoading } = useQuery<Application[]>({
     queryKey: ["applications"],
@@ -30,6 +32,8 @@ export default function ApplicationsFeed() {
       if (!res.ok) throw new Error("Failed to fetch applications");
       const json = await res.json();
       const rows = Array.isArray(json) ? json : (json.applications ?? []);
+      // Only show inbox stages — screening/approved/rejected live in the Screening module
+      const INBOX_STAGES = new Set(["new", "reviewed", "contacted"]);
       return rows.map((r: any) => ({
         id: r.id,
         name: r.worker_name ?? r.name ?? "",
@@ -39,7 +43,7 @@ export default function ApplicationsFeed() {
         jobApplied: r.job_title ?? r.jobApplied ?? "—",
         appliedDate: r.applied_at ?? r.appliedDate ?? "",
         status: (r.stage ?? r.status ?? "new").toLowerCase(),
-      }));
+      })).filter(a => INBOX_STAGES.has(a.status));
     },
   });
 
@@ -55,7 +59,8 @@ export default function ApplicationsFeed() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      toast({ title: "Moved to Screening", description: "Application moved to screening pipeline." });
+      queryClient.invalidateQueries({ queryKey: ["screening-pipeline"] });
+      toast({ title: "Moved to Screening", description: "Candidate moved to screening pipeline. Review them in the Screening module." });
     },
     onError: () => toast({ title: "Error", description: "Failed to update application", variant: "destructive" }),
   });
@@ -90,17 +95,20 @@ export default function ApplicationsFeed() {
           </div>
           <div className="flex items-center gap-3">
             <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-card border border-border text-foreground">
-              Total: <span className="font-bold">{applications.length}</span>
+              Inbox: <span className="font-bold">{applications.length}</span>
             </span>
-            <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-900/50 text-blue-300 border border-blue-600/50">
-              Today: <span className="font-bold">{todayCount}</span>
-            </span>
+            <button
+              onClick={() => setLocation("/screening")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-900/30 text-purple-300 border border-purple-600/50 hover:bg-purple-900/50 transition"
+            >
+              <Users className="w-3.5 h-3.5" /> Go to Screening
+            </button>
           </div>
         </div>
 
         {/* Filters */}
         <div className="flex gap-2">
-          {(["all", "new", "reviewed", "contacted", "screening"] as const).map((f) => (
+          {(["all", "new", "reviewed", "contacted"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -140,21 +148,13 @@ export default function ApplicationsFeed() {
                       Applied for: <span className="text-foreground font-medium">{app.jobApplied}</span>
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    {app.status.toLowerCase() === "screening" ? (
-                      <span className="flex items-center gap-1 px-3 py-1.5 bg-purple-900/30 text-purple-300 border border-purple-600/50 rounded-lg text-xs font-medium">
-                        <Eye className="w-3 h-3" /> In Screening
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => moveToScreening.mutate(app.id)}
-                        disabled={moveToScreening.isPending}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
-                      >
-                        <ArrowRight className="w-3 h-3" /> Move to Screening
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => moveToScreening.mutate(app.id)}
+                    disabled={moveToScreening.isPending}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    <ArrowRight className="w-3 h-3" /> Move to Screening
+                  </button>
                 </div>
               </div>
             ))}
