@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;
 const STORAGE_KEY = "apatris_auth";
 const TOKEN_KEY  = "apatris_jwt";
+const REFRESH_KEY = "apatris_refresh";
 
 interface User {
   id?: string;
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     if (expired) setSessionExpired(true);
     setLocation("/login");
   }, [setLocation]);
@@ -80,8 +82,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newToken) localStorage.setItem(TOKEN_KEY, newToken);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
           } else {
+            // Token expired — try refresh before giving up
+            const rt = localStorage.getItem(REFRESH_KEY);
+            if (rt) {
+              try {
+                const refreshRes = await fetch(`${import.meta.env.BASE_URL}api/auth/refresh`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ refreshToken: rt }),
+                });
+                if (refreshRes.ok) {
+                  const refreshData = await refreshRes.json();
+                  const { jwt: newJwt, refreshToken: newRt, ...refreshUser } = refreshData as any;
+                  setUser(refreshUser as User);
+                  if (newJwt) localStorage.setItem(TOKEN_KEY, newJwt);
+                  if (newRt) localStorage.setItem(REFRESH_KEY, newRt);
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(refreshUser));
+                  return; // restored successfully via refresh
+                }
+              } catch { /* fall through to clear */ }
+            }
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(REFRESH_KEY);
           }
         })
         .catch(() => {
@@ -132,11 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true, otpRequired: true, session: data.session };
       }
 
-      const { jwt: token, ...userData } = data as any;
+      const { jwt: token, refreshToken: rt, ...userData } = data as any;
       setUser(userData as User);
       setSessionExpired(false);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       if (token) localStorage.setItem(TOKEN_KEY, token);
+      if (rt) localStorage.setItem(REFRESH_KEY, rt);
       return { ok: true };
     } catch {
       return { ok: false, error: "Connection error — please try again" };
@@ -158,16 +183,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await res.json();
-      const { jwt: token, ...userData } = data as any;
+      const { jwt: token, refreshToken: rt, ...userData } = data as any;
       setUser(userData as User);
       setSessionExpired(false);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       if (token) localStorage.setItem(TOKEN_KEY, token);
+      if (rt) localStorage.setItem(REFRESH_KEY, rt);
       return { ok: true };
     } catch {
       return { ok: false, error: "Connection error — please try again" };
     }
   };
+
+  // ── Auto-refresh access token before it expires (every 12 min) ──────────
+  useEffect(() => {
+    if (!user) return;
+    const REFRESH_INTERVAL_MS = 12 * 60 * 1000; // 12 minutes (token lives 15 min)
+
+    async function refreshAccessToken() {
+      const rt = localStorage.getItem(REFRESH_KEY);
+      if (!rt) return;
+      try {
+        const res = await fetch(`${import.meta.env.BASE_URL}api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ refreshToken: rt }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.jwt) localStorage.setItem(TOKEN_KEY, data.jwt);
+          if (data.refreshToken) localStorage.setItem(REFRESH_KEY, data.refreshToken);
+        } else {
+          // Refresh failed (revoked/expired) — force re-login
+          logout(true);
+        }
+      } catch {
+        // Network error — don't logout, just skip this cycle
+      }
+    }
+
+    const id = setInterval(refreshAccessToken, REFRESH_INTERVAL_MS);
+    // Also refresh once immediately if we're restoring a session that may be close to expiry
+    refreshAccessToken();
+    return () => clearInterval(id);
+  }, [user, logout]);
 
   const logoutPublic = useCallback(() => logout(false), [logout]);
 
