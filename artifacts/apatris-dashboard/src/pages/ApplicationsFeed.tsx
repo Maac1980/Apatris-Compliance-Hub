@@ -25,7 +25,7 @@ interface Application {
 export default function ApplicationsFeed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "contacted">("all");
+  const [filter, setFilter] = useState<"all" | "new" | "reviewed" | "contacted" | "screening">("all");
 
   const { data: applications = [], isLoading } = useQuery<Application[]>({
     queryKey: ["applications"],
@@ -104,7 +104,7 @@ export default function ApplicationsFeed() {
 
         {/* Filters */}
         <div className="flex gap-2">
-          {(["all", "new", "reviewed", "contacted"] as const).map((f) => (
+          {(["all", "new", "reviewed", "contacted", "screening"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -145,10 +145,15 @@ export default function ApplicationsFeed() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {app.status !== "screening" && (
+                    {app.status.toLowerCase() === "screening" ? (
+                      <span className="flex items-center gap-1 px-3 py-1.5 bg-purple-900/30 text-purple-300 border border-purple-600/50 rounded-lg text-xs font-medium">
+                        <Eye className="w-3 h-3" /> In Screening
+                      </span>
+                    ) : (
                       <button
                         onClick={() => moveToScreening.mutate(app.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition"
+                        disabled={moveToScreening.isPending}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
                       >
                         <ArrowRight className="w-3 h-3" /> Move to Screening
                       </button>

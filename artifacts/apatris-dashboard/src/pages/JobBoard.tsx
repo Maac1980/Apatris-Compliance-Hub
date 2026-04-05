@@ -38,16 +38,36 @@ export default function JobBoard() {
       const res = await fetch(`${BASE}api/jobs/all`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch jobs");
       const json = await res.json();
-      return Array.isArray(json) ? json : (json.jobs ?? []);
+      const rows = Array.isArray(json) ? json : (json.jobs ?? []);
+      return rows.map((r: any) => ({
+        id: r.id,
+        title: r.title ?? "",
+        location: r.location ?? "",
+        salaryMin: Number(r.salary_min ?? r.salaryMin ?? 0),
+        salaryMax: Number(r.salary_max ?? r.salaryMax ?? 0),
+        currency: r.currency ?? "PLN",
+        status: r.is_published ? "published" : (r.status ?? "draft"),
+        applicationCount: Number(r.application_count ?? r.applicationCount ?? 0),
+        createdAt: r.created_at ?? r.createdAt ?? "",
+        description: r.description ?? "",
+      }));
     },
   });
 
   const createJob = useMutation({
     mutationFn: async () => {
+      const body = {
+        title: form.title,
+        location: form.location,
+        salary_min: form.salaryMin || null,
+        salary_max: form.salaryMax || null,
+        description: form.description,
+        is_published: false,
+      };
       const res = await fetch(`${BASE}api/jobs`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to create job");
       return res.json();
@@ -63,11 +83,10 @@ export default function JobBoard() {
 
   const togglePublish = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const newStatus = status === "published" ? "draft" : "published";
       const res = await fetch(`${BASE}api/jobs/${id}`, {
         method: "PATCH",
         headers: authHeaders(),
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ is_published: status !== "published" }),
       });
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
