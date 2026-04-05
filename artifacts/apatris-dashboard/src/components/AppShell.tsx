@@ -199,7 +199,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuSearch, setMenuSearch] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuSearchRef = useRef<HTMLInputElement>(null);
 
   const isPublicRoute =
     location === "/login" ||
@@ -230,9 +232,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  // Close menu on ESC
+  // Close menu on ESC, clear search when closed, focus search when opened
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen) { setMenuSearch(""); return; }
+    setTimeout(() => menuSearchRef.current?.focus(), 50);
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -300,42 +303,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* ─── Mega Menu ───────────────────────────────────────────── */}
             {menuOpen && (
               <div className="app-mega-menu">
-                {/* Close button */}
-                <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-700/50">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">All Modules</p>
+                {/* Search + Close */}
+                <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-slate-700/50">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                    <input
+                      ref={menuSearchRef}
+                      type="text"
+                      value={menuSearch}
+                      onChange={e => setMenuSearch(e.target.value)}
+                      placeholder="Search modules…"
+                      className="w-full pl-8 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                    />
+                  </div>
                   <button onClick={() => setMenuOpen(false)} className="p-1 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
                 <div className="app-mega-menu-grid">
-                  {NAV_GROUPS.map(group => (
-                    <div key={group.id} className="app-mega-menu-group">
-                      <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-2 ${group.color}`}>
-                        {group.label}
-                      </p>
-                      <div className="space-y-0.5">
-                        {group.items.map(item => {
-                          const active = isActive(item.path);
-                          const Icon = item.icon;
-                          return (
-                            <button
-                              key={item.path}
-                              onClick={() => navigate(item.path)}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all ${
-                                active
-                                  ? `${group.activeBg} font-bold`
-                                  : `text-slate-400 ${group.hoverBg} hover:text-white`
-                              }`}
-                            >
-                              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                            </button>
-                          );
-                        })}
+                  {NAV_GROUPS.map(group => {
+                    const q = menuSearch.toLowerCase();
+                    const filtered = q ? group.items.filter(i => i.label.toLowerCase().includes(q) || group.label.toLowerCase().includes(q)) : group.items;
+                    if (q && filtered.length === 0) return null;
+                    return (
+                      <div key={group.id} className="app-mega-menu-group">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-2 ${group.color}`}>
+                          {group.label}
+                        </p>
+                        <div className="space-y-0.5">
+                          {filtered.map(item => {
+                            const active = isActive(item.path);
+                            const Icon = item.icon;
+                            return (
+                              <button
+                                key={item.path}
+                                onClick={() => navigate(item.path)}
+                                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all ${
+                                  active
+                                    ? `${group.activeBg} font-bold`
+                                    : `text-slate-400 ${group.hoverBg} hover:text-white`
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="truncate">{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -363,10 +381,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <button
               onClick={logout}
-              className="p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-white/10 flex-shrink-0"
-              title="Wyloguj"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-slate-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20 flex-shrink-0"
+              title="Wyloguj / Logout"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider">Logout</span>
             </button>
           </div>
         </div>
