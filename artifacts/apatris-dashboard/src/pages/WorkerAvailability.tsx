@@ -59,7 +59,7 @@ export default function WorkerAvailability() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayData = data.find(d => d.date === todayStr);
-  const todayCount = todayData?.workers.length ?? 0;
+  const todayCount = (todayData?.workers ?? []).length;
 
   return (
     <div className="p-4 md:p-6 min-h-screen overflow-y-auto pb-24 bg-background">
@@ -115,7 +115,7 @@ export default function WorkerAvailability() {
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const day = i + 1;
                 const dayData = getDay(day);
-                const count = dayData?.workers.length ?? 0;
+                const count = (dayData?.workers ?? []).length;
                 const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                 const isToday = dateStr === todayStr;
                 const isWeekend = ((firstDayOfWeek + i) % 7) >= 5;

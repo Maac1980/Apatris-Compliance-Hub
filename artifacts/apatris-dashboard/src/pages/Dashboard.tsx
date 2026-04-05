@@ -771,7 +771,7 @@ export default function Dashboard() {
                   <th className="sticky left-0 z-20 bg-slate-700/95 px-3 py-4 border-r border-white/5 text-center w-10">
                     <button
                       onClick={() => {
-                        const ids = workersData?.workers.map((w: any) => w.id) ?? [];
+                        const ids = (workersData?.workers ?? []).map((w: any) => w.id);
                         if (ids.every((id: string) => selectedWorkers.has(id))) {
                           setSelectedWorkers(new Set());
                         } else {
@@ -802,14 +802,14 @@ export default function Dashboard() {
                   Array.from({ length: 8 }).map((_, i) => (
                     <WorkerRowSkeleton key={i} cols={11} />
                   ))
-                ) : workersData?.workers.length === 0 ? (
+                ) : (workersData?.workers ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={11} className="px-6 py-12 text-center text-muted-foreground font-sans">
                       {t("table.noResults")}
                     </td>
                   </tr>
                 ) : (
-                  workersData?.workers.map((worker: any) => {
+                  (workersData?.workers ?? []).map((worker: any) => {
                     const isSelected = selectedWorkers.has(worker.id);
                     return (
                     <tr 
