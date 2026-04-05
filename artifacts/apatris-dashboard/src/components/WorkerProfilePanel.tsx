@@ -846,8 +846,8 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
 
   return (
     <>
-      <div onClick={onClose} className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
-      <div ref={panelRef} className={`fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div onClick={onClose} className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[240] transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
+      <div ref={panelRef} className={`fixed right-0 top-[52px] bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-[250] flex flex-col transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
         {isLoading || !worker ? (
           <div className="flex h-full items-center justify-center">
             <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -1179,8 +1179,8 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       </div>
 
                       {/* Records table */}
-                      <div className="rounded-xl border border-slate-700 overflow-hidden">
-                        <table className="w-full text-xs">
+                      <div className="rounded-xl border border-slate-700 overflow-x-auto">
+                        <table className="w-full text-xs min-w-[520px]">
                           <thead className="bg-slate-800 border-b border-slate-700">
                             <tr>
                               <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase tracking-wider">Month</th>
