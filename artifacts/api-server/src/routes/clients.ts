@@ -7,7 +7,7 @@ const router = Router();
 // Table clients is created by init-db.ts at startup
 
 // GET /clients — list all
-router.get("/clients", async (_req, res) => {
+router.get("/clients", requireAuth, async (req, res) => {
   try {
     const rows = await query("SELECT * FROM clients ORDER BY created_at DESC");
     res.json({ clients: rows });

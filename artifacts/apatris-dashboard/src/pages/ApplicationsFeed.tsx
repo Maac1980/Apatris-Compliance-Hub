@@ -32,7 +32,8 @@ export default function ApplicationsFeed() {
     queryFn: async () => {
       const res = await fetch(`${BASE}api/applications`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch applications");
-      return res.json();
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.applications ?? []);
     },
   });
 

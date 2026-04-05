@@ -37,7 +37,8 @@ export default function ClientManagement() {
     queryFn: async () => {
       const res = await fetch(`${BASE}api/clients`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch clients");
-      return res.json();
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.clients ?? []);
     },
   });
 

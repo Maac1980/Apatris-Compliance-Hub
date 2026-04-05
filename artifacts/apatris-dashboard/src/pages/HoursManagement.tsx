@@ -32,7 +32,8 @@ export default function HoursManagement() {
     queryFn: async () => {
       const res = await fetch(`${BASE}api/hours`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch hours");
-      return res.json();
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.entries ?? []);
     },
   });
 

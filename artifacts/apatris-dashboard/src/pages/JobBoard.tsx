@@ -37,7 +37,8 @@ export default function JobBoard() {
     queryFn: async () => {
       const res = await fetch(`${BASE}api/jobs/all`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch jobs");
-      return res.json();
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.jobs ?? []);
     },
   });
 

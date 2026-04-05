@@ -43,8 +43,9 @@ export default function GDPRManagement() {
     queryKey: ["gdpr-consents"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/gdpr/consents`, { headers: authHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch consents");
-      return res.json();
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.consents ?? []);
     },
   });
 
@@ -52,8 +53,9 @@ export default function GDPRManagement() {
     queryKey: ["gdpr-requests"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/gdpr/requests`, { headers: authHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch requests");
-      return res.json();
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.requests ?? json.log ?? []);
     },
   });
 

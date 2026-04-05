@@ -44,8 +44,9 @@ export default function PostedWorkers() {
     queryKey: ["postings"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/postings`, { headers: authHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch postings");
-      return res.json();
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.postings ?? []);
     },
   });
 
@@ -53,8 +54,9 @@ export default function PostedWorkers() {
     queryKey: ["a1-certificates"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/a1-certificates`, { headers: authHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch certificates");
-      return res.json();
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.certificates ?? []);
     },
   });
 
