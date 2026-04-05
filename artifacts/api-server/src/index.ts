@@ -33,10 +33,17 @@ const port = Number(process.env["PORT"] || "8080");
         await seedSampleData();
         const { seedComprehensiveData } = await import("./lib/seed-comprehensive.js");
         await seedComprehensiveData();
-        const { seedModuleDemoData } = await import("./lib/seed-modules.js");
-        await seedModuleDemoData();
       } else {
-        console.log("[Startup] Production mode — skipping demo data seeders.");
+        console.log("[Startup] Production mode — skipping worker/comprehensive seeders.");
+      }
+
+      // Module demo data (clients, jobs, etc.) seeds in ALL environments
+      // if tables are empty — it's idempotent and non-destructive
+      try {
+        const { seedModuleDemoData } = await import("./lib/seed-modules.js");
+        await seedModuleDemoData(true);
+      } catch (err) {
+        console.error("[Startup] Module seed failed:", err instanceof Error ? err.message : err);
       }
 
       setDbReady(true);
