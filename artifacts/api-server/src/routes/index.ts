@@ -83,6 +83,14 @@ import deploymentsRouter from "./deployments.js";
 import aiCopilotRouter from "./ai-copilot.js";
 import timelineRouter from "./timeline.js";
 import pipReadinessRouter from "./pip-readiness.js";
+import legalStatusRouter from "./legal-status.js";
+import legalCasesRouter from "./legal-cases.js";
+import authorityResponseRouter from "./authority-response.js";
+import legalResearchRouter from "./legal-research.js";
+import legalExplainRouter from "./legal-explain.js";
+import legalQueueRouter from "./legal-queue.js";
+import rejectionsRouter from "./rejections.js";
+import legalApprovalRouter from "./legal-approval.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -169,5 +177,13 @@ router.use(deploymentsRouter);
 router.use(aiCopilotRouter);
 router.use(timelineRouter);
 router.use(pipReadinessRouter);
+router.use(legalStatusRouter);
+router.use(legalCasesRouter);
+router.use(authorityResponseRouter);
+router.use(legalResearchRouter);
+router.use(legalExplainRouter);
+router.use(legalQueueRouter);
+router.use(rejectionsRouter);
+router.use(legalApprovalRouter);
 
 export default router;

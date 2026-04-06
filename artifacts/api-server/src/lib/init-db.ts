@@ -2228,6 +2228,178 @@ export async function initializeDatabase(): Promise<void> {
     author TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // Worker legal snapshots — derived legal state (not raw immigration data)
+  await execute(`CREATE TABLE IF NOT EXISTS worker_legal_snapshots (
+    worker_id UUID PRIMARY KEY REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    country_code TEXT DEFAULT 'PL',
+    legal_status TEXT NOT NULL DEFAULT 'REVIEW_REQUIRED',
+    legal_basis TEXT NOT NULL DEFAULT 'REVIEW_REQUIRED',
+    risk_level TEXT NOT NULL DEFAULT 'HIGH',
+    permit_expires_at TIMESTAMPTZ,
+    trc_application_submitted BOOLEAN DEFAULT FALSE,
+    same_employer_flag BOOLEAN DEFAULT FALSE,
+    same_role_flag BOOLEAN DEFAULT FALSE,
+    legal_protection_flag BOOLEAN DEFAULT FALSE,
+    formal_defect_status TEXT,
+    legal_reasoning_json JSONB DEFAULT '{}',
+    snapshot_created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Safe migration: add legal_basis and risk_level columns if table existed before v1.1
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='worker_legal_snapshots' AND column_name='legal_basis') THEN
+          ALTER TABLE worker_legal_snapshots ADD COLUMN legal_basis TEXT NOT NULL DEFAULT 'REVIEW_REQUIRED';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='worker_legal_snapshots' AND column_name='risk_level') THEN
+          ALTER TABLE worker_legal_snapshots ADD COLUMN risk_level TEXT NOT NULL DEFAULT 'HIGH';
+        END IF;
+      END $$;
+    `);
+  } catch { /* columns already exist */ }
+
+  // Legal evidence — filing proof documents (MoS, UPO, TRC receipts)
+  await execute(`CREATE TABLE IF NOT EXISTS legal_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    source_type TEXT NOT NULL CHECK (source_type IN ('UPO','MOS','TRC_FILING','IMMIGRATION_RECEIPT')),
+    file_name TEXT,
+    file_url TEXT,
+    filing_date DATE,
+    extracted_data JSONB DEFAULT '{}',
+    notes TEXT,
+    uploaded_by TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Legal cases — case-level tracking for TRC, appeals, PR, citizenship
+  await execute(`CREATE TABLE IF NOT EXISTS legal_cases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    case_type TEXT NOT NULL CHECK (case_type IN ('TRC','APPEAL','PR','CITIZENSHIP')),
+    status TEXT NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW','PENDING','REJECTED','APPROVED')),
+    appeal_deadline TIMESTAMPTZ,
+    next_action TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Authority response packs — formal evidence-backed response drafts for authorities
+  await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    legal_case_id UUID REFERENCES legal_cases(id) ON DELETE SET NULL,
+    pack_status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (pack_status IN ('DRAFT','REVIEW_REQUIRED','APPROVED','ARCHIVED')),
+    authority_question TEXT,
+    legal_conclusion TEXT NOT NULL,
+    legal_basis TEXT NOT NULL,
+    risk_level TEXT,
+    response_text_pl TEXT,
+    response_text_en TEXT,
+    response_text_uk TEXT,
+    evidence_links_json JSONB DEFAULT '[]',
+    citation_refs_json JSONB DEFAULT '[]',
+    worker_facts_json JSONB DEFAULT '{}',
+    snapshot_data_json JSONB DEFAULT '{}',
+    generated_at TIMESTAMPTZ DEFAULT NOW(),
+    approved_by TEXT,
+    approved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Law articles — legal research results from Perplexity API
+  await execute(`CREATE TABLE IF NOT EXISTS law_articles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    source_url TEXT,
+    article_ref TEXT,
+    jurisdiction TEXT NOT NULL DEFAULT 'PL',
+    query_used TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // AI explanation audit trail — requests and responses
+  await execute(`CREATE TABLE IF NOT EXISTS ai_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+    task_type TEXT NOT NULL DEFAULT 'legal_explanation',
+    audience_type TEXT NOT NULL CHECK (audience_type IN ('internal','worker')),
+    model_provider TEXT NOT NULL DEFAULT 'anthropic',
+    model_name TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+    prompt_text TEXT,
+    input_json JSONB DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','completed','failed')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS ai_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ai_request_id UUID NOT NULL REFERENCES ai_requests(id) ON DELETE CASCADE,
+    response_json JSONB DEFAULT '{}',
+    confidence_score NUMERIC(3,2),
+    requires_review BOOLEAN NOT NULL DEFAULT TRUE,
+    approved_by TEXT,
+    approved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Rejection analyses — triage intelligence for negative decisions
+  await execute(`CREATE TABLE IF NOT EXISTS rejection_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    legal_case_id UUID REFERENCES legal_cases(id) ON DELETE SET NULL,
+    rejection_text TEXT NOT NULL,
+    category TEXT NOT NULL,
+    explanation TEXT NOT NULL,
+    likely_cause TEXT,
+    next_steps_json JSONB DEFAULT '[]',
+    appeal_possible BOOLEAN DEFAULT FALSE,
+    confidence_score NUMERIC(3,2) DEFAULT 0,
+    source_type TEXT NOT NULL DEFAULT 'RULE' CHECK (source_type IN ('RULE','AI_ASSISTED','HYBRID')),
+    draft_json JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Global legal approval layer — add is_approved to all legal output tables
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='authority_response_packs' AND column_name='is_approved') THEN
+          ALTER TABLE authority_response_packs ADD COLUMN is_approved BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_responses' AND column_name='is_approved') THEN
+          ALTER TABLE ai_responses ADD COLUMN is_approved BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='rejection_analyses' AND column_name='is_approved') THEN
+          ALTER TABLE rejection_analyses ADD COLUMN is_approved BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='rejection_analyses' AND column_name='approved_by') THEN
+          ALTER TABLE rejection_analyses ADD COLUMN approved_by TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='rejection_analyses' AND column_name='approved_at') THEN
+          ALTER TABLE rejection_analyses ADD COLUMN approved_at TIMESTAMPTZ;
+        END IF;
+      END $$;
+    `);
+  } catch { /* columns may already exist */ }
+
   // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
   try {
     await execute(`

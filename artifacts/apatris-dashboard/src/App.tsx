@@ -90,6 +90,9 @@ import PricingPage from "@/pages/PricingPage";
 import ScreeningPage from "@/pages/ScreeningPage";
 import WorkerTimeline from "@/pages/WorkerTimeline";
 import PIPReadiness from "@/pages/PIPReadiness";
+import AuthorityPacks from "@/pages/AuthorityPacks";
+import LegalQueue from "@/pages/LegalQueue";
+import RejectionIntelligence from "@/pages/RejectionIntelligence";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -217,6 +220,15 @@ function Router() {
       </Route>
       <Route path="/pip-readiness">
         {() => <ProtectedRoute component={PIPReadiness} />}
+      </Route>
+      <Route path="/authority-packs">
+        {() => <ProtectedRoute component={AuthorityPacks} />}
+      </Route>
+      <Route path="/legal-queue">
+        {() => <ProtectedRoute component={LegalQueue} />}
+      </Route>
+      <Route path="/rejection-intelligence">
+        {() => <ProtectedRoute component={RejectionIntelligence} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}

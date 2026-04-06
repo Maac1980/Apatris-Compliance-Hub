@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE } from "@/lib/api";
+import { LegalEvidenceUpload } from "@/components/LegalEvidenceUpload";
+import { LegalStatusPanel } from "@/components/LegalStatusPanel";
+import { LegalExplainPanel } from "@/components/LegalExplainPanel";
 import {
   Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
   Bell, Send, Phone, MessageSquare,
@@ -75,6 +78,7 @@ interface AlertStatus {
 
 export default function ImmigrationDashboard() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"permits" | "alerts">("permits");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("");
@@ -114,6 +118,17 @@ export default function ImmigrationDashboard() {
       return res.json() as Promise<{ workers: AlertStatus[] }>;
     },
     enabled: activeTab === "alerts",
+  });
+
+  // Legal status for selected worker (side panel)
+  const { data: legalStatusData, isLoading: legalStatusLoading } = useQuery({
+    queryKey: ["worker-legal-status", selectedWorkerId],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/workers/${selectedWorkerId}/legal-status`, { headers: authHeaders() });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!selectedWorkerId,
   });
 
   const sendAlertsMutation = useMutation({
@@ -504,6 +519,19 @@ export default function ImmigrationDashboard() {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Legal Status Panel — top of side panel, most important info first */}
+              {legalStatusLoading ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full" />
+                </div>
+              ) : legalStatusData ? (
+                <LegalStatusPanel snapshot={legalStatusData} />
+              ) : null}
+
+              {/* AI Legal Explanation */}
+              {selectedWorkerId && <LegalExplainPanel workerId={selectedWorkerId} />}
+
+              {/* Permit History */}
               {historyLoading ? (
                 <div className="flex justify-center py-10">
                   <div className="animate-spin w-6 h-6 border-2 border-[#C41E18] border-t-transparent rounded-full" />
@@ -554,7 +582,7 @@ export default function ImmigrationDashboard() {
                         {days !== null && (days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`)}
                       </p>
 
-                      {/* Predict button per permit */}
+                      {/* Predict + Renewal buttons */}
                       <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => runPrediction(h.id)}
@@ -648,6 +676,19 @@ export default function ImmigrationDashboard() {
                     </div>
                   );
                 })
+              )}
+
+              {/* Legal Evidence Upload — integrated with legal engine */}
+              {selectedWorkerId && (
+                <LegalEvidenceUpload
+                  workerId={selectedWorkerId}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["immigration-permits"] });
+                    queryClient.invalidateQueries({ queryKey: ["immigration-worker-history", selectedWorkerId] });
+                    queryClient.invalidateQueries({ queryKey: ["worker-legal-status", selectedWorkerId] });
+                    toast({ description: "Filing evidence uploaded — legal status updated" });
+                  }}
+                />
               )}
             </div>
           </div>
