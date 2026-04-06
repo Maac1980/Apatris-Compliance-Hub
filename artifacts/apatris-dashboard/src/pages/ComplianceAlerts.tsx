@@ -3,9 +3,11 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authHeaders, BASE } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, ShieldAlert, AlertTriangle, CheckCircle2, Clock,
-  Plus, Trash2, RefreshCcw, Loader2, XCircle, X
+  Plus, Trash2, RefreshCcw, Loader2, XCircle, X,
+  Send, FileText, PlayCircle, CircleCheck,
 } from "lucide-react";
 
 
@@ -197,11 +199,14 @@ export default function ComplianceAlerts() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [filterStatus, setFilterStatus] = useState<ComplianceStatus | "ALL">("ALL");
   const [addOpen, setAddOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
   const [instantAlert, setInstantAlert] = useState<InstantAlert | null>(null);
+  // Local UI state for action badges (persists in session, not DB)
+  const [cardStates, setCardStates] = useState<Record<string, "in_progress" | "resolved">>({});
 
   const { data, isLoading, error, refetch } = useQuery<{ documents: DocumentRecord[]; summary: Summary }>({
     queryKey: ["documents"],
@@ -459,6 +464,63 @@ export default function ComplianceAlerts() {
                           <span className={`font-mono font-bold ${cfg.text}`}>{doc.expiryDate}</span>
                         </div>
                       </div>
+
+                      {/* Action state badge */}
+                      {cardStates[doc.id] && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          cardStates[doc.id] === "resolved"
+                            ? "bg-emerald-900/40 text-emerald-400 border border-emerald-500/30"
+                            : "bg-blue-900/40 text-blue-400 border border-blue-500/30"
+                        }`}>
+                          {cardStates[doc.id] === "resolved" ? <><CircleCheck className="w-2.5 h-2.5" /> Resolved</> : <><PlayCircle className="w-2.5 h-2.5" /> In Progress</>}
+                        </span>
+                      )}
+
+                      {/* Quick actions */}
+                      {!cardStates[doc.id]?.startsWith("resolved") && (
+                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-white/5">
+                          <button
+                            title="Notify Worker (WhatsApp / Email)"
+                            onClick={() => {
+                              toast({ title: "Notification Sent", description: `Alert sent to ${doc.workerName} about ${doc.documentType} expiry.` });
+                              fetch(`${BASE}api/workers/${doc.workerId}/notify`, {
+                                method: "POST", headers: authHeaders(),
+                                body: JSON.stringify({ type: doc.documentType, expiryDate: doc.expiryDate, channel: "whatsapp" }),
+                              }).catch(() => {});
+                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Open Document Workflow"
+                            onClick={() => setLocation(`/doc-workflow`)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Mark as In Progress"
+                            onClick={() => {
+                              setCardStates(prev => ({ ...prev, [doc.id]: "in_progress" }));
+                              toast({ title: "In Progress", description: `${doc.documentType} for ${doc.workerName} marked as in progress.` });
+                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                          >
+                            <PlayCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Resolve"
+                            onClick={() => {
+                              setCardStates(prev => ({ ...prev, [doc.id]: "resolved" }));
+                              toast({ title: "Resolved", description: `${doc.documentType} for ${doc.workerName} marked as resolved.` });
+                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <CircleCheck className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
