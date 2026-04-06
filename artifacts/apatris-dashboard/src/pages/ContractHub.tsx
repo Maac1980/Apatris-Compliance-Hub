@@ -50,17 +50,32 @@ export default function ContractHub() {
   const typeLabel: Record<string, string> = {
     umowa_zlecenie: t("contractHub.umowaZlecenie"),
     umowa_o_prace: t("contractHub.umowaOPrace"),
+    "Umowa Zlecenie": t("contractHub.umowaZlecenie"),
+    "Umowa o Pracę": t("contractHub.umowaOPrace"),
     b2b: "B2B",
+    B2B: "B2B",
     aneks: t("contractHub.aneks"),
   };
 
-  const downloadPdf = async (id: string) => {
-    const res = await fetch(`${API}/contracts/${id}/pdf`, { headers: authHeaders() });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "contract.pdf"; a.click();
-    URL.revokeObjectURL(url);
+  const downloadPdf = async (id: string, source?: string) => {
+    if (source === "generated") {
+      // Download generated contract HTML as file
+      const res = await fetch(`${API}/contracts/generated/${id}/download`, { headers: authHeaders() });
+      if (!res.ok) { toast({ title: "Error", description: "Download failed", variant: "destructive" }); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "contract.html"; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const res = await fetch(`${API}/contracts/${id}/pdf`, { headers: authHeaders() });
+      if (!res.ok) { toast({ title: "Error", description: "Download failed", variant: "destructive" }); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "contract.pdf"; a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (
@@ -95,23 +110,28 @@ export default function ContractHub() {
             </div>
           ) : contracts.map(c => (
             <div key={c.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center gap-4 hover:bg-slate-800 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center shrink-0">
-                <FileSignature className="w-5 h-5 text-slate-400" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${c.source === "generated" ? "bg-indigo-900/40" : "bg-slate-700"}`}>
+                <FileSignature className={`w-5 h-5 ${c.source === "generated" ? "text-indigo-400" : "text-slate-400"}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-white truncate">{c.worker_name}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor[c.status] ?? "bg-slate-700 text-slate-300"}`}>
-                    {{ draft: t("contractHub.draft"), pending_signature: t("contractHub.pendingSignature"), active: t("contractHub.active"), terminated: t("contractHub.terminated"), expired: t("contractHub.expired") }[c.status] ?? c.status.replace("_", " ").toUpperCase()}
+                    {{ draft: t("contractHub.draft"), pending_signature: t("contractHub.pendingSignature"), active: t("contractHub.active"), terminated: t("contractHub.terminated"), expired: t("contractHub.expired"), sent_for_signature: "SENT", signed: "SIGNED" }[c.status] ?? (c.status ?? "draft").replace("_", " ").toUpperCase()}
                   </span>
+                  {c.source === "generated" && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">AI GENERATED</span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  {typeLabel[c.contract_type] ?? c.contract_type} · {new Date(c.start_date).toLocaleDateString("en-GB")}
-                  {c.end_date ? ` → ${new Date(c.end_date).toLocaleDateString("en-GB")}` : ` (${t("contractHub.indefinite")})`}
+                  {typeLabel[c.contract_type] ?? c.contract_type}
+                  {c.start_date ? ` · ${new Date(c.start_date).toLocaleDateString("en-GB")}` : ""}
+                  {c.end_date ? ` → ${new Date(c.end_date).toLocaleDateString("en-GB")}` : ""}
+                  {c.company_name ? ` · ${c.company_name}` : ""}
                   {c.poa_name ? ` · ${t("contractHub.signedBy")} ${c.poa_name}` : ""}
                 </div>
               </div>
-              <button onClick={() => downloadPdf(c.id)} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors" title={t("contractHub.downloadPdf")}>
+              <button onClick={() => downloadPdf(c.id, c.source)} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors" title={t("contractHub.downloadPdf")}>
                 <Download className="w-4 h-4" />
               </button>
             </div>

@@ -112,14 +112,29 @@ router.delete("/poa/:id", requireAuth, requireRole("Admin", "Executive"), async 
 router.get("/contracts", requireAuth, async (req, res) => {
   try {
     const { workerId, status, type } = req.query as { workerId?: string; status?: string; type?: string };
-    let sql = "SELECT * FROM contracts WHERE tenant_id = $1";
-    const params: unknown[] = [req.tenantId!];
-    if (workerId) { params.push(workerId); sql += ` AND worker_id = $${params.length}`; }
-    if (status) { params.push(status); sql += ` AND status = $${params.length}`; }
-    if (type) { params.push(type); sql += ` AND contract_type = $${params.length}`; }
-    sql += " ORDER BY created_at DESC";
-    const rows = await query(sql, params);
-    res.json({ contracts: rows, count: rows.length });
+
+    // Fetch from contracts table
+    let sql1 = "SELECT id, tenant_id, worker_id, worker_name, contract_type, status, start_date, end_date, hourly_rate, monthly_salary, poa_signatory_id, notes, created_at, 'contract' AS source FROM contracts WHERE tenant_id = $1";
+    const params1: unknown[] = [req.tenantId!];
+    if (workerId) { params1.push(workerId); sql1 += ` AND worker_id = $${params1.length}`; }
+    if (status) { params1.push(status); sql1 += ` AND status = $${params1.length}`; }
+    if (type) { params1.push(type); sql1 += ` AND contract_type = $${params1.length}`; }
+    const rows1 = await query(sql1, params1);
+
+    // Also fetch from generated_contracts — AI-generated drafts
+    let sql2 = "SELECT id, tenant_id, worker_id, worker_name, contract_type, status, NULL AS start_date, NULL AS end_date, NULL AS hourly_rate, NULL AS monthly_salary, NULL AS poa_signatory_id, NULL AS notes, created_at, 'generated' AS source FROM generated_contracts WHERE tenant_id = $1";
+    const params2: unknown[] = [req.tenantId!];
+    if (workerId) { params2.push(workerId); sql2 += ` AND worker_id = $${params2.length}::text`; }
+    if (status) { params2.push(status); sql2 += ` AND status = $${params2.length}`; }
+    if (type) { params2.push(type); sql2 += ` AND contract_type = $${params2.length}`; }
+    const rows2 = await query(sql2, params2);
+
+    // Merge and sort by created_at desc
+    const all = [...(rows1 as any[]), ...(rows2 as any[])].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    res.json({ contracts: all, count: all.length });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to fetch contracts" });
   }
