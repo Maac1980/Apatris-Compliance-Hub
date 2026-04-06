@@ -57,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     hoverBg: "hover:bg-amber-500/10",
     activeBg: "bg-amber-500/15 text-amber-400",
     items: [
+      { path: "/pip-readiness",       label: "PIP Readiness",      icon: Shield },
       { path: "/compliance-alerts",  label: "Alerts",             icon: AlertTriangle },
       { path: "/immigration",        label: "Permits",            icon: Stamp },
       { path: "/immigration-search", label: "Immigration Search", icon: Search },

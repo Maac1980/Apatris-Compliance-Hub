@@ -89,6 +89,7 @@ import DeploymentFlow from "@/pages/DeploymentFlow";
 import PricingPage from "@/pages/PricingPage";
 import ScreeningPage from "@/pages/ScreeningPage";
 import WorkerTimeline from "@/pages/WorkerTimeline";
+import PIPReadiness from "@/pages/PIPReadiness";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -213,6 +214,9 @@ function Router() {
       </Route>
       <Route path="/worker-timeline">
         {() => <ProtectedRoute component={WorkerTimeline} />}
+      </Route>
+      <Route path="/pip-readiness">
+        {() => <ProtectedRoute component={PIPReadiness} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}

@@ -82,6 +82,7 @@ import wellnessRouter from "./wellness.js";
 import deploymentsRouter from "./deployments.js";
 import aiCopilotRouter from "./ai-copilot.js";
 import timelineRouter from "./timeline.js";
+import pipReadinessRouter from "./pip-readiness.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -167,5 +168,6 @@ router.use(wellnessRouter);
 router.use(deploymentsRouter);
 router.use(aiCopilotRouter);
 router.use(timelineRouter);
+router.use(pipReadinessRouter);
 
 export default router;
