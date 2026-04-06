@@ -177,8 +177,8 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const healthBase = gross - employeeZUS;
   // Health = healthBase × 9%
   const healthInsurance = Math.round(healthBase * (rates.zdrowotne / 100) * 100) / 100;
-  // KUP = healthBase × 20%
-  const kup = Math.round(healthBase * (rates.kup / 100) * 100) / 100;
+  // KUP = healthBase × 20% (floored to full PLN per Polish tax practice)
+  const kup = Math.floor(healthBase * (rates.kup / 100));
   // taxBase = round(healthBase - KUP)
   const taxBase = Math.max(0, Math.round(healthBase - kup));
   // PIT = max(0, round(taxBase × 12%) - 300 with PIT-2)
@@ -194,19 +194,55 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome, employerZUS, totalEmployerCost };
 }
 
-// Reverse: given desired net/h, find gross/h via binary search
-function reverseNetToGross(desiredNetPerHour: number, hours: number, rates: ZUSRates, pit2: boolean): number {
-  if (hours <= 0 || desiredNetPerHour <= 0) return 0;
-  const targetNet = desiredNetPerHour * hours;
-  let lo = 0, hi = targetNet * 3;
-  for (let i = 0; i < 100; i++) {
-    const midGross = (lo + hi) / 2;
-    const r = calcZUS(midGross, 0, 0, rates, pit2);
-    if (r.netAfterTax < targetNet) lo = midGross;
-    else hi = midGross;
-    if (Math.abs(r.netAfterTax - targetNet) < 0.5) break;
+// Reverse: given desired net/h, find exact gross/h using validated precision solver.
+// Phase A: binary search to approximate. Phase B: 0.01 PLN precision scan ±3 PLN.
+// Always calls calcZUS (the forward engine) — no shortcut formulas.
+function reverseNetToGross(desiredNetPerHour: number, hours: number, rates: ZUSRates, pit2: boolean): { grossPerHour: number; netTotal: number; grossTotal: number; diff: number; exact: boolean } {
+  if (hours <= 0 || desiredNetPerHour <= 0) return { grossPerHour: 0, netTotal: 0, grossTotal: 0, diff: 0, exact: false };
+  const targetNet = Math.round(desiredNetPerHour * hours * 100) / 100;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  // Phase A — Binary search
+  let lo = targetNet * 0.8, hi = targetNet * 2;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const net = calcZUS(mid, 0, 0, rates, pit2).netAfterTax;
+    if (Math.abs(net - targetNet) < 0.50) break;
+    if (net < targetNet) lo = mid; else hi = mid;
   }
-  return Math.round(((lo + hi) / 2 / hours) * 100) / 100;
+  const approx = round2((lo + hi) / 2);
+
+  // Phase B — Precision scan ±3 PLN at 0.01 step
+  const exactMatches: number[] = [];
+  let bestGross = approx, bestDiff = Infinity;
+  const scanLo = round2(approx - 3), scanHi = round2(approx + 3);
+
+  for (let g = scanLo; g <= scanHi; g = round2(g + 0.01)) {
+    const net = calcZUS(g, 0, 0, rates, pit2).netAfterTax;
+    const diff = Math.abs(net - targetNet);
+    if (diff < 0.005) exactMatches.push(g);
+    if (diff < bestDiff) { bestDiff = diff; bestGross = g; }
+  }
+
+  // Pick closest to approximation; on tie prefer higher (conservative)
+  if (exactMatches.length > 0) {
+    let closest = exactMatches[0], closestDist = Math.abs(closest - approx);
+    for (const m of exactMatches) {
+      const dist = Math.abs(m - approx);
+      if (dist < closestDist - 0.01) { closest = m; closestDist = dist; }
+      else if (Math.abs(dist - closestDist) < 0.02 && m > closest) { closest = m; closestDist = dist; }
+    }
+    bestGross = closest;
+  }
+
+  const verify = calcZUS(bestGross, 0, 0, rates, pit2);
+  return {
+    grossPerHour: round2(bestGross / hours),
+    grossTotal: bestGross,
+    netTotal: verify.netAfterTax,
+    diff: round2(verify.netAfterTax - targetNet),
+    exact: exactMatches.length > 0,
+  };
 }
 
 // ─── Split-Employer Calculator ────────────────────────────────────────────────
@@ -300,15 +336,10 @@ function NetHourCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSav
     setEditing(false);
     const desired = parseFloat(draft);
     if (!isNaN(desired) && desired > 0 && monthlyHours > 0) {
-      // Brute force: walk gross/h by 0.01 until net/h >= desired
-      let g = 0.01;
-      while (g < 500) {
-        const r = calcZUS(g * monthlyHours, 0, 0, zusRates, pit2);
-        if (r.netAfterTax / monthlyHours >= desired - 0.005) {
-          onSave(workerId, "hourlyRate", g);
-          break;
-        }
-        g = Math.round((g + 0.01) * 100) / 100;
+      // Use validated precision solver
+      const result = reverseNetToGross(desired, monthlyHours, zusRates, pit2);
+      if (result.grossPerHour > 0) {
+        onSave(workerId, "hourlyRate", result.grossPerHour);
       }
     }
   };

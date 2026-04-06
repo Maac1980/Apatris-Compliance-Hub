@@ -51,10 +51,10 @@ describe("Payroll — Umowa Zlecenie (calculatePayroll)", () => {
     expect(diff).toBeGreaterThan(0);
   });
 
-  it("KUP is 20% of health base", () => {
+  it("KUP is 20% of health base (floored to full PLN)", () => {
     const r = calculatePayroll(10000, false);
     const healthBase = 10000 - r.details.social;
-    expect(r.details.kup).toBeCloseTo(healthBase * 0.20, 0);
+    expect(r.details.kup).toBe(Math.floor(healthBase * 0.20));
   });
 
   it("employer ZUS is ~18.81%", () => {

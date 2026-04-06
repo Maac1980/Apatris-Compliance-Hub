@@ -74,7 +74,7 @@ export function calculateFromGross(gross: number, options: ZUSOptions = {}): ZUS
   const healthBase = round(gross - totalEmployeeSocial);
   const health     = round(healthBase * R.health);
 
-  const kup      = round(healthBase * R.kupRate);
+  const kup      = Math.floor(healthBase * R.kupRate);  // KUP floored to full PLN per Polish tax practice
   const taxBase  = Math.round(healthBase - kup);
   const basePit  = Math.round(taxBase * R.pit12Rate);
   const pit      = Math.max(0, basePit - (applyPit2 ? R.pit2Allowance : 0));
@@ -119,24 +119,39 @@ export function calculateBruttoFromNetto(targetNet: number, options?: ZUSOptions
   }
   const approx = round((lo + hi) / 2);
 
-  // Phase B — Precision scan ±2 PLN at 0.01 step
+  // Phase B — Precision scan ±3 PLN at 0.01 step
+  // PIT rounding creates discontinuities — multiple brutto values can produce the same netto.
+  // Collect all exact matches, then pick the one closest to the binary search approximation.
+  const exactMatches: number[] = [];
   let bestBrutto = approx;
   let bestDiff = Infinity;
 
-  const scanLo = round(approx - 2);
-  const scanHi = round(approx + 2);
+  const scanLo = round(approx - 3);
+  const scanHi = round(approx + 3);
 
   for (let brutto = scanLo; brutto <= scanHi; brutto = round(brutto + 0.01)) {
     const net = calculateFromGross(brutto, options).net;
     const diff = Math.abs(net - targetNet);
 
+    if (diff < 0.005) exactMatches.push(brutto);
+
     if (diff < bestDiff) {
       bestDiff = diff;
       bestBrutto = brutto;
     }
+  }
 
-    // Exact match — return immediately
-    if (diff < 0.005) return brutto;
+  // If exact matches found, pick closest to binary search result.
+  // On tie (within 0.01), prefer higher brutto (conservative — matches Polish payroll calculators).
+  if (exactMatches.length > 0) {
+    let closest = exactMatches[0];
+    let closestDist = Math.abs(closest - approx);
+    for (const m of exactMatches) {
+      const dist = Math.abs(m - approx);
+      if (dist < closestDist - 0.01) { closest = m; closestDist = dist; }
+      else if (Math.abs(dist - closestDist) < 0.02 && m > closest) { closest = m; closestDist = dist; }
+    }
+    return closest;
   }
 
   return bestBrutto;
