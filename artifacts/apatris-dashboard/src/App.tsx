@@ -88,6 +88,7 @@ import FinancialWellness from "@/pages/FinancialWellness";
 import DeploymentFlow from "@/pages/DeploymentFlow";
 import PricingPage from "@/pages/PricingPage";
 import ScreeningPage from "@/pages/ScreeningPage";
+import WorkerTimeline from "@/pages/WorkerTimeline";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -209,6 +210,9 @@ function Router() {
       </Route>
       <Route path="/screening">
         {() => <ProtectedRoute component={ScreeningPage} />}
+      </Route>
+      <Route path="/worker-timeline">
+        {() => <ProtectedRoute component={WorkerTimeline} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}

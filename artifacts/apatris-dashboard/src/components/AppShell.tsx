@@ -47,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/self-service",      label: "Self-Service",  icon: Users },
       { path: "/identity",          label: "Identity",      icon: Users },
       { path: "/housing",           label: "Housing",       icon: Users },
+      { path: "/worker-timeline",   label: "Timeline",      icon: Clock },
     ],
   },
   {
