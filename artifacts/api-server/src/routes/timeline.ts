@@ -95,13 +95,13 @@ router.get("/timeline/:workerId", requireAuth, async (req, res) => {
       }
     }
 
-    // 6. Payroll snapshots (worker_id is TEXT)
+    // 6. Payroll snapshots (worker_id is TEXT, no created_at column — use month as date)
     for (const p of await safeQuery<any>(
-      "SELECT month, hours, netto, created_at FROM payroll_snapshots WHERE worker_id = $1 ORDER BY month DESC",
+      "SELECT month, hours, netto, hourly_rate, gross FROM payroll_snapshots WHERE worker_id = $1 ORDER BY month DESC",
       [wid]
     )) {
-      events.push({ date: p.created_at ?? `${p.month}-28T00:00:00Z`, type: "payroll_processed", category: "payroll",
-        description: `Payroll processed for ${p.month} — ${Number(p.hours ?? 0)}h, ${Number(p.netto ?? 0).toFixed(2)} PLN netto`,
+      events.push({ date: `${p.month}-15T00:00:00Z`, type: "payroll_processed", category: "payroll",
+        description: `Payroll processed for ${p.month} — ${Number(p.hours ?? 0)}h × ${Number(p.hourly_rate ?? 0).toFixed(2)} PLN = ${Number(p.netto ?? 0).toFixed(2)} PLN netto`,
         source: "payroll_snapshots" });
     }
 
