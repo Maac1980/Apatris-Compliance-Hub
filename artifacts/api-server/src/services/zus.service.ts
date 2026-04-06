@@ -98,20 +98,81 @@ export function calculateNettoFromBrutto(gross: number, options?: ZUSOptions): n
 }
 
 /**
- * Calculate brutto from target netto — iterative solver.
+ * Calculate brutto from target netto — exact reverse solver.
+ *
+ * Uses two-phase approach to handle PIT rounding discontinuities:
+ * Phase A: Binary search to find approximate brutto
+ * Phase B: Precision scan ±2 PLN at 0.01 step to find exact match
+ *
+ * ALWAYS calls the forward engine — never invents its own formula.
  */
 export function calculateBruttoFromNetto(targetNet: number, options?: ZUSOptions): number {
-  // Binary search for the gross that produces the target net
+  // Phase A — Binary search for approximate brutto
   let lo = targetNet;
   let hi = targetNet * 2;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    const result = calculateFromGross(mid, options);
-    if (Math.abs(result.net - targetNet) < 0.01) return round(mid);
-    if (result.net < targetNet) lo = mid;
+    const net = calculateFromGross(mid, options).net;
+    if (Math.abs(net - targetNet) < 0.50) break;
+    if (net < targetNet) lo = mid;
     else hi = mid;
   }
-  return round((lo + hi) / 2);
+  const approx = round((lo + hi) / 2);
+
+  // Phase B — Precision scan ±2 PLN at 0.01 step
+  let bestBrutto = approx;
+  let bestDiff = Infinity;
+
+  const scanLo = round(approx - 2);
+  const scanHi = round(approx + 2);
+
+  for (let brutto = scanLo; brutto <= scanHi; brutto = round(brutto + 0.01)) {
+    const net = calculateFromGross(brutto, options).net;
+    const diff = Math.abs(net - targetNet);
+
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestBrutto = brutto;
+    }
+
+    // Exact match — return immediately
+    if (diff < 0.005) return brutto;
+  }
+
+  return bestBrutto;
+}
+
+/**
+ * Full reverse solver with detailed output.
+ *
+ * Input: hours + target netto per hour
+ * Output: brutto total/hourly, netto total/hourly, difference
+ */
+export interface ReverseSolverResult {
+  bruttoTotal: number;
+  bruttoHour: number;
+  nettoTotal: number;
+  nettoHour: number;
+  difference: number;
+  hours: number;
+  exact: boolean;
+}
+
+export function solveReverse(hours: number, targetNetHour: number, options?: ZUSOptions): ReverseSolverResult {
+  const targetNetTotal = round(hours * targetNetHour);
+  const bruttoTotal = calculateBruttoFromNetto(targetNetTotal, options);
+  const result = calculateFromGross(bruttoTotal, options);
+  const difference = round(result.net - targetNetTotal);
+
+  return {
+    bruttoTotal,
+    bruttoHour: round(bruttoTotal / hours),
+    nettoTotal: result.net,
+    nettoHour: round(result.net / hours),
+    difference,
+    hours,
+    exact: Math.abs(difference) < 0.01,
+  };
 }
 
 /**

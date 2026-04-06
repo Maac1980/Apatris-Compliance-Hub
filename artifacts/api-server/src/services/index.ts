@@ -12,10 +12,12 @@ export {
   calculateNettoFromBrutto,
   calculateBruttoFromNetto,
   calculateWorkerPayroll,
+  solveReverse,
   generateDraXml,
   type ZUSBreakdown,
   type ZUSOptions,
   type DRAWorker,
+  type ReverseSolverResult,
 } from "./zus.service.js";
 
 // Payroll workflow orchestration
