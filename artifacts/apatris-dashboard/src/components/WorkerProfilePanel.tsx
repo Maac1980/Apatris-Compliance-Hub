@@ -847,7 +847,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   return (
     <>
       <div onClick={onClose} className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[240] transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
-      <div ref={panelRef} className={`fixed right-0 top-[52px] bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-[250] flex flex-col transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div ref={panelRef} className={`fixed right-0 top-[52px] bottom-0 w-full max-w-2xl bg-slate-900 border-l border-white/10 shadow-2xl z-[250] flex flex-col transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
         {isLoading || !worker ? (
           <div className="flex h-full items-center justify-center">
             <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -855,31 +855,33 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
         ) : (
           <div className="flex flex-col h-full min-h-0">
             {/* Header */}
-            <div className="flex-shrink-0 p-6 border-b border-white/10 relative overflow-hidden bg-slate-900">
-              <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+            <div className="flex-shrink-0 px-6 pt-4 pb-5 border-b border-white/10 bg-slate-900">
+              {/* Action bar */}
+              <div className="flex items-center justify-end gap-1.5 mb-4">
                 <button
                   onClick={handleCopyUploadLink}
                   title="Copy shareable document upload link for this worker"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider border ${copiedLink ? "bg-green-600 border-green-500 text-white" : "bg-slate-700 hover:bg-slate-600 border-slate-500 text-gray-300"}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-[10px] font-bold uppercase tracking-wider border ${copiedLink ? "bg-green-600 border-green-500 text-white" : "bg-slate-800 hover:bg-slate-700 border-slate-600 text-gray-400 hover:text-gray-200"}`}
                 >
-                  <Link className="w-3.5 h-3.5" /> {copiedLink ? "Copied!" : "Upload Link"}
+                  <Link className="w-3 h-3" /> {copiedLink ? "Copied!" : "Upload Link"}
                 </button>
-                <button onClick={() => setShowQR(true)} title="Show QR code for this worker" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
-                  <QrCode className="w-3.5 h-3.5" /> QR
+                <button onClick={() => setShowQR(true)} title="Show QR code" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-[10px] font-bold text-gray-400 hover:text-gray-200 uppercase tracking-wider">
+                  <QrCode className="w-3 h-3" /> QR
                 </button>
-                <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-500 rounded-lg transition-colors text-xs font-bold text-gray-300 uppercase tracking-wider">
-                  <ClipboardCheck className="w-3.5 h-3.5" /> PIP
+                <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-[10px] font-bold text-gray-400 hover:text-gray-200 uppercase tracking-wider">
+                  <ClipboardCheck className="w-3 h-3" /> PIP
                 </button>
                 {!isEditing && (
-                  <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg transition-colors text-xs font-bold text-white uppercase tracking-wider">
-                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg transition-colors text-[10px] font-bold text-white uppercase tracking-wider">
+                    <Pencil className="w-3 h-3" /> Edit
                   </button>
                 )}
-                <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
-                  <X className="w-5 h-5 text-gray-300" />
+                <button onClick={onClose} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors ml-1">
+                  <X className="w-4 h-4 text-gray-300" />
                 </button>
               </div>
-              <div className="flex items-center gap-4 mt-4">
+              {/* Worker identity */}
+              <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 text-xl font-bold uppercase">
                   {(worker as any).name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                 </div>
@@ -1180,7 +1182,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
 
                       {/* Records table */}
                       <div className="rounded-xl border border-slate-700 overflow-x-auto">
-                        <table className="w-full text-xs min-w-[520px]">
+                        <table className="w-full text-xs">
                           <thead className="bg-slate-800 border-b border-slate-700">
                             <tr>
                               <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase tracking-wider">Month</th>
