@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { authHeaders, BASE, formatDate } from "@/lib/api";
 import {
   Clock, FileSignature, FileCheck, Shield, Calculator, ClipboardCheck,
-  Users, Search, Loader2, ChevronDown, ChevronUp, ArrowLeft, MapPin,
+  Users, Search, Loader2, ChevronDown, ChevronUp, ArrowLeft, MapPin, ExternalLink,
 } from "lucide-react";
 
 const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
@@ -35,6 +36,7 @@ interface Worker {
 }
 
 export default function WorkerTimeline() {
+  const [, setLocation] = useLocation();
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("all");
@@ -207,6 +209,25 @@ export default function WorkerTimeline() {
                               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${STATUS_BADGE[evt.status] ?? "bg-slate-700 text-slate-300"}`}>
                                 {evt.status.replace(/_/g, " ")}
                               </span>
+                            )}
+                            {/* Action links for actionable events */}
+                            {evt.type === "contract_generated" && evt.status === "draft" && (
+                              <button onClick={() => setLocation("/contract-gen")}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 hover:text-violet-300 transition-colors">
+                                <ExternalLink className="w-2.5 h-2.5" /> Open Draft
+                              </button>
+                            )}
+                            {evt.type === "contract_created" && evt.status === "draft" && (
+                              <button onClick={() => setLocation("/contracts")}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 hover:text-violet-300 transition-colors">
+                                <ExternalLink className="w-2.5 h-2.5" /> View Contract
+                              </button>
+                            )}
+                            {(evt.type === "document_uploaded" || evt.type === "document_approved" || evt.type === "document_rejected") && (
+                              <button onClick={() => setLocation("/doc-workflow")}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors">
+                                <ExternalLink className="w-2.5 h-2.5" /> View Document
+                              </button>
                             )}
                           </div>
                         </div>

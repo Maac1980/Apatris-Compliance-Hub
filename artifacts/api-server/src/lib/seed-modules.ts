@@ -256,6 +256,30 @@ export async function seedModuleDemoData(force = false): Promise<void> {
       console.log("[seed-modules] Generated Contracts: 6 records");
     }
 
+    // ═══ 10. PAYROLL SNAPSHOTS (if none exist for these workers) ══════
+    const psCount = await query<{ count: string }>("SELECT COUNT(*) AS count FROM payroll_snapshots WHERE tenant_id = $1", [tenantId]);
+    if (parseInt(psCount[0]?.count ?? "0") < 5) {
+      const months = ["2026-01", "2026-02", "2026-03"];
+      for (let i = 0; i < Math.min(10, workers.length); i++) {
+        const w = workers[i];
+        for (const month of months) {
+          const hours = 150 + Math.round(Math.random() * 20);
+          const rate = 28 + i * 1.2;
+          const gross = Math.round(hours * rate * 100) / 100;
+          const zus = Math.round(gross * 0.1126 * 100) / 100;
+          const health = Math.round((gross - zus) * 0.09 * 100) / 100;
+          const pit = Math.max(0, Math.round((gross - zus) * 0.8 * 0.12 - 300));
+          const netto = Math.round((gross - zus - health - pit) * 100) / 100;
+          await execute(
+            `INSERT INTO payroll_snapshots (month, worker_id, worker_name, site, hours, hourly_rate, gross, employee_zus, health_ins, est_pit, advance, penalties, netto, tenant_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,0,$11,$12)`,
+            [month, w.id, w.full_name, w.assigned_site ?? "Warsaw", hours, rate, gross, zus, health, pit, netto, tenantId]
+          );
+        }
+      }
+      console.log("[seed-modules] Payroll Snapshots: 30 records (10 workers × 3 months)");
+    }
+
   } else {
     console.log("[seed-modules] No workers found — skipping posted workers and GDPR data.");
   }
