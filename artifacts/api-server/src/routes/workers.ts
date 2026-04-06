@@ -558,27 +558,57 @@ router.post("/workers/apply", applyUpload.fields([
   }
 });
 
-// POST /workers/:id/notify
+// POST /workers/:id/notify — send compliance alert via email (or WhatsApp if configured)
 router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
     const worker = mapRowToWorker(row);
-    const body = req.body as { message?: string; channel?: string };
+    const { type, expiryDate, channel } = req.body as { type?: string; expiryDate?: string; channel?: string };
 
-    // In a production system, this would send an email/SMS
-    // For now, we log and return success
-    console.log(
-      `[Notify] Worker: ${worker.name} | Channel: ${body.channel ?? "email"} | Message: ${body.message}`
-    );
+    let sent = false;
+    let sentVia = "log";
+
+    // Try email first (most reliable)
+    if (worker.email) {
+      try {
+        const { sendAlertEmail, isMailConfigured } = await import("../lib/mailer.js");
+        if (isMailConfigured()) {
+          await sendAlertEmail({
+            workerName: worker.name,
+            documentType: type ?? "Document",
+            expiryDate: expiryDate ?? "Unknown",
+            daysUntilExpiry: worker.daysUntilExpiry ?? 0,
+            status: "RED",
+            recipients: [{ name: worker.name, email: worker.email }],
+          });
+          sent = true;
+          sentVia = "email";
+        }
+      } catch (err) {
+        console.error("[Notify] Email failed:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    // Log notification to DB
+    await execute(
+      `INSERT INTO notification_log (channel, worker_name, message_preview, recipient, status, tenant_id)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [sentVia, worker.name, `${type ?? "Document"} expires ${expiryDate ?? "soon"}`, worker.email ?? "no email", sent ? "sent" : "logged", req.tenantId!]
+    ).catch(() => {});
+
+    console.log(`[Notify] ${worker.name} via ${sentVia} — ${sent ? "sent" : "logged only (no SMTP or email)"}`);
 
     res.json({
       success: true,
-      message: `Notification queued for ${worker.name} via ${body.channel ?? "email"}.`,
+      sent,
+      sentVia,
+      message: sent
+        ? `Alert emailed to ${worker.email} about ${type ?? "document"} expiry.`
+        : `Notification logged for ${worker.name}. No email address or SMTP not configured.`,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
   }
 });
 

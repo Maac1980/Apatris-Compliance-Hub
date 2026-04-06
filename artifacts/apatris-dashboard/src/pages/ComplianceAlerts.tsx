@@ -205,15 +205,23 @@ export default function ComplianceAlerts() {
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
   const [instantAlert, setInstantAlert] = useState<InstantAlert | null>(null);
-  // Local UI state for action badges (persists in session, not DB)
-  const [cardStates, setCardStates] = useState<Record<string, "in_progress" | "resolved">>({});
+  // Alert action states — loaded from DB (alert_status column), updated via API
+  const [cardStates, setCardStates] = useState<Record<string, string>>({});
 
   const { data, isLoading, error, refetch } = useQuery<{ documents: DocumentRecord[]; summary: Summary }>({
     queryKey: ["documents"],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.BASE_URL}api/documents`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch documents");
-      return res.json();
+      const json = await res.json();
+      // Extract alert_status from each document into cardStates
+      const states: Record<string, string> = {};
+      for (const d of (json.documents ?? [])) {
+        const as = d.alertStatus ?? d.alert_status;
+        if (as && as !== "none") states[d.id] = as;
+      }
+      setCardStates(prev => ({ ...states, ...prev }));
+      return json;
     },
     staleTime: 30_000,
   });
@@ -477,16 +485,19 @@ export default function ComplianceAlerts() {
                       )}
 
                       {/* Quick actions */}
-                      {!cardStates[doc.id]?.startsWith("resolved") && (
+                      {cardStates[doc.id] !== "resolved" && (
                         <div className="flex items-center justify-end gap-1 pt-1 border-t border-white/5">
                           <button
-                            title="Notify Worker (WhatsApp / Email)"
-                            onClick={() => {
-                              toast({ title: "Notification Sent", description: `Alert sent to ${doc.workerName} about ${doc.documentType} expiry.` });
-                              fetch(`${BASE}api/workers/${doc.workerId}/notify`, {
-                                method: "POST", headers: authHeaders(),
-                                body: JSON.stringify({ type: doc.documentType, expiryDate: doc.expiryDate, channel: "whatsapp" }),
-                              }).catch(() => {});
+                            title="Notify Worker (Email)"
+                            onClick={async () => {
+                              try {
+                                const r = await fetch(`${BASE}api/workers/${doc.workerId}/notify`, {
+                                  method: "POST", headers: authHeaders(),
+                                  body: JSON.stringify({ type: doc.documentType, expiryDate: doc.expiryDate }),
+                                });
+                                const result = await r.json();
+                                toast({ title: result.sent ? "Email Sent" : "Notification Logged", description: result.message });
+                              } catch { toast({ title: "Failed", description: "Could not send notification", variant: "destructive" }); }
                             }}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                           >
@@ -503,6 +514,7 @@ export default function ComplianceAlerts() {
                             title="Mark as In Progress"
                             onClick={() => {
                               setCardStates(prev => ({ ...prev, [doc.id]: "in_progress" }));
+                              fetch(`${BASE}api/documents/${doc.id}/alert-status`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ alertStatus: "in_progress" }) }).catch(() => {});
                               toast({ title: "In Progress", description: `${doc.documentType} for ${doc.workerName} marked as in progress.` });
                             }}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
@@ -513,6 +525,7 @@ export default function ComplianceAlerts() {
                             title="Resolve"
                             onClick={() => {
                               setCardStates(prev => ({ ...prev, [doc.id]: "resolved" }));
+                              fetch(`${BASE}api/documents/${doc.id}/alert-status`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ alertStatus: "resolved" }) }).catch(() => {});
                               toast({ title: "Resolved", description: `${doc.documentType} for ${doc.workerName} marked as resolved.` });
                             }}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"

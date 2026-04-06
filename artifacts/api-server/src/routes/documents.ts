@@ -137,4 +137,22 @@ router.delete("/documents/:id", requireAuth, requireRole("Admin", "Executive", "
   }
 });
 
+// PATCH /api/documents/:id/alert-status — update compliance alert action status
+router.patch("/documents/:id/alert-status", requireAuth, async (req, res) => {
+  try {
+    const { alertStatus } = req.body as { alertStatus?: string };
+    if (!alertStatus || !["in_progress", "resolved", "none"].includes(alertStatus)) {
+      return res.status(400).json({ error: "alertStatus must be 'in_progress', 'resolved', or 'none'" });
+    }
+    const { queryOne: qo, execute: ex } = await import("../lib/db.js");
+    // Add column if missing (safe migration)
+    await ex("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='alert_status') THEN ALTER TABLE documents ADD COLUMN alert_status TEXT DEFAULT 'none'; END IF; END $$;").catch(() => {});
+    const row = await qo("UPDATE documents SET alert_status = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id, alert_status", [alertStatus, req.params.id, req.tenantId!]);
+    if (!row) return res.status(404).json({ error: "Document not found" });
+    res.json({ success: true, alertStatus });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 export default router;

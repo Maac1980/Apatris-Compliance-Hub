@@ -1549,6 +1549,15 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // Add alert_status to documents if missing
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='alert_status') THEN
+        ALTER TABLE documents ADD COLUMN alert_status TEXT DEFAULT 'none';
+      END IF;
+    END $$;
+  `);
+
   // messages
   await execute(`
     CREATE TABLE IF NOT EXISTS messages (
