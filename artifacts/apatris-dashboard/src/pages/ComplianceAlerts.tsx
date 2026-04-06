@@ -488,47 +488,64 @@ export default function ComplianceAlerts() {
                       {cardStates[doc.id] !== "resolved" && (
                         <div className="flex items-center justify-end gap-1 pt-1 border-t border-white/5">
                           <button
-                            title="Notify Worker (Email)"
+                            title="Notify Worker"
                             onClick={async () => {
+                              if (!doc.workerId) {
+                                toast({ title: "No Worker Linked", description: "This document has no linked worker. Add a worker ID to enable notifications.", variant: "destructive" });
+                                return;
+                              }
                               try {
                                 const r = await fetch(`${BASE}api/workers/${doc.workerId}/notify`, {
                                   method: "POST", headers: authHeaders(),
                                   body: JSON.stringify({ type: doc.documentType, expiryDate: doc.expiryDate }),
                                 });
+                                if (!r.ok) {
+                                  const err = await r.json().catch(() => ({}));
+                                  const msg = (err as any).error ?? "Request failed";
+                                  if (r.status === 404) toast({ title: "Worker Not Found", description: `Worker ID ${doc.workerId} not found in the system.`, variant: "destructive" });
+                                  else toast({ title: "Notification Failed", description: msg, variant: "destructive" });
+                                  return;
+                                }
                                 const result = await r.json();
-                                toast({ title: result.sent ? "Email Sent" : "Notification Logged", description: result.message });
-                              } catch { toast({ title: "Failed", description: "Could not send notification", variant: "destructive" }); }
+                                if (result.sent) {
+                                  toast({ title: "Email Sent", description: `Compliance alert emailed to ${result.sentTo ?? doc.workerName}.` });
+                                } else {
+                                  toast({ title: "Logged (Not Sent)", description: result.message || "Worker has no email or SMTP is not configured. Notification was logged." });
+                                }
+                              } catch {
+                                toast({ title: "Connection Error", description: "Could not reach the server. Try again.", variant: "destructive" });
+                              }
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            className="p-1.5 rounded-lg text-blue-500/60 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
                           <button
                             title="Open Document Workflow"
                             onClick={() => setLocation(`/doc-workflow`)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400/60 hover:text-white hover:bg-white/5 transition-colors"
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            title="Mark as In Progress"
+                            title="Mark In Progress"
                             onClick={() => {
                               setCardStates(prev => ({ ...prev, [doc.id]: "in_progress" }));
                               fetch(`${BASE}api/documents/${doc.id}/alert-status`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ alertStatus: "in_progress" }) }).catch(() => {});
                               toast({ title: "In Progress", description: `${doc.documentType} for ${doc.workerName} marked as in progress.` });
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            className="p-1.5 rounded-lg text-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
                           >
                             <PlayCircle className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            title="Resolve"
+                            title="Resolve Alert"
                             onClick={() => {
                               setCardStates(prev => ({ ...prev, [doc.id]: "resolved" }));
                               fetch(`${BASE}api/documents/${doc.id}/alert-status`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ alertStatus: "resolved" }) }).catch(() => {});
                               toast({ title: "Resolved", description: `${doc.documentType} for ${doc.workerName} marked as resolved.` });
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            className="p-1.5 rounded-lg text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                           >
                             <CircleCheck className="w-3.5 h-3.5" />
                           </button>
