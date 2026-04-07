@@ -55,29 +55,43 @@ router.post("/legal-kb/query", requireAuth, async (req, res) => {
       return { ...a, relevance: score };
     }).filter(a => a.relevance > 0).sort((a, b) => b.relevance - a.relevance).slice(0, 5);
 
-    let answer = "I could not find a specific answer in the verified knowledge base. Please consult a legal professional.";
+    let answer = "";
     const sourcesUsed = scored.map(a => ({ title: a.title, category: a.category, source: a.source_name }));
 
-    // AI generates answer from verified articles only
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (apiKey && scored.length > 0) {
+
+    if (scored.length > 0 && apiKey) {
+      // AI generates answer from verified articles
       try {
         const { default: Anthropic } = await import("@anthropic-ai/sdk");
         const anthropic = new Anthropic({ apiKey });
         const articlesContext = scored.map(a => `[${a.category}] ${a.title}: ${a.content}`).join("\n\n");
-
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-6", max_tokens: 1024,
-          system: `You are a Polish immigration and labour law assistant. Answer the question using ONLY the verified articles provided below. Do not make up information. Cite which article you used. If the answer is not in the articles, say so.${language === "pl" ? " Odpowiedz po polsku." : ""}
-
-VERIFIED ARTICLES:
-${articlesContext}`,
+          system: `You are a Polish immigration and labour law assistant. Answer the question using ONLY the verified articles provided below. Do not make up information. Cite which article you used. If the answer is not in the articles, say so.${language === "pl" ? " Odpowiedz po polsku." : ""}\n\nVERIFIED ARTICLES:\n${articlesContext}`,
           messages: [{ role: "user", content: question }],
         });
-        answer = response.content[0]?.type === "text" ? response.content[0].text : answer;
-      } catch { /* use fallback */ }
-    } else if (scored.length > 0) {
-      answer = `Based on verified sources:\n\n${scored[0].content}\n\nSource: ${scored[0].source_name}`;
+        answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+      } catch { /* fall through */ }
+    }
+
+    // If knowledge base is empty or AI didn't answer, use Claude directly with legal expertise
+    if (!answer && apiKey) {
+      try {
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
+        const anthropic = new Anthropic({ apiKey });
+        const response = await anthropic.messages.create({
+          model: "claude-sonnet-4-6", max_tokens: 1024,
+          system: `You are a Polish immigration and labour law expert. Answer the question accurately based on current Polish law (2026). Cover: TRC (Temporary Residence Card), Art. 108 continuity, MOS electronic filing, work permits, ZUS, PIT, Posted Workers, GDPR, A1 certificates. Always cite the relevant legal basis (e.g. "Art. 108 Ustawy o cudzoziemcach"). If uncertain, say so.${language === "pl" ? " Odpowiedz po polsku." : ""}`,
+          messages: [{ role: "user", content: question }],
+        });
+        answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+        if (answer) sourcesUsed.push({ title: "AI Legal Expert", category: "AI", source: "Claude (general knowledge)" });
+      } catch { /* fall through */ }
+    }
+
+    if (!answer) {
+      answer = "I could not generate an answer at this time. Please check that the AI service is configured and try again.";
     }
 
     // Log query
