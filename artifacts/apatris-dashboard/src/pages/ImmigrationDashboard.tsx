@@ -6,6 +6,7 @@ import { LegalEvidenceUpload } from "@/components/LegalEvidenceUpload";
 import { LegalStatusPanel } from "@/components/LegalStatusPanel";
 import { LegalExplainPanel } from "@/components/LegalExplainPanel";
 import { LegalCopilot } from "@/components/LegalCopilot";
+import { ActionCenter } from "@/components/ActionCenter";
 import {
   Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
   Bell, Send, Phone, MessageSquare,
@@ -533,6 +534,9 @@ export default function ImmigrationDashboard() {
               {selectedWorkerId && <LegalExplainPanel workerId={selectedWorkerId} />}
 
               {/* Legal Copilot */}
+              {/* Action Center — system-driven decisions */}
+              {selectedWorkerId && <ActionCenter workerId={selectedWorkerId} />}
+
               {selectedWorkerId && <LegalCopilot workerId={selectedWorkerId} />}
 
               {/* Permit History */}
