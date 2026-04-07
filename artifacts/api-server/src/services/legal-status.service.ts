@@ -86,17 +86,25 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
   // Determine the key dates from existing data
   const permitExpiryStr = permit?.expiry_date ?? worker.trc_expiry ?? worker.work_permit_expiry ?? null;
 
-  // Check for explicit filing evidence (most authoritative source)
+  // Check for MOS electronic submission date (highest authority)
+  const mosCase = await queryOne<any>(
+    "SELECT mos_submission_date, mos_status FROM legal_cases WHERE worker_id = $1 AND tenant_id = $2 AND mos_status IN ('submitted','mos_pending','approved','correction_needed') ORDER BY mos_submission_date DESC NULLS LAST LIMIT 1",
+    [workerId, tenantId]
+  );
+
+  // Check for explicit filing evidence
   const evidence = await queryOne<any>(
     "SELECT filing_date FROM legal_evidence WHERE worker_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1",
     [workerId, tenantId]
   );
 
-  // Determine filing date: evidence > TRC case > permit flag
-  const trcSubmitted = permit?.trc_application_submitted === true
+  // Determine filing date: MOS submission > evidence > TRC case > permit flag
+  const trcSubmitted = !!mosCase?.mos_submission_date
+    || permit?.trc_application_submitted === true
     || (trcCase?.status && trcCase.status !== "intake")
     || !!evidence?.filing_date;
-  const filingDate = evidence?.filing_date
+  const filingDate = mosCase?.mos_submission_date
+    ?? evidence?.filing_date
     ?? (trcSubmitted ? (trcCase?.start_date ?? trcCase?.created_at ?? permit?.created_at ?? null) : null);
 
   // Check for formal defect

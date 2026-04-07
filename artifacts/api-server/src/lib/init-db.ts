@@ -2302,6 +2302,38 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* column may already exist */ }
 
+  // ── MOS electronic filing columns on legal_cases
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_status') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_status TEXT DEFAULT 'draft';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_submission_date') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_submission_date TIMESTAMPTZ;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_receipt_url') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_receipt_url TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='login_gov_pl_verified') THEN
+          ALTER TABLE legal_cases ADD COLUMN login_gov_pl_verified BOOLEAN DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='e_signature_method') THEN
+          ALTER TABLE legal_cases ADD COLUMN e_signature_method TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='e_signature_date') THEN
+          ALTER TABLE legal_cases ADD COLUMN e_signature_date TIMESTAMPTZ;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='pr_eligible') THEN
+          ALTER TABLE legal_cases ADD COLUMN pr_eligible BOOLEAN;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='pr_eligible_date') THEN
+          ALTER TABLE legal_cases ADD COLUMN pr_eligible_date DATE;
+        END IF;
+      END $$;
+    `);
+  } catch { /* columns may already exist */ }
+
   // Authority response packs — formal evidence-backed response drafts for authorities
   await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

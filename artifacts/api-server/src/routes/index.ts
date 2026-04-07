@@ -97,6 +97,7 @@ import pipInspectionReportRouter from "./pip-inspection-report.js";
 import caseSyncRouter from "./case-sync.js";
 import legalCopilotRouter from "./legal-copilot.js";
 import legalDocumentsRouter from "./legal-documents.js";
+import mosRouter from "./mos.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -197,5 +198,6 @@ router.use(pipInspectionReportRouter);
 router.use(caseSyncRouter);
 router.use(legalCopilotRouter);
 router.use(legalDocumentsRouter);
+router.use(mosRouter);
 
 export default router;
