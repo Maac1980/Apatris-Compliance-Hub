@@ -49,45 +49,32 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
 }
 
 // Reverse: precision solver — finds exact gross/h that produces desired net/h.
-// Phase A: binary search. Phase B: 0.01 PLN scan ±3 PLN. Always uses forward engine.
+// Phase A: binary search (tight). Phase B: 0.01 PLN scan ±3 PLN. Always uses forward engine.
 export function reverseCalculate(hours: number, desiredNet: number, contract: ContractType, applyPit2: boolean, includeSickness: boolean) {
   if (hours <= 0 || desiredNet <= 0) return calculate(hours, 0, contract, applyPit2, includeSickness);
   const targetNetTotal = Math.round(desiredNet * hours * 100) / 100;
   const r2 = (n: number) => Math.round(n * 100) / 100;
 
-  // Phase A — Binary search to approximate gross total
-  let lo = targetNetTotal * 0.8, hi = targetNetTotal * 2;
-  for (let i = 0; i < 60; i++) {
+  // Phase A — Binary search to approximate gross rate
+  let lo = desiredNet * 0.8, hi = desiredNet * 2.5;
+  for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
-    const midRate = mid / hours;
-    const net = calculate(hours, midRate, contract, applyPit2, includeSickness).net;
-    if (Math.abs(net - targetNetTotal) < 0.50) break;
+    const net = calculate(hours, r2(mid), contract, applyPit2, includeSickness).net;
+    if (Math.abs(net - targetNetTotal) < 0.01) { lo = hi = mid; break; }
     if (net < targetNetTotal) lo = mid; else hi = mid;
   }
-  const approxRate = r2((lo + hi) / 2 / hours);
+  const approxRate = r2((lo + hi) / 2);
 
-  // Phase B — Precision scan ±0.03 PLN/h at 0.01 step
-  const exactMatches: number[] = [];
+  // Phase B — Precision scan ±3 PLN/h at 0.01 step
+  const scanLo = r2(Math.max(0.01, approxRate - 3));
+  const scanHi = r2(approxRate + 3);
   let bestRate = approxRate, bestDiff = Infinity;
-  const scanLo = r2(approxRate - 0.03);
-  const scanHi = r2(approxRate + 0.03);
 
   for (let rate = scanLo; rate <= scanHi; rate = r2(rate + 0.01)) {
     const res = calculate(hours, rate, contract, applyPit2, includeSickness);
     const diff = Math.abs(res.net - targetNetTotal);
-    if (diff < 0.01) exactMatches.push(rate);
     if (diff < bestDiff) { bestDiff = diff; bestRate = rate; }
-  }
-
-  // Pick closest to approximation; on tie prefer higher (conservative)
-  if (exactMatches.length > 0) {
-    let closest = exactMatches[0], closestDist = Math.abs(closest - approxRate);
-    for (const m of exactMatches) {
-      const dist = Math.abs(m - approxRate);
-      if (dist < closestDist - 0.001) { closest = m; closestDist = dist; }
-      else if (Math.abs(dist - closestDist) < 0.005 && m > closest) { closest = m; closestDist = dist; }
-    }
-    bestRate = closest;
+    if (diff < 0.005) break; // Exact match found
   }
 
   return calculate(hours, bestRate, contract, applyPit2, includeSickness);

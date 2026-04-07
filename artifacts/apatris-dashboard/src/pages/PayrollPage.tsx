@@ -202,12 +202,12 @@ function reverseNetToGross(desiredNetPerHour: number, hours: number, rates: ZUSR
   const targetNet = Math.round(desiredNetPerHour * hours * 100) / 100;
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
-  // Phase A — Binary search
-  let lo = targetNet * 0.8, hi = targetNet * 2;
-  for (let i = 0; i < 60; i++) {
+  // Phase A — Binary search (tight convergence)
+  let lo = targetNet * 0.8, hi = targetNet * 2.5;
+  for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
-    const net = calcZUS(mid, 0, 0, rates, pit2).netAfterTax;
-    if (Math.abs(net - targetNet) < 0.50) break;
+    const net = calcZUS(round2(mid), 0, 0, rates, pit2).netAfterTax;
+    if (Math.abs(net - targetNet) < 0.01) { lo = hi = mid; break; }
     if (net < targetNet) lo = mid; else hi = mid;
   }
   const approx = round2((lo + hi) / 2);
