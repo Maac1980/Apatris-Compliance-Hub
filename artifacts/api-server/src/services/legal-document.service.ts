@@ -160,14 +160,20 @@ export async function generateDocument(input: DocumentInput): Promise<LegalDocum
 
   // Load worker data
   const worker = await queryOne<any>(
-    "SELECT full_name, nationality, pesel, passport_number, assigned_site FROM workers WHERE id = $1 AND tenant_id = $2",
+    "SELECT full_name, pesel, passport_number, assigned_site FROM workers WHERE id = $1 AND tenant_id = $2",
     [workerId, tenantId]
   );
   if (!worker) throw new Error("Worker not found");
 
-  // Load TRC case if available
+  // Load TRC case if available (includes nationality)
   const trc = await queryOne<any>(
-    "SELECT employer_name, employer_nip, voivodeship, case_type FROM trc_cases WHERE worker_id = $1::text AND tenant_id = $2::text ORDER BY created_at DESC LIMIT 1",
+    "SELECT employer_name, employer_nip, voivodeship, case_type, nationality FROM trc_cases WHERE worker_id = $1::text AND tenant_id = $2::text ORDER BY created_at DESC LIMIT 1",
+    [workerId, tenantId]
+  );
+
+  // Load nationality from immigration permit if not in TRC
+  const permit = await queryOne<any>(
+    "SELECT country FROM immigration_permits WHERE worker_id = $1 AND tenant_id = $2 ORDER BY expiry_date DESC NULLS LAST LIMIT 1",
     [workerId, tenantId]
   );
 
@@ -180,7 +186,7 @@ export async function generateDocument(input: DocumentInput): Promise<LegalDocum
   // Build content
   const content = buildTemplateContent(templateType, {
     workerName: worker.full_name,
-    workerNationality: worker.nationality,
+    workerNationality: trc?.nationality ?? permit?.country ?? "",
     workerPesel: worker.pesel,
     workerPassport: worker.passport_number,
     employerName: trc?.employer_name ?? tenant?.name ?? "Apatris Sp. z o.o.",
