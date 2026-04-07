@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,95 +9,97 @@ import { PageLoader } from "@/components/Skeleton";
 import { AppShell } from "@/components/AppShell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-// Pages
+// Eager — used on every session
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Apply from "@/pages/Apply";
-import AdminSettings from "@/pages/AdminSettings";
-import ComplianceAlerts from "@/pages/ComplianceAlerts";
-import PayrollPage from "@/pages/PayrollPage";
-import { KnowledgeCenter } from "@/components/KnowledgeCenter";
-import HistoryPage from "@/pages/HistoryPage";
-import WorkerUpload from "@/pages/WorkerUpload";
-import ContractHub from "@/pages/ContractHub";
-import DocumentWorkflow from "@/pages/DocumentWorkflow";
-import GpsTracking from "@/pages/GpsTracking";
-import AnalyticsPage from "@/pages/AnalyticsPage";
-import AiCopilot from "@/pages/AiCopilot";
-import RegulatoryIntelligence from "@/pages/RegulatoryIntelligence";
-import ImmigrationSearch from "@/pages/ImmigrationSearch";
-import TRCService from "@/pages/TRCService";
-import WorkerAvailability from "@/pages/WorkerAvailability";
-import ShiftSchedule from "@/pages/ShiftSchedule";
-import SkillsMatrix from "@/pages/SkillsMatrix";
-import SalaryBenchmark from "@/pages/SalaryBenchmark";
-import AiAuditTrail from "@/pages/AiAuditTrail";
-import GDPRManagement from "@/pages/GDPRManagement";
-import PostedWorkers from "@/pages/PostedWorkers";
-import CountryCompliance from "@/pages/CountryCompliance";
-import HoursManagement from "@/pages/HoursManagement";
-import SystemLogs from "@/pages/SystemLogs";
-import ClientManagement from "@/pages/ClientManagement";
-import PayTransparency from "@/pages/PayTransparency";
-import ApplicationsFeed from "@/pages/ApplicationsFeed";
-import JobBoard from "@/pages/JobBoard";
-import InvoiceManagement from "@/pages/InvoiceManagement";
-import ImmigrationDashboard from "@/pages/ImmigrationDashboard";
-import OnboardingPage from "@/pages/OnboardingPage";
-import CrmPage from "@/pages/CrmPage";
-import ZusFilings from "@/pages/ZusFilings";
-import WorkerMatching from "@/pages/WorkerMatching";
-import MoodTracker from "@/pages/MoodTracker";
-import VoiceCheckins from "@/pages/VoiceCheckins";
-import SalaryAdvances from "@/pages/SalaryAdvances";
-import CertifiedSignatures from "@/pages/CertifiedSignatures";
-import BenchManagement from "@/pages/BenchManagement";
-import GoogleWorkspace from "@/pages/GoogleWorkspace";
-import ContractGenerator from "@/pages/ContractGenerator";
-import SelfService from "@/pages/SelfService";
-import RoiDashboard from "@/pages/RoiDashboard";
-import FinesPrevention from "@/pages/FinesPrevention";
-import TrustScores from "@/pages/TrustScores";
-import ChurnPrediction from "@/pages/ChurnPrediction";
-import HousingManagement from "@/pages/HousingManagement";
-import RevenueForecast from "@/pages/RevenueForecast";
-import LegalMonitor from "@/pages/LegalMonitor";
-import SafetyMonitor from "@/pages/SafetyMonitor";
-import CompetitorMonitor from "@/pages/CompetitorMonitor";
-import CountryPayroll from "@/pages/CountryPayroll";
-import FraudDetection from "@/pages/FraudDetection";
-import TranslationEngine from "@/pages/TranslationEngine";
-import Messaging from "@/pages/Messaging";
-import InsuranceManagement from "@/pages/InsuranceManagement";
-import SkillsGap from "@/pages/SkillsGap";
-import CareerPaths from "@/pages/CareerPaths";
-import MarginAnalysis from "@/pages/MarginAnalysis";
-import GeoIntelligence from "@/pages/GeoIntelligence";
-import MarketSignals from "@/pages/MarketSignals";
-import WorkerIdentity from "@/pages/WorkerIdentity";
-import ComplianceGuarantees from "@/pages/ComplianceGuarantees";
-import WhiteLabel from "@/pages/WhiteLabel";
-import FrameworkAgreements from "@/pages/FrameworkAgreements";
-import LegalKB from "@/pages/LegalKB";
-import SaaSBilling from "@/pages/SaaSBilling";
-import PostedNotifications from "@/pages/PostedNotifications";
-import EsspassPage from "@/pages/EsspassPage";
-import DeveloperPortal from "@/pages/DeveloperPortal";
-import IntelligenceFeed from "@/pages/IntelligenceFeed";
-import FinancialWellness from "@/pages/FinancialWellness";
-import DeploymentFlow from "@/pages/DeploymentFlow";
-import PricingPage from "@/pages/PricingPage";
-import ScreeningPage from "@/pages/ScreeningPage";
-import WorkerTimeline from "@/pages/WorkerTimeline";
-import PIPReadiness from "@/pages/PIPReadiness";
-import AuthorityPacks from "@/pages/AuthorityPacks";
-import LegalQueue from "@/pages/LegalQueue";
-import RejectionIntelligence from "@/pages/RejectionIntelligence";
-import LegalAlerts from "@/pages/LegalAlerts";
-import PIPInspectionReport from "@/pages/PIPInspectionReport";
-import LinkedCases from "@/pages/LinkedCases";
-import LegalDocuments from "@/pages/LegalDocuments";
 import NotFound from "@/pages/not-found";
+
+// Lazy — loaded on demand (code splitting)
+const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
+const ComplianceAlerts = lazy(() => import("@/pages/ComplianceAlerts"));
+const PayrollPage = lazy(() => import("@/pages/PayrollPage"));
+const KnowledgeCenterPage = lazy(() => import("@/components/KnowledgeCenter").then(m => ({ default: () => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><m.KnowledgeCenter /></div> })));
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
+const WorkerUpload = lazy(() => import("@/pages/WorkerUpload"));
+const ContractHub = lazy(() => import("@/pages/ContractHub"));
+const DocumentWorkflow = lazy(() => import("@/pages/DocumentWorkflow"));
+const GpsTracking = lazy(() => import("@/pages/GpsTracking"));
+const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
+const AiCopilot = lazy(() => import("@/pages/AiCopilot"));
+const RegulatoryIntelligence = lazy(() => import("@/pages/RegulatoryIntelligence"));
+const ImmigrationSearch = lazy(() => import("@/pages/ImmigrationSearch"));
+const TRCService = lazy(() => import("@/pages/TRCService"));
+const WorkerAvailability = lazy(() => import("@/pages/WorkerAvailability"));
+const ShiftSchedule = lazy(() => import("@/pages/ShiftSchedule"));
+const SkillsMatrix = lazy(() => import("@/pages/SkillsMatrix"));
+const SalaryBenchmark = lazy(() => import("@/pages/SalaryBenchmark"));
+const AiAuditTrail = lazy(() => import("@/pages/AiAuditTrail"));
+const GDPRManagement = lazy(() => import("@/pages/GDPRManagement"));
+const PostedWorkers = lazy(() => import("@/pages/PostedWorkers"));
+const CountryCompliance = lazy(() => import("@/pages/CountryCompliance"));
+const HoursManagement = lazy(() => import("@/pages/HoursManagement"));
+const SystemLogs = lazy(() => import("@/pages/SystemLogs"));
+const ClientManagement = lazy(() => import("@/pages/ClientManagement"));
+const PayTransparency = lazy(() => import("@/pages/PayTransparency"));
+const ApplicationsFeed = lazy(() => import("@/pages/ApplicationsFeed"));
+const JobBoard = lazy(() => import("@/pages/JobBoard"));
+const InvoiceManagement = lazy(() => import("@/pages/InvoiceManagement"));
+const ImmigrationDashboard = lazy(() => import("@/pages/ImmigrationDashboard"));
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
+const CrmPage = lazy(() => import("@/pages/CrmPage"));
+const ZusFilings = lazy(() => import("@/pages/ZusFilings"));
+const WorkerMatching = lazy(() => import("@/pages/WorkerMatching"));
+const MoodTracker = lazy(() => import("@/pages/MoodTracker"));
+const VoiceCheckins = lazy(() => import("@/pages/VoiceCheckins"));
+const SalaryAdvances = lazy(() => import("@/pages/SalaryAdvances"));
+const CertifiedSignatures = lazy(() => import("@/pages/CertifiedSignatures"));
+const BenchManagement = lazy(() => import("@/pages/BenchManagement"));
+const GoogleWorkspace = lazy(() => import("@/pages/GoogleWorkspace"));
+const ContractGenerator = lazy(() => import("@/pages/ContractGenerator"));
+const SelfService = lazy(() => import("@/pages/SelfService"));
+const RoiDashboard = lazy(() => import("@/pages/RoiDashboard"));
+const FinesPrevention = lazy(() => import("@/pages/FinesPrevention"));
+const TrustScores = lazy(() => import("@/pages/TrustScores"));
+const ChurnPrediction = lazy(() => import("@/pages/ChurnPrediction"));
+const HousingManagement = lazy(() => import("@/pages/HousingManagement"));
+const RevenueForecast = lazy(() => import("@/pages/RevenueForecast"));
+const LegalMonitor = lazy(() => import("@/pages/LegalMonitor"));
+const SafetyMonitor = lazy(() => import("@/pages/SafetyMonitor"));
+const CompetitorMonitor = lazy(() => import("@/pages/CompetitorMonitor"));
+const CountryPayroll = lazy(() => import("@/pages/CountryPayroll"));
+const FraudDetection = lazy(() => import("@/pages/FraudDetection"));
+const TranslationEngine = lazy(() => import("@/pages/TranslationEngine"));
+const Messaging = lazy(() => import("@/pages/Messaging"));
+const InsuranceManagement = lazy(() => import("@/pages/InsuranceManagement"));
+const SkillsGap = lazy(() => import("@/pages/SkillsGap"));
+const CareerPaths = lazy(() => import("@/pages/CareerPaths"));
+const MarginAnalysis = lazy(() => import("@/pages/MarginAnalysis"));
+const GeoIntelligence = lazy(() => import("@/pages/GeoIntelligence"));
+const MarketSignals = lazy(() => import("@/pages/MarketSignals"));
+const WorkerIdentity = lazy(() => import("@/pages/WorkerIdentity"));
+const ComplianceGuarantees = lazy(() => import("@/pages/ComplianceGuarantees"));
+const WhiteLabel = lazy(() => import("@/pages/WhiteLabel"));
+const FrameworkAgreements = lazy(() => import("@/pages/FrameworkAgreements"));
+const LegalKB = lazy(() => import("@/pages/LegalKB"));
+const SaaSBilling = lazy(() => import("@/pages/SaaSBilling"));
+const PostedNotifications = lazy(() => import("@/pages/PostedNotifications"));
+const EsspassPage = lazy(() => import("@/pages/EsspassPage"));
+const DeveloperPortal = lazy(() => import("@/pages/DeveloperPortal"));
+const IntelligenceFeed = lazy(() => import("@/pages/IntelligenceFeed"));
+const FinancialWellness = lazy(() => import("@/pages/FinancialWellness"));
+const DeploymentFlow = lazy(() => import("@/pages/DeploymentFlow"));
+const PricingPage = lazy(() => import("@/pages/PricingPage"));
+const ScreeningPage = lazy(() => import("@/pages/ScreeningPage"));
+const WorkerTimeline = lazy(() => import("@/pages/WorkerTimeline"));
+const PIPReadiness = lazy(() => import("@/pages/PIPReadiness"));
+const AuthorityPacks = lazy(() => import("@/pages/AuthorityPacks"));
+const LegalQueue = lazy(() => import("@/pages/LegalQueue"));
+const RejectionIntelligence = lazy(() => import("@/pages/RejectionIntelligence"));
+const LegalAlerts = lazy(() => import("@/pages/LegalAlerts"));
+const PIPInspectionReport = lazy(() => import("@/pages/PIPInspectionReport"));
+const LinkedCases = lazy(() => import("@/pages/LinkedCases"));
+const LegalDocuments = lazy(() => import("@/pages/LegalDocuments"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -137,6 +139,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 function Router() {
   return (
+    <Suspense fallback={<div className="fixed inset-0 bg-slate-900 flex items-center justify-center"><PageLoader /></div>}>
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/apply" component={Apply} />
@@ -386,13 +389,14 @@ function Router() {
       </Route>
       <Route path="/pricing" component={PricingPage} />
       <Route path="/calculator">
-        {() => <ProtectedRoute component={() => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><KnowledgeCenter /></div>} />}
+        {() => <ProtectedRoute component={KnowledgeCenterPage} />}
       </Route>
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

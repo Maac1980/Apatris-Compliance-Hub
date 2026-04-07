@@ -48,6 +48,11 @@ interface ClaudeOutput {
 export async function explainCase(input: ExplainCaseInput): Promise<ExplanationResult> {
   const { workerId, tenantId, audience } = input;
 
+  // Rate limit check
+  const { checkAIRateLimit } = await import("../lib/ai-rate-limiter.js");
+  const limit = checkAIRateLimit(tenantId, "claude");
+  if (!limit.allowed) throw new Error(`AI rate limit exceeded. Resets in ${limit.resetsIn}s.`);
+
   // 1. Load existing legal snapshot (the source of truth)
   let snapshot: LegalSnapshot;
   try {

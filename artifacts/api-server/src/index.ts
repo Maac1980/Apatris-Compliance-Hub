@@ -1,5 +1,18 @@
 import { createServer } from "http";
 
+// ── Sentry error monitoring ──────────────────────────────────────────────
+try {
+  const Sentry = await import("@sentry/node");
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV ?? "production",
+      tracesSampleRate: 0.1,
+    });
+    console.log("[Sentry] Initialized.");
+  }
+} catch { /* Sentry is optional */ }
+
 const port = Number(process.env["PORT"] || "8080");
 
 // Wrap EVERYTHING in try/catch — the server MUST open port 8080 no matter what

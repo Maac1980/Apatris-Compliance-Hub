@@ -132,6 +132,11 @@ export async function askLegalCopilot(
   tenantId: string,
   question: string,
 ): Promise<CopilotResponse> {
+  // Rate limit check
+  const { checkAIRateLimit } = await import("../lib/ai-rate-limiter.js");
+  const limit = checkAIRateLimit(tenantId, "claude");
+  if (!limit.allowed) throw new Error(`AI rate limit exceeded. ${limit.remaining} calls remaining. Resets in ${limit.resetsIn}s.`);
+
   // Build context
   const ctx = await buildWorkerLegalContext(workerId, tenantId);
 

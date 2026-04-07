@@ -127,6 +127,11 @@ function parsePerplexityResponse(content: string, citations: string[]): ParsedAr
 // ═══ SERVICE FUNCTIONS ══════════════════════════════════════════════════════
 
 export async function fetchLatestUpdates(tenantId: string, customQuery?: string): Promise<LawArticle[]> {
+  // Rate limit check
+  const { checkAIRateLimit } = await import("../lib/ai-rate-limiter.js");
+  const limit = checkAIRateLimit(tenantId, "perplexity");
+  if (!limit.allowed) throw new Error(`Perplexity rate limit exceeded. Resets in ${limit.resetsIn}s.`);
+
   const searchQuery = customQuery ?? RESEARCH_QUERY;
   const { articles } = await callPerplexity(customQuery);
 
