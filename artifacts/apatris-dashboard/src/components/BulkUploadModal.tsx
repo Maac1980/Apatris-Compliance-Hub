@@ -99,6 +99,7 @@ function DropZone({
 
 export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
   const [files, setFiles] = useState<Partial<Record<Category, DropZoneFile>>>({});
+  const [workerName, setWorkerName] = useState("");
   const [profession, setProfession] = useState("");
   const [customProfession, setCustomProfession] = useState("");
   const [status, setStatus] = useState<"idle" | "scanning" | "creating" | "done" | "error">("idle");
@@ -136,10 +137,15 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
       if (effectiveProfession) {
         form.append("profession", effectiveProfession);
       }
+      if (workerName.trim()) {
+        form.append("workerName", workerName.trim());
+      }
 
       setStatus("creating");
+      const token = localStorage.getItem("apatris_jwt");
       const res = await fetch(`${import.meta.env.BASE_URL}api/workers/bulk-create`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
 
@@ -167,6 +173,7 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
 
   const handleClose = () => {
     setFiles({});
+    setWorkerName("");
     setProfession("");
     setCustomProfession("");
     setStatus("idle");
@@ -210,6 +217,21 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
                     onFile={setFile(cat.key)}
                   />
                 ))}
+              </div>
+
+              {/* WORKER NAME — fallback if AI can't extract from passport */}
+              <div className="mb-4 p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Worker Name
+                  <span className="ml-1 text-gray-600 normal-case font-normal">(optional — AI reads from passport, type here as backup)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Manish Suresh Shetty"
+                  value={workerName}
+                  onChange={(e) => setWorkerName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500/60 placeholder:text-gray-600"
+                />
               </div>
 
               {/* PROFESSION / SPEC field */}

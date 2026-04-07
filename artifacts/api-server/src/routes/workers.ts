@@ -272,8 +272,8 @@ async function scanBulkDocument(
   if (!imageTypes.includes(mimeType)) return {};
 
   const prompts: Record<string, string> = {
-    passport: `Extract from this passport image. Return ONLY valid JSON:
-{"name":"full name or null","dateOfBirth":"YYYY-MM-DD or null","passportExpiry":"YYYY-MM-DD or null","nationality":"nationality or null"}`,
+    passport: `Extract from this passport image. Look for BOTH "Given Name" / "Prénom" AND "Surname" / "Nom" fields separately. Indian passports show Given Name (which may include father's name) and Surname in different areas. Combine them as: givenName + " " + surname = full name. If only one is visible, use what you can read. Return ONLY valid JSON:
+{"name":"full name (givenName + surname combined) or given name only if surname not visible, or null only if nothing readable","givenName":"given name field or null","surname":"surname field or null","dateOfBirth":"YYYY-MM-DD or null","passportExpiry":"YYYY-MM-DD or null","nationality":"nationality or null","passportNumber":"passport number or null"}`,
     bhp: `Extract from this BHP/safety certificate. Return ONLY valid JSON:
 {"name":"worker full name or null","bhpExpiry":"YYYY-MM-DD or null"}`,
     certificate: `Extract from this TRC/welding certificate. Return ONLY valid JSON:
@@ -344,11 +344,39 @@ router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive
     const workerFields: Record<string, unknown> = {};
     const extractedSummary: Record<string, string> = {};
 
-    const name = merged.name;
-    if (name) {
-      workerFields.full_name = name;
-      extractedSummary.name = name;
+    // Name resolution: AI combined name > givenName+surname > manual fallback
+    const manualName = typeof req.body?.workerName === "string" ? req.body.workerName.trim() : "";
+    let resolvedName = merged.name?.trim() || null;
+
+    // If AI couldn't combine, try givenName + surname from passport
+    if (!resolvedName && passportData.givenName) {
+      const given = (passportData.givenName ?? "").trim();
+      const surname = (passportData.surname ?? "").trim();
+      resolvedName = surname ? `${given} ${surname}` : given;
     }
+
+    // Manual fallback from form field
+    if (!resolvedName && manualName) {
+      resolvedName = manualName;
+    }
+
+    // Validation: name is required
+    if (!resolvedName) {
+      return res.status(400).json({
+        error: "Could not extract worker name from uploaded documents. Please enter the name manually.",
+        extracted: { ...passportData, ...certData, ...bhpData, ...contractData },
+      });
+    }
+
+    workerFields.full_name = resolvedName;
+    extractedSummary.name = resolvedName;
+
+    // Store passport number if extracted
+    if (passportData.passportNumber) {
+      workerFields.passport_number = passportData.passportNumber;
+      extractedSummary.passportNumber = passportData.passportNumber;
+    }
+
     if (passportData.passportExpiry) {
       workerFields.passport_expiry = passportData.passportExpiry;
       extractedSummary.passportExpiry = passportData.passportExpiry;
