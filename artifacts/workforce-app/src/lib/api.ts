@@ -304,6 +304,30 @@ export async function createWorkerInAirtable(
   return { id: result.id ?? "", name: result.name ?? data.name };
 }
 
+// ── Worker legal status (self-service) ────────────────────────────────────
+export interface WorkerLegalView {
+  statusLabel: string;
+  statusColor: string;
+  explanation: string;
+  whatHappensNext: string;
+  whatYouNeedToDo: string | null;
+  contactMessage: string;
+  lastUpdated: string;
+  customMessage: string | null;
+}
+
+export async function fetchMyLegalStatus(jwt: string): Promise<WorkerLegalView | null> {
+  try {
+    const res = await fetch(`${API_BASE}/self-service/legal-status`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    if (!res.ok) return null;
+    return await res.json() as WorkerLegalView;
+  } catch {
+    return null;
+  }
+}
+
 // ── Fetch workers ──────────────────────────────────────────────────────────
 export async function fetchWorkersFromApi(jwt?: string): Promise<Worker[]> {
   const res = await fetch(`${API_BASE}/workers`, {

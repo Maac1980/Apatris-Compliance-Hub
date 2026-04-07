@@ -11,8 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import {
-  fetchMyWorkerProfile, fetchMyHours, submitHours,
-  type WorkerProfile, type HoursEntry,
+  fetchMyWorkerProfile, fetchMyHours, submitHours, fetchMyLegalStatus,
+  type WorkerProfile, type HoursEntry, type WorkerLegalView,
 } from "@/lib/api";
 
 const MY_COORDINATORS = [
@@ -202,6 +202,7 @@ export function Tier5Home() {
 
   const [profile, setProfile]   = useState<WorkerProfile | null>(null);
   const [hoursLog, setHoursLog] = useState<HoursEntry[]>([]);
+  const [legalStatus, setLegalStatus] = useState<WorkerLegalView | null>(null);
   const [profLoading, setProfLoading] = useState(true);
   const [hoursSheetOpen, setHoursSheetOpen] = useState(false);
 
@@ -215,6 +216,9 @@ export function Tier5Home() {
     fetchMyHours(jwt)
       .then(setHoursLog)
       .catch(() => setHoursLog([]));
+    fetchMyLegalStatus(jwt)
+      .then(setLegalStatus)
+      .catch(() => setLegalStatus(null));
   }, [jwt]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -316,6 +320,55 @@ export function Tier5Home() {
           <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{t("tier5.daysToNextRenewal")}</div>
         </div>
       </div>
+
+      {/* ── Legal Status ─────────────────────────────────────────────────── */}
+      {legalStatus && (
+        <div className="space-y-2">
+          <h2 className="text-[10px] font-heading font-bold uppercase tracking-widest text-muted-foreground ml-1">
+            {t("tier5.myStatus") ?? "My Status"}
+          </h2>
+          <div className={cn(
+            "premium-card rounded-2xl p-4 border",
+            legalStatus.statusColor === "green" ? "border-emerald-500/20" :
+            legalStatus.statusColor === "blue" ? "border-blue-500/20" :
+            legalStatus.statusColor === "amber" ? "border-amber-500/20" :
+            legalStatus.statusColor === "red" ? "border-red-500/20" : "border-white/[0.06]"
+          )}>
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className={cn(
+                "w-8 h-8 rounded-xl flex items-center justify-center",
+                legalStatus.statusColor === "green" ? "bg-emerald-500/15" :
+                legalStatus.statusColor === "blue" ? "bg-blue-500/15" :
+                legalStatus.statusColor === "amber" ? "bg-amber-500/15" :
+                legalStatus.statusColor === "red" ? "bg-red-500/15" : "bg-white/[0.06]"
+              )}>
+                {legalStatus.statusColor === "green" ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> :
+                 legalStatus.statusColor === "red" ? <ShieldAlert className="w-4 h-4 text-red-400" /> :
+                 <ShieldCheck className="w-4 h-4 text-blue-400" />}
+              </div>
+              <div>
+                <div className={cn(
+                  "text-sm font-bold",
+                  legalStatus.statusColor === "green" ? "text-emerald-400" :
+                  legalStatus.statusColor === "blue" ? "text-blue-400" :
+                  legalStatus.statusColor === "amber" ? "text-amber-400" :
+                  legalStatus.statusColor === "red" ? "text-red-400" : "text-muted-foreground"
+                )}>{legalStatus.statusLabel}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {new Date(legalStatus.lastUpdated).toLocaleDateString("en-GB")}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-foreground/80 leading-relaxed">{legalStatus.explanation}</p>
+            {legalStatus.whatYouNeedToDo && (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                <p className="text-[11px] text-amber-400 font-medium">{legalStatus.whatYouNeedToDo}</p>
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground mt-2.5 leading-relaxed">{legalStatus.whatHappensNext}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── My Documents ───────────────────────────────────────────────────── */}
       <div className="space-y-3">
