@@ -159,23 +159,8 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
 
       const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
-      // Try OTP if mail is configured, otherwise direct JWT
-      if (isMailConfigured()) {
-        const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
-        const session = crypto.randomBytes(24).toString("hex");
-        await storeOtpSession(session, otp, userData, OTP_EXPIRY_MS);
-
-        try {
-          await sendOtpEmail(user.email, user.name, otp);
-          return res.json({ otpRequired: true, session });
-        } catch (err) {
-          await deleteOtpSession(session);
-          console.error("[Auth] OTP email failed, falling back to direct JWT:", err instanceof Error ? err.message : err);
-          // Fall through to direct JWT
-        }
-      }
-
-      // Direct JWT login (OTP unavailable or email failed)
+      // Direct JWT login — OTP disabled for internal team use
+      // Re-enable OTP when Brevo SMTP latency is resolved
       const accessToken = signToken(userData);
       const refreshToken = await createRefreshToken(userData);
       setJwtCookie(res, accessToken);
