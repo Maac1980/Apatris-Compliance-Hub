@@ -42,7 +42,8 @@ export default function LegalDocuments() {
     queryFn: async () => {
       const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
       if (!res.ok) return [];
-      return extractList<{ id: string; full_name: string }>(await res.json(), "workers").slice(0, 300);
+      const list = extractList<any>(await res.json(), "workers").slice(0, 300);
+      return list.map((w: any) => ({ id: w.id, full_name: w.full_name ?? w.name ?? w.id }));
     },
   });
 
