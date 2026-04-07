@@ -93,6 +93,9 @@ import PIPReadiness from "@/pages/PIPReadiness";
 import AuthorityPacks from "@/pages/AuthorityPacks";
 import LegalQueue from "@/pages/LegalQueue";
 import RejectionIntelligence from "@/pages/RejectionIntelligence";
+import LegalAlerts from "@/pages/LegalAlerts";
+import PIPInspectionReport from "@/pages/PIPInspectionReport";
+import LinkedCases from "@/pages/LinkedCases";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -229,6 +232,15 @@ function Router() {
       </Route>
       <Route path="/rejection-intelligence">
         {() => <ProtectedRoute component={RejectionIntelligence} />}
+      </Route>
+      <Route path="/legal-alerts">
+        {() => <ProtectedRoute component={LegalAlerts} />}
+      </Route>
+      <Route path="/pip-inspection-report">
+        {() => <ProtectedRoute component={PIPInspectionReport} />}
+      </Route>
+      <Route path="/linked-cases">
+        {() => <ProtectedRoute component={LinkedCases} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}

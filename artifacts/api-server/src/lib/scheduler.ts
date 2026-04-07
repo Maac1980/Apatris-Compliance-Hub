@@ -310,6 +310,7 @@ export function startScheduler(): void {
       .then(() => runChurnScan())
       .then(() => runInsuranceAlerts())
       .then(() => runPostingExpiryAlertsJob())
+      .then(() => runDailyLegalStatusScan())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
@@ -333,6 +334,16 @@ async function runInsuranceAlerts(): Promise<void> {
     await runInsuranceExpiryAlerts();
   } catch (err) {
     console.error("[Scheduler] Insurance alert failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+// Daily legal status scan — proactive detection of status transitions
+async function runDailyLegalStatusScan(): Promise<void> {
+  try {
+    const { runDailyLegalScan } = await import("../services/daily-legal-scan.service.js");
+    await runDailyLegalScan(); // scans all tenants
+  } catch (err) {
+    console.error("[Scheduler] Daily legal scan failed:", err instanceof Error ? err.message : err);
   }
 }
 

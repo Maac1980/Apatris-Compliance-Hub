@@ -2291,6 +2291,17 @@ export async function initializeDatabase(): Promise<void> {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // ── TRC ↔ Legal Case linkage column
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='trc_case_id') THEN
+          ALTER TABLE legal_cases ADD COLUMN trc_case_id UUID;
+        END IF;
+      END $$;
+    `);
+  } catch { /* column may already exist */ }
+
   // Authority response packs — formal evidence-backed response drafts for authorities
   await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2399,6 +2410,89 @@ export async function initializeDatabase(): Promise<void> {
       END $$;
     `);
   } catch { /* columns may already exist */ }
+
+  // Legal alerts — proactive status change detection
+  await execute(`CREATE TABLE IF NOT EXISTS legal_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    alert_type TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'MEDIUM' CHECK (severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+    previous_status TEXT,
+    new_status TEXT,
+    previous_risk_level TEXT,
+    new_risk_level TEXT,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    notification_channel TEXT,
+    notification_status TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // Legal scan runs — operational audit for daily scans
+  await execute(`CREATE TABLE IF NOT EXISTS legal_scan_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    workers_scanned INTEGER DEFAULT 0,
+    alerts_created INTEGER DEFAULT 0,
+    errors INTEGER DEFAULT 0,
+    summary_json JSONB DEFAULT '{}'
+  )`);
+
+  // ── OCR evidence extraction columns on legal_evidence
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extracted_filing_date') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extracted_filing_date DATE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extracted_document_type') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extracted_document_type TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extracted_reference_number') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extracted_reference_number TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extracted_authority') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extracted_authority TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extracted_text') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extracted_text TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extraction_confidence') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extraction_confidence NUMERIC(3,2);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extraction_status') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extraction_status TEXT DEFAULT 'PENDING';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='extraction_provider') THEN
+          ALTER TABLE legal_evidence ADD COLUMN extraction_provider TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='verification_status') THEN
+          ALTER TABLE legal_evidence ADD COLUMN verification_status TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_evidence' AND column_name='verification_details') THEN
+          ALTER TABLE legal_evidence ADD COLUMN verification_details JSONB;
+        END IF;
+      END $$;
+    `);
+  } catch { /* columns may already exist */ }
+
+  // PIP inspection reports — stored compliance snapshots for inspections
+  await execute(`CREATE TABLE IF NOT EXISTS pip_inspection_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    site_id TEXT,
+    company_id TEXT,
+    readiness_score INTEGER NOT NULL DEFAULT 0,
+    readiness_level TEXT NOT NULL DEFAULT 'CRITICAL',
+    summary_json JSONB NOT NULL DEFAULT '{}',
+    workers_json JSONB NOT NULL DEFAULT '[]',
+    report_json JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
 
   // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
   try {

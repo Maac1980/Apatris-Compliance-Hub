@@ -44,6 +44,14 @@ router.post("/trc/cases", requireAuth, async (req, res) => {
         startDate ?? null, expiryDate ?? null, notes ?? null, assignedTo ?? null,
       ]
     );
+    // Auto-create linked legal case
+    if (row && workerId) {
+      try {
+        const { syncTrcCaseToLegalCase } = await import("../services/case-sync.service.js");
+        await syncTrcCaseToLegalCase((row as any).id, req.tenantId!);
+      } catch { /* non-blocking */ }
+    }
+
     res.status(201).json({ case: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create TRC case" });
@@ -74,6 +82,15 @@ router.patch("/trc/cases/:id", requireAuth, async (req, res) => {
       vals
     );
     if (!row) return res.status(404).json({ error: "TRC case not found" });
+
+    // Auto-sync to linked legal case if status changed
+    if (body.status !== undefined) {
+      try {
+        const { syncTrcCaseToLegalCase } = await import("../services/case-sync.service.js");
+        await syncTrcCaseToLegalCase(req.params.id as string, req.tenantId!);
+      } catch { /* non-blocking — sync is best-effort */ }
+    }
+
     res.json({ case: row });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to update TRC case" });

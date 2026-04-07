@@ -103,6 +103,14 @@ export async function updateCaseStatus(
   // Trigger snapshot refresh — status change may affect legal protection
   try { await refreshWorkerLegalSnapshot(existing.worker_id, tenantId); } catch { /* non-blocking */ }
 
+  // Sync back to TRC case if linked (only REJECTED/APPROVED)
+  if (newStatus === "REJECTED" || newStatus === "APPROVED") {
+    try {
+      const { syncLegalCaseToTrcCase } = await import("./case-sync.service.js");
+      await syncLegalCaseToTrcCase(caseId, tenantId);
+    } catch { /* non-blocking */ }
+  }
+
   return updated;
 }
 

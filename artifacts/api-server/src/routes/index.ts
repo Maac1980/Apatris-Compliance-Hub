@@ -91,6 +91,10 @@ import legalExplainRouter from "./legal-explain.js";
 import legalQueueRouter from "./legal-queue.js";
 import rejectionsRouter from "./rejections.js";
 import legalApprovalRouter from "./legal-approval.js";
+import legalAlertsRouter from "./legal-alerts.js";
+import legalEvidenceOcrRouter from "./legal-evidence-ocr.js";
+import pipInspectionReportRouter from "./pip-inspection-report.js";
+import caseSyncRouter from "./case-sync.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -185,5 +189,9 @@ router.use(legalExplainRouter);
 router.use(legalQueueRouter);
 router.use(rejectionsRouter);
 router.use(legalApprovalRouter);
+router.use(legalAlertsRouter);
+router.use(legalEvidenceOcrRouter);
+router.use(pipInspectionReportRouter);
+router.use(caseSyncRouter);
 
 export default router;
