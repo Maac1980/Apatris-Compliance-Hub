@@ -459,7 +459,9 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
-  max-width: 820px;
+  max-width: 860px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   background: linear-gradient(180deg, #111827 0%, #0c1424 100%);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px;
