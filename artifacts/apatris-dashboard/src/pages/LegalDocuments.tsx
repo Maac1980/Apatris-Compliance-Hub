@@ -40,7 +40,7 @@ export default function LegalDocuments() {
   const { data: workersData } = useQuery({
     queryKey: ["workers-for-docs"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/workers`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
       if (!res.ok) return [];
       return extractList<{ id: string; full_name: string }>(await res.json(), "workers").slice(0, 300);
     },
@@ -50,7 +50,7 @@ export default function LegalDocuments() {
   const { data: suggestionsData } = useQuery({
     queryKey: ["doc-suggestions", selectedWorker],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/documents/suggest/${selectedWorker}`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/documents/suggest/${selectedWorker}`, { headers: authHeaders() });
       if (!res.ok) return [];
       const json = await res.json();
       return json.suggestions ?? [];
@@ -62,7 +62,7 @@ export default function LegalDocuments() {
   const { data: docsData, isLoading: docsLoading } = useQuery({
     queryKey: ["worker-legal-docs", selectedWorker],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/documents/worker/${selectedWorker}`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/documents/worker/${selectedWorker}`, { headers: authHeaders() });
       if (!res.ok) return [];
       const json = await res.json();
       return json.documents ?? [];
@@ -72,7 +72,7 @@ export default function LegalDocuments() {
 
   const generateMutation = useMutation({
     mutationFn: async (templateType: string) => {
-      const res = await fetch(`${BASE}/api/v1/legal/documents/generate`, {
+      const res = await fetch(`${BASE}api/v1/legal/documents/generate`, {
         method: "POST", headers: authHeaders(),
         body: JSON.stringify({ workerId: selectedWorker, templateType }),
       });
@@ -89,7 +89,7 @@ export default function LegalDocuments() {
 
   const approveMutation = useMutation({
     mutationFn: async (docId: string) => {
-      const res = await fetch(`${BASE}/api/v1/legal/documents/${docId}/approve`, { method: "POST", headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/documents/${docId}/approve`, { method: "POST", headers: authHeaders() });
       if (!res.ok) throw new Error("Approval failed");
       return res.json();
     },
@@ -232,7 +232,7 @@ export default function LegalDocuments() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${STATUS_STYLE[selectedDoc.status] ?? STATUS_STYLE.draft}`}>{selectedDoc.status}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => window.open(`${BASE}/api/v1/legal/documents/${selectedDoc.id}/html`, "_blank")}
+                <button onClick={() => window.open(`${BASE}api/v1/legal/documents/${selectedDoc.id}/html`, "_blank")}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold hover:bg-slate-600">
                   <Printer className="w-3 h-3" /> Print
                 </button>
