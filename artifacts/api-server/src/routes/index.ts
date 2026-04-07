@@ -96,6 +96,7 @@ import legalEvidenceOcrRouter from "./legal-evidence-ocr.js";
 import pipInspectionReportRouter from "./pip-inspection-report.js";
 import caseSyncRouter from "./case-sync.js";
 import legalCopilotRouter from "./legal-copilot.js";
+import legalDocumentsRouter from "./legal-documents.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -195,5 +196,6 @@ router.use(legalEvidenceOcrRouter);
 router.use(pipInspectionReportRouter);
 router.use(caseSyncRouter);
 router.use(legalCopilotRouter);
+router.use(legalDocumentsRouter);
 
 export default router;

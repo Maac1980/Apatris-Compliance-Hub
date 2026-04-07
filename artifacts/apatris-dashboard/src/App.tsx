@@ -96,6 +96,7 @@ import RejectionIntelligence from "@/pages/RejectionIntelligence";
 import LegalAlerts from "@/pages/LegalAlerts";
 import PIPInspectionReport from "@/pages/PIPInspectionReport";
 import LinkedCases from "@/pages/LinkedCases";
+import LegalDocuments from "@/pages/LegalDocuments";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -241,6 +242,9 @@ function Router() {
       </Route>
       <Route path="/linked-cases">
         {() => <ProtectedRoute component={LinkedCases} />}
+      </Route>
+      <Route path="/legal-documents">
+        {() => <ProtectedRoute component={LegalDocuments} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}

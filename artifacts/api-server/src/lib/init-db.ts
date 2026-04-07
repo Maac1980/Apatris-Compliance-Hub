@@ -2494,6 +2494,28 @@ export async function initializeDatabase(): Promise<void> {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // Legal document generation — attorney documents, applications, appeals
+  await execute(`CREATE TABLE IF NOT EXISTS legal_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+    legal_case_id UUID REFERENCES legal_cases(id) ON DELETE SET NULL,
+    template_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    language TEXT NOT NULL DEFAULT 'pl',
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','review','approved','sent','archived')),
+    content_json JSONB NOT NULL DEFAULT '{}',
+    rendered_html TEXT,
+    file_path TEXT,
+    suggested_by TEXT,
+    created_by TEXT,
+    approved_by TEXT,
+    approved_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
   try {
     await execute(`
