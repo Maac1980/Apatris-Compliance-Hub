@@ -202,20 +202,20 @@ function reverseNetToGross(desiredNetPerHour: number, hours: number, rates: ZUSR
   const targetNet = Math.round(desiredNetPerHour * hours * 100) / 100;
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
-  // Phase A — Binary search (tight convergence)
+  // Phase A — Binary search on gross TOTAL (tight convergence)
   let lo = targetNet * 0.8, hi = targetNet * 2.5;
   for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
     const net = calcZUS(round2(mid), 0, 0, rates, pit2).netAfterTax;
-    if (Math.abs(net - targetNet) < 0.01) { lo = hi = mid; break; }
+    if (Math.abs(net - targetNet) < 0.50) break;
     if (net < targetNet) lo = mid; else hi = mid;
   }
   const approx = round2((lo + hi) / 2);
 
-  // Phase B — Precision scan ±3 PLN at 0.01 step
+  // Phase B — Precision scan on gross TOTAL ±5 PLN at 0.01 step
   const exactMatches: number[] = [];
   let bestGross = approx, bestDiff = Infinity;
-  const scanLo = round2(approx - 3), scanHi = round2(approx + 3);
+  const scanLo = round2(Math.max(1, approx - 5)), scanHi = round2(approx + 5);
 
   for (let g = scanLo; g <= scanHi; g = round2(g + 0.01)) {
     const net = calcZUS(g, 0, 0, rates, pit2).netAfterTax;
