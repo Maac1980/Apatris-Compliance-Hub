@@ -9,6 +9,22 @@ const router = Router();
 // All authority pack endpoints are restricted to Admin/Executive/LegalHead
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
 
+// GET /api/v1/legal/authority-pack/all — list all packs for tenant
+router.get("/v1/legal/authority-pack/all", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
+  try {
+    const { query } = await import("../lib/db.js");
+    const packs = await query(
+      `SELECT ap.*, w.full_name as worker_name FROM authority_response_packs ap
+       LEFT JOIN workers w ON w.id = ap.worker_id
+       WHERE ap.tenant_id = $1 ORDER BY ap.created_at DESC LIMIT 100`,
+      [req.tenantId!]
+    );
+    res.json({ packs, count: packs.length });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 // POST /api/v1/legal/authority-pack/generate — generate a new authority response pack
 router.post("/v1/legal/authority-pack/generate", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
