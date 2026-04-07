@@ -159,23 +159,27 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
 
       const userData = { email: user.email, name: user.name, role: user.role, tenantId: req.tenantId, tenantSlug: req.tenantSlug };
 
-      if (!isMailConfigured()) {
-        return res.status(503).json({ error: "Two-factor login is temporarily unavailable. Contact the administrator." });
+      // Try OTP if mail is configured, otherwise direct JWT
+      if (isMailConfigured()) {
+        const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+        const session = crypto.randomBytes(24).toString("hex");
+        await storeOtpSession(session, otp, userData, OTP_EXPIRY_MS);
+
+        try {
+          await sendOtpEmail(user.email, user.name, otp);
+          return res.json({ otpRequired: true, session });
+        } catch (err) {
+          await deleteOtpSession(session);
+          console.error("[Auth] OTP email failed, falling back to direct JWT:", err instanceof Error ? err.message : err);
+          // Fall through to direct JWT
+        }
       }
 
-      const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
-      const session = crypto.randomBytes(24).toString("hex");
-      await storeOtpSession(session, otp, userData, OTP_EXPIRY_MS);
-
-      try {
-        await sendOtpEmail(user.email, user.name, otp);
-      } catch (err) {
-        await deleteOtpSession(session);
-        console.error("[Auth] Failed to send OTP email:", err instanceof Error ? err.message : err);
-        return res.status(503).json({ error: "We could not send your verification code. Please try again or contact the administrator." });
-      }
-
-      return res.json({ otpRequired: true, session });
+      // Direct JWT login (OTP unavailable or email failed)
+      const accessToken = signToken(userData);
+      const refreshToken = await createRefreshToken(userData);
+      setJwtCookie(res, accessToken);
+      return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
