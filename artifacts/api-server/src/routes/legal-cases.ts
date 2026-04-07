@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../lib/auth-middleware.js";
+import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import {
   createCase, updateCaseStatus, getCasesByWorker, getActiveCases, getUrgencyQueue,
   type CaseType, type CaseStatus,
@@ -9,9 +9,10 @@ const router = Router();
 
 const VALID_TYPES: CaseType[] = ["TRC", "APPEAL", "PR", "CITIZENSHIP"];
 const VALID_STATUSES: CaseStatus[] = ["NEW", "PENDING", "REJECTED", "APPROVED"];
+const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
 
 // GET /api/v1/legal/cases — list all active cases for tenant
-router.get("/v1/legal/cases", requireAuth, async (req, res) => {
+router.get("/v1/legal/cases", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const cases = await getActiveCases(req.tenantId!);
     res.json({ cases, count: cases.length });
@@ -21,7 +22,7 @@ router.get("/v1/legal/cases", requireAuth, async (req, res) => {
 });
 
 // GET /api/v1/legal/cases/queue — urgency queue sorted by deadline
-router.get("/v1/legal/cases/queue", requireAuth, async (req, res) => {
+router.get("/v1/legal/cases/queue", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const cases = await getUrgencyQueue(req.tenantId!);
     res.json({ cases, count: cases.length });
@@ -41,7 +42,7 @@ router.get("/v1/legal/cases/:workerId", requireAuth, async (req, res) => {
 });
 
 // POST /api/v1/legal/cases — create a new legal case
-router.post("/v1/legal/cases", requireAuth, async (req, res) => {
+router.post("/v1/legal/cases", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const { workerId, caseType, notes } = req.body as {
       workerId?: string; caseType?: string; notes?: string;
@@ -59,7 +60,7 @@ router.post("/v1/legal/cases", requireAuth, async (req, res) => {
 });
 
 // PATCH /api/v1/legal/cases/:id — update case status
-router.patch("/v1/legal/cases/:id", requireAuth, async (req, res) => {
+router.patch("/v1/legal/cases/:id", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const { status } = req.body as { status?: string };
     if (!status || !VALID_STATUSES.includes(status as CaseStatus)) {

@@ -5,6 +5,7 @@ import { authHeaders, BASE } from "@/lib/api";
 import { LegalEvidenceUpload } from "@/components/LegalEvidenceUpload";
 import { LegalStatusPanel } from "@/components/LegalStatusPanel";
 import { LegalExplainPanel } from "@/components/LegalExplainPanel";
+import { LegalCopilot } from "@/components/LegalCopilot";
 import {
   Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
   Bell, Send, Phone, MessageSquare,
@@ -530,6 +531,9 @@ export default function ImmigrationDashboard() {
 
               {/* AI Legal Explanation */}
               {selectedWorkerId && <LegalExplainPanel workerId={selectedWorkerId} />}
+
+              {/* Legal Copilot */}
+              {selectedWorkerId && <LegalCopilot workerId={selectedWorkerId} />}
 
               {/* Permit History */}
               {historyLoading ? (

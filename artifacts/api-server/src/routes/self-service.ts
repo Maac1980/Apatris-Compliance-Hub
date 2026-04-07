@@ -189,4 +189,28 @@ router.patch("/leave/:id", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/self-service/legal-status — worker-safe legal view
+router.get("/self-service/legal-status", requireAuth, async (req, res) => {
+  try {
+    const worker = await resolveWorker(req);
+    if (!worker) return res.status(404).json({ error: "Worker not found" });
+
+    const { getWorkerLegalView } = await import("../services/worker-legal-view.service.js");
+    const view = await getWorkerLegalView(worker.id, req.tenantId!);
+    res.json(view);
+  } catch (err) {
+    // Safe fallback — never expose internal errors to workers
+    res.json({
+      statusLabel: "Pending",
+      statusColor: "gray",
+      explanation: "Your records are being processed. Your coordinator will contact you if anything is needed.",
+      whatHappensNext: "Our team is reviewing your documents.",
+      whatYouNeedToDo: null,
+      contactMessage: "If you have questions, your coordinator will contact you.",
+      lastUpdated: new Date().toISOString(),
+      customMessage: null,
+    });
+  }
+});
+
 export default router;

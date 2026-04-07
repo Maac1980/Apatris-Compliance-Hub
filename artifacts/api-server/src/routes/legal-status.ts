@@ -42,7 +42,7 @@ router.post("/workers/:id/legal-status/refresh", requireAuth, requireRole("Admin
 const VALID_SOURCE_TYPES = ["UPO", "MOS", "TRC_FILING", "IMMIGRATION_RECEIPT"] as const;
 
 // POST /api/workers/:id/legal-evidence — upload filing evidence and trigger legal re-evaluation
-router.post("/workers/:id/legal-evidence", requireAuth, async (req, res) => {
+router.post("/workers/:id/legal-evidence", requireAuth, requireRole("Admin", "Executive", "LegalHead", "Coordinator"), async (req, res) => {
   try {
     const workerId = req.params.id as string;
     const tenantId = req.tenantId!;

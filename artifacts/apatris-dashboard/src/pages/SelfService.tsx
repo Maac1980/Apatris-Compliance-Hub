@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { User, FileText, Calendar, DollarSign, Clock, Send, CheckCircle2, Stamp } from "lucide-react";
+import { User, FileText, Calendar, DollarSign, Clock, Send, CheckCircle2, Stamp, Shield } from "lucide-react";
 import { authHeaders, BASE } from "@/lib/api";
+import { WorkerLegalStatus } from "@/components/WorkerLegalStatus";
 
 
 export default function SelfService() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"profile" | "docs" | "leave" | "payslips">("profile");
+  const [tab, setTab] = useState<"status" | "profile" | "docs" | "leave" | "payslips">("status");
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [leaveForm, setLeaveForm] = useState<Record<string, string>>({});
@@ -72,6 +73,7 @@ export default function SelfService() {
   });
 
   const TABS = [
+    { id: "status" as const, label: "My Status", icon: Shield },
     { id: "profile" as const, label: "Profile", icon: User },
     { id: "docs" as const, label: "Documents", icon: FileText },
     { id: "leave" as const, label: "Leave", icon: Calendar },
@@ -96,6 +98,8 @@ export default function SelfService() {
           </button>
         ))}
       </div>
+
+      {tab === "status" && <WorkerLegalStatus />}
 
       {tab === "profile" && profile && (
         <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
