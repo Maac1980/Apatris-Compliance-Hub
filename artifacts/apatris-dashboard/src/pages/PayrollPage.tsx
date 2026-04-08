@@ -340,6 +340,8 @@ function NetHourCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSav
       const result = reverseNetToGross(desired, monthlyHours, zusRates, pit2);
       if (result.grossPerHour > 0) {
         onSave(workerId, "hourlyRate", result.grossPerHour);
+        // Also store precise gross total to avoid rounding loss
+        onSave(workerId, "preciseGrossTotal" as any, result.grossTotal);
       }
     }
   };
@@ -594,7 +596,8 @@ export default function PayrollPage() {
       const monthlyHours = p.monthlyHours ?? w.monthlyHours ?? 160;
       const advance = p.advance ?? w.advance;
       const penalties = p.penalties ?? w.penalties;
-      const grossPayout = hourlyRate * monthlyHours;
+      // Use precise gross total from reverse solver if available (avoids rate×hours rounding loss)
+      const grossPayout = (p as any).preciseGrossTotal ?? Math.round(hourlyRate * monthlyHours * 100) / 100;
       const finalNetto = grossPayout - advance - penalties;
       return { ...w, hourlyRate, monthlyHours, advance, penalties, grossPayout, finalNetto };
     });
