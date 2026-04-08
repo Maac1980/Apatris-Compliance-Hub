@@ -512,7 +512,7 @@ export default function PayrollPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user?.role === "Admin" || user?.role === "Executive" || user?.role === "LegalHead";
 
   const today = new Date();
   const currentYear = today.getFullYear();
