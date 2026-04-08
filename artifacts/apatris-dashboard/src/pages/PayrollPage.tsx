@@ -180,8 +180,8 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   const healthInsurance = Math.round(healthBase * (rates.zdrowotne / 100) * 100) / 100;
   // KUP = healthBase × 20% (floored to full PLN per Polish tax practice)
   const kup = Math.floor(healthBase * (rates.kup / 100));
-  // taxBase = round(healthBase - KUP)
-  const taxBase = Math.max(0, Math.round(healthBase - kup));
+  // taxBase = floor(healthBase - KUP) — per official Polish tax calculator
+  const taxBase = Math.max(0, Math.floor(healthBase - kup));
   // PIT = max(0, round(taxBase × 12%) - 300 with PIT-2)
   const grossTaxRounded = Math.round(taxBase * (rates.pit / 100));
   const estimatedTax = Math.max(0, grossTaxRounded - (pit2 ? (rates.pit2Reduction ?? 300) : 0));

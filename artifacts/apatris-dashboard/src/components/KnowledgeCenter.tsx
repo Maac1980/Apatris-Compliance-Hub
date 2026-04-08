@@ -21,9 +21,9 @@ export function calculate(hours: number, rate: number, contract: ContractType, a
   let taxBase: number;
   if (contract === "zlecenie") {
     const kup = Math.floor(healthBase * 0.20); // Floored to full PLN per Polish tax practice
-    taxBase = Math.round(healthBase - kup);
+    taxBase = Math.floor(healthBase - kup); // Floor per official Polish tax calculator
   } else {
-    taxBase = Math.round(gross - employeeZus - 250);
+    taxBase = Math.floor(gross - employeeZus - 250);
   }
 
   // PIT = max(0, round(taxBase × 12%) - 300 if PIT-2)
