@@ -394,6 +394,65 @@ function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave
   );
 }
 
+// ─── Net/h editable cell — converts to net total, uses same reverse solver ────
+function NetHourEditCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSave }: {
+  netPerHour: number; monthlyHours: number; workerId: string;
+  zusRates: ZUSRates; pit2: boolean;
+  onSave: (id: string, field: string, val: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const desiredNetH = parseFloat(draft);
+    if (!isNaN(desiredNetH) && desiredNetH > 0 && monthlyHours > 0) {
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      const targetNet = round2(desiredNetH * monthlyHours);
+      // Same reverse scan as NetTotalCell
+      let lo = targetNet * 0.8, hi = targetNet * 2.5;
+      for (let i = 0; i < 80; i++) {
+        const mid = (lo + hi) / 2;
+        const net = calcZUS(round2(mid), 0, 0, zusRates, pit2).netAfterTax;
+        if (Math.abs(net - targetNet) < 0.50) break;
+        if (net < targetNet) lo = mid; else hi = mid;
+      }
+      const approx = round2((lo + hi) / 2);
+      let bestGross = approx, bestDiff = Infinity;
+      for (let g = round2(Math.max(1, approx - 5)); g <= round2(approx + 5); g = round2(g + 0.01)) {
+        const net = calcZUS(g, 0, 0, zusRates, pit2).netAfterTax;
+        const diff = Math.abs(net - targetNet);
+        if (diff < bestDiff) { bestDiff = diff; bestGross = g; }
+        if (diff < 0.005) break;
+      }
+      const grossPerHour = round2(bestGross / monthlyHours);
+      (window as any).__netTotalSave = true;
+      onSave(workerId, "grossTotal" as any, bestGross);
+      onSave(workerId, "hourlyRate", grossPerHour);
+      setTimeout(() => { (window as any).__netTotalSave = false; }, 200);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input ref={inputRef} type="number" step="0.01" min="0" value={draft}
+        onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        className="bg-slate-700 border-2 border-green-500/70 text-green-300 rounded px-1.5 py-1 text-sm font-mono font-bold focus:outline-none text-right"
+        style={{ width: "80px" }} />
+    );
+  }
+  return (
+    <button onClick={() => { setDraft(netPerHour > 0 ? netPerHour.toFixed(2) : ""); setEditing(true); }} title="Click to set desired net/h"
+      className="text-sm font-mono font-semibold text-right transition-colors px-2 py-1 rounded hover:bg-green-500/10 hover:ring-1 hover:ring-green-500/30 text-green-300"
+      style={{ maxWidth: "80px" }}>
+      {netPerHour > 0 ? netPerHour.toFixed(2) : "—"}
+    </button>
+  );
+}
+
 // ─── ZUS Rates Editor Modal ───────────────────────────────────────────────────
 function ZUSRatesModal({ rates, onSave, onClose }: {
   rates: ZUSRates; onSave: (r: ZUSRates) => void; onClose: () => void;
@@ -1162,24 +1221,24 @@ export default function PayrollPage() {
                     <span className="text-cyan-400">Bank IBAN ✎</span>
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "110px" }}>
-                    {isAdmin ? "Gross Rate PLN/h" : <span className="text-gray-600">Rate</span>}
+                    {isAdmin ? <span className="text-blue-400">Gross/h ✎</span> : <span className="text-gray-600">Rate</span>}
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "100px" }}>
                     <span className="text-yellow-400">Hours ✎</span>
                   </th>
                   <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}>
-                    {isAdmin ? "Gross Total" : <span className="text-gray-600">Gross</span>}
+                    Gross Total
                   </th>
                   {!showZUS && isAdmin && (<>
-                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "120px" }}><span className="text-green-400">Net Total ✎</span></th>
-                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "80px" }}>Net/h</th>
+                    <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}><span className="text-green-400">Net Total ✎</span></th>
+                    <th className={`${thCls} text-right`} style={{ minWidth: "80px" }}><span className="text-green-400">Net/h ✎</span></th>
                   </>)}
                   {showZUS && isAdmin && <>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Emp. ZUS</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
-                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "120px" }}><span className="text-green-400">Net Total ✎</span></th>
-                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "100px" }}>Net/h</th>
+                    <th className={`${thCls} text-right`} style={{ minWidth: "120px" }}><span className="text-green-400">Net Total ✎</span></th>
+                    <th className={`${thCls} text-right`} style={{ minWidth: "80px" }}><span className="text-green-400">Net/h ✎</span></th>
                     <th className={`${thCls} text-right text-orange-400`} style={{ minWidth: "140px" }}>Total Empl. Cost</th>
                   </>}
                   {showZUS && showSplit && isAdmin && <>
@@ -1263,13 +1322,13 @@ export default function PayrollPage() {
                             {fmt(w.grossPayout)}
                           </span>
                         </td>
-                        {/* Net Total (editable) + Net/h (display) in basic view */}
+                        {/* Net Total ✎ + Net/h ✎ in basic view */}
                         {!showZUS && isAdmin && zus && (<>
                           <td className={`${tdCls} text-right`} style={{ minWidth: "120px" }}>
                             <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                         </>)}
                         {/* ZUS columns */}
@@ -1300,7 +1359,7 @@ export default function PayrollPage() {
                             <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
-                            <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
+                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
