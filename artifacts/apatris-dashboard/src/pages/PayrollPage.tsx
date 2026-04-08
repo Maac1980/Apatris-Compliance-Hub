@@ -566,6 +566,16 @@ export default function PayrollPage() {
         const next = { ...p };
         if (!next[id]) next[id] = {};
         next[id][field] = val;
+        // When hourlyRate or monthlyHours changed directly, clear gross_total
+        // so it falls back to rate × hours (prevents stale values)
+        if (field === "hourlyRate" || field === "monthlyHours") {
+          next[id].grossTotal = undefined as any;
+          // Also clear in DB
+          fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
+            method: "PATCH", headers: authHeaders(),
+            body: JSON.stringify({ grossTotal: null }),
+          }).catch(() => {});
+        }
         return next;
       });
     },
