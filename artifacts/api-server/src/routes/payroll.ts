@@ -28,11 +28,12 @@ router.get("/payroll/current", requireAuth, requireRole("Admin", "Executive"), a
       specialization: w.specialization,
       assignedSite: w.assignedSite,
       hourlyRate: w.hourlyRate ?? 0,
+      grossTotal: w.grossTotal ?? null,
       monthlyHours: w.monthlyHours ?? 0,
       advance: w.advance ?? 0,
       penalties: w.penalties ?? 0,
-      grossPayout: Math.round((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) * 100) / 100,
-      finalNetto: calculateNet(Math.round((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) * 100) / 100).net - (w.advance ?? 0) - (w.penalties ?? 0),
+      grossPayout: (w.grossTotal && w.grossTotal > 0) ? w.grossTotal : Math.round((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) * 100) / 100,
+      finalNetto: calculateNet((w.grossTotal && w.grossTotal > 0) ? w.grossTotal : Math.round((w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) * 100) / 100).net - (w.advance ?? 0) - (w.penalties ?? 0),
       complianceStatus: w.complianceStatus,
     }));
     res.json({ workers });
