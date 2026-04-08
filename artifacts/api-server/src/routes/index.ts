@@ -101,6 +101,7 @@ import mosRouter from "./mos.js";
 import actionsRouter from "./actions.js";
 import automationRouter from "./automation.js";
 import riskRouter from "./risk.js";
+import intelligenceRouter from "./intelligence.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -205,5 +206,6 @@ router.use(mosRouter);
 router.use(actionsRouter);
 router.use(automationRouter);
 router.use(riskRouter);
+router.use(intelligenceRouter);
 
 export default router;

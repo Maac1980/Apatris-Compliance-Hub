@@ -101,6 +101,7 @@ const PIPInspectionReport = lazy(() => import("@/pages/PIPInspectionReport"));
 const LinkedCases = lazy(() => import("@/pages/LinkedCases"));
 const LegalDocuments = lazy(() => import("@/pages/LegalDocuments"));
 const RiskOverview = lazy(() => import("@/pages/RiskOverview"));
+const IntelligenceDashboard = lazy(() => import("@/pages/IntelligenceDashboard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -252,6 +253,9 @@ function Router() {
       </Route>
       <Route path="/risk-overview">
         {() => <ProtectedRoute component={RiskOverview} />}
+      </Route>
+      <Route path="/intelligence-dashboard">
+        {() => <ProtectedRoute component={IntelligenceDashboard} />}
       </Route>
       <Route path="/job-board">
         {() => <ProtectedRoute component={JobBoard} />}
