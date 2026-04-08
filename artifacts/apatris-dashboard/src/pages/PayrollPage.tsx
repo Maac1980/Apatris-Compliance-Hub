@@ -827,11 +827,20 @@ export default function PayrollPage() {
             />
           </div>
           {isAdmin && (
-            <button onClick={() => setShowZUS((v) => !v)} title="Toggle ZUS/PIT breakdown view"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${showZUS ? "border-purple-500/60 bg-purple-900/30 text-purple-300" : "border-slate-600 text-gray-400 hover:bg-slate-700"}`}>
-              {showZUS ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-              <span className="hidden sm:inline">ZUS View</span>
-            </button>
+            <div className="flex gap-1 bg-slate-800/50 rounded-lg p-0.5">
+              <button onClick={() => { setShowZUS(false); setShowSplit(false); }}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${!showZUS ? "bg-[#C41E18] text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                Monthly
+              </button>
+              <button onClick={() => { setShowZUS(true); setShowSplit(false); }}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${showZUS && !showSplit ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                ZUS Payroll
+              </button>
+              <button onClick={() => { setShowZUS(true); setShowSplit(true); }}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${showZUS && showSplit ? "bg-teal-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                Split Employer
+              </button>
+            </div>
           )}
           {isAdmin && (
             <button onClick={handleBankExport} title="Export bank transfer list"
@@ -924,7 +933,7 @@ export default function PayrollPage() {
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-gray-500 font-mono mt-2">
                 <span>Employee ZUS: <span className="text-purple-300 font-bold">{(zusRates.emerytalneEmployee + zusRates.rentoweEmployee + (zusRates.chorobowe ?? 2.45)).toFixed(2)}%</span></span>
-                <span>Employer burden: <span className="text-orange-400 font-bold">{((zusRates.emerytalneEmployer ?? 9.76) + (zusRates.rentoweEmployer ?? 6.5) + (zusRates.wypadkowe ?? 1.67) + (zusRates.fp ?? 2.45) + (zusRates.fgsp ?? 0.10)).toFixed(2)}%</span> on top of gross</span>
+                <span>Employer burden: <span className="text-orange-400 font-bold">{((zusRates.emerytalneEmployer ?? 9.76) + (zusRates.rentoweEmployer ?? 6.5) + (zusRates.fp ?? 2.45) + (zusRates.fgsp ?? 0.10)).toFixed(2)}%</span> on top of gross (Zlecenie — no wypadkowe)</span>
                 <span className="text-gray-600">· ZUS base = Rate × Hours</span>
               </div>
             </div>
@@ -933,11 +942,7 @@ export default function PayrollPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-800/60 hover:bg-purple-700/60 border border-purple-500/40 text-purple-200 rounded-lg text-xs font-bold transition-colors whitespace-nowrap">
                 <Edit2 className="w-3 h-3" /> Edit Rates
               </button>
-              <button onClick={() => setShowSplit((v) => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${showSplit ? "border-teal-500/60 bg-teal-900/40 text-teal-200" : "border-slate-600 bg-slate-800/60 text-gray-400 hover:bg-slate-700/60"}`}>
-                {showSplit ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
-                2nd Employer Split
-              </button>
+              {/* Split toggle moved to top tab bar */}
             </div>
           </div>
         )}
