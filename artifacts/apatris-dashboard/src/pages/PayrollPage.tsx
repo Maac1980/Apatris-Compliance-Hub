@@ -1162,7 +1162,7 @@ export default function PayrollPage() {
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Emp. ZUS</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "110px" }}>Health Ins.</th>
                     <th className={`${thCls} text-right text-purple-400`} style={{ minWidth: "100px" }}>Est. PIT</th>
-                    <th className={`${thCls} text-right text-purple-300`} style={{ minWidth: "120px" }}>Net After Tax</th>
+                    <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "120px" }}><span className="text-green-400">Net Total ✎</span></th>
                     <th className={`${thCls} text-right text-green-300`} style={{ minWidth: "100px" }}>Net/h</th>
                     <th className={`${thCls} text-right text-orange-400`} style={{ minWidth: "140px" }}>Total Empl. Cost</th>
                   </>}
@@ -1281,7 +1281,7 @@ export default function PayrollPage() {
                             </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <span className="text-sm font-mono font-semibold text-purple-300">{fmt(zus.netAfterTax)}</span>
+                            <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
                           </td>
                           <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
                             <span className="text-sm font-mono font-semibold text-green-300">{w.monthlyHours > 0 ? (zus.netAfterTax / w.monthlyHours).toFixed(2) : "—"}</span>
