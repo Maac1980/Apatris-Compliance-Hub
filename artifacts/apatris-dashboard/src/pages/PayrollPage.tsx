@@ -188,10 +188,13 @@ function calcZUS(gross: number, advance: number, penalties: number, rates: ZUSRa
   // Net = gross - ZUS - health - PIT
   const netAfterTax = Math.round((gross - employeeZUS - healthInsurance - estimatedTax) * 100) / 100;
   const takeHome = netAfterTax - advance - penalties;
-  // Employer ZUS — paid by Apatris on top of gross, does not affect worker's net
-  const employerRate = ((rates.emerytalneEmployer ?? 9.76) + (rates.rentoweEmployer ?? 6.5) + (rates.wypadkowe ?? 1.67) + (rates.fp ?? 2.45) + (rates.fgsp ?? 0.10)) / 100;
-  const employerZUS = gross * employerRate;
-  const totalEmployerCost = gross + employerZUS;
+  // Employer ZUS — Umowa Zlecenie: no wypadkowe (accident insurance is for Umowa o Prace only)
+  const empPension = Math.round(gross * ((rates.emerytalneEmployer ?? 9.76) / 100) * 100) / 100;
+  const empDisability = Math.round(gross * ((rates.rentoweEmployer ?? 6.5) / 100) * 100) / 100;
+  const empFP = Math.round(gross * ((rates.fp ?? 2.45) / 100) * 100) / 100;
+  const empFGSP = Math.round(gross * ((rates.fgsp ?? 0.10) / 100) * 100) / 100;
+  const employerZUS = empPension + empDisability + empFP + empFGSP;
+  const totalEmployerCost = Math.round((gross + employerZUS) * 100) / 100;
   return { employeeZUS, healthInsurance, estimatedTax, netAfterTax, takeHome, employerZUS, totalEmployerCost };
 }
 
@@ -360,10 +363,13 @@ function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave
         if (diff < 0.005) break;
       }
 
-      // Save exact gross total (for precise net) + derived hourly rate (for display)
+      // Save both fields — grossTotal is the source of truth for net
       const grossPerHour = round2(bestGross / monthlyHours);
-      onSave(workerId, "grossTotal", bestGross);
+      // Mark this as a net-total-driven save (so onSuccess doesn't clear grossTotal)
+      (window as any).__netTotalSave = true;
+      onSave(workerId, "grossTotal" as any, bestGross);
       onSave(workerId, "hourlyRate", grossPerHour);
+      setTimeout(() => { (window as any).__netTotalSave = false; }, 200);
     }
   };
 
@@ -566,8 +572,8 @@ export default function PayrollPage() {
         const next = { ...p };
         if (!next[id]) next[id] = {};
         next[id][field] = val;
-        // When rate or hours changed directly, clear grossTotal so it recalculates
-        if (field === "hourlyRate" || field === "monthlyHours") {
+        // When rate or hours changed MANUALLY (not from NetTotalCell), clear grossTotal
+        if ((field === "hourlyRate" || field === "monthlyHours") && !(window as any).__netTotalSave) {
           (next[id] as any).grossTotal = null;
           fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
             method: "PATCH", headers: authHeaders(),
