@@ -24,6 +24,7 @@ export interface Worker {
   email: string | null;
   phone: string | null;
   hourlyRate: number;
+  grossTotal: number | null;
   monthlyHours: number;
   advance: number;
   penalties: number;
@@ -118,6 +119,7 @@ export function mapRowToWorker(row: WorkerRow): Worker {
     email: row.email ?? null,
     phone: row.phone ?? null,
     hourlyRate: Number(row.hourly_rate) || 0,
+    grossTotal: row.gross_total != null ? Number(row.gross_total) : null,
     monthlyHours: Number(row.monthly_hours) || 0,
     advance: Number(row.advance) || 0,
     penalties: Number(row.penalties) || 0,

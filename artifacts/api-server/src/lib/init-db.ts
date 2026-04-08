@@ -2559,6 +2559,17 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* column may already exist */ }
 
+  // ── Precise gross total column (avoids hourly_rate × hours rounding loss)
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='gross_total') THEN
+          ALTER TABLE workers ADD COLUMN gross_total NUMERIC(10,2);
+        END IF;
+      END $$;
+    `);
+  } catch { /* column may already exist */ }
+
   // Automation tracking
   await execute(`CREATE TABLE IF NOT EXISTS automation_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
