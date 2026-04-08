@@ -16,8 +16,12 @@ export interface PredictedRisk {
   type: string;
   description: string;
   severity: RiskSeverity;
+  riskScore: number;              // 0-100, higher = more urgent
   daysUntilImpact: number;
+  daysUntilActionRequired: number; // when action must be taken (before impact)
   confidence: number;
+  confidenceSource: "RULE_BASED" | "DATA_PATTERN";
+  linkedActionIds: string[];       // references to Action Engine action IDs
   preventionActions: string[];
 }
 
@@ -90,31 +94,36 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
     if (days <= 0) {
       risks.push({
         type: "PERMIT_EXPIRED", description: `Permit expired ${Math.abs(days)} day(s) ago`,
-        severity: "CRITICAL", daysUntilImpact: 0, confidence: 1.0,
+        severity: "CRITICAL", riskScore: 100, daysUntilImpact: 0, daysUntilActionRequired: 0,
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["urgent-review", "create-case"],
         preventionActions: ["Suspend deployment", "Consult immigration lawyer", "File new application immediately"],
       });
     } else if (days <= 7) {
       risks.push({
         type: "PERMIT_EXPIRY_IMMINENT", description: `Permit expires in ${days} day(s)`,
-        severity: "CRITICAL", daysUntilImpact: days, confidence: 1.0,
+        severity: "CRITICAL", riskScore: 95, daysUntilImpact: days, daysUntilActionRequired: 0,
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["trc-app", "poa", "cover-letter"],
         preventionActions: ["File TRC application TODAY", "Prepare emergency cover letter", "Verify all documents ready"],
       });
     } else if (days <= 14) {
       risks.push({
         type: "PERMIT_EXPIRY_URGENT", description: `Permit expires in ${days} day(s)`,
-        severity: "HIGH", daysUntilImpact: days, confidence: 1.0,
+        severity: "HIGH", riskScore: 80, daysUntilImpact: days, daysUntilActionRequired: Math.max(0, days - 7),
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["trc-app", "poa"],
         preventionActions: ["Start TRC renewal package", "Ensure POA is signed", "Upload filing evidence"],
       });
     } else if (days <= 30) {
       risks.push({
         type: "PERMIT_EXPIRY_WARNING", description: `Permit expires in ${days} day(s)`,
-        severity: "MEDIUM", daysUntilImpact: days, confidence: 1.0,
+        severity: "MEDIUM", riskScore: 50, daysUntilImpact: days, daysUntilActionRequired: Math.max(0, days - 14),
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["trc-app"],
         preventionActions: ["Begin TRC application process", "Collect required documents"],
       });
     } else if (days <= 60) {
       risks.push({
         type: "PERMIT_EXPIRY_PLANNED", description: `Permit expires in ${days} day(s)`,
-        severity: "LOW", daysUntilImpact: days, confidence: 1.0,
+        severity: "LOW", riskScore: 20, daysUntilImpact: days, daysUntilActionRequired: Math.max(0, days - 30),
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
         preventionActions: ["Plan TRC renewal timeline"],
       });
     }
@@ -125,7 +134,10 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
   if (permitDays !== null && permitDays <= 30 && permitDays > 0 && !legalCase) {
     risks.push({
       type: "NO_CONTINUITY_PROTECTION", description: "No TRC case filed — Art. 108 continuity will NOT apply if permit expires",
-      severity: permitDays <= 14 ? "CRITICAL" : "HIGH", daysUntilImpact: permitDays, confidence: 0.95,
+      severity: permitDays <= 14 ? "CRITICAL" : "HIGH",
+      riskScore: permitDays <= 14 ? 90 : 75,
+      daysUntilImpact: permitDays, daysUntilActionRequired: Math.max(0, permitDays - 7),
+      confidence: 0.95, confidenceSource: "RULE_BASED", linkedActionIds: ["create-case", "trc-app", "poa"],
       preventionActions: ["Create TRC case immediately", "File via MOS before permit expiry", "Generate TRC Renewal Package"],
     });
   }
@@ -134,7 +146,8 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
   if (Number(evidenceCount?.cnt ?? 0) === 0 && (worker.legal_status === "PROTECTED_PENDING" || legalCase)) {
     risks.push({
       type: "NO_EVIDENCE", description: "No filing evidence uploaded — PIP inspection risk",
-      severity: "HIGH", daysUntilImpact: 0, confidence: 0.9,
+      severity: "HIGH", riskScore: 70, daysUntilImpact: 0, daysUntilActionRequired: 0,
+      confidence: 0.9, confidenceSource: "DATA_PATTERN", linkedActionIds: ["upload-evidence"],
       preventionActions: ["Upload MoS/UPO filing receipt", "Scan and verify filing documents"],
     });
   }
@@ -143,7 +156,8 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
   if (ocrMismatch) {
     risks.push({
       type: "EVIDENCE_MISMATCH", description: "OCR verification found date mismatch — filing date may be incorrect",
-      severity: "HIGH", daysUntilImpact: 0, confidence: 0.85,
+      severity: "HIGH", riskScore: 65, daysUntilImpact: 0, daysUntilActionRequired: 0,
+      confidence: 0.85, confidenceSource: "DATA_PATTERN", linkedActionIds: ["upload-evidence"],
       preventionActions: ["Manually verify filing date", "Re-upload correct evidence", "Check voivodeship records"],
     });
   }
@@ -154,19 +168,22 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
     if (appealDays <= 0) {
       risks.push({
         type: "APPEAL_DEADLINE_PASSED", description: "Appeal deadline has passed",
-        severity: "CRITICAL", daysUntilImpact: 0, confidence: 1.0,
+        severity: "CRITICAL", riskScore: 100, daysUntilImpact: 0, daysUntilActionRequired: 0,
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
         preventionActions: ["Consult lawyer for alternative options", "Consider new application"],
       });
     } else if (appealDays <= 3) {
       risks.push({
         type: "APPEAL_DEADLINE_IMMINENT", description: `Appeal deadline in ${appealDays} day(s)`,
-        severity: "CRITICAL", daysUntilImpact: appealDays, confidence: 1.0,
+        severity: "CRITICAL", riskScore: 95, daysUntilImpact: appealDays, daysUntilActionRequired: 0,
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["appeal"],
         preventionActions: ["Submit appeal TODAY", "Execute Appeal Package immediately"],
       });
     } else if (appealDays <= 7) {
       risks.push({
         type: "APPEAL_DEADLINE_APPROACHING", description: `Appeal deadline in ${appealDays} day(s)`,
-        severity: "HIGH", daysUntilImpact: appealDays, confidence: 1.0,
+        severity: "HIGH", riskScore: 80, daysUntilImpact: appealDays, daysUntilActionRequired: Math.max(0, appealDays - 3),
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["appeal"],
         preventionActions: ["Prepare appeal draft", "Collect supporting evidence", "Schedule legal review"],
       });
     }
@@ -176,7 +193,8 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
   if (!hasPoa && legalCase) {
     risks.push({
       type: "MISSING_POA", description: "No Power of Attorney — cannot act on behalf of worker",
-      severity: "HIGH", daysUntilImpact: 0, confidence: 1.0,
+      severity: "HIGH", riskScore: 75, daysUntilImpact: 0, daysUntilActionRequired: 0,
+      confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: ["poa"],
       preventionActions: ["Generate and sign POA immediately"],
     });
   }
@@ -194,20 +212,23 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
     if (days <= 0) {
       risks.push({
         type: `${doc.label.toUpperCase().replace(/ /g, "_")}_EXPIRED`, description: `${doc.label} expired ${Math.abs(days)} day(s) ago`,
-        severity: "HIGH", daysUntilImpact: 0, confidence: 1.0,
+        severity: "HIGH", riskScore: 70, daysUntilImpact: 0, daysUntilActionRequired: 0,
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
         preventionActions: [`Renew ${doc.label} immediately`],
       });
     } else if (days <= doc.days) {
       risks.push({
         type: `${doc.label.toUpperCase().replace(/ /g, "_")}_EXPIRING`, description: `${doc.label} expires in ${days} day(s)`,
-        severity: days <= 7 ? "HIGH" : "MEDIUM", daysUntilImpact: days, confidence: 1.0,
+        severity: days <= 7 ? "HIGH" : "MEDIUM", riskScore: days <= 7 ? 60 : 35,
+        daysUntilImpact: days, daysUntilActionRequired: Math.max(0, days - 7),
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
         preventionActions: [`Schedule ${doc.label} renewal`],
       });
     }
   }
 
-  // Sort by severity then days
-  risks.sort((a, b) => severityScore(b.severity) - severityScore(a.severity) || a.daysUntilImpact - b.daysUntilImpact);
+  // Sort by riskScore descending
+  risks.sort((a, b) => b.riskScore - a.riskScore);
 
   // Build timeline
   const timeline = buildTimeline(permitDays, legalCase);
