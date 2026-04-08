@@ -99,6 +99,7 @@ import legalCopilotRouter from "./legal-copilot.js";
 import legalDocumentsRouter from "./legal-documents.js";
 import mosRouter from "./mos.js";
 import actionsRouter from "./actions.js";
+import automationRouter from "./automation.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -201,5 +202,6 @@ router.use(legalCopilotRouter);
 router.use(legalDocumentsRouter);
 router.use(mosRouter);
 router.use(actionsRouter);
+router.use(automationRouter);
 
 export default router;

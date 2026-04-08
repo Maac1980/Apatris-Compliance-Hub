@@ -311,6 +311,7 @@ export function startScheduler(): void {
       .then(() => runInsuranceAlerts())
       .then(() => runPostingExpiryAlertsJob())
       .then(() => runDailyLegalStatusScan())
+      .then(() => runAutomationCycle())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
       });
@@ -344,6 +345,18 @@ async function runDailyLegalStatusScan(): Promise<void> {
     await runDailyLegalScan(); // scans all tenants
   } catch (err) {
     console.error("[Scheduler] Daily legal scan failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+// Automation cycle — runs after legal scan, respects per-tenant mode
+async function runAutomationCycle(): Promise<void> {
+  try {
+    const { runAutomationCycle: run } = await import("../services/automation-engine.service.js");
+    // No tenantId = all tenants. No mode override = uses tenant's automation_mode setting.
+    // Default tenant setting: "disabled" — change to "dry_run" or "enabled" per tenant.
+    await run();
+  } catch (err) {
+    console.error("[Scheduler] Automation cycle failed:", err instanceof Error ? err.message : err);
   }
 }
 

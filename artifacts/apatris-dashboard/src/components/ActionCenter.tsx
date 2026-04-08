@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE } from "@/lib/api";
 import {
   Zap, FileSignature, Shield, AlertTriangle, CheckCircle2, Loader2,
-  Upload, Eye, Package, ChevronRight,
+  Upload, Eye, Package, ChevronRight, Clock, Bot,
 } from "lucide-react";
 
 const TYPE_ICON: Record<string, typeof FileSignature> = {
@@ -150,7 +150,41 @@ export function ActionCenter({ workerId }: ActionCenterProps) {
         {done.length > 0 && (
           <p className="text-[10px] text-emerald-400/60 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{done.length} completed</p>
         )}
+
+        {/* Automation activity */}
+        <AutomationActivity workerId={workerId} />
       </div>
+    </div>
+  );
+}
+
+function AutomationActivity({ workerId }: { workerId: string }) {
+  const { data } = useQuery({
+    queryKey: ["automation-worker", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/v1/automation/worker/${workerId}`, { headers: authHeaders() });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.logs ?? [];
+    },
+    enabled: !!workerId,
+  });
+
+  const logs = (data ?? []).slice(0, 5);
+  if (logs.length === 0) return null;
+
+  return (
+    <div className="mt-2 pt-2 border-t border-slate-700/30">
+      <p className="text-[10px] text-slate-500 flex items-center gap-1 mb-1.5"><Bot className="w-3 h-3" /> Automation Activity</p>
+      {logs.map((l: any, i: number) => (
+        <div key={l.id ?? i} className="flex items-center gap-2 text-[10px] text-slate-400 mb-0.5">
+          {l.result === "SUCCESS" ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" /> :
+           l.result === "DRY_RUN" ? <Clock className="w-2.5 h-2.5 text-blue-400" /> :
+           <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />}
+          <span className="truncate">{l.action_title}</span>
+          <span className="ml-auto text-slate-600 font-mono text-[9px]">{l.result}</span>
+        </div>
+      ))}
     </div>
   );
 }

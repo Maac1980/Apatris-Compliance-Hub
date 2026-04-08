@@ -2548,6 +2548,43 @@ export async function initializeDatabase(): Promise<void> {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // ── Tenant automation mode (per-tenant control)
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tenants' AND column_name='automation_mode') THEN
+          ALTER TABLE tenants ADD COLUMN automation_mode TEXT NOT NULL DEFAULT 'disabled' CHECK (automation_mode IN ('disabled','dry_run','enabled'));
+        END IF;
+      END $$;
+    `);
+  } catch { /* column may already exist */ }
+
+  // Automation tracking
+  await execute(`CREATE TABLE IF NOT EXISTS automation_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    mode TEXT NOT NULL DEFAULT 'dry_run' CHECK (mode IN ('dry_run','live')),
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    workers_processed INTEGER DEFAULT 0,
+    actions_executed INTEGER DEFAULT 0,
+    actions_skipped INTEGER DEFAULT 0,
+    errors INTEGER DEFAULT 0,
+    summary_json JSONB DEFAULT '{}'
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS automation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID REFERENCES automation_runs(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+    action_id TEXT NOT NULL,
+    action_title TEXT,
+    result TEXT NOT NULL CHECK (result IN ('SUCCESS','SKIPPED','ERROR','DRY_RUN')),
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
   try {
     await execute(`
