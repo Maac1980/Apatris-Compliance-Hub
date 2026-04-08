@@ -360,9 +360,8 @@ function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave
         if (diff < 0.005) break;
       }
 
-      // Save gross total + derived hourly rate
+      // Save derived hourly rate — gross = rate × hours (simple, no precision loss)
       const grossPerHour = round2(bestGross / monthlyHours);
-      onSave(workerId, "grossTotal", bestGross);
       onSave(workerId, "hourlyRate", grossPerHour);
     }
   };
@@ -566,16 +565,6 @@ export default function PayrollPage() {
         const next = { ...p };
         if (!next[id]) next[id] = {};
         next[id][field] = val;
-        // When hourlyRate or monthlyHours changed directly, clear gross_total
-        // so it falls back to rate × hours (prevents stale values)
-        if (field === "hourlyRate" || field === "monthlyHours") {
-          next[id].grossTotal = undefined as any;
-          // Also clear in DB
-          fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
-            method: "PATCH", headers: authHeaders(),
-            body: JSON.stringify({ grossTotal: null }),
-          }).catch(() => {});
-        }
         return next;
       });
     },
@@ -628,7 +617,8 @@ export default function PayrollPage() {
       const advance = p.advance ?? w.advance;
       const penalties = p.penalties ?? w.penalties;
       // Use precise gross total: pending > DB-stored > rate × hours fallback
-      const grossPayout = (p as any).grossTotal ?? w.grossTotal ?? Math.round(hourlyRate * monthlyHours * 100) / 100;
+      // Always use rate × hours for gross. Net Total cell updates hourlyRate via reverse solver.
+      const grossPayout = Math.round(hourlyRate * monthlyHours * 100) / 100;
       const finalNetto = grossPayout - advance - penalties;
       return { ...w, hourlyRate, monthlyHours, advance, penalties, grossPayout, finalNetto };
     });

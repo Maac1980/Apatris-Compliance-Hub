@@ -2568,8 +2568,7 @@ export async function initializeDatabase(): Promise<void> {
         END IF;
       END $$;
     `);
-    // One-time cleanup: clear stale gross_total values so workers use rate × hours
-    await execute("UPDATE workers SET gross_total = NULL WHERE gross_total IS NOT NULL");
+    // gross_total column exists but payroll uses hourlyRate × monthlyHours directly
   } catch { /* column may already exist */ }
 
   // Automation tracking
