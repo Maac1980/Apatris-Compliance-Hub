@@ -325,10 +325,11 @@ function NumCell({
 }
 
 // ─── Net Total editable cell — type desired net total, system finds exact gross ────
-function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave }: {
+function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave, onSaveNet }: {
   netTotal: number; monthlyHours: number; workerId: string;
   zusRates: ZUSRates; pit2: boolean;
   onSave: (id: string, field: string, val: number) => void;
+  onSaveNet?: (id: string, grossTotal: number, hourlyRate: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -363,13 +364,13 @@ function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave
         if (diff < 0.005) break;
       }
 
-      // Save both fields — grossTotal is the source of truth for net
+      // Save both atomically — no race condition
       const grossPerHour = round2(bestGross / monthlyHours);
-      // Mark this as a net-total-driven save (so onSuccess doesn't clear grossTotal)
-      (window as any).__netTotalSave = true;
-      onSave(workerId, "grossTotal" as any, bestGross);
-      onSave(workerId, "hourlyRate", grossPerHour);
-      setTimeout(() => { (window as any).__netTotalSave = false; }, 200);
+      if (onSaveNet) {
+        onSaveNet(workerId, bestGross, grossPerHour);
+      } else {
+        onSave(workerId, "hourlyRate", grossPerHour);
+      }
     }
   };
 
@@ -395,10 +396,11 @@ function NetTotalCell({ netTotal, monthlyHours, workerId, zusRates, pit2, onSave
 }
 
 // ─── Net/h editable cell — converts to net total, uses same reverse solver ────
-function NetHourEditCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSave }: {
+function NetHourEditCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, onSave, onSaveNet }: {
   netPerHour: number; monthlyHours: number; workerId: string;
   zusRates: ZUSRates; pit2: boolean;
   onSave: (id: string, field: string, val: number) => void;
+  onSaveNet?: (id: string, grossTotal: number, hourlyRate: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -428,10 +430,11 @@ function NetHourEditCell({ netPerHour, monthlyHours, workerId, zusRates, pit2, o
         if (diff < 0.005) break;
       }
       const grossPerHour = round2(bestGross / monthlyHours);
-      (window as any).__netTotalSave = true;
-      onSave(workerId, "grossTotal" as any, bestGross);
-      onSave(workerId, "hourlyRate", grossPerHour);
-      setTimeout(() => { (window as any).__netTotalSave = false; }, 200);
+      if (onSaveNet) {
+        onSaveNet(workerId, bestGross, grossPerHour);
+      } else {
+        onSave(workerId, "hourlyRate", grossPerHour);
+      }
     }
   };
 
@@ -631,8 +634,8 @@ export default function PayrollPage() {
         const next = { ...p };
         if (!next[id]) next[id] = {};
         next[id][field] = val;
-        // When rate or hours changed MANUALLY (not from NetTotalCell), clear grossTotal
-        if ((field === "hourlyRate" || field === "monthlyHours") && !(window as any).__netTotalSave) {
+        // When rate or hours changed MANUALLY, clear grossTotal
+        if (field === "hourlyRate" || field === "monthlyHours") {
           (next[id] as any).grossTotal = null;
           fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
             method: "PATCH", headers: authHeaders(),
@@ -643,6 +646,21 @@ export default function PayrollPage() {
       });
     },
   });
+
+  // Atomic save for Net Total / Net/h — saves grossTotal + hourlyRate in ONE call
+  const saveNetReverse = (id: string, grossTotal: number, hourlyRate: number) => {
+    fetch(`${import.meta.env.BASE_URL}api/payroll/workers/${id}`, {
+      method: "PATCH", headers: authHeaders(),
+      body: JSON.stringify({ grossTotal, hourlyRate }),
+    }).catch(() => {});
+    setPending((p) => {
+      const next = { ...p };
+      if (!next[id]) next[id] = {};
+      (next[id] as any).grossTotal = grossTotal;
+      next[id].hourlyRate = hourlyRate;
+      return next;
+    });
+  };
 
   const handleSave = (id: string, field: string, val: number) => saveMutation.mutate({ id, field, val });
 
@@ -1325,10 +1343,10 @@ export default function PayrollPage() {
                         {/* Net Total ✎ + Net/h ✎ in basic view */}
                         {!showZUS && isAdmin && zus && (<>
                           <td className={`${tdCls} text-right`} style={{ minWidth: "120px" }}>
-                            <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
+                            <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} onSaveNet={saveNetReverse} />
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
+                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} onSaveNet={saveNetReverse} />
                           </td>
                         </>)}
                         {/* ZUS columns */}
@@ -1356,10 +1374,10 @@ export default function PayrollPage() {
                             </div>
                           </td>
                           <td className={`${tdCls} text-right`}>
-                            <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
+                            <NetTotalCell netTotal={zus.netAfterTax} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} onSaveNet={saveNetReverse} />
                           </td>
                           <td className={`${tdCls} text-right`} style={{ minWidth: "100px" }}>
-                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} />
+                            <NetHourEditCell netPerHour={w.monthlyHours > 0 ? zus.netAfterTax / w.monthlyHours : 0} monthlyHours={w.monthlyHours} workerId={w.id} zusRates={zusRates} pit2={wPit2} onSave={handleSave} onSaveNet={saveNetReverse} />
                           </td>
                           <td className={`${tdCls} text-right`}>
                             <div>
