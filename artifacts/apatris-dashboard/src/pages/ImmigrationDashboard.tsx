@@ -7,6 +7,7 @@ import { LegalStatusPanel } from "@/components/LegalStatusPanel";
 import { LegalExplainPanel } from "@/components/LegalExplainPanel";
 import { LegalCopilot } from "@/components/LegalCopilot";
 import { ActionCenter } from "@/components/ActionCenter";
+import { RiskForecast } from "@/components/RiskForecast";
 import {
   Stamp, X, ChevronRight, Filter, Plus, Search, Brain, Play, Shield, AlertTriangle, CheckCircle2,
   Bell, Send, Phone, MessageSquare,
@@ -535,6 +536,10 @@ export default function ImmigrationDashboard() {
 
               {/* Legal Copilot */}
               {/* Action Center — system-driven decisions */}
+              {/* Risk Forecast */}
+              {selectedWorkerId && <RiskForecast workerId={selectedWorkerId} />}
+
+              {/* Action Center */}
               {selectedWorkerId && <ActionCenter workerId={selectedWorkerId} />}
 
               {selectedWorkerId && <LegalCopilot workerId={selectedWorkerId} />}

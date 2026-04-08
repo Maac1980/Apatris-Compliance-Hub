@@ -100,6 +100,7 @@ import legalDocumentsRouter from "./legal-documents.js";
 import mosRouter from "./mos.js";
 import actionsRouter from "./actions.js";
 import automationRouter from "./automation.js";
+import riskRouter from "./risk.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -203,5 +204,6 @@ router.use(legalDocumentsRouter);
 router.use(mosRouter);
 router.use(actionsRouter);
 router.use(automationRouter);
+router.use(riskRouter);
 
 export default router;

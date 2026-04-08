@@ -69,6 +69,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/pip-inspection-report", label: "PIP Report", icon: Shield },
       { path: "/linked-cases",  label: "Linked Cases", icon: Shield },
       { path: "/legal-documents", label: "Legal Docs", icon: Shield },
+      { path: "/risk-overview", label: "Risk Overview", icon: AlertTriangle },
       { path: "/posted-workers",     label: "Posted Workers",     icon: Globe },
       { path: "/country-compliance", label: "Country Rules",      icon: Globe },
       { path: "/fines",             label: "Fines Prevention",   icon: Shield },
