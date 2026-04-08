@@ -191,6 +191,69 @@ S3_SECRET_ACCESS_KEY=<secret>
 - After every change: build dist → copy to artifacts → commit → push
 - Replit deploy: `git fetch origin main && git reset --hard origin/main`
 
+## MANDATORY VALIDATION FRAMEWORK
+
+Every feature build MUST include a validation loop before completion.
+Do NOT say "done" without running this framework.
+
+### Pre-Build Checks
+- Confirm no uncommitted changes from previous work
+- Confirm all existing tests pass (134+)
+- Confirm smoke test passes (22+ checks)
+
+### Post-Build Validation (REQUIRED)
+
+After every feature implementation, run:
+
+1. **Unit Tests**: `cd artifacts/api-server && npx vitest run`
+   - Must show 0 failures
+   - Report exact count: "X/X tests pass"
+
+2. **Build Verification**: Both backend + frontend must build clean
+   - `npx tsx ./build.ts` (api-server)
+   - `npx vite build` (apatris-dashboard)
+
+3. **Smoke Test**: `./scripts/smoke-test.sh`
+   - Must show "ALL CHECKS PASSED"
+
+4. **Safety Validation** (for legal/AI/automation features):
+   - Verify: 0 writes in read-only services
+   - Verify: 0 external sends (email/WhatsApp/SMTP)
+   - Verify: 0 approval bypasses
+   - Verify: legal-engine.ts not modified
+   - Verify: role protection on all new endpoints
+
+5. **Scenario Simulation** (minimum 3 cases):
+   - Happy path (normal usage)
+   - Missing data / blocked path
+   - Edge case or conflict path
+
+6. **Regression Check**:
+   - Confirm existing systems still work
+   - Confirm no circular dependencies
+   - Confirm no duplicate logic
+
+### Validation Report Format
+Report MUST include:
+- What passed (with counts)
+- What failed (with details)
+- What is risky (needs manual testing)
+- What was NOT tested (honest gaps)
+
+### Payroll Validation (CRITICAL)
+For any payroll/ZUS changes, verify these exact scenarios:
+- 160h × 31.40 brutto = 3929.05 net (benchmark)
+- Net 6400 @ 160h → gross 8444.23 (reverse)
+- Net 5000 @ 160h → gross 6506.23 (reverse)
+- Net 8800 @ 160h → gross 11766.69 (reverse)
+- Forward and reverse must produce identical results
+
+### Database Safety
+- Verify: 0 destructive SQL (DROP TABLE/COLUMN/TRUNCATE)
+- Verify: all new tables use CREATE TABLE IF NOT EXISTS
+- Verify: all new columns use ADD COLUMN IF NOT EXISTS
+- Count and report: total tables, total columns added
+
 ---
 
 ## PHASE 1 — WEEK 1: Core Business Tools (21 Features)
