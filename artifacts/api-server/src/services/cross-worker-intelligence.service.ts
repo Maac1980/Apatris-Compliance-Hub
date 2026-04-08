@@ -168,20 +168,20 @@ export async function getVoivodeshipInsights(tenantId: string): Promise<Voivodes
       COUNT(*) FILTER (WHERE tc.status IN ('Rejected','rejected')) as rejected,
       COUNT(*) FILTER (WHERE tc.status NOT IN ('Approved','approved','Rejected','rejected')) as pending,
       AVG(CASE WHEN tc.status IN ('Approved','approved','Rejected','rejected') AND tc.start_date IS NOT NULL
-          THEN EXTRACT(EPOCH FROM (tc.updated_at - tc.start_date::timestamp)) / 86400 END)::int as avg_days
+          THEN GREATEST(1, EXTRACT(EPOCH FROM (COALESCE(tc.expiry_date::timestamp, tc.updated_at) - tc.start_date::timestamp)) / 86400) END)::int as avg_days
     FROM trc_cases tc
     WHERE tc.tenant_id = $1::text AND tc.voivodeship IS NOT NULL AND tc.voivodeship != ''
     GROUP BY tc.voivodeship
     ORDER BY total DESC
   `, [tenantId]);
 
-  // Top rejection reason per voivodeship
+  // Top rejection reason per voivodeship (LEFT JOINs handle NULL trc_case_id)
   const rejReasons = await query<any>(`
     SELECT tc.voivodeship, ra.category, COUNT(*) as cnt
     FROM rejection_analyses ra
-    JOIN legal_cases lc ON lc.id = ra.legal_case_id
-    JOIN trc_cases tc ON tc.id = lc.trc_case_id
-    WHERE ra.tenant_id = $1
+    LEFT JOIN legal_cases lc ON lc.id = ra.legal_case_id
+    LEFT JOIN trc_cases tc ON tc.id = lc.trc_case_id
+    WHERE ra.tenant_id = $1 AND tc.voivodeship IS NOT NULL
     GROUP BY tc.voivodeship, ra.category
     ORDER BY tc.voivodeship, cnt DESC
   `, [tenantId]);

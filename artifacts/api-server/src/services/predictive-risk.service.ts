@@ -201,10 +201,10 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
 
   // ── 7. Document expiry risks ──────────────────────────────────────────
   const docChecks = [
-    { field: worker.passport_expiry, label: "Passport", days: 90 },
-    { field: worker.bhp_expiry, label: "BHP Certificate", days: 30 },
-    { field: worker.medical_exam_expiry, label: "Medical Exam", days: 30 },
-    { field: worker.contract_end_date, label: "Employment Contract", days: 14 },
+    { field: worker.passport_expiry, label: "Passport", days: 90, actionId: "upload-evidence" },
+    { field: worker.bhp_expiry, label: "BHP Certificate", days: 30, actionId: "upload-evidence" },
+    { field: worker.medical_exam_expiry, label: "Medical Exam", days: 30, actionId: "upload-evidence" },
+    { field: worker.contract_end_date, label: "Employment Contract", days: 14, actionId: "create-case" },
   ];
   for (const doc of docChecks) {
     if (!doc.field) continue;
@@ -213,7 +213,7 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
       risks.push({
         type: `${doc.label.toUpperCase().replace(/ /g, "_")}_EXPIRED`, description: `${doc.label} expired ${Math.abs(days)} day(s) ago`,
         severity: "HIGH", riskScore: 70, daysUntilImpact: 0, daysUntilActionRequired: 0,
-        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [doc.actionId],
         preventionActions: [`Renew ${doc.label} immediately`],
       });
     } else if (days <= doc.days) {
@@ -221,14 +221,22 @@ export async function getWorkerRiskForecast(workerId: string, tenantId: string):
         type: `${doc.label.toUpperCase().replace(/ /g, "_")}_EXPIRING`, description: `${doc.label} expires in ${days} day(s)`,
         severity: days <= 7 ? "HIGH" : "MEDIUM", riskScore: days <= 7 ? 60 : 35,
         daysUntilImpact: days, daysUntilActionRequired: Math.max(0, days - 7),
-        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [],
+        confidence: 1.0, confidenceSource: "RULE_BASED", linkedActionIds: [doc.actionId],
         preventionActions: [`Schedule ${doc.label} renewal`],
       });
     }
   }
 
+  // Deduplicate: if PERMIT_EXPIRED exists, suppress EVIDENCE_MISMATCH (permit is the primary issue)
+  const hasPermitExpired = risks.some(r => r.type === "PERMIT_EXPIRED");
+  const filtered = hasPermitExpired
+    ? risks.filter(r => r.type !== "EVIDENCE_MISMATCH") // mismatch is secondary when permit already expired
+    : risks;
+
   // Sort by riskScore descending
-  risks.sort((a, b) => b.riskScore - a.riskScore);
+  filtered.sort((a, b) => b.riskScore - a.riskScore);
+  risks.length = 0;
+  risks.push(...filtered);
 
   // Build timeline
   const timeline = buildTimeline(permitDays, legalCase);
