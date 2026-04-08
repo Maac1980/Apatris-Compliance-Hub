@@ -51,6 +51,8 @@ router.patch("/payroll/workers/:id", requireAuth, requireRole("Admin", "Executiv
 
     if (body.hourlyRate !== undefined)
       fields["HOURLY_RATE"] = body.hourlyRate === "" ? null : Number(body.hourlyRate);
+    if (body.grossTotal !== undefined)
+      fields["grossTotal"] = body.grossTotal === "" ? null : Number(body.grossTotal);
     if (body.monthlyHours !== undefined)
       fields["MONTHLY_HOURS"] = body.monthlyHours === "" ? null : Number(body.monthlyHours);
     if (body.advance !== undefined)
