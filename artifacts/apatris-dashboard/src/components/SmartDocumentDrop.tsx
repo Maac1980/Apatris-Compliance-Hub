@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from "react";
-import { Upload, FileText, Loader2, CheckCircle2, AlertTriangle, User, X } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle2, AlertTriangle, User, X, UserPlus } from "lucide-react";
 
 interface ExtractedFields {
   workerName: string | null;
@@ -46,9 +46,38 @@ const BASE = import.meta.env.BASE_URL;
 
 export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: SmartDocumentDropProps) {
   const [processing, setProcessing] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<SmartDocResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const createWorker = async () => {
+    if (!result?.extractedFields.workerName) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("apatris_jwt");
+      const body: Record<string, string> = { name: result.extractedFields.workerName };
+      if (result.extractedFields.nationality) body.nationality = result.extractedFields.nationality;
+      if (result.extractedFields.pesel) body.pesel = result.extractedFields.pesel;
+      if (result.extractedFields.passportNumber) body.passportNumber = result.extractedFields.passportNumber;
+      const res = await fetch(`${BASE}api/workers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error ?? "Failed to create worker");
+      }
+      const worker = await res.json();
+      onWorkerSelected?.(worker.id, worker.name ?? result.extractedFields.workerName);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create worker");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
@@ -148,9 +177,24 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
               <span className="text-slate-500 font-mono text-[10px]">{(result.workerMatch.confidence * 100).toFixed(0)}%</span>
             </div>
           ) : result.extractedFields.workerName ? (
-            <div className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-amber-400">Name found: "{result.extractedFields.workerName}" — no match in database</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-amber-400">Name found: "{result.extractedFields.workerName}" — no match in database</span>
+              </div>
+              <button
+                onClick={createWorker}
+                disabled={creating}
+                className="w-full flex items-center justify-center gap-2 py-1.5 rounded bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-50"
+              >
+                {creating ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <UserPlus className="w-3 h-3" />
+                )}
+                Create Worker: {result.extractedFields.workerName}
+                {result.extractedFields.nationality ? ` (${result.extractedFields.nationality})` : ""}
+              </button>
             </div>
           ) : null}
 
