@@ -1,16 +1,16 @@
 /**
- * Rejection Intelligence — internal page for classifying negative decisions
- * and generating internal draft responses.
+ * Rejection Intelligence — classify negative decisions, generate AI appeal letters.
  */
 
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
 import { SmartDocumentDrop } from "@/components/SmartDocumentDrop";
 import {
-  AlertTriangle, FileText, Loader2, Search, ChevronRight, X, Brain, Shield,
-  CheckCircle2, HelpCircle, Clock,
+  AlertTriangle, FileText, Loader2, Brain, Shield,
+  CheckCircle2, HelpCircle, Clock, Scale, Copy, Download,
+  CalendarClock, Gavel,
 } from "lucide-react";
 import { ApprovalBadge, UnapprovedWarning } from "@/components/ApprovalBadge";
 
@@ -28,26 +28,14 @@ interface ClassifyResult {
   sourceType: string;
 }
 
-interface RejectionDraft {
-  internalSummary: string;
-  suggestedAppealFocus: string;
-  requiredDocuments: string[];
-  suggestedNextActions: string[];
+interface AppealLetter {
+  appealText: string;
+  appealTextPL: string;
+  legalBasis: string[];
+  arguments: string[];
+  evidenceRequired: string[];
+  deadlineDate: string | null;
   reviewRequired: boolean;
-}
-
-interface Analysis {
-  id: string;
-  worker_id: string;
-  category: string;
-  explanation: string;
-  likely_cause: string | null;
-  next_steps_json: string[];
-  appeal_possible: boolean;
-  confidence_score: number;
-  source_type: string;
-  draft_json: RejectionDraft | null;
-  created_at: string;
 }
 
 // ═══ DISPLAY CONFIG ═════════════════════════════════════════════════════════
@@ -71,17 +59,14 @@ const SRC_STYLE: Record<string, { label: string; color: string }> = {
 
 export default function RejectionIntelligence() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Form state
   const [workerId, setWorkerId] = useState("");
   const [caseId, setCaseId] = useState("");
   const [rejectionText, setRejectionText] = useState("");
   const [result, setResult] = useState<ClassifyResult | null>(null);
-  const [draft, setDraft] = useState<RejectionDraft | null>(null);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
+  const [appeal, setAppeal] = useState<AppealLetter | null>(null);
+  const [showPL, setShowPL] = useState(true);
 
-  // Worker search for quick lookup
   const { data: workersData } = useQuery({
     queryKey: ["workers-list-mini"],
     queryFn: async () => {
@@ -112,28 +97,28 @@ export default function RejectionIntelligence() {
     },
     onSuccess: (data) => {
       setResult(data);
-      setDraft(null);
+      setAppeal(null);
       toast({ description: `Classified as: ${data.category}` });
     },
     onError: (err) => toast({ description: (err as Error).message, variant: "destructive" }),
   });
 
-  const draftMutation = useMutation({
+  const appealMutation = useMutation({
     mutationFn: async (analysisId: string) => {
-      const res = await fetch(`${BASE}api/v1/legal/rejections/draft`, {
+      const res = await fetch(`${BASE}api/v1/legal/rejections/appeal`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ workerId, analysisId }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).error ?? "Draft generation failed");
+        throw new Error((err as any).error ?? "Appeal generation failed");
       }
-      return res.json() as Promise<RejectionDraft>;
+      return res.json() as Promise<AppealLetter>;
     },
     onSuccess: (data) => {
-      setDraft(data);
-      toast({ description: "Internal draft generated" });
+      setAppeal(data);
+      toast({ description: "Appeal letter generated — requires lawyer review" });
     },
     onError: (err) => toast({ description: (err as Error).message, variant: "destructive" }),
   });
@@ -143,6 +128,15 @@ export default function RejectionIntelligence() {
   const srcStyle = SRC_STYLE[result?.sourceType ?? "RULE"] ?? SRC_STYLE.RULE;
   const CatIcon = catStyle.icon;
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ description: "Copied to clipboard" });
+  };
+
+  const daysUntilDeadline = appeal?.deadlineDate
+    ? Math.ceil((new Date(appeal.deadlineDate).getTime() - Date.now()) / 86400000)
+    : null;
+
   return (
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
       {/* Header */}
@@ -151,7 +145,7 @@ export default function RejectionIntelligence() {
           <Brain className="w-7 h-7 text-[#C41E18]" />
           <h1 className="text-3xl font-bold text-white">Rejection Intelligence</h1>
         </div>
-        <p className="text-gray-400">Classify negative decisions, suggest next steps, and prepare internal drafts</p>
+        <p className="text-gray-400">Classify rejections, generate AI appeal letters for lawyer review</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -160,7 +154,6 @@ export default function RejectionIntelligence() {
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
             <h2 className="text-sm font-bold text-slate-300">Analyze Rejection</h2>
 
-            {/* Smart Document Drop — reads PDF, matches worker, extracts rejection text */}
             <SmartDocumentDrop
               label="Drop rejection letter PDF — AI reads and matches worker"
               hint="Extracts worker name, rejection reasons, voivodeship, dates"
@@ -187,12 +180,12 @@ export default function RejectionIntelligence() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">Case ID (optional)</label>
+              <label className="text-xs text-slate-500">Case Reference (optional)</label>
               <input
                 type="text"
                 value={caseId}
                 onChange={e => setCaseId(e.target.value)}
-                placeholder="Legal case UUID if applicable"
+                placeholder="e.g. WSC-II-S.6151.111539.2024"
                 className="w-full text-sm bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-slate-200 placeholder:text-slate-600"
               />
             </div>
@@ -281,69 +274,148 @@ export default function RejectionIntelligence() {
                   </div>
                 )}
 
-                <ApprovalBadge
-                  entityType="rejection_analysis"
-                  entityId={result.id}
-                  isApproved={false}
-                  size="sm"
-                />
-                <UnapprovedWarning />
+                <ApprovalBadge entityType="rejection_analysis" entityId={result.id} isApproved={false} size="sm" />
 
-                {/* Generate Draft button */}
-                <button
-                  onClick={() => draftMutation.mutate(result.id)}
-                  disabled={draftMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 py-1.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-bold hover:bg-blue-600/30 transition-colors disabled:opacity-50"
-                >
-                  {draftMutation.isPending ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <FileText className="w-3 h-3" />
-                  )}
-                  Generate Internal Draft
-                </button>
+                {/* Generate Appeal Letter button */}
+                {result.appealPossible && (
+                  <button
+                    onClick={() => appealMutation.mutate(result.id)}
+                    disabled={appealMutation.isPending}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded bg-gradient-to-r from-blue-600/30 to-purple-600/30 text-blue-300 border border-blue-500/30 text-sm font-bold hover:from-blue-600/40 hover:to-purple-600/40 transition-all disabled:opacity-50"
+                  >
+                    {appealMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> AI Writing Appeal Letter...</>
+                    ) : (
+                      <><Gavel className="w-4 h-4" /> Generate AI Appeal Letter</>
+                    )}
+                  </button>
+                )}
+
+                {!result.appealPossible && (
+                  <div className="flex items-center gap-2 text-xs text-red-400/70 bg-red-500/5 rounded px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Appeal unlikely for this rejection type. Consult lawyer for alternatives.
+                  </div>
+                )}
+
+                {appealMutation.isError && (
+                  <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 rounded px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {(appealMutation.error as Error).message}
+                  </div>
+                )}
               </div>
 
-              {/* Draft result */}
-              {draft && (
-                <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-bold text-blue-400">Internal Draft</span>
-                  </div>
-
-                  <div className="rounded bg-slate-900/60 px-3 py-2">
-                    <p className="text-xs text-slate-300 leading-relaxed">{draft.internalSummary}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Suggested Appeal Focus</p>
-                      <p className="text-[11px] text-slate-300">{draft.suggestedAppealFocus}</p>
+              {/* ── Appeal Letter Result ──────────────────────────── */}
+              {appeal && (
+                <div className="space-y-4">
+                  {/* Deadline warning */}
+                  {appeal.deadlineDate && (
+                    <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 border ${
+                      daysUntilDeadline !== null && daysUntilDeadline <= 3
+                        ? "bg-red-500/10 border-red-500/20 text-red-400"
+                        : daysUntilDeadline !== null && daysUntilDeadline <= 7
+                          ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                    }`}>
+                      <CalendarClock className="w-4 h-4" />
+                      <span className="font-bold">Appeal Deadline: {appeal.deadlineDate}</span>
+                      {daysUntilDeadline !== null && (
+                        <span className="ml-1">({daysUntilDeadline} days remaining)</span>
+                      )}
                     </div>
+                  )}
 
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Required Documents</p>
+                  {/* DRAFT warning banner */}
+                  <div className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-amber-400">
+                    <Scale className="w-4 h-4" />
+                    <span className="font-bold">DRAFT — REQUIRES LAWYER REVIEW BEFORE FILING</span>
+                  </div>
+
+                  {/* Legal basis & arguments */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {appeal.legalBasis.length > 0 && (
+                      <div className="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                        <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider mb-1.5">Legal Basis</p>
+                        <ul className="space-y-1">
+                          {appeal.legalBasis.map((b, i) => (
+                            <li key={i} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                              <Scale className="w-3 h-3 mt-0.5 text-purple-400 flex-shrink-0" />
+                              <span>{b}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {appeal.arguments.length > 0 && (
+                      <div className="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1.5">Key Arguments</p>
+                        <ul className="space-y-1">
+                          {appeal.arguments.map((a, i) => (
+                            <li key={i} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                              <Gavel className="w-3 h-3 mt-0.5 text-blue-400 flex-shrink-0" />
+                              <span>{a}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Evidence required */}
+                  {appeal.evidenceRequired.length > 0 && (
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1.5">Evidence to Attach</p>
                       <ul className="space-y-0.5">
-                        {draft.requiredDocuments.map((d, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-300">
-                            <span className="text-blue-400 mt-0.5">-</span>
-                            <span>{d}</span>
+                        {appeal.evidenceRequired.map((e, i) => (
+                          <li key={i} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 mt-0.5 text-emerald-400 flex-shrink-0" />
+                            <span>{e}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
+                  )}
 
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Next Actions</p>
-                      <ul className="space-y-0.5">
-                        {draft.suggestedNextActions.map((a, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-300">
-                            <span className="text-slate-400 mt-0.5">{i + 1}.</span>
-                            <span>{a}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Appeal letter text */}
+                  <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-bold text-blue-400">Appeal Letter</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowPL(!showPL)}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
+                            showPL ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400"
+                          }`}
+                        >
+                          PL
+                        </button>
+                        <button
+                          onClick={() => setShowPL(!showPL)}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
+                            !showPL ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400"
+                          }`}
+                        >
+                          EN
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(showPL ? appeal.appealTextPL : appeal.appealText)}
+                          className="text-slate-400 hover:text-white p-1"
+                          title="Copy to clipboard"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="rounded bg-slate-900/80 px-4 py-3 max-h-[500px] overflow-y-auto">
+                      <pre className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+                        {showPL ? appeal.appealTextPL : appeal.appealText}
+                      </pre>
                     </div>
                   </div>
 
@@ -355,7 +427,7 @@ export default function RejectionIntelligence() {
             <div className="text-center py-20 text-slate-500">
               <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="text-lg font-semibold">No analysis yet</p>
-              <p className="text-sm mt-1">Paste a rejection notice and click Analyze</p>
+              <p className="text-sm mt-1">Drop a rejection letter or paste the text and click Analyze</p>
             </div>
           )}
         </div>

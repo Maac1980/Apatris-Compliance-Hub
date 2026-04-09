@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import {
-  classifyRejection, generateRejectionDraft,
+  classifyRejection, generateRejectionDraft, generateAppealLetter,
   getAnalysesByWorker, getAnalysisById,
 } from "../services/rejection-intelligence.service.js";
 
@@ -60,6 +60,20 @@ router.post("/v1/legal/rejections/draft", requireAuth, requireRole(...LEGAL_ROLE
     res.status(201).json(draft);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to generate draft" });
+  }
+});
+
+// POST /api/v1/legal/rejections/appeal — generate full AI appeal letter
+router.post("/v1/legal/rejections/appeal", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
+  try {
+    const { workerId, analysisId } = req.body as { workerId?: string; analysisId?: string };
+    if (!workerId || !analysisId) {
+      return res.status(400).json({ error: "workerId and analysisId are required" });
+    }
+    const appeal = await generateAppealLetter(workerId, analysisId, req.tenantId!);
+    res.status(201).json(appeal);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to generate appeal" });
   }
 });
 

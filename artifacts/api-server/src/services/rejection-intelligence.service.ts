@@ -428,3 +428,189 @@ export async function getAnalysisById(id: string, tenantId: string): Promise<Rej
     [id, tenantId]
   );
 }
+
+// ═══ AI APPEAL LETTER GENERATOR ═════════════════════════════════════════════
+
+export interface AppealLetter {
+  appealText: string;
+  appealTextPL: string;
+  legalBasis: string[];
+  arguments: string[];
+  evidenceRequired: string[];
+  deadlineDate: string | null;
+  reviewRequired: true;
+}
+
+export async function generateAppealLetter(
+  workerId: string,
+  analysisId: string,
+  tenantId: string,
+): Promise<AppealLetter> {
+  // 1. Load the analysis
+  const analysis = await queryOne<RejectionAnalysis>(
+    "SELECT * FROM rejection_analyses WHERE id = $1 AND tenant_id = $2",
+    [analysisId, tenantId]
+  );
+  if (!analysis) throw new Error("Rejection analysis not found");
+
+  // 2. Load worker data
+  const worker = await queryOne<any>(
+    `SELECT id, full_name, nationality, pesel, passport_number, date_of_birth,
+            trc_expiry, work_permit_expiry
+     FROM workers WHERE id = $1 AND tenant_id = $2`,
+    [workerId, tenantId]
+  );
+  if (!worker) throw new Error("Worker not found");
+
+  // 3. Load legal snapshot context
+  let snapshotContext = "No legal snapshot available";
+  try {
+    const snap = await getWorkerLegalSnapshot(workerId, tenantId);
+    snapshotContext = `Legal status: ${snap.legalStatus}, Basis: ${snap.legalBasis}, Risk: ${snap.riskLevel}`;
+  } catch { /* non-blocking */ }
+
+  // 4. Calculate deadline (14 days from decision date if available)
+  let deadlineDate: string | null = null;
+  const dateMatch = analysis.rejection_text.match(/(\d{1,2})[.\s/](marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|stycznia|lutego|\d{1,2})[.\s/](\d{4})/i);
+  if (dateMatch) {
+    const monthMap: Record<string, number> = {
+      stycznia: 1, lutego: 2, marca: 3, kwietnia: 4, maja: 5, czerwca: 6,
+      lipca: 7, sierpnia: 8, września: 9, października: 10, listopada: 11, grudnia: 12,
+    };
+    const day = parseInt(dateMatch[1]);
+    const monthStr = dateMatch[2].toLowerCase();
+    const month = monthMap[monthStr] ?? parseInt(monthStr);
+    const year = parseInt(dateMatch[3]);
+    if (day && month && year) {
+      const decisionDate = new Date(year, month - 1, day);
+      decisionDate.setDate(decisionDate.getDate() + 14);
+      deadlineDate = decisionDate.toISOString().slice(0, 10);
+    }
+  }
+
+  // 5. Call AI to generate the full appeal letter
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("AI not configured — cannot generate appeal letter");
+
+  const workerInfo = [
+    `Name: ${worker.full_name ?? "Unknown"}`,
+    worker.nationality ? `Nationality: ${worker.nationality}` : null,
+    worker.date_of_birth ? `DOB: ${worker.date_of_birth}` : null,
+    worker.pesel ? `PESEL: ${worker.pesel}` : null,
+    worker.passport_number ? `Passport: ${worker.passport_number}` : null,
+  ].filter(Boolean).join("\n");
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      system: `You are an expert Polish immigration lawyer drafting appeal letters (odwołanie) against negative decisions from Polish Voivodes (Wojewoda) to the Head of Office for Foreigners (Szef Urzędu do Spraw Cudzoziemców).
+
+You MUST:
+- Write a COMPLETE, formal appeal letter in Polish legal format
+- Include proper legal headings, references to specific articles of Ustawa o cudzoziemcach
+- Address each rejection reason with specific counter-arguments
+- Reference applicable EU directives and Polish administrative procedure (KPA)
+- Include a request section (petitum) asking to overturn the decision
+- Be factually accurate about Polish immigration law as of 2026
+
+Format the appeal as a real legal document that a lawyer can review and file.
+
+You must also return a JSON section with structured metadata.
+
+CRITICAL: This is a DRAFT for lawyer review. Mark it clearly as PROJEKT/DRAFT.`,
+      messages: [{
+        role: "user",
+        content: `Generate a complete appeal letter (odwołanie) for this case.
+
+REJECTION DECISION TEXT:
+"${analysis.rejection_text}"
+
+CLASSIFICATION: ${analysis.category}
+EXPLANATION: ${analysis.explanation}
+LIKELY CAUSE: ${analysis.likely_cause ?? "Unknown"}
+APPEAL POSSIBLE: ${analysis.appeal_possible}
+
+WORKER INFO:
+${workerInfo}
+
+LEGAL CONTEXT:
+${snapshotContext}
+
+${deadlineDate ? `DEADLINE: Appeal must be filed by ${deadlineDate} (14 days from decision)` : ""}
+
+Please return your response in this exact format:
+
+---APPEAL_PL---
+[Full appeal letter in Polish - complete legal document]
+---END_APPEAL_PL---
+
+---APPEAL_EN---
+[English translation of the appeal for internal reference]
+---END_APPEAL_EN---
+
+---METADATA---
+{
+  "legalBasis": ["Art. X Ustawy...", ...],
+  "arguments": ["Argument 1...", ...],
+  "evidenceRequired": ["Document 1...", ...]
+}
+---END_METADATA---`,
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(`AI appeal generation failed: ${(errData as any).error?.message ?? res.statusText}`);
+  }
+
+  const data = await res.json() as { content: Array<{ type: string; text?: string }> };
+  const raw = data.content?.find(b => b.type === "text")?.text ?? "";
+
+  // Parse the structured response
+  const plMatch = raw.match(/---APPEAL_PL---\s*([\s\S]*?)\s*---END_APPEAL_PL---/);
+  const enMatch = raw.match(/---APPEAL_EN---\s*([\s\S]*?)\s*---END_APPEAL_EN---/);
+  const metaMatch = raw.match(/---METADATA---\s*([\s\S]*?)\s*---END_METADATA---/);
+
+  const appealTextPL = plMatch?.[1]?.trim() ?? raw;
+  const appealText = enMatch?.[1]?.trim() ?? "See Polish version";
+
+  let legalBasis: string[] = [];
+  let arguments_: string[] = [];
+  let evidenceRequired: string[] = [];
+
+  if (metaMatch) {
+    try {
+      const jsonStr = metaMatch[1].match(/\{[\s\S]*\}/)?.[0] ?? "{}";
+      const meta = JSON.parse(jsonStr);
+      legalBasis = Array.isArray(meta.legalBasis) ? meta.legalBasis.map(String) : [];
+      arguments_ = Array.isArray(meta.arguments) ? meta.arguments.map(String) : [];
+      evidenceRequired = Array.isArray(meta.evidenceRequired) ? meta.evidenceRequired.map(String) : [];
+    } catch { /* parse error — non-blocking */ }
+  }
+
+  const appeal: AppealLetter = {
+    appealText,
+    appealTextPL,
+    legalBasis,
+    arguments: arguments_,
+    evidenceRequired,
+    deadlineDate,
+    reviewRequired: true,
+  };
+
+  // Store appeal on the analysis record
+  await execute(
+    "UPDATE rejection_analyses SET draft_json = $1, updated_at = NOW() WHERE id = $2",
+    [JSON.stringify(appeal), analysisId]
+  );
+
+  return appeal;
+}
