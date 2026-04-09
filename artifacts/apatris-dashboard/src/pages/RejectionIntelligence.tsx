@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
+import { SmartDocumentDrop } from "@/components/SmartDocumentDrop";
 import {
   AlertTriangle, FileText, Loader2, Search, ChevronRight, X, Brain, Shield,
   CheckCircle2, HelpCircle, Clock,
@@ -157,6 +158,18 @@ export default function RejectionIntelligence() {
         <div className="space-y-4">
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
             <h2 className="text-sm font-bold text-slate-300">Analyze Rejection</h2>
+
+            {/* Smart Document Drop — reads PDF, matches worker, extracts rejection text */}
+            <SmartDocumentDrop
+              label="Drop rejection letter PDF — AI reads and matches worker"
+              hint="Extracts worker name, rejection reasons, voivodeship, dates"
+              onResult={(r) => {
+                if (r.extractedFields.rejectionReasons) setRejectionText(r.extractedFields.rejectionReasons);
+                else if (r.extractedFields.keyContent) setRejectionText(r.extractedFields.keyContent);
+                if (r.extractedFields.caseReference) setCaseId(r.extractedFields.caseReference);
+              }}
+              onWorkerSelected={(id) => setWorkerId(id)}
+            />
 
             <div className="space-y-1">
               <label className="text-xs text-slate-500">Worker</label>

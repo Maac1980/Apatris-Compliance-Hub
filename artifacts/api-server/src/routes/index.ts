@@ -103,6 +103,7 @@ import automationRouter from "./automation.js";
 import riskRouter from "./risk.js";
 import intelligenceRouter from "./intelligence.js";
 import systemHealthRouter from "./system-health.js";
+import smartDocumentRouter from "./smart-document.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -209,5 +210,6 @@ router.use(automationRouter);
 router.use(riskRouter);
 router.use(intelligenceRouter);
 router.use(systemHealthRouter);
+router.use(smartDocumentRouter);
 
 export default router;
