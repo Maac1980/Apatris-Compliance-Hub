@@ -5,6 +5,7 @@
 
 import React, { useState, useRef } from "react";
 import { Upload, FileText, Loader2, CheckCircle2, AlertTriangle, User, X, UserPlus } from "lucide-react";
+import { authHeaders, BASE } from "@/lib/api";
 
 interface ExtractedFields {
   workerName: string | null;
@@ -42,8 +43,6 @@ interface SmartDocumentDropProps {
   hint?: string;
 }
 
-const BASE = import.meta.env.BASE_URL;
-
 export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: SmartDocumentDropProps) {
   const [processing, setProcessing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -56,14 +55,13 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
     setCreating(true);
     setError(null);
     try {
-      const token = localStorage.getItem("apatris_jwt");
       const body: Record<string, string> = { name: result.extractedFields.workerName };
       if (result.extractedFields.nationality) body.nationality = result.extractedFields.nationality;
       if (result.extractedFields.pesel) body.pesel = result.extractedFields.pesel;
       if (result.extractedFields.passportNumber) body.passportNumber = result.extractedFields.passportNumber;
       const res = await fetch(`${BASE}api/workers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: authHeaders(),
         body: JSON.stringify(body),
       });
       if (!res.ok) {
