@@ -84,10 +84,10 @@ export default function RejectionIntelligence() {
   const { data: workersData } = useQuery({
     queryKey: ["workers-list-mini"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/workers`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
       if (!res.ok) return [];
       const json = await res.json();
-      return extractList<{ id: string; full_name: string }>(json, "workers").slice(0, 200);
+      return extractList<any>(json, "workers").slice(0, 200).map((w: any) => ({ id: w.id, full_name: w.full_name ?? w.name ?? w.id }));
     },
   });
 
