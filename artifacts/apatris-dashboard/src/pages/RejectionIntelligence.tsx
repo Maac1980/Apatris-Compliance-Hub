@@ -94,7 +94,7 @@ export default function RejectionIntelligence() {
 
   const analyzeMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/rejections/analyze`, {
+      const res = await fetch(`${BASE}api/v1/legal/rejections/analyze`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
@@ -119,7 +119,7 @@ export default function RejectionIntelligence() {
 
   const draftMutation = useMutation({
     mutationFn: async (analysisId: string) => {
-      const res = await fetch(`${BASE}/api/v1/legal/rejections/draft`, {
+      const res = await fetch(`${BASE}api/v1/legal/rejections/draft`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ workerId, analysisId }),
