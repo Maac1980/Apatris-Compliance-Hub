@@ -102,6 +102,7 @@ import actionsRouter from "./actions.js";
 import automationRouter from "./automation.js";
 import riskRouter from "./risk.js";
 import intelligenceRouter from "./intelligence.js";
+import systemHealthRouter from "./system-health.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -207,5 +208,6 @@ router.use(actionsRouter);
 router.use(automationRouter);
 router.use(riskRouter);
 router.use(intelligenceRouter);
+router.use(systemHealthRouter);
 
 export default router;

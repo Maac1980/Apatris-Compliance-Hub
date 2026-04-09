@@ -1,4 +1,5 @@
 import { KnowledgeCenter } from "@/components/KnowledgeCenter";
+import { SystemHealth } from "@/components/SystemHealth";
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/auth";
@@ -449,6 +450,11 @@ export default function Dashboard() {
               </span>
             </button>
           ))}
+        </div>
+
+        {/* System Health */}
+        <div className="px-4 sm:px-6 mt-4">
+          <SystemHealth />
         </div>
 
         {/* Stats Grid */}
