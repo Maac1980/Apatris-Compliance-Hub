@@ -99,7 +99,8 @@ export default function RejectionIntelligence() {
         headers: authHeaders(),
         body: JSON.stringify({
           workerId,
-          caseId: caseId || undefined,
+          caseId: caseId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId) ? caseId : undefined,
+          caseReference: caseId || undefined,
           rejectionText,
         }),
       });

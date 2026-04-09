@@ -271,7 +271,10 @@ You must NOT invent legal rights or make final legal determinations. This is tri
 // ═══ CORE: classifyRejection ════════════════════════════════════════════════
 
 export async function classifyRejection(input: ClassifyInput): Promise<ClassifyResult> {
-  const { workerId, caseId, rejectionText, tenantId } = input;
+  const { workerId, rejectionText, tenantId } = input;
+  // Only use caseId if it's a valid UUID — admin case references like "WSC-II-..." are not UUIDs
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const caseId = input.caseId && UUID_RE.test(input.caseId) ? input.caseId : null;
 
   // Load snapshot context for AI
   let snapshotContext = "No snapshot available";
