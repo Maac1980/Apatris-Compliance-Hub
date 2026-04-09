@@ -50,7 +50,9 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const createWorker = async () => {
+  const createWorker = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     if (!result?.extractedFields.workerName) return;
     setCreating(true);
     setError(null);
@@ -59,18 +61,22 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
       if (result.extractedFields.nationality) body.nationality = result.extractedFields.nationality;
       if (result.extractedFields.pesel) body.pesel = result.extractedFields.pesel;
       if (result.extractedFields.passportNumber) body.passportNumber = result.extractedFields.passportNumber;
-      const res = await fetch(`${BASE}api/workers`, {
+      const url = `${BASE}api/workers`;
+      console.log("[SmartDocDrop] Creating worker at:", url, body);
+      const res = await fetch(url, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify(body),
       });
+      console.log("[SmartDocDrop] Response:", res.status, res.statusText);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).error ?? "Failed to create worker");
+        throw new Error((err as any).error ?? `Create failed (${res.status})`);
       }
       const worker = await res.json();
       onWorkerSelected?.(worker.id, worker.name ?? result.extractedFields.workerName);
     } catch (err) {
+      console.error("[SmartDocDrop] Create error:", err);
       setError(err instanceof Error ? err.message : "Failed to create worker");
     } finally {
       setCreating(false);
@@ -181,7 +187,7 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
                 <span className="text-amber-400">Name found: "{result.extractedFields.workerName}" — no match in database</span>
               </div>
               <button
-                onClick={createWorker}
+                onClick={(e) => createWorker(e)}
                 disabled={creating}
                 className="w-full flex items-center justify-center gap-2 py-1.5 rounded bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-50"
               >
