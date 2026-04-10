@@ -455,8 +455,8 @@ export async function generateAppealLetter(
 
   // 2. Load worker data
   const worker = await queryOne<any>(
-    `SELECT id, full_name, nationality, pesel, passport_number, date_of_birth,
-            trc_expiry, work_permit_expiry
+    `SELECT id, full_name, pesel, email, phone,
+            trc_expiry, work_permit_expiry, specialization, assigned_site
      FROM workers WHERE id = $1 AND tenant_id = $2`,
     [workerId, tenantId]
   );
@@ -492,12 +492,18 @@ export async function generateAppealLetter(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("AI not configured — cannot generate appeal letter");
 
+  // Extract nationality from the rejection text itself (AI classified it)
+  const nationalityMatch = analysis.rejection_text.match(/obywatel(?:k[ąi]|em?)\s+(\w+)/i);
+  const extractedNationality = nationalityMatch?.[1] ?? null;
+
   const workerInfo = [
     `Name: ${worker.full_name ?? "Unknown"}`,
-    worker.nationality ? `Nationality: ${worker.nationality}` : null,
-    worker.date_of_birth ? `DOB: ${worker.date_of_birth}` : null,
+    extractedNationality ? `Nationality (from decision): ${extractedNationality}` : null,
     worker.pesel ? `PESEL: ${worker.pesel}` : null,
-    worker.passport_number ? `Passport: ${worker.passport_number}` : null,
+    worker.specialization ? `Specialization: ${worker.specialization}` : null,
+    worker.assigned_site ? `Assigned site: ${worker.assigned_site}` : null,
+    worker.trc_expiry ? `TRC expiry: ${worker.trc_expiry}` : null,
+    worker.work_permit_expiry ? `Work permit expiry: ${worker.work_permit_expiry}` : null,
   ].filter(Boolean).join("\n");
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {

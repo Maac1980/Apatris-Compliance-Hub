@@ -57,10 +57,10 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
     setCreating(true);
     setError(null);
     try {
+      // Only send fields that exist in workers table: full_name, pesel, email, phone, specialization, etc.
+      // NOTE: nationality, passportNumber do NOT exist as columns — they are extracted for display only.
       const body: Record<string, string> = { name: result.extractedFields.workerName };
-      if (result.extractedFields.nationality) body.nationality = result.extractedFields.nationality;
       if (result.extractedFields.pesel) body.pesel = result.extractedFields.pesel;
-      if (result.extractedFields.passportNumber) body.passportNumber = result.extractedFields.passportNumber;
       const url = `${BASE}api/workers`;
       console.log("[SmartDocDrop] Creating worker at:", url, body);
       const res = await fetch(url, {

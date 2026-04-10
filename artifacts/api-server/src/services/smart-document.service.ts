@@ -24,24 +24,43 @@ export interface SmartDocumentResult {
 
 // ═══ EXTRACTION PROMPT ══════════════════════════════════════════════════════
 
-const EXTRACTION_PROMPT = `Analyze this Polish legal/immigration document. Extract ALL of the following. Return ONLY valid JSON:
-{
-  "workerName": "full name of the worker/foreigner mentioned, or null",
-  "nationality": "nationality if mentioned, or null",
-  "pesel": "PESEL number if visible, or null",
-  "passportNumber": "passport number if visible, or null",
-  "documentType": "REJECTION_LETTER" or "FILING_RECEIPT" or "TRC_DECISION" or "AUTHORITY_CORRESPONDENCE" or "PERMIT" or "CONTRACT" or "OTHER",
-  "voivodeship": "voivodeship/office name if mentioned, or null",
-  "caseReference": "case/reference number if visible, or null",
-  "decisionDate": "YYYY-MM-DD if a decision date is visible, or null",
-  "filingDate": "YYYY-MM-DD if a filing/submission date is visible, or null",
-  "rejectionReasons": "text of rejection reasons if this is a rejection, or null",
-  "keyContent": "main content summary in 2-3 sentences",
-  "language": "pl" or "en" or "uk" or "other"
-}
+const EXTRACTION_PROMPT = `You are an expert document reader for a Polish immigration staffing agency. Analyze this document carefully.
 
-Look for: names, dates, case numbers, stamps, office headers, decision text.
-Return JSON only, no markdown.`;
+DOCUMENT TYPES you may encounter:
+- PASSPORT: Look for MRZ zone (bottom of page, two lines of <<< characters), photo, name fields "Surname/Nom", "Given names/Prénoms", passport number, nationality, date of birth, expiry date, issuing country
+- REJECTION_LETTER: Polish government rejection (odmowa/decyzja negatywna) — look for Wojewoda, case number, worker name, rejection reasons
+- FILING_RECEIPT: UPO receipt or MoS stamp confirming filing date
+- TRC_DECISION: Temporary Residence Card decision
+- PERMIT: Work permit or residence permit
+- CONTRACT: Employment contract (Umowa zlecenie/o pracę)
+- ID_CARD: National ID card — look for name, number, DOB, nationality
+- OTHER: Anything else
+
+EXTRACTION RULES:
+- For PASSPORTS: The name is ALWAYS split into Surname + Given Names. Combine them as "Given Names SURNAME" (e.g. "Monica Tatiana BARAHONA VARON"). Read the MRZ zone carefully for passport number (alphanumeric, 8-9 chars) and nationality code (3-letter ISO).
+- For PESEL: 11-digit Polish identification number. May appear on contracts, ZUS forms, or Polish documents.
+- For dates: Always convert to YYYY-MM-DD format.
+- For names: Extract the FULL name including all middle names.
+- If the image is blurry or low quality, extract what you CAN read and note uncertainty.
+
+Return ONLY valid JSON (no markdown):
+{
+  "workerName": "full name or null",
+  "nationality": "full country name or ISO code or null",
+  "pesel": "11-digit PESEL or null",
+  "passportNumber": "passport/ID document number or null",
+  "dateOfBirth": "YYYY-MM-DD or null",
+  "documentType": "PASSPORT|REJECTION_LETTER|FILING_RECEIPT|TRC_DECISION|PERMIT|CONTRACT|ID_CARD|OTHER",
+  "voivodeship": "voivodeship/office or null",
+  "caseReference": "case/reference number or null",
+  "decisionDate": "YYYY-MM-DD or null",
+  "filingDate": "YYYY-MM-DD or null",
+  "expiryDate": "YYYY-MM-DD document expiry or null",
+  "rejectionReasons": "rejection reasons text or null",
+  "keyContent": "2-3 sentence summary of what this document contains",
+  "language": "pl|en|uk|es|other",
+  "confidence": "HIGH|MEDIUM|LOW based on image quality"
+}`;
 
 // ═══ CORE ═══════════════════════════════════════════════════════════════════
 
@@ -149,14 +168,8 @@ async function matchWorker(
     if (row) return { match: { id: row.id, name: row.full_name, confidence: 1.0 }, suggestions: [] };
   }
 
-  // Try passport match
-  if (passport && passport.length >= 5) {
-    const row = await queryOne<any>(
-      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND passport_number = $2",
-      [tenantId, passport]
-    );
-    if (row) return { match: { id: row.id, name: row.full_name, confidence: 0.95 }, suggestions: [] };
-  }
+  // Note: workers table does not have passport_number column.
+  // Passport matching would require adding the column. For now, skip to name match.
 
   // Try name match (fuzzy)
   if (name && name.trim().length >= 3) {
