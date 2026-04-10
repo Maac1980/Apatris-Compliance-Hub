@@ -70,14 +70,19 @@ export default function LegalBrief() {
   const copyText = (text: string) => { navigator.clipboard.writeText(text); toast({ description: "Copied" }); };
 
   return (
-    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Gavel className="w-7 h-7 text-[#C41E18]" />
-          <h1 className="text-3xl font-bold text-white">Legal Brief Generator</h1>
+    <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
+      <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
+            <Gavel className="w-5 h-5 text-slate-300" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Legal Brief Generator</h1>
+            <p className="text-xs text-slate-500 font-mono uppercase tracking-widest mt-1">Research · Case Review · Validation · Pressure Check</p>
+          </div>
         </div>
-        <p className="text-gray-400">4-stage AI pipeline: Research → Case Review → Validation → Pressure Check</p>
       </div>
+      <div className="max-w-6xl mx-auto px-6 py-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Input ─────────────────────────────────────────────── */}
@@ -432,6 +437,7 @@ export default function LegalBrief() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

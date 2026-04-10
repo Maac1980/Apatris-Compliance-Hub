@@ -311,6 +311,7 @@ export function startScheduler(): void {
       .then(() => runInsuranceAlerts())
       .then(() => runPostingExpiryAlertsJob())
       .then(() => runDailyLegalStatusScan())
+      .then(() => runIntelligenceScanJob())
       .then(() => runAutomationCycle())
       .finally(() => {
         setTimeout(daily, SCAN_INTERVAL_MS);
@@ -345,6 +346,17 @@ async function runDailyLegalStatusScan(): Promise<void> {
     await runDailyLegalScan(); // scans all tenants
   } catch (err) {
     console.error("[Scheduler] Daily legal scan failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+// Intelligence scan — fleet-wide next-action + risk snapshot
+async function runIntelligenceScanJob(): Promise<void> {
+  try {
+    const { runIntelligenceScan } = await import("../services/intelligence-scan.service.js");
+    const tenantId = getDefaultTenantId();
+    await runIntelligenceScan(tenantId ?? "default");
+  } catch (err) {
+    console.error("[Scheduler] Intelligence scan failed:", err instanceof Error ? err.message : err);
   }
 }
 

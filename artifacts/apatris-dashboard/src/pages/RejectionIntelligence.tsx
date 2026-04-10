@@ -141,15 +141,19 @@ export default function RejectionIntelligence() {
     : null;
 
   return (
-    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Brain className="w-7 h-7 text-[#C41E18]" />
-          <h1 className="text-3xl font-bold text-white">Rejection Intelligence</h1>
+    <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
+      <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
+            <Brain className="w-5 h-5 text-slate-300" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Rejection Intelligence</h1>
+            <p className="text-xs text-slate-500 font-mono uppercase tracking-widest mt-1">Classify Rejections · AI Appeal Letters</p>
+          </div>
         </div>
-        <p className="text-gray-400">Classify rejections, generate AI appeal letters for lawyer review</p>
       </div>
+      <div className="max-w-6xl mx-auto px-6 py-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Input Panel ────────────────────────────────────────── */}
@@ -440,6 +444,7 @@ export default function RejectionIntelligence() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

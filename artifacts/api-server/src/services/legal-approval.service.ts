@@ -11,7 +11,7 @@ import { queryOne } from "../lib/db.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
-export type ApprovableEntity = "authority_pack" | "ai_response" | "rejection_analysis";
+export type ApprovableEntity = "authority_pack" | "ai_response" | "rejection_analysis" | "appeal_output" | "poa_document" | "authority_draft" | "research_memo";
 
 export interface ApprovalResult {
   entityType: ApprovableEntity;
@@ -31,10 +31,14 @@ export interface ApprovalStatus {
 
 // ═══ TABLE MAPPING ══════════════════════════════════════════════════════════
 
-const ENTITY_CONFIG: Record<ApprovableEntity, { table: string; tenantCol: boolean }> = {
+const ENTITY_CONFIG: Record<ApprovableEntity, { table: string; tenantCol: boolean; statusCol?: string }> = {
   authority_pack:     { table: "authority_response_packs", tenantCol: true },
   ai_response:        { table: "ai_responses",            tenantCol: false },
   rejection_analysis: { table: "rejection_analyses",      tenantCol: true },
+  appeal_output:      { table: "appeal_assistant_outputs", tenantCol: true, statusCol: "status" },
+  poa_document:       { table: "poa_documents",            tenantCol: true, statusCol: "status" },
+  authority_draft:    { table: "authority_drafts",          tenantCol: true, statusCol: "status" },
+  research_memo:      { table: "research_memos",           tenantCol: true, statusCol: "status" },
 };
 
 // ═══ CORE ═══════════════════════════════════════════════════════════════════
@@ -66,6 +70,14 @@ export async function approveEntity(
     await queryOne(
       `UPDATE authority_response_packs SET pack_status = 'APPROVED', updated_at = NOW()
        WHERE id = $1 AND pack_status IN ('DRAFT','REVIEW_REQUIRED')`,
+      [entityId]
+    );
+  }
+
+  // For Block 3 entities with status column, update status to 'approved'
+  if (cfg.statusCol) {
+    await queryOne(
+      `UPDATE ${cfg.table} SET ${cfg.statusCol} = 'approved' WHERE id = $1`,
       [entityId]
     );
   }

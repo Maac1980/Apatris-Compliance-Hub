@@ -14,6 +14,7 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -436,6 +437,63 @@ function PIPModal({ worker, onClose }: { worker: any; onClose: () => void }) {
 }
 
 /* ─── Main Panel ────────────────────────────────────────────────────────────── */
+/** Next Action + Risk bar inside worker profile */
+function WorkerActionBar({ workerId }: { workerId: string }) {
+  const { data } = useQuery<{ intelligence: any }>({
+    queryKey: ["worker-intelligence", workerId],
+    queryFn: async () => {
+      const token = localStorage.getItem("apatris_jwt");
+      const res = await fetch(`${import.meta.env.BASE_URL}api/v1/legal/intelligence/worker/${workerId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return { intelligence: null };
+      return res.json();
+    },
+    enabled: !!workerId,
+    staleTime: 30_000,
+  });
+  const intel = data?.intelligence;
+  if (!intel) return null;
+
+  const riskColor = intel.riskLevel === "CRITICAL" ? "text-red-400 bg-red-500/10 border-red-500/30"
+    : intel.riskLevel === "HIGH" ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
+    : intel.riskLevel === "MEDIUM" ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/30"
+    : "text-green-400 bg-green-500/10 border-green-500/30";
+
+  return (
+    <div className="space-y-2">
+      {/* Risk + Scores */}
+      <div className="flex items-center gap-2">
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${riskColor}`}>
+          Risk: {intel.riskLevel}
+        </span>
+        <span className="text-[10px] text-slate-500">Docs: {intel.scores?.documentCompleteness ?? 0}%</span>
+        <span className="text-[10px] text-slate-500">Health: {intel.scores?.complianceHealth ?? 0}%</span>
+      </div>
+
+      {/* Primary action */}
+      {intel.primaryAction && intel.primaryAction !== "No immediate action required" && (
+        <div className={`p-2.5 rounded-lg border ${intel.riskLevel === "CRITICAL" || intel.riskLevel === "HIGH" ? "bg-red-500/5 border-red-500/20" : "bg-blue-500/5 border-blue-500/20"}`}>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next Action</p>
+          <p className="text-xs text-white font-medium">{intel.primaryAction}</p>
+        </div>
+      )}
+
+      {/* Top deadlines */}
+      {intel.deadlines?.filter((d: any) => d.status === "expired" || d.status === "urgent").length > 0 && (
+        <div className="space-y-1">
+          {intel.deadlines.filter((d: any) => d.status === "expired" || d.status === "urgent").slice(0, 3).map((d: any, i: number) => (
+            <div key={i} className={`flex items-center justify-between text-xs px-2 py-1 rounded ${d.status === "expired" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>
+              <span>{d.label}</span>
+              <span className="font-mono font-bold">{d.daysLeft < 0 ? `${Math.abs(d.daysLeft)}d overdue` : `${d.daysLeft}d left`}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface WorkerProfilePanelProps {
   workerId: string | null;
   initialEditMode?: boolean;
@@ -449,6 +507,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const isAdmin = user?.role === "Admin";
   const isCoordinator = user?.role === "Coordinator";
   const { data: worker, isLoading } = useGetWorker(workerId || "", { query: { enabled: !!workerId } as any });
@@ -497,7 +556,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const [deleting, setDeleting] = useState(false);
 
   // Panel tabs
-  const [activeTab, setActiveTab] = useState<"profile" | "payroll-history">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "documents" | "compliance" | "assignment" | "payroll">("profile");
 
   // Payroll history
   const { data: payrollHistoryData } = useQuery<{ records: any[] }>({
@@ -523,7 +582,7 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
       }));
       return { records: rows };
     },
-    enabled: !!workerId && isAdmin && activeTab === "payroll-history",
+    enabled: !!workerId && isAdmin && activeTab === "payroll",
     staleTime: 30_000,
   });
   const payrollRecords: any[] = payrollHistoryData?.records ?? [];
@@ -1127,114 +1186,28 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
               )}
 
               {/* ── PANEL TABS (view mode only) ── */}
-              {!isEditing && isAdmin && (
-                <div className="flex gap-1 p-1 bg-slate-800/60 rounded-xl border border-slate-700">
-                  <button
-                    onClick={() => setActiveTab("profile")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "profile" ? "bg-slate-700 text-white shadow" : "text-gray-500 hover:text-gray-300"}`}
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Profile
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("payroll-history")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "payroll-history" ? "bg-slate-700 text-white shadow" : "text-gray-500 hover:text-gray-300"}`}
-                  >
-                    <History className="w-3.5 h-3.5" /> Payroll History
-                  </button>
-                </div>
-              )}
-
-              {/* ── PAYROLL HISTORY TAB ── */}
-              {!isEditing && isAdmin && activeTab === "payroll-history" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Payroll Records</p>
+              {!isEditing && (
+                <div className="flex gap-0.5 p-1 bg-slate-800/60 rounded-xl border border-slate-700">
+                  {([
+                    { id: "profile" as const, label: "Profile", icon: FileText },
+                    { id: "documents" as const, label: "Docs", icon: Upload },
+                    { id: "compliance" as const, label: "Compliance", icon: Shield },
+                    { id: "assignment" as const, label: "Assignment", icon: MapPin },
+                    ...(isAdmin ? [{ id: "payroll" as const, label: "Payroll", icon: CreditCard }] : []),
+                  ]).map((tab) => (
                     <button
-                      onClick={handlePrintFinalSettlement}
-                      disabled={payrollRecords.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(196,30,24,0.3)]"
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === tab.id ? "bg-slate-700 text-white shadow" : "text-gray-500 hover:text-gray-300"}`}
                     >
-                      <Printer className="w-3.5 h-3.5" /> Final Settlement PDF
+                      <tab.icon className="w-3.5 h-3.5" /> {tab.label}
                     </button>
-                  </div>
-
-                  {payrollRecords.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500">
-                      <Calculator className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm font-mono">No payroll records yet.</p>
-                      <p className="text-xs mt-1">Records appear after the first month is closed.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Summary totals */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { label: "Lifetime Hours", value: `${payrollRecords.reduce((s, r) => s + Number(r.totalHours ?? 0), 0).toLocaleString("pl-PL")} h`, color: "text-blue-400" },
-                          { label: "Total Advances", value: `${payrollRecords.reduce((s, r) => s + Number(r.advancesDeducted ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-orange-400" },
-                          { label: "Total Netto Paid", value: `${payrollRecords.reduce((s, r) => s + Number(r.finalNettoPayout ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-green-400" },
-                        ].map((c) => (
-                          <div key={c.label} className="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-center">
-                            <p className={`text-sm font-mono font-bold ${c.color}`}>{c.value}</p>
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">{c.label}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Records table */}
-                      <div className="rounded-xl border border-slate-700 overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="bg-slate-800 border-b border-slate-700">
-                            <tr>
-                              <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase tracking-wider">Month</th>
-                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Hrs</th>
-                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Rate</th>
-                              <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Deductions</th>
-                              <th className="px-3 py-2 text-right font-bold text-green-400 uppercase tracking-wider">Netto</th>
-                              <th className="px-3 py-2 text-center font-bold text-gray-400 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-700/50">
-                            {payrollRecords.map((r) => (
-                              <tr key={r.id} className="hover:bg-slate-700/20 transition-colors">
-                                <td className="px-3 py-2 font-mono text-white">{r.monthYear}</td>
-                                <td className="px-3 py-2 text-right font-mono text-blue-400">{r.totalHours}</td>
-                                <td className="px-3 py-2 text-right font-mono text-gray-300">{Number(r.hourlyRate ?? 0).toFixed(2)}</td>
-                                <td className="px-3 py-2 text-right font-mono text-orange-400">
-                                  {(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)) > 0 ? `- ${(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)).toLocaleString("pl-PL", { minimumFractionDigits: 2 })}` : "—"}
-                                </td>
-                                <td className="px-3 py-2 text-right font-mono font-bold text-green-400">
-                                  {Number(r.finalNettoPayout ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button
-                                      title="Download Payslip PDF"
-                                      onClick={(e) => { e.stopPropagation(); generateMonthlyPayslip(r); }}
-                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                                    >
-                                      <Download className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      title="Email Payslip"
-                                      onClick={(e) => { e.stopPropagation(); emailMonthlyPayslip(r); }}
-                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors"
-                                    >
-                                      <Mail className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
+                  ))}
                 </div>
               )}
 
-              {/* ── VIEW MODE ── */}
-              {!isEditing && (!isAdmin || activeTab === "profile") && (
+              {/* ── PROFILE TAB ── */}
+              {!isEditing && activeTab === "profile" && (
                 <>
                   {/* Contact */}
                   <div className="grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700">
@@ -1315,35 +1288,6 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                     );
                   })()}
 
-                  {/* Compliance Timeline */}
-                  <div>
-                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.complianceTimeline")}</h3>
-                    <div className="space-y-2">
-                      <DocRow label="TRC Certificate Expiry" date={(worker as any).trcExpiry} />
-                      <DocRow label="BHP Certificate Expiry" date={(worker as any).bhpExpiry} />
-                      <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
-                      <DocRow label="Contract End Date" date={(worker as any).contractEndDate} />
-                      <DocRow label="Badania Lekarskie (Medical)" date={(worker as any).medicalExamExpiry} />
-                      <DocRow label="Oświadczenie (Work Decl.)" date={(worker as any).oswiadczenieExpiry} />
-                      <DocRow label="UDT Certificate" date={(worker as any).udtCertExpiry} />
-                      {(worker as any).workPermitExpiry && <DocRow label="Work Permit" date={(worker as any).workPermitExpiry} />}
-                    </div>
-                  </div>
-
-                  {/* Bank Details — view mode */}
-                  {((worker as any).iban || (worker as any).IBAN) && (
-                    <div>
-                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Bank Details</h3>
-                      <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
-                        <FRow
-                          label="IBAN"
-                          value={(worker as any).iban || (worker as any).IBAN}
-                          accent="blue"
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   {/* Identity & Legal */}
                   {((worker as any).pesel || (worker as any).nip || (worker as any).zusStatus || (worker as any).visaType || (worker as any).rodoConsentDate || (worker as any).pupFiledDate) && (
                     <div>
@@ -1355,6 +1299,16 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                         <FRow label="ZUS Status" value={(worker as any).zusStatus} accent={(worker as any).zusStatus === "Registered" ? "green" : (worker as any).zusStatus === "Unregistered" ? "red" : undefined} />
                         <FRow label="RODO Consent" value={(worker as any).rodoConsentDate ? format(parseISO((worker as any).rodoConsentDate), "MMM d, yyyy") : null} accent="green" />
                         <FRow label="PUP Filed" value={(worker as any).pupFiledDate ? format(parseISO((worker as any).pupFiledDate), "MMM d, yyyy") : null} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bank Details */}
+                  {((worker as any).iban || (worker as any).IBAN) && (
+                    <div>
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Bank Details</h3>
+                      <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                        <FRow label="IBAN" value={(worker as any).iban || (worker as any).IBAN} accent="blue" />
                       </div>
                     </div>
                   )}
@@ -1371,59 +1325,208 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       </div>
                     </div>
                   )}
+                </>
+              )}
 
-                  {/* Payroll — Admin only */}
-                  {isAdmin && (
-                    <div>
-                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Payroll</h3>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
-                          <span className="text-sm font-medium text-gray-300">{t("panel.monthlyHoursLabel")}</span>
-                          <span className="text-sm font-mono text-blue-400 font-semibold">{(worker as any).monthlyHours != null ? `${(worker as any).monthlyHours} hrs` : <span className="text-gray-500">N/A</span>}</span>
-                        </div>
-                        {wGross !== null && (
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
-                            <span className="text-sm font-medium text-gray-300">Gross Salary</span>
-                            <span className="text-sm font-mono font-bold text-blue-400">{wGross.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
-                          </div>
-                        )}
-                        {(worker as any).advance != null && (worker as any).advance > 0 && (
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                            <span className="text-sm font-medium text-orange-400">Advance Taken</span>
-                            <span className="text-sm font-mono font-bold text-orange-400">- {((worker as any).advance).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
-                          </div>
-                        )}
-                        {wFinal !== null && (
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                            <span className="text-sm font-medium text-green-300">Final Net Salary</span>
-                            <span className="text-lg font-mono font-bold text-green-400">{wFinal.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
-                          </div>
-                        )}
-                      </div>
+              {/* ── DOCUMENTS TAB ── */}
+              {!isEditing && activeTab === "documents" && (
+                <div>
+                  <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.documentVault")}</h3>
+                  {((worker as any).passportAttachments?.length > 0 || (worker as any).trcAttachments?.length > 0 || (worker as any).bhpAttachments?.length > 0 || (worker as any).contractAttachments?.length > 0) && (
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {(worker as any).passportAttachments?.map((att: any) => <AttachmentCard key={att.id} title="Passport" filename={att.filename} url={att.url} />)}
+                      {(worker as any).trcAttachments?.map((att: any) => <AttachmentCard key={att.id} title="TRC Certificate" filename={att.filename} url={att.url} />)}
+                      {(worker as any).bhpAttachments?.map((att: any) => <AttachmentCard key={att.id} title="BHP Certificate" filename={att.filename} url={att.url} />)}
+                      {(worker as any).contractAttachments?.map((att: any) => <AttachmentCard key={att.id} title={t("panel.contract")} filename={att.filename} url={att.url} />)}
                     </div>
                   )}
+                  <div className="space-y-2.5">
+                    <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">Upload Document</p>
+                    <UploadButton workerId={(worker as any).id} docType="passport" label="Passport" accent="red" />
+                    <UploadButton workerId={(worker as any).id} docType="trc" label="TRC Certificate" accent="green" />
+                    <UploadButton workerId={(worker as any).id} docType="bhp" label="BHP Certificate" accent="orange" />
+                    <UploadButton workerId={(worker as any).id} docType="contract" label="Contract" accent="violet" />
+                    <p className="text-xs text-gray-600 text-center">PDF, JPG, PNG or WebP · AI scans docs automatically</p>
+                  </div>
+                </div>
+              )}
 
-                  {/* Document Vault */}
+              {/* ── COMPLIANCE TAB ── */}
+              {!isEditing && activeTab === "compliance" && (
+                <>
                   <div>
-                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.documentVault")}</h3>
-                    {((worker as any).passportAttachments?.length > 0 || (worker as any).trcAttachments?.length > 0 || (worker as any).bhpAttachments?.length > 0 || (worker as any).contractAttachments?.length > 0) && (
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        {(worker as any).passportAttachments?.map((att: any) => <AttachmentCard key={att.id} title="Passport" filename={att.filename} url={att.url} />)}
-                        {(worker as any).trcAttachments?.map((att: any) => <AttachmentCard key={att.id} title="TRC Certificate" filename={att.filename} url={att.url} />)}
-                        {(worker as any).bhpAttachments?.map((att: any) => <AttachmentCard key={att.id} title="BHP Certificate" filename={att.filename} url={att.url} />)}
-                        {(worker as any).contractAttachments?.map((att: any) => <AttachmentCard key={att.id} title={t("panel.contract")} filename={att.filename} url={att.url} />)}
-                      </div>
-                    )}
-                    <div className="space-y-2.5">
-                      <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">Upload Document</p>
-                      <UploadButton workerId={(worker as any).id} docType="passport" label="Passport" accent="red" />
-                      <UploadButton workerId={(worker as any).id} docType="trc" label="TRC Certificate" accent="green" />
-                      <UploadButton workerId={(worker as any).id} docType="bhp" label="BHP Certificate" accent="orange" />
-                      <UploadButton workerId={(worker as any).id} docType="contract" label="Contract" accent="violet" />
-                      <p className="text-xs text-gray-600 text-center">PDF, JPG, PNG or WebP · AI scans docs automatically</p>
+                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">{t("panel.complianceTimeline")}</h3>
+                    <div className="space-y-2">
+                      <DocRow label="TRC Certificate Expiry" date={(worker as any).trcExpiry} />
+                      <DocRow label="BHP Certificate Expiry" date={(worker as any).bhpExpiry} />
+                      <DocRow label="Passport Expiry" date={(worker as any).passportExpiry} />
+                      <DocRow label="Contract End Date" date={(worker as any).contractEndDate} />
+                      <DocRow label="Badania Lekarskie (Medical)" date={(worker as any).medicalExamExpiry} />
+                      <DocRow label="Oświadczenie (Work Decl.)" date={(worker as any).oswiadczenieExpiry} />
+                      <DocRow label="UDT Certificate" date={(worker as any).udtCertExpiry} />
+                      {(worker as any).workPermitExpiry && <DocRow label="Work Permit" date={(worker as any).workPermitExpiry} />}
                     </div>
                   </div>
+
+                  {/* Compliance Status Summary */}
+                  <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-2">
+                    <FRow label="Compliance Status" value={(worker as any).complianceStatus} accent={
+                      (worker as any).complianceStatus === "Cleared" ? "green" :
+                      (worker as any).complianceStatus === "Expiring" ? "yellow" :
+                      (worker as any).complianceStatus === "Expired" || (worker as any).complianceStatus === "Missing" ? "red" : undefined
+                    } />
+                    <FRow label="Worker Status" value={(worker as any).workerStatus} />
+                    <FRow label="ZUS Status" value={(worker as any).zusStatus} accent={(worker as any).zusStatus === "Registered" ? "green" : (worker as any).zusStatus === "Unregistered" ? "red" : undefined} />
+                  </div>
+
+                  {/* Next Action + Risk — from intelligence engine */}
+                  <WorkerActionBar workerId={(worker as any).id} />
+
+                  {/* Legal Intelligence Actions */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Legal Intelligence</p>
+                    {[
+                      { label: "Appeal Assistant", tab: "appeal", color: "text-red-400 border-red-500/30 hover:bg-red-500/10" },
+                      { label: "Legal Brief AI", tab: "brief", color: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10" },
+                      { label: "Legal Timeline", tab: "reasoning", color: "text-blue-400 border-blue-500/30 hover:bg-blue-500/10" },
+                      { label: "Generate POA", tab: "poa", color: "text-green-400 border-green-500/30 hover:bg-green-500/10" },
+                    ].map(link => (
+                      <button key={link.tab} onClick={() => { onClose(); navigate(`/legal-intelligence?workerId=${(worker as any).id}&tab=${link.tab}`); }}
+                        className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-colors ${link.color}`}>
+                        {link.label} →
+                      </button>
+                    ))}
+                  </div>
                 </>
+              )}
+
+              {/* ── ASSIGNMENT TAB ── */}
+              {!isEditing && activeTab === "assignment" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-800 border border-slate-700 space-y-3">
+                    <FRow label="Assigned Site" value={(worker as any).assignedSite} accent="blue" />
+                    <FRow label="Specialization" value={(worker as any).specialization} />
+                    <FRow label="Worker Status" value={(worker as any).workerStatus} accent={
+                      (worker as any).workerStatus === "Active" ? "green" :
+                      (worker as any).workerStatus === "On Leave" ? "yellow" :
+                      (worker as any).workerStatus === "Departed" ? "red" : undefined
+                    } />
+                    <FRow label="Contract End Date" value={(worker as any).contractEndDate ? format(parseISO((worker as any).contractEndDate), "MMM d, yyyy") : null} />
+                    {(worker as any).monthlyHours != null && (
+                      <FRow label="Monthly Hours" value={`${(worker as any).monthlyHours} hrs`} accent="blue" />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── PAYROLL TAB (Admin only) ── */}
+              {!isEditing && isAdmin && activeTab === "payroll" && (
+                <div className="space-y-4">
+                  {/* Current payroll summary */}
+                  <div>
+                    <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Current Period</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                        <span className="text-sm font-medium text-gray-300">{t("panel.monthlyHoursLabel")}</span>
+                        <span className="text-sm font-mono text-blue-400 font-semibold">{(worker as any).monthlyHours != null ? `${(worker as any).monthlyHours} hrs` : <span className="text-gray-500">N/A</span>}</span>
+                      </div>
+                      {wGross !== null && (
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700">
+                          <span className="text-sm font-medium text-gray-300">Gross Salary</span>
+                          <span className="text-sm font-mono font-bold text-blue-400">{wGross.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                        </div>
+                      )}
+                      {(worker as any).advance != null && (worker as any).advance > 0 && (
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                          <span className="text-sm font-medium text-orange-400">Advance Taken</span>
+                          <span className="text-sm font-mono font-bold text-orange-400">- {((worker as any).advance).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                        </div>
+                      )}
+                      {wFinal !== null && (
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                          <span className="text-sm font-medium text-green-300">Final Net Salary</span>
+                          <span className="text-lg font-mono font-bold text-green-400">{wFinal.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payroll History */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-bold tracking-widest text-gray-400 uppercase">Payroll History</h3>
+                      <button
+                        onClick={handlePrintFinalSettlement}
+                        disabled={payrollRecords.length === 0}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(196,30,24,0.3)]"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Final Settlement PDF
+                      </button>
+                    </div>
+
+                    {payrollRecords.length === 0 ? (
+                      <div className="text-center py-10 text-gray-500">
+                        <Calculator className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm font-mono">No payroll records yet.</p>
+                        <p className="text-xs mt-1">Records appear after the first month is closed.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {[
+                            { label: "Lifetime Hours", value: `${payrollRecords.reduce((s, r) => s + Number(r.totalHours ?? 0), 0).toLocaleString("pl-PL")} h`, color: "text-blue-400" },
+                            { label: "Total Advances", value: `${payrollRecords.reduce((s, r) => s + Number(r.advancesDeducted ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-orange-400" },
+                            { label: "Total Netto Paid", value: `${payrollRecords.reduce((s, r) => s + Number(r.finalNettoPayout ?? 0), 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`, color: "text-green-400" },
+                          ].map((c) => (
+                            <div key={c.label} className="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-center">
+                              <p className={`text-sm font-mono font-bold ${c.color}`}>{c.value}</p>
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">{c.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="rounded-xl border border-slate-700 overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-slate-800 border-b border-slate-700">
+                              <tr>
+                                <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase tracking-wider">Month</th>
+                                <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Hrs</th>
+                                <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Rate</th>
+                                <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase tracking-wider">Deductions</th>
+                                <th className="px-3 py-2 text-right font-bold text-green-400 uppercase tracking-wider">Netto</th>
+                                <th className="px-3 py-2 text-center font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-700/50">
+                              {payrollRecords.map((r) => (
+                                <tr key={r.id} className="hover:bg-slate-700/20 transition-colors">
+                                  <td className="px-3 py-2 font-mono text-white">{r.monthYear}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-blue-400">{r.totalHours}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-gray-300">{Number(r.hourlyRate ?? 0).toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-orange-400">
+                                    {(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)) > 0 ? `- ${(Number(r.advancesDeducted ?? 0) + Number(r.penaltiesDeducted ?? 0)).toLocaleString("pl-PL", { minimumFractionDigits: 2 })}` : "—"}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono font-bold text-green-400">
+                                    {Number(r.finalNettoPayout ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button title="Download Payslip PDF" onClick={(e) => { e.stopPropagation(); generateMonthlyPayslip(r); }} className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+                                        <Download className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button title="Email Payslip" onClick={(e) => { e.stopPropagation(); emailMonthlyPayslip(r); }} className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
+                                        <Mail className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 

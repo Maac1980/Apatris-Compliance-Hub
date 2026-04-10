@@ -19,7 +19,7 @@ import NotFound from "@/pages/not-found";
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const ComplianceAlerts = lazy(() => import("@/pages/ComplianceAlerts"));
 const PayrollPage = lazy(() => import("@/pages/PayrollPage"));
-const KnowledgeCenterPage = lazy(() => import("@/components/KnowledgeCenter").then(m => ({ default: () => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><m.KnowledgeCenter /></div> })));
+const KnowledgeCenterPage = lazy(() => import("@/components/KnowledgeCenter").then(m => ({ default: () => <div className="min-h-screen overflow-y-auto"><m.KnowledgeCenter /></div> })));
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const WorkerUpload = lazy(() => import("@/pages/WorkerUpload"));
 const ContractHub = lazy(() => import("@/pages/ContractHub"));
@@ -104,6 +104,7 @@ const RiskOverview = lazy(() => import("@/pages/RiskOverview"));
 const IntelligenceDashboard = lazy(() => import("@/pages/IntelligenceDashboard"));
 const DocumentIntake = lazy(() => import("@/pages/DocumentIntake"));
 const LegalBrief = lazy(() => import("@/pages/LegalBrief"));
+const LegalIntelligence = lazy(() => import("@/pages/LegalIntelligence"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -246,6 +247,9 @@ function Router() {
       </Route>
       <Route path="/legal-brief">
         {() => <ProtectedRoute component={LegalBrief} />}
+      </Route>
+      <Route path="/legal-intelligence">
+        {() => <ProtectedRoute component={LegalIntelligence} />}
       </Route>
       <Route path="/legal-alerts">
         {() => <ProtectedRoute component={LegalAlerts} />}

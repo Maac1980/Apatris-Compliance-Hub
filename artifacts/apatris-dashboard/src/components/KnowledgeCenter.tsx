@@ -108,10 +108,17 @@ export function KnowledgeCenter() {
   const grossRate = mode === "net" && hours > 0 ? Math.round((r.gross / hours) * 100) / 100 : rate;
 
   return (
-    <div className="tab-page" style={{ background: "#0f172a", padding: 0 }}>
-    <div className="p-4 text-slate-200 pb-24">
-      <div className="max-w-2xl mx-auto space-y-4">
-        <h1 className="text-xl font-bold text-white">ZUS Calculator</h1>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center">
+    <div className="w-full max-w-2xl px-4 pt-8 pb-24 text-slate-200">
+      <div className="space-y-6">
+        {/* Workspace Header */}
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 mb-3">
+            <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="8" y1="10" x2="16" y2="10" /><line x1="8" y1="14" x2="12" y2="14" /></svg>
+          </div>
+          <h1 className="text-xl font-bold text-white tracking-tight">ZUS Calculator</h1>
+          <p className="text-xs text-slate-500 font-mono mt-1 uppercase tracking-widest">Polish Payroll · Gross ↔ Net · Umowa Zlecenie / o Pracę</p>
+        </div>
 
         {/* Contract Toggle */}
         <div className="flex rounded-lg overflow-hidden border border-slate-700">
@@ -134,7 +141,7 @@ export function KnowledgeCenter() {
         </div>
 
         {/* Controls */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
           <div>
             <div className="flex justify-between text-xs text-slate-400 mb-1">
               <span>Hours</span><span className="text-blue-400 font-bold">{hours}h</span>
@@ -193,32 +200,32 @@ export function KnowledgeCenter() {
 
         {/* Results */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">Gross Monthly</p>
             <p className="text-xl font-black text-blue-400">{r.gross.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">Net Take-Home</p>
             <p className="text-xl font-black text-green-400">{r.net.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">Employee ZUS</p>
             <p className="text-xl font-black text-red-400">-{r.employeeZus.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">Health</p>
             <p className="text-xl font-black text-red-400">-{r.health.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">PIT Tax</p>
             <p className="text-xl font-black text-amber-400">-{r.pit.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
             <p className="text-xs text-slate-400 uppercase mb-1">Total Employer Cost</p>
             <p className="text-xl font-black text-rose-400">{r.totalCost.toFixed(2)}</p>
             <p className="text-xs text-slate-500">PLN</p>
@@ -226,13 +233,18 @@ export function KnowledgeCenter() {
         </div>
 
         {/* Tax Base Info */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-400">
+        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-sm text-slate-400">
           <div className="flex justify-between"><span>Tax Base (Podstawa)</span><span className="text-white">{r.taxBase.toFixed(2)} PLN</span></div>
           <div className="flex justify-between mt-1"><span>Employer ZUS</span><span className="text-white">{r.employerZus.toFixed(2)} PLN</span></div>
           <div className="flex justify-between mt-1"><span>Net per Hour</span><span className="text-green-400 font-bold">{r.netPerHour.toFixed(2)} PLN/h</span></div>
           <div className="flex justify-between mt-1"><span>Contract Type</span><span className="text-white">{contract === "zlecenie" ? "Umowa Zlecenie" : "Umowa o Prace"}</span></div>
           <div className="flex justify-between mt-1"><span>Mode</span><span className="text-white">{mode === "gross" ? "Gross → Net" : "Net → Gross (Reverse)"}</span></div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-[10px] text-slate-600 font-mono uppercase tracking-widest pt-2">
+          Apatris Compliance Platform · Finance Workspace
+        </p>
       </div>
     </div>
     </div>
