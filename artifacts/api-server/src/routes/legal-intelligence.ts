@@ -59,6 +59,10 @@ import {
   checkReleaseReadiness,
 } from "../services/intelligence-scan.service.js";
 
+import {
+  getTrcCaseView, updateTask, getCaseGuidance, getFullCaseIntelligence,
+} from "../services/trc-workspace.service.js";
+
 const router = Router();
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
 const EXTENDED_ROLES = [...LEGAL_ROLES, "Coordinator"];
@@ -539,6 +543,54 @@ router.get("/v1/legal/intelligence/manager-view", requireAuth, requireRole(...LE
         low: snapshot.low_risk_count,
       } : null,
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRC CASE WORKSPACE
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get("/v1/legal/trc-workspace/:caseId", requireAuth, requireRole(...EXTENDED_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const view = await getTrcCaseView(p(req.params.caseId), user.tenant_id ?? "default");
+    res.json({ caseView: view });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/v1/legal/trc-workspace/task/:taskId", requireAuth, requireRole(...EXTENDED_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { status, notes, linkedDocumentId } = req.body;
+    const task = await updateTask(p(req.params.taskId), user.tenant_id ?? "default", { status, notes, linkedDocumentId });
+    if (!task) { res.status(404).json({ error: "Task not found" }); return; }
+    res.json({ task });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/v1/legal/trc-workspace/:caseId/guidance", requireAuth, requireRole(...EXTENDED_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { prompt } = req.body;
+    if (!prompt) { res.status(400).json({ error: "prompt required" }); return; }
+    const result = await getCaseGuidance(p(req.params.caseId), user.tenant_id ?? "default", prompt);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/v1/legal/trc-workspace/:caseId/full-intelligence", requireAuth, requireRole(...EXTENDED_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const result = await getFullCaseIntelligence(p(req.params.caseId), user.tenant_id ?? "default");
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

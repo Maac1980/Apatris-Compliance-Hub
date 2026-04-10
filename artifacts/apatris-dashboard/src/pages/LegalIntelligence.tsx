@@ -8,6 +8,8 @@ import {
   MapPin, Plus, Eye, Sparkles, CheckCircle2, Archive, Printer, Upload,
   Calendar, ArrowRight, FileDown, User, Building2 as Building
 } from "lucide-react";
+import { ContextUpload } from "@/components/ContextUpload";
+import { CopilotPanel } from "@/components/CopilotPanel";
 import {
   PageShell, PageHeader, TabBar, pageContentCls, sectionGap,
   cardCls as sharedCardCls, labelCls as sharedLabelCls, inputCls as sharedInputCls,
@@ -268,41 +270,11 @@ function ExplanationCard({ label, audience, text, icon: Icon }: { label: string;
 
 /** Part 3 — Evidence upload directly in legal flow */
 function EvidencePanel({ workerId }: { workerId: string }) {
-  const qc = useQueryClient();
-  const [uploading, setUploading] = useState(false);
-  const [sourceType, setSourceType] = useState("TRC_FILING");
-  const fileRef = useRef<HTMLInputElement>(null);
-
   const { data, refetch } = useQuery<{ evidence: any[]; gaps: any; recommendedTypes: any[] }>({
     queryKey: ["worker-evidence", workerId],
     queryFn: () => fetch(`${BASE}/api/v1/legal/evidence/${workerId}`, { headers: authHeaders() }).then(r => r.json()),
     enabled: !!workerId,
   });
-
-  const handleUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      // Upload file as base64 evidence
-      const reader = new FileReader();
-      reader.onload = async () => {
-        await fetch(`${BASE}/api/workers/${workerId}/legal-evidence`, {
-          method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceType,
-            fileName: file.name,
-            filingDate: new Date().toISOString().slice(0, 10),
-            notes: `Uploaded via Legal Intelligence: ${file.name}`,
-          }),
-        });
-        refetch();
-        qc.invalidateQueries({ queryKey: ["worker-evidence", workerId] });
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setUploading(false);
-    }
-  };
 
   if (!workerId || !data) return null;
   const { evidence = [], gaps } = data;
@@ -325,19 +297,8 @@ function EvidencePanel({ workerId }: { workerId: string }) {
       {evidence.length === 0 && <p className="text-xs text-slate-500 mb-3">No evidence uploaded yet.</p>}
 
       {/* Upload new evidence */}
-      <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-slate-900 border border-slate-700">
-        <select value={sourceType} onChange={e => setSourceType(e.target.value)} className="bg-slate-800 border border-slate-600 text-white rounded px-2 py-1 text-[11px]">
-          <option value="TRC_FILING">TRC Filing Proof</option>
-          <option value="UPO">UPO Receipt</option>
-          <option value="MOS">MOS Submission</option>
-          <option value="IMMIGRATION_RECEIPT">Immigration Receipt</option>
-        </select>
-        <input ref={fileRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          className="flex items-center gap-1 px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded text-[11px] font-bold transition-colors">
-          {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-          {uploading ? "Uploading..." : "Upload Evidence"}
-        </button>
+      <div className="mt-2">
+        <ContextUpload workerId={workerId} sourcePanel="legal_evidence" defaultDocType="filing_proof" compact onUploaded={() => refetch()} />
       </div>
 
       {gaps?.criticalMissing?.length > 0 && (
@@ -572,7 +533,11 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
   const [workerId, setWorkerId] = useState(initialWorkerId);
   const [caseId, setCaseId] = useState("");
   const [rejectionText, setRejectionText] = useState("");
+  const [uploadedDecision, setUploadedDecision] = useState<{ fileName: string } | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [outputView, setOutputView] = useState<"pl" | "en" | "simple">("pl");
+  const decisionFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingDecision, setUploadingDecision] = useState(false);
 
   const run = useMutation({
     mutationFn: async () => {
@@ -582,22 +547,88 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
       });
       return res.json();
     },
-    onSuccess: (data) => setResult(data.output),
+    onSuccess: (data) => { setResult(data.output); setOutputView("pl"); },
   });
+
+  // Upload decision file → store as worker file + extract text into rejectionText
+  const handleDecisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !workerId) return;
+    setUploadingDecision(true);
+    try {
+      // 1. Store file via worker-files endpoint
+      const token = localStorage.getItem("apatris_jwt");
+      const form = new FormData();
+      form.append("file", file);
+      form.append("docType", "rejection_letter");
+      form.append("notes", "Decision/rejection uploaded from Appeal Assistant");
+      if (caseId) form.append("caseId", caseId);
+      await fetch(`${BASE}/api/workers/${workerId}/files`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+
+      // 2. For text files / small PDFs, try to read text content
+      if (file.type.startsWith("text/") || file.name.endsWith(".txt")) {
+        const text = await file.text();
+        setRejectionText(text.substring(0, 5000));
+      }
+
+      setUploadedDecision({ fileName: file.name });
+    } catch { /* upload failed silently */ }
+    setUploadingDecision(false);
+    if (decisionFileRef.current) decisionFileRef.current.value = "";
+  };
+
+  // Determine what content is available for each output tab
+  const hasPl = !!result?.appeal_draft_pl;
+  const hasEn = !!result?.appeal_draft_en;
+  const hasSimple = !!(result?.worker_explanation || result?.client_explanation);
 
   return (
     <div className="space-y-6">
+      {/* ── Input Form ── */}
       <div className={cardCls}>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Gavel className="w-4 h-4 text-red-400" /> Appeal Assistant</h2>
-        <p className="text-xs text-slate-500 mb-4">AI-assisted appeal analysis. All outputs are DRAFT and require lawyer review.</p>
+        <p className="text-xs text-slate-500 mb-4">Upload the decision/rejection, then receive a Polish appeal draft, English translation, and simple explanation. All outputs are DRAFT.</p>
         <div className="space-y-3">
           <div><label className={labelCls}>Worker *</label><WorkerSelect value={workerId} onChange={setWorkerId} /></div>
           <div><label className={labelCls}>Linked Case</label><CasePicker workerId={workerId} value={caseId} onChange={setCaseId} /></div>
+
+          {/* Decision Upload */}
           <div>
-            <label className={labelCls}>Rejection Decision Text (paste full text)</label>
-            <textarea value={rejectionText} onChange={e => setRejectionText(e.target.value)} rows={5} placeholder="Paste the rejection decision text here. Without this, the assistant can only provide general guidance." className={inputCls} />
+            <label className={labelCls}>Decision / Rejection Document</label>
+            <input ref={decisionFileRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.txt" onChange={handleDecisionUpload} />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => decisionFileRef.current?.click()}
+                disabled={uploadingDecision || !workerId}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed text-xs font-bold transition-colors ${
+                  uploadedDecision ? "bg-green-500/10 border-green-500/40 text-green-400" :
+                  "bg-slate-900 border-slate-600 text-slate-400 hover:border-red-500/40 hover:text-red-400 cursor-pointer"
+                } disabled:opacity-50`}
+              >
+                {uploadingDecision ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                 uploadedDecision ? <CheckCircle2 className="w-3.5 h-3.5" /> :
+                 <Upload className="w-3.5 h-3.5" />}
+                {uploadingDecision ? "Uploading..." : uploadedDecision ? uploadedDecision.fileName : "Upload Decision (PDF/Image/Text)"}
+              </button>
+              {uploadedDecision && (
+                <span className="text-[10px] text-green-400/70">Stored as evidence · auto-linked to worker{caseId ? " & case" : ""}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Rejection text */}
+          <div>
+            <label className={labelCls}>Rejection Decision Text {uploadedDecision ? "(from upload or paste)" : "(paste full text)"}</label>
+            <textarea value={rejectionText} onChange={e => setRejectionText(e.target.value)} rows={5}
+              placeholder={uploadedDecision ? "Text extracted from upload, or paste/edit the full decision text here." : "Paste the rejection decision text here. Without this, the assistant can only provide general guidance."}
+              className={inputCls} />
             {!rejectionText && <p className="text-[10px] text-yellow-500 mt-1">Without rejection text, appeal content will be limited to general guidance.</p>}
           </div>
+
           <button onClick={() => run.mutate()} disabled={run.isPending || !workerId}
             className="w-full py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
             {run.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gavel className="w-4 h-4" />}
@@ -609,10 +640,11 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
       {/* Evidence on file */}
       {workerId && <EvidencePanel workerId={workerId} />}
 
+      {/* ── Results ── */}
       {result && (
         <div className="space-y-4">
           {/* Actions — View / Print / Word / Approve */}
-          {result.appeal_draft_pl && (
+          {hasPl && (
             <OutputActions
               title="Appeal Draft / Odwołanie"
               contentPl={result.appeal_draft_pl}
@@ -633,7 +665,7 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
           )}
 
           {/* Provider Status */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <span className={`px-2 py-1 rounded text-[10px] font-bold ${result.provider_status?.perplexity === "success" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
               Perplexity: {result.provider_status?.perplexity ?? "unknown"}
             </span>
@@ -658,7 +690,7 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
             </div>
           )}
 
-          {/* Appeal Grounds */}
+          {/* Appeal Grounds + Missing Evidence */}
           {result.appeal_grounds?.length > 0 && (
             <div className={cardCls}>
               <h3 className="text-xs font-bold text-white mb-2">Appeal Grounds</h3>
@@ -670,12 +702,10 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
               ))}
             </div>
           )}
-
-          {/* Missing Evidence */}
           {result.missing_evidence?.length > 0 && (
             <div className={cardCls}>
               <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5 text-yellow-400" /> Missing Evidence</h3>
-              {result.missing_evidence.map((e: string, i: number) => <p key={i} className="text-xs text-yellow-300 mb-1">- {e}</p>)}
+              {result.missing_evidence.map((ev: string, i: number) => <p key={i} className="text-xs text-yellow-300 mb-1">- {ev}</p>)}
             </div>
           )}
 
@@ -690,32 +720,94 @@ function AppealTab({ initialWorkerId = "" }: { initialWorkerId?: string }) {
             </div>
           )}
 
-          {/* Appeal Draft PL/EN */}
-          {result.appeal_draft_pl && (
-            <div className={cardCls}>
-              <h3 className="text-xs font-bold text-white mb-2">Appeal Draft (PL)</h3>
-              <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-900 p-3 rounded-lg max-h-96 overflow-y-auto">{result.appeal_draft_pl}</pre>
-            </div>
-          )}
-          {result.appeal_draft_en && (
-            <div className={cardCls}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-white">Appeal Draft (EN)</h3>
-                <CopyButton text={result.appeal_draft_en} />
+          {/* ── OUTPUT TABS: PL / EN / Simple ── */}
+          {(hasPl || hasEn || hasSimple) && (
+            <div className={`${cardCls} border-red-500/20`}>
+              {/* Tab bar */}
+              <div className="flex gap-0.5 p-1 bg-slate-900 rounded-lg border border-slate-700 mb-4">
+                <button onClick={() => setOutputView("pl")}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${outputView === "pl" ? "bg-red-700 text-white shadow" : "text-slate-500 hover:text-slate-300"}`}>
+                  PL — Odwołanie
+                </button>
+                <button onClick={() => setOutputView("en")} disabled={!hasEn}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${outputView === "en" ? "bg-blue-600 text-white shadow" : "text-slate-500 hover:text-slate-300"} disabled:opacity-30`}>
+                  EN — Translation
+                </button>
+                <button onClick={() => setOutputView("simple")} disabled={!hasSimple}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${outputView === "simple" ? "bg-green-600 text-white shadow" : "text-slate-500 hover:text-slate-300"} disabled:opacity-30`}>
+                  Simple Explanation
+                </button>
               </div>
-              <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-900 p-3 rounded-lg max-h-96 overflow-y-auto">{result.appeal_draft_en}</pre>
+
+              {/* PL — Formal Polish appeal */}
+              {outputView === "pl" && hasPl && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-red-400">Formal Appeal Draft (Polish)</h3>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">Source Legal Version</span>
+                    </div>
+                    <CopyButton text={result.appeal_draft_pl} />
+                  </div>
+                  <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-900 p-3 rounded-lg max-h-[500px] overflow-y-auto leading-relaxed">{result.appeal_draft_pl}</pre>
+                </div>
+              )}
+
+              {/* EN — Internal English translation */}
+              {outputView === "en" && hasEn && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-blue-400">English Translation (Internal)</h3>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Internal Only — Not for Filing</span>
+                    </div>
+                    <CopyButton text={result.appeal_draft_en} />
+                  </div>
+                  <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-900 p-3 rounded-lg max-h-[500px] overflow-y-auto leading-relaxed">{result.appeal_draft_en}</pre>
+                </div>
+              )}
+
+              {/* Simple — Worker/Client explanation */}
+              {outputView === "simple" && hasSimple && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xs font-bold text-green-400">Simple Explanation</h3>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">Plain Language — No Legal Jargon</span>
+                  </div>
+                  {result.worker_explanation && (
+                    <div className="rounded-lg bg-green-500/5 border border-green-500/15 p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <User className="w-3 h-3 text-green-400" />
+                        <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">For Worker</p>
+                      </div>
+                      <p className="text-sm text-slate-300 leading-relaxed">{result.worker_explanation}</p>
+                    </div>
+                  )}
+                  {result.client_explanation && (
+                    <div className="rounded-lg bg-blue-500/5 border border-blue-500/15 p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Building className="w-3 h-3 text-blue-400" />
+                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">For Client / Employer</p>
+                      </div>
+                      <p className="text-sm text-slate-300 leading-relaxed">{result.client_explanation}</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-600">This explanation does not contain article references or legal terminology. It is not a formal document.</p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Worker + Client Explanations */}
-          {/* Worker/Client explanations — clearly separated from formal drafts */}
-          <ExplanationCard label="Worker Explanation" audience="worker" text={result.worker_explanation} icon={User} />
-          <ExplanationCard label="Client / Employer Explanation" audience="client" text={result.client_explanation} icon={Building} />
-
-          {/* Document history for this worker */}
+          {/* Document history */}
           {workerId && <DocumentHistoryPanel workerId={workerId} />}
+
+          {/* Copilot */}
+          {workerId && <CopilotPanel workerId={workerId} panelContext="legal_case" />}
         </div>
       )}
+
+      {/* Copilot when no result yet but worker selected */}
+      {!result && workerId && <CopilotPanel workerId={workerId} panelContext="legal_case" compact />}
     </div>
   );
 }

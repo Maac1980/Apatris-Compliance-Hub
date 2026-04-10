@@ -145,6 +145,7 @@ const NAV_GROUPS: NavGroup[] = [
     activeBg: "bg-rose-500/15 text-rose-400",
     items: [
       { path: "/legal-intelligence", label: "Legal Intelligence", icon: Shield },
+      { path: "/trc-workspace",     label: "TRC Workspace",      icon: Shield },
       { path: "/legal-brief",  label: "Legal Brief AI", icon: Sparkles },
       { path: "/analytics",    label: "Analytics",     icon: BarChart3 },
       { path: "/ai-copilot",   label: "AI Copilot",    icon: Sparkles },

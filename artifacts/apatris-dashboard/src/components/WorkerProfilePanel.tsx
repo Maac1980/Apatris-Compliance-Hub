@@ -15,6 +15,8 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
+import { ContextUpload } from "@/components/ContextUpload";
+import { CopilotPanel } from "@/components/CopilotPanel";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -1348,6 +1350,14 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                     <UploadButton workerId={(worker as any).id} docType="contract" label="Contract" accent="violet" />
                     <p className="text-xs text-gray-600 text-center">PDF, JPG, PNG or WebP · AI scans docs automatically</p>
                   </div>
+                  {/* General document upload with type picker */}
+                  <div className="mt-4">
+                    <ContextUpload workerId={(worker as any).id} sourcePanel="worker_documents" defaultDocType="supporting" />
+                  </div>
+                  {/* EEJ Copilot */}
+                  <div className="mt-4">
+                    <CopilotPanel workerId={(worker as any).id} panelContext="documents" compact />
+                  </div>
                 </div>
               )}
 
@@ -1397,6 +1407,12 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                       </button>
                     ))}
                   </div>
+
+                  {/* Compliance document upload */}
+                  <ContextUpload workerId={(worker as any).id} sourcePanel="compliance" defaultDocType="filing_proof" compact />
+
+                  {/* EEJ Copilot */}
+                  <CopilotPanel workerId={(worker as any).id} panelContext="compliance" compact />
                 </>
               )}
 
