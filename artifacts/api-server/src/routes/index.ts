@@ -104,6 +104,9 @@ import riskRouter from "./risk.js";
 import intelligenceRouter from "./intelligence.js";
 import systemHealthRouter from "./system-health.js";
 import smartDocumentRouter from "./smart-document.js";
+import documentIntakeRouter from "./document-intake.js";
+import workerValidationRouter from "./worker-validation.js";
+import legalBriefRouter from "./legal-brief.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -211,5 +214,8 @@ router.use(riskRouter);
 router.use(intelligenceRouter);
 router.use(systemHealthRouter);
 router.use(smartDocumentRouter);
+router.use(documentIntakeRouter);
+router.use(workerValidationRouter);
+router.use(legalBriefRouter);
 
 export default router;

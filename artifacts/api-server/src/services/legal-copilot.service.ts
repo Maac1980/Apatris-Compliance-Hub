@@ -19,8 +19,11 @@ import { getWorkerLegalSnapshot } from "./legal-status.service.js";
 
 export interface CopilotResponse {
   answer: string;
+  answerEN: string;
   reasoning: string;
+  reasoningEN: string;
   nextSteps: string[];
+  nextStepsEN: string[];
   riskLevel: string;
   confidence: number;
   requiresReview: true;
@@ -198,11 +201,19 @@ STRICT RULES:
 5. If asked something outside the provided data, say "I don't have enough data to answer this."
 6. Always note that your answer is a draft requiring internal review.
 
+LANGUAGE RULES:
+- Documents and context are in Polish. Read and understand in Polish.
+- Provide answers in BOTH Polish and English.
+- Polish is the primary/authoritative version.
+
 Return ONLY a JSON object:
 {
-  "answer": "direct answer to the question",
-  "reasoning": "why, based on the data provided",
-  "nextSteps": ["action 1", "action 2"],
+  "answer": "direct answer in Polish",
+  "answerEN": "same answer in English",
+  "reasoning": "why, in Polish",
+  "reasoningEN": "same reasoning in English",
+  "nextSteps": ["action 1 in Polish", "action 2"],
+  "nextStepsEN": ["action 1 in English", "action 2"],
   "riskLevel": "current risk assessment from snapshot",
   "confidence": 0.0 to 1.0
 }
@@ -242,8 +253,11 @@ async function callClaude(question: string, ctx: WorkerLegalContext): Promise<Om
       const p = JSON.parse(jsonMatch[0]);
       return {
         answer: String(p.answer ?? "").slice(0, 2000),
+        answerEN: String(p.answerEN ?? p.answer ?? "").slice(0, 2000),
         reasoning: String(p.reasoning ?? "").slice(0, 1000),
+        reasoningEN: String(p.reasoningEN ?? p.reasoning ?? "").slice(0, 1000),
         nextSteps: Array.isArray(p.nextSteps) ? p.nextSteps.map(String).slice(0, 8) : [],
+        nextStepsEN: Array.isArray(p.nextStepsEN) ? p.nextStepsEN.map(String).slice(0, 8) : [],
         riskLevel: String(p.riskLevel ?? ctx.snapshot.riskLevel),
         confidence: typeof p.confidence === "number" ? Math.min(1, Math.max(0, p.confidence)) : 0.5,
       };
@@ -252,7 +266,10 @@ async function callClaude(question: string, ctx: WorkerLegalContext): Promise<Om
 
   return {
     answer: raw.slice(0, 2000) || "Could not parse response.",
-    reasoning: "", nextSteps: [], riskLevel: ctx.snapshot.riskLevel, confidence: 0,
+    answerEN: raw.slice(0, 2000) || "Could not parse response.",
+    reasoning: "", reasoningEN: "",
+    nextSteps: [], nextStepsEN: [],
+    riskLevel: ctx.snapshot.riskLevel, confidence: 0,
   };
 }
 

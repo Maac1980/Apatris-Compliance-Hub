@@ -88,9 +88,14 @@ const FIELD_MAP: Record<string, string> = {
   oswiadczenieExpiry: "oswiadczenie_expiry",
   visaType: "visa_type",
   zusStatus: "zus_status",
+  passportNumber: "passport_number",
+  nationality: "nationality",
+  dateOfBirth: "date_of_birth",
 
   // snake_case pass-through (already DB column names)
   full_name: "full_name",
+  passport_number: "passport_number",
+  date_of_birth: "date_of_birth",
   assigned_site: "assigned_site",
   trc_expiry: "trc_expiry",
   passport_expiry: "passport_expiry",
@@ -140,6 +145,9 @@ const MUTABLE_COLUMNS = new Set([
   "oswiadczenie_expiry",
   "visa_type",
   "zus_status",
+  "passport_number",
+  "nationality",
+  "date_of_birth",
 ]);
 
 // ---------------------------------------------------------------------------

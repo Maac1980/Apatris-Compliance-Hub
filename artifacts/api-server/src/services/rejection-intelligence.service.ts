@@ -38,8 +38,11 @@ export interface ClassifyResult {
   id: string;
   category: RejectionCategory;
   explanation: string;
+  explanationEN: string;
   likelyCause: string;
+  likelyCauseEN: string;
   nextSteps: string[];
+  nextStepsEN: string[];
   appealPossible: boolean;
   confidence: number;
   reviewRequired: true;
@@ -77,8 +80,11 @@ export interface RejectionAnalysis {
 interface RuleMatch {
   category: RejectionCategory;
   explanation: string;
+  explanationEN?: string;
   likelyCause: string;
+  likelyCauseEN?: string;
   nextSteps: string[];
+  nextStepsEN?: string[];
   appealPossible: boolean;
   confidence: number;
 }
@@ -229,11 +235,17 @@ async function classifyByAI(text: string, snapshotContext: string): Promise<Rule
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1024,
-        system: `You classify Polish immigration/work permit rejection notices into categories. Return ONLY a JSON object with these fields:
+        system: `You classify Polish immigration/work permit rejection notices into categories.
+The document is in Polish. You must read and understand it in Polish.
+
+Return ONLY a JSON object with these fields:
 - category: one of MISSING_DOCS, EMPLOYER_ERROR, TIMING_ERROR, FORMAL_DEFECT, LEGAL_BASIS_PROBLEM, OTHER_REVIEW_REQUIRED
-- explanation: 1-2 sentence summary of the rejection
-- likelyCause: what likely caused this rejection
-- nextSteps: array of 3-5 actionable steps
+- explanationPL: 1-2 sentence summary of the rejection IN POLISH
+- explanationEN: same summary translated to English
+- likelyCausePL: what likely caused this rejection IN POLISH
+- likelyCauseEN: same in English
+- nextStepsPL: array of 3-5 actionable steps IN POLISH
+- nextStepsEN: same steps in English
 - appealPossible: boolean
 - confidence: 0.0-1.0
 
@@ -257,9 +269,12 @@ You must NOT invent legal rights or make final legal determinations. This is tri
 
     return {
       category: validCategories.includes(parsed.category) ? parsed.category : "OTHER_REVIEW_REQUIRED",
-      explanation: String(parsed.explanation ?? "AI classification — review required.").slice(0, 2000),
-      likelyCause: String(parsed.likelyCause ?? "Unclear from AI analysis.").slice(0, 1000),
-      nextSteps: Array.isArray(parsed.nextSteps) ? parsed.nextSteps.map(String).slice(0, 8) : ["Review rejection notice manually"],
+      explanation: String(parsed.explanationPL ?? parsed.explanation ?? "AI classification — review required.").slice(0, 2000),
+      explanationEN: String(parsed.explanationEN ?? parsed.explanation ?? "").slice(0, 2000),
+      likelyCause: String(parsed.likelyCausePL ?? parsed.likelyCause ?? "Unclear from AI analysis.").slice(0, 1000),
+      likelyCauseEN: String(parsed.likelyCauseEN ?? parsed.likelyCause ?? "").slice(0, 1000),
+      nextSteps: Array.isArray(parsed.nextStepsPL) ? parsed.nextStepsPL.map(String).slice(0, 8) : Array.isArray(parsed.nextSteps) ? parsed.nextSteps.map(String).slice(0, 8) : ["Review rejection notice manually"],
+      nextStepsEN: Array.isArray(parsed.nextStepsEN) ? parsed.nextStepsEN.map(String).slice(0, 8) : [],
       appealPossible: parsed.appealPossible === true,
       confidence: typeof parsed.confidence === "number" ? Math.min(1, Math.max(0, parsed.confidence)) : 0.3,
     };
@@ -334,8 +349,11 @@ export async function classifyRejection(input: ClassifyInput): Promise<ClassifyR
     id: row!.id,
     category: result.category as RejectionCategory,
     explanation: result.explanation,
+    explanationEN: result.explanationEN ?? result.explanation,
     likelyCause: result.likelyCause,
+    likelyCauseEN: result.likelyCauseEN ?? result.likelyCause,
     nextSteps: result.nextSteps,
+    nextStepsEN: result.nextStepsEN ?? result.nextSteps,
     appealPossible: result.appealPossible,
     confidence: result.confidence,
     reviewRequired: true,

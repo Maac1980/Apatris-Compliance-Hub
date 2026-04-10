@@ -2619,6 +2619,93 @@ export async function initializeDatabase(): Promise<void> {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // ── Worker identity columns (passport_number, nationality, date_of_birth) ──
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='passport_number') THEN ALTER TABLE workers ADD COLUMN passport_number TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='nationality') THEN ALTER TABLE workers ADD COLUMN nationality TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='date_of_birth') THEN ALTER TABLE workers ADD COLUMN date_of_birth DATE; END IF;
+      END $$;
+    `);
+  } catch { /* workers table may not exist yet */ }
+
+  // ── Document Intake Intelligence ──────────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS document_intake (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    uploaded_by TEXT,
+    file_name TEXT,
+    mime_type TEXT,
+    file_size INTEGER,
+    ai_extracted_json JSONB,
+    ai_classification TEXT,
+    ai_confidence NUMERIC(3,2) DEFAULT 0,
+    ai_legal_impact_json JSONB,
+    ai_suggested_action TEXT,
+    matched_worker_id UUID,
+    match_confidence NUMERIC(3,2) DEFAULT 0,
+    match_signals_json JSONB,
+    status TEXT DEFAULT 'PENDING_REVIEW',
+    confirmed_by TEXT,
+    confirmed_at TIMESTAMPTZ,
+    confirmed_worker_id UUID,
+    confirmed_fields_json JSONB,
+    applied_actions_json JSONB,
+    contradiction_flags JSONB,
+    urgency_score INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Document Intake Hardening columns ────────────────────────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='file_hash') THEN ALTER TABLE document_intake ADD COLUMN file_hash TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='previous_intake_id') THEN ALTER TABLE document_intake ADD COLUMN previous_intake_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='linked_case_id') THEN ALTER TABLE document_intake ADD COLUMN linked_case_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='link_confidence') THEN ALTER TABLE document_intake ADD COLUMN link_confidence NUMERIC(3,2) DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='deadline_date') THEN ALTER TABLE document_intake ADD COLUMN deadline_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='confidence_gate') THEN ALTER TABLE document_intake ADD COLUMN confidence_gate TEXT DEFAULT 'REVIEW_REQUIRED'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='identity_risk_level') THEN ALTER TABLE document_intake ADD COLUMN identity_risk_level TEXT DEFAULT 'UNKNOWN'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='timeline_status') THEN ALTER TABLE document_intake ADD COLUMN timeline_status TEXT DEFAULT 'UNKNOWN'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='completeness_score') THEN ALTER TABLE document_intake ADD COLUMN completeness_score INTEGER DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='missing_fields_json') THEN ALTER TABLE document_intake ADD COLUMN missing_fields_json JSONB; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='language') THEN ALTER TABLE document_intake ADD COLUMN language TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='is_duplicate') THEN ALTER TABLE document_intake ADD COLUMN is_duplicate BOOLEAN DEFAULT false; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='duplicate_of_id') THEN ALTER TABLE document_intake ADD COLUMN duplicate_of_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='is_latest_version') THEN ALTER TABLE document_intake ADD COLUMN is_latest_version BOOLEAN DEFAULT true; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='version_number') THEN ALTER TABLE document_intake ADD COLUMN version_number INTEGER DEFAULT 1; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='audit_trail_json') THEN ALTER TABLE document_intake ADD COLUMN audit_trail_json JSONB; END IF;
+      END $$;
+    `);
+  } catch { /* document_intake table may not exist yet */ }
+
+  // ── Legal Brief Pipeline ──────────────────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS legal_briefs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    worker_id UUID NOT NULL,
+    case_id UUID,
+    generated_by TEXT,
+    status TEXT DEFAULT 'GENERATING',
+    stage1_research_json JSONB,
+    stage2_review_json JSONB,
+    stage3_validation_json JSONB,
+    stage4_pressure_json JSONB,
+    final_brief_json JSONB,
+    overall_confidence NUMERIC(3,2) DEFAULT 0,
+    is_valid BOOLEAN DEFAULT false,
+    requires_review BOOLEAN DEFAULT true,
+    pressure_level TEXT,
+    pipeline_halted_at TEXT,
+    pipeline_halt_reason TEXT,
+    rejection_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
@@ -2637,6 +2724,11 @@ export async function initializeDatabase(): Promise<void> {
     "CREATE INDEX IF NOT EXISTS idx_face_encodings_worker ON face_encodings(worker_id)",
     "CREATE INDEX IF NOT EXISTS idx_a1_certs_worker ON a1_certificates(worker_id)",
     "CREATE INDEX IF NOT EXISTS idx_postings_worker ON posting_assignments(worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_intake_hash ON document_intake(file_hash)",
+    "CREATE INDEX IF NOT EXISTS idx_intake_status ON document_intake(status)",
+    "CREATE INDEX IF NOT EXISTS idx_intake_worker ON document_intake(confirmed_worker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_intake_deadline ON document_intake(deadline_date)",
+    "CREATE INDEX IF NOT EXISTS idx_intake_tenant_status ON document_intake(tenant_id, status)",
   ];
   for (const idx of indexes) {
     try { await execute(idx); } catch { /* index may already exist or table missing */ }

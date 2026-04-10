@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
+import { GlobalDropZone } from "./GlobalDropZone";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
@@ -110,6 +111,7 @@ const NAV_GROUPS: NavGroup[] = [
     hoverBg: "hover:bg-violet-500/10",
     activeBg: "bg-violet-500/15 text-violet-400",
     items: [
+      { path: "/document-intake", label: "Doc Intake AI", icon: FileCheck },
       { path: "/contracts",      label: "Contracts",     icon: FileSignature },
       { path: "/doc-workflow",   label: "Doc Workflow",  icon: FileCheck },
       { path: "/contract-gen",          label: "AI Contracts",  icon: FileSignature },
@@ -142,6 +144,7 @@ const NAV_GROUPS: NavGroup[] = [
     hoverBg: "hover:bg-rose-500/10",
     activeBg: "bg-rose-500/15 text-rose-400",
     items: [
+      { path: "/legal-brief",  label: "Legal Brief AI", icon: Sparkles },
       { path: "/analytics",    label: "Analytics",     icon: BarChart3 },
       { path: "/ai-copilot",   label: "AI Copilot",    icon: Sparkles },
       { path: "/regulatory",   label: "Regulatory",    icon: Shield },
@@ -266,6 +269,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <GlobalDropZone>
     <div className="app-shell-root">
       {/* ─── Top Navigation Bar ───────────────────────────────────────── */}
       <header className="app-top-bar">
@@ -482,5 +486,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+    </GlobalDropZone>
   );
 }
