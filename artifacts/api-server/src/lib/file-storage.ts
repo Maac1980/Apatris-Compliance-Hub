@@ -31,13 +31,15 @@ const S3_ENDPOINT = process.env.S3_ENDPOINT;
 const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY_ID;
 const S3_SECRET_KEY = process.env.S3_SECRET_ACCESS_KEY;
 
-// ── PRODUCTION VALIDATION (runs at import time — fails hard) ────────────────
+// ── PRODUCTION VALIDATION ────────────────────────────────────────────────────
+// Log loudly at startup. Block file operations (not entire server).
+let STORAGE_BLOCKED = false;
+let STORAGE_BLOCK_REASON = "";
+
 if (IS_PRODUCTION && STORAGE_MODE !== "s3") {
-  throw new Error(
-    "[file-storage] FATAL: FILE_STORAGE is not set to 's3' in production. " +
-    "Local filesystem is ephemeral on Fly.io — refusing to start. " +
-    "Set FILE_STORAGE=s3 with R2/S3 credentials."
-  );
+  STORAGE_BLOCKED = true;
+  STORAGE_BLOCK_REASON = "FILE_STORAGE is not set to 's3' in production. Local filesystem is ephemeral. Set FILE_STORAGE=s3 with R2/S3 credentials.";
+  console.error(`[file-storage] BLOCKED: ${STORAGE_BLOCK_REASON}`);
 }
 
 if (IS_PRODUCTION && STORAGE_MODE === "s3") {
@@ -48,10 +50,15 @@ if (IS_PRODUCTION && STORAGE_MODE === "s3") {
   if (!S3_ENDPOINT) missing.push("S3_ENDPOINT");
 
   if (missing.length > 0) {
-    throw new Error(
-      `[file-storage] FATAL: S3/R2 config incomplete in production. Missing: ${missing.join(", ")}. ` +
-      "Refusing to start — file uploads would fail."
-    );
+    STORAGE_BLOCKED = true;
+    STORAGE_BLOCK_REASON = `S3/R2 config incomplete. Missing: ${missing.join(", ")}`;
+    console.error(`[file-storage] BLOCKED: ${STORAGE_BLOCK_REASON}`);
+  }
+}
+
+function assertStorageAvailable() {
+  if (STORAGE_BLOCKED) {
+    throw new Error(`[file-storage] File storage is BLOCKED in production: ${STORAGE_BLOCK_REASON}`);
   }
 }
 
@@ -101,7 +108,7 @@ export async function storeFile(params: {
   buffer: Buffer;
   mimeType: string;
 }): Promise<StoredFile> {
-  const ext = path.extname(params.fileName) || "";
+  assertStorageAvailable();
   const hash = crypto.createHash("md5").update(params.buffer).digest("hex").slice(0, 8);
   const safeFileName = params.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${params.tenantId}/${params.category}/${Date.now()}_${hash}_${safeFileName}`;
@@ -109,28 +116,21 @@ export async function storeFile(params: {
   if (STORAGE_MODE === "s3") {
     return storeToS3(key, params.buffer, params.mimeType);
   }
-  if (IS_PRODUCTION) {
-    throw new Error("[file-storage] Local storage is disabled in production");
-  }
   return storeToLocal(key, params.buffer, params.mimeType);
 }
 
 export async function getFile(key: string): Promise<Buffer | null> {
+  assertStorageAvailable();
   if (STORAGE_MODE === "s3") {
     return getFromS3(key);
-  }
-  if (IS_PRODUCTION) {
-    throw new Error("[file-storage] Local storage is disabled in production");
   }
   return getFromLocal(key);
 }
 
 export async function deleteFile(key: string): Promise<void> {
+  assertStorageAvailable();
   if (STORAGE_MODE === "s3") {
     return deleteFromS3(key);
-  }
-  if (IS_PRODUCTION) {
-    throw new Error("[file-storage] Local storage is disabled in production");
   }
   return deleteFromLocal(key);
 }
