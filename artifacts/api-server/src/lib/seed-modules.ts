@@ -19,15 +19,19 @@ export async function seedModuleDemoData(force = false): Promise<void> {
   const tenantId = getDefaultTenantId();
   if (!tenantId) { console.log("[seed-modules] No tenant — skipping."); return; }
 
-  // Only seed if clients table is empty (first run guard)
-  const existing = await query<{ count: string }>("SELECT COUNT(*) AS count FROM clients");
-  if (parseInt(existing[0]?.count ?? "0") > 3) {
-    console.log("[seed-modules] Modules already have data — skipping.");
+  // Guard: skip if already seeded (check clients + trc_cases)
+  const clientCount = parseInt((await query<{ count: string }>("SELECT COUNT(*) AS count FROM clients"))[0]?.count ?? "0");
+  const trcCount = parseInt((await query<{ count: string }>("SELECT COUNT(*) AS count FROM trc_cases WHERE tenant_id = $1", [tenantId]))[0]?.count ?? "0");
+  if (clientCount > 3 && trcCount > 3) {
+    console.log("[seed-modules] Modules + TRC already have data — skipping.");
     return;
   }
+  // If clients exist but TRC doesn't, skip to TRC section
+  const skipModules = clientCount > 3;
 
   console.log("[seed-modules] Seeding demo data for dashboard modules…");
 
+  if (!skipModules) {
   // ═══ 1. CLIENTS (20 records) ═══════════════════════════════════════════
   const clients = [
     { name: "[DEMO] Heerema Marine Contractors", contact: "Jan van der Berg", email: "j.vanderberg@heerema.com", phone: "+31 70 123 4567", nip: "NL123456789B01", rate: 45.00 },
@@ -283,10 +287,12 @@ export async function seedModuleDemoData(force = false): Promise<void> {
   } else {
     console.log("[seed-modules] No workers found — skipping posted workers and GDPR data.");
   }
+  } // end skipModules
 
   // ═══════════════════════════════════════════════════════════════════════
   // TRC CASES + LEGAL CASES — 5 scenarios covering every legal path
   // ═══════════════════════════════════════════════════════════════════════
+  const allWorkers = await query<any>("SELECT id, full_name FROM workers WHERE tenant_id = $1 ORDER BY created_at", [tenantId]);
   const trcExisting = await query<{ count: string }>("SELECT COUNT(*) AS count FROM trc_cases WHERE tenant_id = $1", [tenantId]);
   if (parseInt(trcExisting[0]?.count ?? "0") < 3 && allWorkers.length >= 5) {
     console.log("[seed-modules] Seeding TRC case demo data (5 scenarios)…");
