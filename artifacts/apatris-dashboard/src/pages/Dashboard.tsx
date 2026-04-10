@@ -1,3 +1,4 @@
+import { KnowledgeCenter } from "@/components/KnowledgeCenter";
 import { SystemHealth } from "@/components/SystemHealth";
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -108,103 +109,6 @@ function LanguageToggle() {
         <span className="text-sm leading-none">🇵🇱</span>
         <span>PL</span>
       </button>
-    </div>
-  );
-}
-
-/** Fleet intelligence signals — lightweight alert bar */
-function FleetSignalBar() {
-  const { data } = useQuery<{ signals: any }>({
-    queryKey: ["fleet-signals"],
-    queryFn: async () => {
-      const token = localStorage.getItem("apatris_jwt");
-      const res = await fetch(`${BASE}api/v1/legal/intelligence/fleet-signals`, {
-        headers: token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {},
-      });
-      if (!res.ok) return { signals: null };
-      return res.json();
-    },
-    staleTime: 60_000,
-  });
-  const s = data?.signals;
-  if (!s) return null;
-  const hasAlerts = s.expired > 0 || s.expiringSoon > 0 || s.casesNeedingAction > 0 || s.missingCriticalDocs > 0;
-  if (!hasAlerts) return null;
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {s.expired > 0 && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-          <p className="text-2xl font-black text-red-400">{s.expired}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60 mt-0.5">Expired Docs</p>
-        </div>
-      )}
-      {s.expiringSoon > 0 && (
-        <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-          <p className="text-2xl font-black text-yellow-400">{s.expiringSoon}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 mt-0.5">Expiring &lt;30d</p>
-        </div>
-      )}
-      {s.casesNeedingAction > 0 && (
-        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-          <p className="text-2xl font-black text-blue-400">{s.casesNeedingAction}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400/60 mt-0.5">Cases Need Action</p>
-        </div>
-      )}
-      {s.missingCriticalDocs > 0 && (
-        <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
-          <p className="text-2xl font-black text-orange-400">{s.missingCriticalDocs}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400/60 mt-0.5">Missing Docs</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Manager readiness — top urgent actions from latest scan */
-function ManagerReadinessPanel() {
-  const { data } = useQuery<{ signals: any; topActions: any[]; riskDistribution: any }>({
-    queryKey: ["manager-view"],
-    queryFn: async () => {
-      const token = localStorage.getItem("apatris_jwt");
-      const res = await fetch(`${BASE}api/v1/legal/intelligence/manager-view`, {
-        headers: token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {},
-      });
-      if (!res.ok) return { signals: null, topActions: [], riskDistribution: null };
-      return res.json();
-    },
-    staleTime: 120_000,
-  });
-  const actions = data?.topActions ?? [];
-  const risk = data?.riskDistribution;
-  if (!risk && actions.length === 0) return null;
-
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Fleet Readiness</h3>
-        {risk && (
-          <div className="flex items-center gap-2 text-[10px] font-bold">
-            {risk.critical > 0 && <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">{risk.critical} Critical</span>}
-            {risk.high > 0 && <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">{risk.high} High</span>}
-            {risk.medium > 0 && <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">{risk.medium} Medium</span>}
-            <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">{risk.low} OK</span>
-          </div>
-        )}
-      </div>
-      {actions.length > 0 ? (
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Top Urgent Actions</p>
-          {actions.slice(0, 8).map((a: any, i: number) => (
-            <div key={i} className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg ${a.priority === "critical" ? "bg-red-500/10 border border-red-500/20 text-red-300" : "bg-orange-500/10 border border-orange-500/20 text-orange-300"}`}>
-              <span className="truncate">{a.workerName}: {a.action}</span>
-              <span className="text-[9px] font-bold uppercase ml-2 flex-shrink-0">{a.priority}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-slate-500 text-center py-2">No urgent actions. Run a scan to refresh.</p>
-      )}
     </div>
   );
 }
@@ -561,10 +465,6 @@ export default function Dashboard() {
           <StatCard title={t("stats.upcomingRenewals")} value={stats?.warning || "0"} icon={Clock} variant="warning" />
           <StatCard title={t("stats.nonCompliant")} value={stats?.nonCompliant || "0"} icon={AlertTriangle} variant="critical" />
         </div>
-
-        {/* Intelligence Signals */}
-        <FleetSignalBar />
-        <ManagerReadinessPanel />
 
         {/* Per-Site Compliance Cards */}
         {siteStats.length > 0 && (

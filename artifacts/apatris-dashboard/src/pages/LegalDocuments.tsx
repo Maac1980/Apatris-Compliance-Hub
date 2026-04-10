@@ -105,19 +105,14 @@ export default function LegalDocuments() {
   const docs = docsData ?? [];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
-      <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
-            <FileSignature className="w-5 h-5 text-slate-300" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Legal Documents</h1>
-            <p className="text-xs text-slate-500 font-mono uppercase tracking-widest mt-1">Attorney Documents · Auto-Prefilled Templates</p>
-          </div>
+    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <FileSignature className="w-7 h-7 text-[#C41E18]" />
+          <h1 className="text-3xl font-bold text-white">Legal Documents</h1>
         </div>
+        <p className="text-gray-400">Generate attorney documents from templates — auto-prefilled with worker data</p>
       </div>
-      <div className="max-w-6xl mx-auto px-6 py-6">
 
       {/* Worker selector */}
       <div className="mb-6">
@@ -261,7 +256,6 @@ export default function LegalDocuments() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

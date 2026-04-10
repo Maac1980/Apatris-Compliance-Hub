@@ -79,19 +79,14 @@ export default function WorkerTimeline() {
   // ── WORKER LIST VIEW ──────────────────────────────────────────────────
   if (!selectedWorker) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
-        <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-slate-300" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">Worker Timeline</h1>
-              <p className="text-xs text-slate-500 font-mono uppercase tracking-widest mt-1">Chronological Worker History</p>
-            </div>
+      <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
+        <div className="max-w-3xl mx-auto space-y-5">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Clock className="w-6 h-6 text-primary" /> Worker Timeline
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">Select a worker to view their chronological history</p>
           </div>
-        </div>
-        <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />

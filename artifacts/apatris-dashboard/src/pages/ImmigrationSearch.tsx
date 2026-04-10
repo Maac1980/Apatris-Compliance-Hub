@@ -68,26 +68,17 @@ export default function ImmigrationSearch() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
-      <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
-            <Globe className="w-5 h-5 text-slate-300" />
+    <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary mb-3">
+            <Sparkles className="w-3 h-3" /> AI-Powered
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              {isPl ? "Wyszukiwarka Imigracyjna" : "Immigration Search Engine"}
-            </h1>
-            <p className="text-xs text-slate-500 font-mono uppercase tracking-widest mt-1">
-              {isPl ? "Prawo Imigracyjne · AI" : "Polish Immigration Law · AI-Powered"}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="max-w-3xl mx-auto px-6 py-6">
-        {/* Header badge */}
-        <div className="text-center mb-6">
-          <p className="text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-white">
+            {isPl ? "Wyszukiwarka Imigracyjna" : "Immigration Search Engine"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2">
             {isPl
               ? "Przeszukuj polskie prawo imigracyjne i przepisy dotyczace pracy"
               : "Search Polish immigration law and employment regulations"}
