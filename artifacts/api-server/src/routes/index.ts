@@ -109,6 +109,7 @@ import workerValidationRouter from "./worker-validation.js";
 import legalBriefRouter from "./legal-brief.js";
 import workerFilesRouter from "./worker-files.js";
 import legalIntelligenceRouter from "./legal-intelligence.js";
+import caseIntelligenceRouter from "./case-intelligence.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -221,5 +222,6 @@ router.use(workerValidationRouter);
 router.use(legalBriefRouter);
 router.use(workerFilesRouter);
 router.use(legalIntelligenceRouter);
+router.use(caseIntelligenceRouter);
 
 export default router;
