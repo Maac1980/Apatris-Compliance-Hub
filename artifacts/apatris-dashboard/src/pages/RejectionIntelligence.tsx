@@ -20,8 +20,11 @@ interface ClassifyResult {
   id: string;
   category: string;
   explanation: string;
+  explanationEN: string;
   likelyCause: string;
+  likelyCauseEN: string;
   nextSteps: string[];
+  nextStepsEN: string[];
   appealPossible: boolean;
   confidence: number;
   reviewRequired: boolean;
@@ -243,14 +246,20 @@ export default function RejectionIntelligence() {
                   </div>
                 </div>
 
+                {/* PL/EN toggle for classification */}
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => setShowPL(true)} className={`text-[10px] font-bold px-2 py-0.5 rounded ${showPL ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400"}`}>PL</button>
+                  <button onClick={() => setShowPL(false)} className={`text-[10px] font-bold px-2 py-0.5 rounded ${!showPL ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400"}`}>EN</button>
+                </div>
+
                 <div className="rounded bg-slate-900/60 px-3 py-2">
-                  <p className="text-xs text-slate-300 leading-relaxed">{result.explanation}</p>
+                  <p className="text-xs text-slate-300 leading-relaxed">{showPL ? result.explanation : (result.explanationEN || result.explanation)}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="rounded bg-slate-900/40 px-2 py-1.5">
                     <div className="text-slate-500 mb-0.5">Likely Cause</div>
-                    <div className="text-slate-300">{result.likelyCause}</div>
+                    <div className="text-slate-300">{showPL ? result.likelyCause : (result.likelyCauseEN || result.likelyCause)}</div>
                   </div>
                   <div className="rounded bg-slate-900/40 px-2 py-1.5">
                     <div className="text-slate-500 mb-0.5">Appeal Possible</div>
@@ -260,11 +269,11 @@ export default function RejectionIntelligence() {
                   </div>
                 </div>
 
-                {result.nextSteps.length > 0 && (
+                {(showPL ? result.nextSteps : (result.nextStepsEN?.length ? result.nextStepsEN : result.nextSteps)).length > 0 && (
                   <div>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Suggested Next Steps</p>
                     <ul className="space-y-0.5">
-                      {result.nextSteps.map((s, i) => (
+                      {(showPL ? result.nextSteps : (result.nextStepsEN?.length ? result.nextStepsEN : result.nextSteps)).map((s, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-300">
                           <span className="text-slate-400 mt-0.5">{i + 1}.</span>
                           <span>{s}</span>

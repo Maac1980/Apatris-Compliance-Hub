@@ -24,7 +24,7 @@ interface Deal { id: string; company_id: string; company_name: string; deal_name
 export default function CrmPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"pipeline" | "companies">("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "companies" | "recruitment">("pipeline");
   const [search, setSearch] = useState("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedCompanyName, setSelectedCompanyName] = useState("");
@@ -138,6 +138,9 @@ export default function CrmPage() {
         </button>
         <button onClick={() => setActiveTab("companies")} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === "companies" ? "bg-[#C41E18] text-white shadow" : "text-slate-400 hover:text-white"}`}>
           <Building2 className="w-4 h-4" />Companies
+        </button>
+        <button onClick={() => setActiveTab("recruitment")} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === "recruitment" ? "bg-[#C41E18] text-white shadow" : "text-slate-400 hover:text-white"}`}>
+          <Users className="w-4 h-4" />Recruitment Funnel
         </button>
       </div>
 
@@ -332,6 +335,104 @@ export default function CrmPage() {
           </div>
         </div>
       )}
+
+      {activeTab === "recruitment" && (
+        <RecruitmentFunnel />
+      )}
+    </div>
+  );
+}
+
+// ═══ RECRUITMENT FUNNEL ANALYTICS ═══════════════════════════════════════════
+
+function RecruitmentFunnel() {
+  const { data } = useQuery({
+    queryKey: ["recruitment-funnel"],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/applications/analytics/funnel`, { headers: authHeaders() });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  if (!data) return <div className="text-center py-12 text-slate-500">Loading funnel data...</div>;
+
+  const { funnel, conversionRate, avgTimeToHire, stageBreakdown } = data;
+  const maxCount = Math.max(funnel.applied, 1);
+
+  const stages = [
+    { label: "Applied", count: funnel.applied, color: "bg-slate-500" },
+    { label: "Screened", count: funnel.screened, color: "bg-purple-500" },
+    { label: "Interviewed", count: funnel.interviewed, color: "bg-blue-500" },
+    { label: "Offered", count: funnel.offered, color: "bg-amber-500" },
+    { label: "Hired", count: funnel.hired, color: "bg-emerald-500" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-center">
+          <p className="text-xs text-slate-400 uppercase">Total Candidates</p>
+          <p className="text-2xl font-black text-white mt-1">{funnel.applied}</p>
+        </div>
+        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-xl p-4 text-center">
+          <p className="text-xs text-emerald-400 uppercase">Hired</p>
+          <p className="text-2xl font-black text-emerald-400 mt-1">{funnel.hired}</p>
+        </div>
+        <div className="bg-blue-900/20 border border-blue-600/30 rounded-xl p-4 text-center">
+          <p className="text-xs text-blue-400 uppercase">Conversion Rate</p>
+          <p className="text-2xl font-black text-blue-400 mt-1">{conversionRate}%</p>
+        </div>
+        <div className="bg-purple-900/20 border border-purple-600/30 rounded-xl p-4 text-center">
+          <p className="text-xs text-purple-400 uppercase">Avg Time to Hire</p>
+          <p className="text-2xl font-black text-purple-400 mt-1">{avgTimeToHire ? `${avgTimeToHire}d` : "—"}</p>
+        </div>
+      </div>
+
+      {/* Visual funnel */}
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+        <h3 className="text-sm font-bold text-slate-300 mb-4">Recruitment Funnel</h3>
+        <div className="space-y-3">
+          {stages.map((s, i) => {
+            const width = Math.max(5, (s.count / maxCount) * 100);
+            const dropoff = i > 0 ? stages[i - 1].count - s.count : 0;
+            return (
+              <div key={s.label} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">{s.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-white font-bold">{s.count}</span>
+                    {dropoff > 0 && <span className="text-red-400 text-[10px]">-{dropoff} dropped</span>}
+                  </div>
+                </div>
+                <div className="h-6 rounded bg-slate-700/50 overflow-hidden">
+                  <div className={`h-full rounded ${s.color} transition-all`} style={{ width: `${width}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Drop-off analysis */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+          <p className="text-xs text-red-400 uppercase mb-2">Rejected</p>
+          <p className="text-xl font-black text-red-400">{funnel.rejected}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{funnel.applied > 0 ? Math.round((funnel.rejected / funnel.applied) * 100) : 0}% of applicants</p>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+          <p className="text-xs text-slate-400 uppercase mb-2">Declined Offer</p>
+          <p className="text-xl font-black text-slate-400">{funnel.declined}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{funnel.offered > 0 ? Math.round((funnel.declined / funnel.offered) * 100) : 0}% of offers</p>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+          <p className="text-xs text-emerald-400 uppercase mb-2">Offer Acceptance Rate</p>
+          <p className="text-xl font-black text-emerald-400">{funnel.offered > 0 ? Math.round((funnel.hired / funnel.offered) * 100) : 0}%</p>
+          <p className="text-[10px] text-slate-500 mt-1">{funnel.hired} hired from {funnel.offered} offers</p>
+        </div>
+      </div>
     </div>
   );
 }

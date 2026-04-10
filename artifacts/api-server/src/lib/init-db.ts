@@ -2658,6 +2658,67 @@ export async function initializeDatabase(): Promise<void> {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // ── Worker Files (working documents) ────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS worker_files (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    worker_id UUID NOT NULL,
+    case_id UUID,
+    file_key TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_size INTEGER,
+    mime_type TEXT,
+    doc_type TEXT DEFAULT 'miscellaneous',
+    status TEXT DEFAULT 'uploaded',
+    notes TEXT,
+    tags TEXT,
+    source TEXT DEFAULT 'uploaded',
+    uploaded_by TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Document Action Log (append-only audit trail) ─────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS document_action_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    worker_id UUID,
+    document_id UUID,
+    document_type TEXT,
+    action TEXT NOT NULL,
+    actor TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Worker Files status column (for existing tables) ────────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='worker_files' AND column_name='status') THEN ALTER TABLE worker_files ADD COLUMN status TEXT DEFAULT 'uploaded'; END IF;
+      END $$;
+    `);
+  } catch { /* worker_files may not exist yet */ }
+
+  // ── Recruitment Pipeline: Interview + Offer stages ──────────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='phone') THEN ALTER TABLE job_applications ADD COLUMN phone TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='nationality') THEN ALTER TABLE job_applications ADD COLUMN nationality TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='interview_date') THEN ALTER TABLE job_applications ADD COLUMN interview_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='interview_notes') THEN ALTER TABLE job_applications ADD COLUMN interview_notes TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='skills_score') THEN ALTER TABLE job_applications ADD COLUMN skills_score INTEGER; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='interview_result') THEN ALTER TABLE job_applications ADD COLUMN interview_result TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='offered_rate') THEN ALTER TABLE job_applications ADD COLUMN offered_rate NUMERIC(8,2); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='offer_status') THEN ALTER TABLE job_applications ADD COLUMN offer_status TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='offer_date') THEN ALTER TABLE job_applications ADD COLUMN offer_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='start_date') THEN ALTER TABLE job_applications ADD COLUMN start_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='converted_worker_id') THEN ALTER TABLE job_applications ADD COLUMN converted_worker_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='converted_at') THEN ALTER TABLE job_applications ADD COLUMN converted_at TIMESTAMPTZ; END IF;
+      END $$;
+    `);
+  } catch { /* job_applications table may not exist yet */ }
+
   // ── Document Intake Hardening columns ────────────────────────────────────
   try {
     await execute(`

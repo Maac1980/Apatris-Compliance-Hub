@@ -488,22 +488,43 @@ export async function generateAppealLetter(
   } catch { /* non-blocking */ }
 
   // 4. Calculate deadline (14 days from decision date if available)
+  // IMPORTANT: Polish rejection texts contain multiple dates — law reference dates (e.g. "27 sierpnia 2004 r.")
+  // and the actual decision date (e.g. "z dnia 31 marca 2026 r."). We must find the DECISION date, not law dates.
   let deadlineDate: string | null = null;
-  const dateMatch = analysis.rejection_text.match(/(\d{1,2})[.\s/](marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|stycznia|lutego|\d{1,2})[.\s/](\d{4})/i);
-  if (dateMatch) {
-    const monthMap: Record<string, number> = {
-      stycznia: 1, lutego: 2, marca: 3, kwietnia: 4, maja: 5, czerwca: 6,
-      lipca: 7, sierpnia: 8, września: 9, października: 10, listopada: 11, grudnia: 12,
-    };
-    const day = parseInt(dateMatch[1]);
-    const monthStr = dateMatch[2].toLowerCase();
-    const month = monthMap[monthStr] ?? parseInt(monthStr);
-    const year = parseInt(dateMatch[3]);
-    if (day && month && year) {
-      const decisionDate = new Date(year, month - 1, day);
-      decisionDate.setDate(decisionDate.getDate() + 14);
-      deadlineDate = decisionDate.toISOString().slice(0, 10);
-    }
+  const monthMap: Record<string, number> = {
+    stycznia: 1, lutego: 2, marca: 3, kwietnia: 4, maja: 5, czerwca: 6,
+    lipca: 7, sierpnia: 8, września: 9, października: 10, listopada: 11, grudnia: 12,
+  };
+
+  // Strategy 1: Look for "z dnia DD miesiąca YYYY" (decision date format)
+  const decisionDateMatch = analysis.rejection_text.match(/(?:z dnia|dnia)\s+(\d{1,2})\s+(marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|stycznia|lutego)\s+(\d{4})/i);
+
+  // Strategy 2: Find ALL dates and take the most recent one (>= 2024)
+  const allDateMatches = [...analysis.rejection_text.matchAll(/(\d{1,2})\s+(marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|stycznia|lutego)\s+(\d{4})/gi)];
+
+  const parseDateMatch = (m: RegExpMatchArray | null): Date | null => {
+    if (!m) return null;
+    const day = parseInt(m[1]);
+    const month = monthMap[m[2].toLowerCase()];
+    const year = parseInt(m[3]);
+    if (day && month && year) return new Date(year, month - 1, day);
+    return null;
+  };
+
+  // Prefer "z dnia" match. If not found, take the most recent date >= 2024.
+  let decisionDate = parseDateMatch(decisionDateMatch);
+  if (!decisionDate) {
+    const recentDates = allDateMatches
+      .map(m => parseDateMatch(m))
+      .filter((d): d is Date => d !== null && d.getFullYear() >= 2024)
+      .sort((a, b) => b.getTime() - a.getTime());
+    decisionDate = recentDates[0] ?? null;
+  }
+
+  if (decisionDate) {
+    const deadline = new Date(decisionDate);
+    deadline.setDate(deadline.getDate() + 14);
+    deadlineDate = deadline.toISOString().slice(0, 10);
   }
 
   // 5. Call AI to generate the full appeal letter
@@ -604,7 +625,27 @@ Please return your response in this exact format:
   const metaMatch = raw.match(/---METADATA---\s*([\s\S]*?)\s*---END_METADATA---/);
 
   const appealTextPL = plMatch?.[1]?.trim() ?? raw;
-  const appealText = enMatch?.[1]?.trim() ?? "See Polish version";
+  let appealText = enMatch?.[1]?.trim() ?? "";
+
+  // If EN markers not found, generate EN translation with a quick follow-up call
+  if (!appealText && appealTextPL.length > 50) {
+    try {
+      const enRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6", max_tokens: 4096,
+          system: "Translate this Polish legal appeal letter into formal English. Preserve all legal meaning, article references, and arguments. This is for internal legal understanding, not for submission to Polish authorities. Return ONLY the English translation, no markers or metadata.",
+          messages: [{ role: "user", content: appealTextPL.slice(0, 8000) }],
+        }),
+      });
+      if (enRes.ok) {
+        const enData = await enRes.json() as any;
+        appealText = enData.content?.find((b: any) => b.type === "text")?.text?.trim() ?? "";
+      }
+    } catch { /* EN translation failed — non-blocking */ }
+    if (!appealText) appealText = "English translation not available — see Polish version above.";
+  }
 
   let legalBasis: string[] = [];
   let arguments_: string[] = [];

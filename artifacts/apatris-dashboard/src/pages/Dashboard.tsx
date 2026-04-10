@@ -4,14 +4,14 @@ import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/auth";
 import { useGetWorkers, useGetWorkerStats } from "@workspace/api-client-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { authHeaders, BASE } from "@/lib/api";
 import { 
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings,
   Phone, MessageSquare, TrendingUp, Calculator, Download, Upload, CalendarDays, ChevronLeft, ChevronRight,
-  CheckSquare, Square, Archive, X, Send, History
+  CheckSquare, Square, Archive, X, Send, History, Loader2
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -137,6 +137,7 @@ export default function Dashboard() {
   const [actionWorker, setActionWorker] = useState<any | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [docMenuWorker, setDocMenuWorker] = useState<any>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addWorkerOpen, setAddWorkerOpen] = useState(false);
@@ -976,15 +977,23 @@ export default function Dashboard() {
                             <Pencil className="w-3.5 h-3.5" />
                             <span>{t("table.viewEdit")}</span>
                           </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDocMenuWorker(worker); }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-700/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap"
+                            title="Dokumenty"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span className="hidden lg:inline">Dokumenty</span>
+                          </button>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
+                            <button
                               onClick={(e) => handleNotify(e, worker)}
                               className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
                               title={t("table.notifyWorker")}
                             >
                               <Bell className="w-3.5 h-3.5" />
                             </button>
-                            <button 
+                            <button
                               onClick={(e) => handleRenew(e, worker)}
                               className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
                               title={t("table.renewDocument")}
@@ -1294,6 +1303,657 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Worker Document Menu ────────────────────────────────────── */}
+      {docMenuWorker && (
+        <WorkerDocumentMenu worker={docMenuWorker} onClose={() => setDocMenuWorker(null)} />
+      )}
+    </div>
+  );
+}
+
+// ═══ WORKER DOCUMENT MENU ═══════════════════════════════════════════════════
+
+const DOC_TABS = [
+  { key: "umowy", label: "Umowy", icon: "📄" },
+  { key: "podatkowe", label: "Podatkowe", icon: "🧾" },
+  { key: "compliance", label: "Compliance / RODO", icon: "🛡️" },
+  { key: "certyfikaty", label: "Certyfikaty", icon: "📋" },
+  { key: "inne", label: "Inne", icon: "📎" },
+  { key: "historia", label: "Historia", icon: "🕐" },
+  { key: "pliki", label: "Pliki", icon: "📁" },
+  { key: "dodaj", label: "Dodaj dokument", icon: "➕" },
+] as const;
+
+interface DocTemplate {
+  id: string;
+  label: string;
+  description: string;
+  route?: string;
+  // Metadata for AI matching
+  requiredFor?: string[];      // contract types: "zlecenie", "praca", "b2b"
+  relatedExpiry?: string;      // worker field name that triggers urgency
+  relevantSpec?: string[];     // specializations where this is extra relevant
+  onboarding?: boolean;        // needed for new workers
+  // Pre-generation validation
+  requiredFields?: Array<{ key: string; label: string }>;
+}
+
+const DOC_TEMPLATES: Record<string, DocTemplate[]> = {
+  umowy: [
+    { id: "umowa-zlecenie", label: "Umowa Zlecenie", description: "Umowa zlecenie — standardowy wzór", requiredFor: ["zlecenie"],
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }, { key: "site", label: "Obiekt" }] },
+    { id: "umowa-praca", label: "Umowa o Pracę", description: "Umowa o pracę — pełny etat", requiredFor: ["praca"],
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }, { key: "site", label: "Obiekt" }, { key: "pesel", label: "PESEL" }] },
+    { id: "umowa-wspolpraca", label: "Umowa o Współpracy", description: "Umowa B2B / współpraca", requiredFor: ["b2b"],
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "nip", label: "NIP" }] },
+    { id: "umowa-aneks", label: "Aneks do Umowy", description: "Aneks zmieniający warunki umowy", relatedExpiry: "contract_end_date",
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "contractEndDate", label: "Data końca umowy" }] },
+  ],
+  podatkowe: [
+    { id: "pit-2", label: "PIT-2", description: "Oświadczenie dla celów obliczania zaliczki PIT", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "pesel", label: "PESEL" }] },
+    { id: "rezydencja", label: "Rezydencja Podatkowa", description: "Oświadczenie o rezydencji podatkowej", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "nationality", label: "Narodowość" }, { key: "pesel", label: "PESEL" }] },
+    { id: "pit-11", label: "PIT-11", description: "Informacja o dochodach",
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "pesel", label: "PESEL" }] },
+  ],
+  compliance: [
+    { id: "rodo", label: "RODO", description: "Klauzula informacyjna RODO", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }] },
+    { id: "warunki", label: "Warunki Zatrudnienia", description: "Informacja o warunkach zatrudnienia", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }] },
+    { id: "ryzyko", label: "Ryzyko Zawodowe", description: "Ocena ryzyka zawodowego na stanowisku", relevantSpec: ["welder", "spawacz", "construction"],
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }, { key: "site", label: "Obiekt" }] },
+    { id: "zakres", label: "Zakres Obowiązków", description: "Zakres obowiązków pracownika", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }] },
+    { id: "bhp-szkolenie", label: "Szkolenie BHP", description: "Karta szkolenia BHP", relatedExpiry: "bhp_expiry", onboarding: true,
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "site", label: "Obiekt" }] },
+  ],
+  certyfikaty: [
+    { id: "cert-bhp", label: "Certyfikat BHP", description: "Zaświadczenie o szkoleniu BHP", route: "/doc-workflow", relatedExpiry: "bhp_expiry" },
+    { id: "cert-udt", label: "Certyfikat UDT", description: "Certyfikat Urzędu Dozoru Technicznego", route: "/doc-workflow", relatedExpiry: "udt_cert_expiry", relevantSpec: ["welder", "spawacz", "operator"] },
+    { id: "cert-welding", label: "Certyfikat Spawalniczy", description: "Uprawnienia spawalnicze (MIG/TIG/MAG)", route: "/doc-workflow", relevantSpec: ["welder", "spawacz", "MIG", "TIG", "MAG"] },
+    { id: "cert-medical", label: "Badania Lekarskie", description: "Orzeczenie lekarskie medycyny pracy", route: "/doc-workflow", relatedExpiry: "medical_exam_expiry" },
+  ],
+  inne: [
+    { id: "poa", label: "Pełnomocnictwo", description: "Pełnomocnictwo do reprezentowania",
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }] },
+    { id: "zaswiadczenie", label: "Zaświadczenie o Zatrudnieniu", description: "Zaświadczenie o zatrudnieniu i wynagrodzeniu",
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }, { key: "specialization", label: "Stanowisko" }, { key: "site", label: "Obiekt" }] },
+    { id: "referencje", label: "Referencje", description: "List referencyjny",
+      requiredFields: [{ key: "name", label: "Imię i nazwisko" }] },
+  ],
+};
+
+// ═══ AI TEMPLATE SUGGESTION ENGINE (deterministic, no API call) ═════════════
+
+interface TemplateSuggestion {
+  templateId: string;
+  reason: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+}
+
+function suggestTemplates(worker: any, tab: string): Map<string, TemplateSuggestion> {
+  const suggestions = new Map<string, TemplateSuggestion>();
+  const templates = DOC_TEMPLATES[tab] ?? [];
+  const now = new Date();
+  const spec = (worker.specialization || "").toLowerCase();
+  const contractEnd = worker.contractEndDate || worker.contract_end_date || null;
+
+  for (const t of templates) {
+    // Check expiry urgency — if related field expires within 60 days
+    if (t.relatedExpiry) {
+      const expiryVal = worker[t.relatedExpiry] || worker[camelToSnake(t.relatedExpiry)];
+      if (expiryVal) {
+        const expiry = new Date(expiryVal);
+        const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / 86400000);
+        if (daysLeft < 0) {
+          suggestions.set(t.id, { templateId: t.id, reason: `Wygasł ${Math.abs(daysLeft)} dni temu — wymaga odnowienia`, priority: "HIGH" });
+          continue;
+        }
+        if (daysLeft <= 30) {
+          suggestions.set(t.id, { templateId: t.id, reason: `Wygasa za ${daysLeft} dni`, priority: "HIGH" });
+          continue;
+        }
+        if (daysLeft <= 60) {
+          suggestions.set(t.id, { templateId: t.id, reason: `Wygasa za ${daysLeft} dni — warto przygotować`, priority: "MEDIUM" });
+          continue;
+        }
+      }
+    }
+
+    // Check specialization relevance
+    if (t.relevantSpec && t.relevantSpec.some(s => spec.includes(s.toLowerCase()))) {
+      if (!suggestions.has(t.id)) {
+        suggestions.set(t.id, { templateId: t.id, reason: `Ważne dla: ${spec}`, priority: "MEDIUM" });
+      }
+    }
+
+    // Check contract end approaching — suggest aneks
+    if (t.id === "umowa-aneks" && contractEnd) {
+      const daysToEnd = Math.ceil((new Date(contractEnd).getTime() - now.getTime()) / 86400000);
+      if (daysToEnd > 0 && daysToEnd <= 30) {
+        suggestions.set(t.id, { templateId: t.id, reason: `Umowa kończy się za ${daysToEnd} dni`, priority: "HIGH" });
+      }
+    }
+
+    // Check onboarding — if worker was recently created (no contract end = likely new)
+    if (t.onboarding && !contractEnd) {
+      if (!suggestions.has(t.id)) {
+        suggestions.set(t.id, { templateId: t.id, reason: "Wymagane przy onboardingu", priority: "MEDIUM" });
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+function camelToSnake(str: string): string {
+  return str.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`);
+}
+
+function WorkerDocumentMenu({ worker, onClose }: { worker: any; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<string>("umowy");
+  const [, setLocation] = useLocation();
+  const [validationWarning, setValidationWarning] = useState<{ template: DocTemplate; missing: string[] } | null>(null);
+
+  const name = worker.name || worker.full_name || "—";
+  const site = worker.site || worker.assignedSite || worker.assigned_site || "—";
+  const spec = worker.specialization || "—";
+  const contractEnd = worker.contractEndDate || worker.contract_end_date || null;
+
+  const templates = DOC_TEMPLATES[activeTab] ?? [];
+  const suggestions = suggestTemplates(worker, activeTab);
+
+  const sortedTemplates = [...templates].sort((a, b) => {
+    const sa = suggestions.get(a.id);
+    const sb = suggestions.get(b.id);
+    const prio = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    const pa = sa ? prio[sa.priority] : 3;
+    const pb = sb ? prio[sb.priority] : 3;
+    return pa - pb;
+  });
+
+  const tabSuggestionCounts: Record<string, number> = {};
+  for (const tab of DOC_TABS) {
+    if (tab.key === "historia" || tab.key === "dodaj" || tab.key === "pliki") continue;
+    const s = suggestTemplates(worker, tab.key);
+    const highCount = [...s.values()].filter(v => v.priority === "HIGH").length;
+    if (highCount > 0) tabSuggestionCounts[tab.key] = highCount;
+  }
+
+  // ── Pre-generation validation ──────────────────────────────────────────
+  const resolveWorkerField = (key: string): string | null => {
+    const map: Record<string, string | null> = {
+      name: worker.name || worker.full_name || null,
+      specialization: worker.specialization || null,
+      site: worker.site || worker.assignedSite || worker.assigned_site || null,
+      pesel: worker.pesel || null,
+      nip: worker.nip || null,
+      nationality: worker.nationality || null,
+      contractEndDate: worker.contractEndDate || worker.contract_end_date || null,
+      email: worker.email || null,
+      phone: worker.phone || null,
+      iban: worker.iban || null,
+    };
+    return map[key] ?? null;
+  };
+
+  const validateTemplate = (template: DocTemplate): string[] => {
+    if (!template.requiredFields) return [];
+    return template.requiredFields
+      .filter(f => !resolveWorkerField(f.key))
+      .map(f => f.label);
+  };
+
+  const handleTemplateClick = (template: DocTemplate) => {
+    // Certyfikaty route directly — no validation needed
+    if (template.route) {
+      setLocation(`${template.route}?workerId=${worker.id}`);
+      onClose();
+      return;
+    }
+
+    // Validate required fields
+    const missing = validateTemplate(template);
+    if (missing.length > 0) {
+      setValidationWarning({ template, missing });
+      return;
+    }
+
+    setLocation(`/contract-gen?workerId=${worker.id}&template=${template.id}`);
+    onClose();
+  };
+
+  const handleForceGenerate = () => {
+    if (!validationWarning) return;
+    // Log the validation override
+    fetch(`${BASE}api/workers/${worker.id}/doc-log`, {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({
+        action: "VALIDATION_OVERRIDE",
+        documentType: validationWarning.template.id,
+        metadata: { template: validationWarning.template.label, missingFields: validationWarning.missing },
+      }),
+    }).catch(() => {});
+    setLocation(`/contract-gen?workerId=${worker.id}&template=${validationWarning.template.id}`);
+    onClose();
+  };
+
+  const handleSpecialTab = (tab: string) => {
+    if (tab === "dodaj") {
+      setLocation("/document-intake");
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-700 bg-slate-800/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                📄 Dokumenty
+              </h2>
+              <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                <span className="text-white font-semibold">{name}</span>
+                <span>Stanowisko: {spec}</span>
+                <span>Obiekt: {site}</span>
+                {contractEnd && <span>Umowa do: {new Date(contractEnd).toLocaleDateString("pl-PL")}</span>}
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-700 overflow-x-auto no-scrollbar">
+          {DOC_TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                if (tab.key === "dodaj") {
+                  handleSpecialTab(tab.key);
+                } else {
+                  setActiveTab(tab.key);
+                  setValidationWarning(null);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.key
+                  ? "border-blue-500 text-blue-400 bg-blue-500/5"
+                  : "border-transparent text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tabSuggestionCounts[tab.key] > 0 && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">{tabSuggestionCounts[tab.key]}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Validation warning overlay */}
+        {validationWarning && (
+          <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-bold text-amber-400">Brakujące dane dla: {validationWarning.template.label}</p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {validationWarning.missing.map(f => (
+                    <span key={f} className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-semibold">{f}</span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-amber-400/70 mt-1">Uzupełnij dane pracownika przed generowaniem lub kontynuuj mimo to.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setValidationWarning(null)}
+                className="flex-1 text-xs py-1.5 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 font-bold">Anuluj</button>
+              <button onClick={handleForceGenerate}
+                className="flex-1 text-xs py-1.5 rounded bg-amber-600/30 text-amber-400 hover:bg-amber-600/40 border border-amber-500/30 font-bold">Kontynuuj mimo to</button>
+            </div>
+          </div>
+        )}
+
+        {/* Content area */}
+        <div className="p-4 overflow-y-auto max-h-[50vh]">
+          {activeTab === "historia" ? (
+            <WorkerHistoryTab workerId={worker.id} />
+          ) : activeTab === "pliki" ? (
+            <WorkerFilesTab workerId={worker.id} />
+          ) : sortedTemplates.length > 0 ? (
+            <div className="space-y-3">
+              {suggestions.size > 0 && (
+                <div className="flex items-center gap-2 text-[11px] text-blue-400 bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
+                  <span className="font-bold">AI:</span>
+                  <span>{suggestions.size} sugestii dla {name}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {sortedTemplates.map(t => {
+                  const suggestion = suggestions.get(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleTemplateClick(t)}
+                      className={`text-left rounded-xl p-3 transition-all group ${
+                        suggestion?.priority === "HIGH"
+                          ? "bg-red-500/5 border border-red-500/30 hover:border-red-400/50"
+                          : suggestion?.priority === "MEDIUM"
+                            ? "bg-amber-500/5 border border-amber-500/20 hover:border-amber-400/40"
+                            : "bg-slate-800 border border-slate-700 hover:border-blue-500/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className={`w-4 h-4 ${suggestion?.priority === "HIGH" ? "text-red-400" : "text-blue-400"} group-hover:text-blue-300`} />
+                        <span className="text-sm font-semibold text-white">{t.label}</span>
+                        {suggestion?.priority === "HIGH" && (
+                          <span className="text-[9px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">PILNE</span>
+                        )}
+                        {suggestion?.priority === "MEDIUM" && (
+                          <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">Sugerowane</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{t.description}</p>
+                      {suggestion && (
+                        <p className={`text-[10px] mt-1 font-semibold ${suggestion.priority === "HIGH" ? "text-red-400" : "text-amber-400"}`}>
+                          {suggestion.reason}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              Wybierz kategorię aby zobaczyć dostępne dokumenty
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-slate-700 bg-slate-800/30 text-[10px] text-slate-500">
+          Worker ID: {worker.id} · Wybierz szablon — generowanie będzie dostępne w następnym kroku
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══ WORKER FILES TAB ═══════════════════════════════════════════════════════
+
+const FILE_TYPE_LABELS: Record<string, string> = {
+  passport: "Paszport", permit: "Pozwolenie", filing_proof: "Dowód złożenia",
+  upo: "UPO", mos: "MoS", rejection_letter: "Odmowa", insurance: "Ubezpieczenie",
+  bank_statement: "Wyciąg bankowy", contract: "Umowa", certificate: "Certyfikat",
+  supporting: "Dokument pomocniczy", miscellaneous: "Inne",
+};
+
+function WorkerFilesTab({ workerId }: { workerId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const [uploadType, setUploadType] = useState("miscellaneous");
+  const [uploadNotes, setUploadNotes] = useState("");
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["worker-files", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/workers/${workerId}/files`, { headers: authHeaders() });
+      if (!res.ok) return { files: [], count: 0 };
+      return res.json();
+    },
+  });
+
+  const files = data?.files ?? [];
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("docType", uploadType);
+      if (uploadNotes) form.append("notes", uploadNotes);
+      const token = localStorage.getItem("apatris_jwt");
+      const res = await fetch(`${BASE}api/workers/${workerId}/files`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error ?? "Upload failed"); }
+      toast({ description: "Plik przesłany" });
+      queryClient.invalidateQueries({ queryKey: ["worker-files", workerId] });
+      setUploadNotes("");
+    } catch (err) {
+      toast({ description: err instanceof Error ? err.message : "Upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDelete = async (fileId: string) => {
+    try {
+      const res = await fetch(`${BASE}api/workers/${workerId}/files/${fileId}`, { method: "DELETE", headers: authHeaders() });
+      if (!res.ok) throw new Error("Delete failed");
+      toast({ description: "Plik usunięty" });
+      queryClient.invalidateQueries({ queryKey: ["worker-files", workerId] });
+    } catch {
+      toast({ description: "Nie udało się usunąć", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Upload section */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <select value={uploadType} onChange={e => setUploadType(e.target.value)}
+            className="text-xs bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-slate-200">
+            {Object.entries(FILE_TYPE_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <input type="text" value={uploadNotes} onChange={e => setUploadNotes(e.target.value)}
+            placeholder="Notatka (opcjonalnie)..."
+            className="flex-1 text-xs bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-slate-200 placeholder:text-slate-600" />
+        </div>
+        <input ref={fileInputRef} type="file" accept="application/pdf,image/*,.doc,.docx"
+          className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+        <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-bold hover:bg-blue-600/30 disabled:opacity-50 transition-colors">
+          {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+          {uploading ? "Przesyłanie..." : "Prześlij plik"}
+        </button>
+      </div>
+
+      {/* File list */}
+      {isLoading ? (
+        <div className="text-center py-6 text-slate-500 text-xs">Ładowanie plików...</div>
+      ) : files.length === 0 ? (
+        <div className="text-center py-6 text-slate-500 text-xs">Brak plików — prześlij pierwszy dokument powyżej</div>
+      ) : (
+        <div className="space-y-1.5">
+          {files.map((f: any) => (
+            <div key={f.id} className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 group">
+              <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white font-semibold truncate">{f.file_name || "—"}</span>
+                  <span className="text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">{FILE_TYPE_LABELS[f.doc_type] || f.doc_type || "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                  <span>{f.uploaded_by || "—"}</span>
+                  <span>{f.created_at ? new Date(f.created_at).toLocaleDateString("pl-PL") : "—"}</span>
+                  {f.notes && <span className="truncate max-w-[150px]">{f.notes}</span>}
+                </div>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <a href={f.url} target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]" title="Otwórz">
+                  <Download className="w-3 h-3" />
+                </a>
+                <button onClick={() => handleDelete(f.id)}
+                  className="p-1 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 text-[10px]" title="Usuń">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══ WORKER HISTORY TAB (unified: generated + uploaded) ═════════════════════
+
+interface HistoryItem {
+  id: string;
+  name: string;
+  type: string;
+  source: "GENERATED" | "UPLOADED";
+  date: string;
+  createdBy: string;
+  status: string;
+  url?: string;
+}
+
+const STATUS_BADGE: Record<string, { label: string; color: string }> = {
+  uploaded: { label: "Przesłany", color: "bg-blue-500/20 text-blue-400" },
+  draft: { label: "Szkic", color: "bg-slate-600 text-slate-300" },
+  generated: { label: "Wygenerowany", color: "bg-purple-500/20 text-purple-400" },
+  reviewed: { label: "Sprawdzony", color: "bg-emerald-500/20 text-emerald-400" },
+  sent: { label: "Wysłany", color: "bg-cyan-500/20 text-cyan-400" },
+  signed: { label: "Podpisany", color: "bg-green-500/20 text-green-400" },
+  sent_for_signature: { label: "Do podpisu", color: "bg-amber-500/20 text-amber-400" },
+};
+
+function WorkerHistoryTab({ workerId }: { workerId: string }) {
+  const [, setLocation] = useLocation();
+
+  const { data: filesData } = useQuery({
+    queryKey: ["worker-files-history", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/workers/${workerId}/files`, { headers: authHeaders() });
+      if (!res.ok) return { files: [] };
+      return res.json();
+    },
+  });
+
+  const { data: contractsData } = useQuery({
+    queryKey: ["worker-contracts-history", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/contracts?workerId=${workerId}`, { headers: authHeaders() });
+      if (!res.ok) return { contracts: [] };
+      return res.json();
+    },
+  });
+
+  // Fetch action log for override warnings
+  const { data: logData } = useQuery({
+    queryKey: ["worker-doc-log", workerId],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/workers/${workerId}/doc-log`, { headers: authHeaders() });
+      if (!res.ok) return { logs: [] };
+      return res.json();
+    },
+  });
+
+  const overrideSet = new Set(
+    (logData?.logs ?? [])
+      .filter((l: any) => l.action === "VALIDATION_OVERRIDE")
+      .map((l: any) => l.metadata?.template ?? "")
+  );
+
+  const uploadedFiles: HistoryItem[] = (filesData?.files ?? []).map((f: any) => ({
+    id: f.id,
+    name: f.file_name || "—",
+    type: FILE_TYPE_LABELS[f.doc_type] || f.doc_type || "—",
+    source: "UPLOADED" as const,
+    date: f.created_at || "",
+    createdBy: f.uploaded_by || "—",
+    status: f.status || "uploaded",
+    url: f.url,
+  }));
+
+  const generatedDocs: HistoryItem[] = (contractsData?.contracts ?? []).map((c: any) => ({
+    id: c.id,
+    name: `${c.contract_type || "Dokument"} — ${c.worker_name || "—"}`,
+    type: c.contract_type || "—",
+    source: "GENERATED" as const,
+    date: c.created_at || "",
+    createdBy: "System",
+    status: c.status || "draft",
+  }));
+
+  const combined = [...uploadedFiles, ...generatedDocs].sort((a, b) =>
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  return (
+    <div className="space-y-3">
+      {combined.length === 0 ? (
+        <div className="text-center py-8 text-slate-500 text-sm">Brak historii dokumentów dla tego pracownika</div>
+      ) : (
+        <>
+          <div className="text-[10px] text-slate-500">{combined.length} dokumentów · {uploadedFiles.length} przesłanych · {generatedDocs.length} wygenerowanych</div>
+          <div className="space-y-1.5">
+            {combined.map(item => {
+              const sBadge = STATUS_BADGE[item.status] ?? STATUS_BADGE.draft;
+              const wasOverridden = item.source === "GENERATED" && overrideSet.has(item.type);
+              return (
+                <div key={`${item.source}-${item.id}`} className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 group">
+                  <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs text-white font-semibold truncate">{item.name}</span>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                        item.source === "GENERATED" ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                      }`}>{item.source === "GENERATED" ? "WYGENEROWANY" : "PRZESŁANY"}</span>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${sBadge.color}`}>{sBadge.label}</span>
+                      {wasOverridden && (
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400" title="Wygenerowano mimo brakujących danych">⚠️ Override</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                      <span>{item.type}</span>
+                      <span>{item.date ? new Date(item.date).toLocaleDateString("pl-PL") : "—"}</span>
+                      <span>{item.createdBy}</span>
+                    </div>
+                  </div>
+                  {item.url && (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Download className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={() => setLocation(`/history?workerId=${workerId}`)}
+            className="w-full text-center text-[10px] text-blue-400 hover:text-blue-300 underline py-2">
+            Pokaż pełną historię →
+          </button>
+        </>
       )}
     </div>
   );

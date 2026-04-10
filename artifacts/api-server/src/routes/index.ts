@@ -107,6 +107,7 @@ import smartDocumentRouter from "./smart-document.js";
 import documentIntakeRouter from "./document-intake.js";
 import workerValidationRouter from "./worker-validation.js";
 import legalBriefRouter from "./legal-brief.js";
+import workerFilesRouter from "./worker-files.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -217,5 +218,6 @@ router.use(smartDocumentRouter);
 router.use(documentIntakeRouter);
 router.use(workerValidationRouter);
 router.use(legalBriefRouter);
+router.use(workerFilesRouter);
 
 export default router;
