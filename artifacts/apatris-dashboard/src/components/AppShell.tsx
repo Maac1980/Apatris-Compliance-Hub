@@ -169,6 +169,7 @@ const NAV_GROUPS: NavGroup[] = [
     hoverBg: "hover:bg-slate-500/10",
     activeBg: "bg-slate-500/15 text-slate-300",
     items: [
+      { path: "/system-test",     label: "System Test", icon: Settings },
       { path: "/history",         label: "History",    icon: History },
       { path: "/system-logs",     label: "Logs",       icon: FileText },
       { path: "/google",           label: "Google",     icon: Settings },

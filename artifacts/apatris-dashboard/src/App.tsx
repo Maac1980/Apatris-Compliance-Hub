@@ -105,6 +105,7 @@ const IntelligenceDashboard = lazy(() => import("@/pages/IntelligenceDashboard")
 const DocumentIntake = lazy(() => import("@/pages/DocumentIntake"));
 const LegalBrief = lazy(() => import("@/pages/LegalBrief"));
 const LegalIntelligence = lazy(() => import("@/pages/LegalIntelligence"));
+const SystemTest = lazy(() => import("@/pages/SystemTest"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -250,6 +251,9 @@ function Router() {
       </Route>
       <Route path="/legal-intelligence">
         {() => <ProtectedRoute component={LegalIntelligence} />}
+      </Route>
+      <Route path="/system-test">
+        {() => <ProtectedRoute component={SystemTest} />}
       </Route>
       <Route path="/legal-alerts">
         {() => <ProtectedRoute component={LegalAlerts} />}
