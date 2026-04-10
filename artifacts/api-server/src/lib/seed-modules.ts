@@ -284,5 +284,91 @@ export async function seedModuleDemoData(force = false): Promise<void> {
     console.log("[seed-modules] No workers found — skipping posted workers and GDPR data.");
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // TRC CASES + LEGAL CASES — 5 scenarios covering every legal path
+  // ═══════════════════════════════════════════════════════════════════════
+  const trcExisting = await query<{ count: string }>("SELECT COUNT(*) AS count FROM trc_cases WHERE tenant_id = $1", [tenantId]);
+  if (parseInt(trcExisting[0]?.count ?? "0") < 3 && allWorkers.length >= 5) {
+    console.log("[seed-modules] Seeding TRC case demo data (5 scenarios)…");
+
+    // Scenario 1: Active TRC, no issues — Mark Anthony Santos
+    const w1 = allWorkers[1]; // TRC expiring 2026-04-20 (soon)
+    const trc1 = await queryOne<{id:string}>(
+      `INSERT INTO trc_cases (tenant_id, worker_id, worker_name, nationality, case_type, status, voivodeship, employer_name, employer_nip, start_date, expiry_date, notes)
+       VALUES ($1,$2,$3,'Filipino','Type A','pending',$4,'Apatris Sp. z o.o.','1234567890',$5,$6,'[DEMO] TRC renewal in progress — permit expiring soon') RETURNING id`,
+      [tenantId, w1.id, w1.full_name, "Mazowieckie", "2025-04-20", "2026-04-20"]
+    );
+    await queryOne(
+      `INSERT INTO legal_cases (worker_id, tenant_id, case_type, status, next_action, notes, trc_case_id)
+       VALUES ($1,$2,'TRC','PENDING','Submit renewal application before expiry','[DEMO] TRC renewal — expiry approaching',$3) RETURNING id`,
+      [w1.id, tenantId, trc1!.id]
+    );
+
+    // Scenario 2: Expired TRC, filed on time — Art. 108 protected — Roberto Mendoza
+    const w2 = allWorkers[3]; // TRC expired 2026-03-10
+    const trc2 = await queryOne<{id:string}>(
+      `INSERT INTO trc_cases (tenant_id, worker_id, worker_name, nationality, case_type, status, voivodeship, employer_name, employer_nip, start_date, expiry_date, notes)
+       VALUES ($1,$2,$3,'Filipino','Type A','pending',$4,'Apatris Sp. z o.o.','1234567890',$5,$6,'[DEMO] TRC expired but filed before expiry — Art. 108 protection active') RETURNING id`,
+      [tenantId, w2.id, w2.full_name, "Pomorskie", "2024-03-10", "2026-03-10"]
+    );
+    await queryOne(
+      `INSERT INTO legal_cases (worker_id, tenant_id, case_type, status, next_action, notes, trc_case_id)
+       VALUES ($1,$2,'TRC','PENDING','Wait for voivodeship decision — Art. 108 active','[DEMO] Protected under Art. 108 — filed on 2026-02-28',$3) RETURNING id`,
+      [w2.id, tenantId, trc2!.id]
+    );
+
+    // Scenario 3: Rejection — appeal needed — Arjun Sharma
+    const w3 = allWorkers[7]; // TRC expired 2026-01-20
+    const trc3 = await queryOne<{id:string}>(
+      `INSERT INTO trc_cases (tenant_id, worker_id, worker_name, nationality, case_type, status, voivodeship, employer_name, employer_nip, start_date, expiry_date, notes)
+       VALUES ($1,$2,$3,'Indian','Type A','rejected',$4,'Apatris Sp. z o.o.','1234567890',$5,$6,'[DEMO] TRC rejected — missing financial proof and health insurance') RETURNING id`,
+      [tenantId, w3.id, w3.full_name, "Mazowieckie", "2024-01-20", "2026-01-20"]
+    );
+    const lc3 = await queryOne<{id:string}>(
+      `INSERT INTO legal_cases (worker_id, tenant_id, case_type, status, appeal_deadline, next_action, notes, trc_case_id)
+       VALUES ($1,$2,'APPEAL','REJECTED',$3,'File appeal to Szef UdSC within 14 days','[DEMO] Rejection for missing docs — appeal possible',$4) RETURNING id`,
+      [w3.id, tenantId, "2026-04-25", trc3!.id]
+    );
+    await execute(
+      `INSERT INTO rejection_analyses (tenant_id, worker_id, legal_case_id, rejection_text, category, explanation, likely_cause, next_steps_json, appeal_possible, confidence_score, source_type)
+       VALUES ($1,$2,$3,$4,'MISSING_DOCS',$5,$6,$7,true,0.91,'RULE')`,
+      [tenantId, w3.id, lc3!.id,
+       "Decyzja Wojewody Mazowieckiego odmawia udzielenia zezwolenia na pobyt czasowy z powodu braku dokumentów potwierdzających wystarczające środki finansowe oraz brak ubezpieczenia zdrowotnego.",
+       "[DEMO] Rejection due to missing financial proof and health insurance documents",
+       "Worker did not respond to document request within deadline",
+       JSON.stringify(["Collect bank statements", "Obtain health insurance proof", "File appeal within 14 days", "Consult immigration lawyer"])]
+    );
+
+    // Scenario 4: Formal defect — pending correction — Dinesh Magar
+    const w4 = allWorkers[14]; // TRC expired 2026-02-15
+    const trc4 = await queryOne<{id:string}>(
+      `INSERT INTO trc_cases (tenant_id, worker_id, worker_name, nationality, case_type, status, voivodeship, employer_name, employer_nip, start_date, expiry_date, notes)
+       VALUES ($1,$2,$3,'Nepali','Type A','formal_defect',$4,'Apatris Sp. z o.o.','1234567890',$5,$6,'[DEMO] Formal defect — missing employer declaration, 7-day correction deadline') RETURNING id`,
+      [tenantId, w4.id, w4.full_name, "Pomorskie", "2024-02-15", "2026-02-15"]
+    );
+    await queryOne(
+      `INSERT INTO legal_cases (worker_id, tenant_id, case_type, status, next_action, notes, trc_case_id)
+       VALUES ($1,$2,'TRC','PENDING','Submit corrected employer declaration within 7 days','[DEMO] Formal defect — Art. 64 KPA correction window open',$3) RETURNING id`,
+      [w4.id, tenantId, trc4!.id]
+    );
+
+    // Scenario 5: Ukrainian worker — CUKR/Specustawa — Oleksandr Kovalenko
+    const w5 = allWorkers[15]; // Ukrainian, TRC 2026-08-25
+    const trc5 = await queryOne<{id:string}>(
+      `INSERT INTO trc_cases (tenant_id, worker_id, worker_name, nationality, case_type, status, voivodeship, employer_name, employer_nip, start_date, expiry_date, notes)
+       VALUES ($1,$2,$3,'Ukrainian','Type A','pending',$4,'Apatris Sp. z o.o.','1234567890',$5,$6,'[DEMO] Ukrainian worker — CUKR/Specustawa provisions apply, extended legal stay') RETURNING id`,
+      [tenantId, w5.id, w5.full_name, "Mazowieckie", "2024-08-25", "2026-08-25"]
+    );
+    await queryOne(
+      `INSERT INTO legal_cases (worker_id, tenant_id, case_type, status, next_action, notes, trc_case_id)
+       VALUES ($1,$2,'TRC','PENDING','Verify CUKR application status — extended protection applies','[DEMO] Ukrainian special provisions — Specustawa protection',$3) RETURNING id`,
+      [w5.id, tenantId, trc5!.id]
+    );
+
+    console.log("[seed-modules] TRC Cases: 5 scenarios (renewal, Art.108, rejection, formal defect, CUKR)");
+    console.log("[seed-modules] Legal Cases: 5 linked cases");
+    console.log("[seed-modules] Rejection Analyses: 1 (Arjun Sharma — MISSING_DOCS)");
+  }
+
   console.log("[seed-modules] Module demo data seeding complete.");
 }
