@@ -115,6 +115,7 @@ function clearJwtCookie(res: Response) {
 }
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+const REFRESH_TOKEN_REMEMBER_DAYS = 90;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 
 function hashToken(token: string): string {
@@ -124,10 +125,11 @@ function hashToken(token: string): string {
 async function createRefreshToken(userData: {
   email: string; name: string; role: string;
   assignedSite?: string; tenantId?: string;
-}): Promise<string> {
+}, rememberMe = false): Promise<string> {
   const token = crypto.randomBytes(48).toString("hex");
   const hash = hashToken(token);
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const days = rememberMe ? REFRESH_TOKEN_REMEMBER_DAYS : REFRESH_TOKEN_EXPIRY_DAYS;
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   await execute(
     `INSERT INTO refresh_tokens (token_hash, user_email, user_name, user_role, tenant_id, assigned_site, expires_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -139,7 +141,7 @@ async function createRefreshToken(userData: {
 // ─── POST /api/auth/login ────────────────────────────────────────────────────
 router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, res) => {
   try {
-    const { email, password } = req.body as { email?: string; password?: string };
+    const { email, password, rememberMe } = req.body as { email?: string; password?: string; rememberMe?: boolean };
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
@@ -162,7 +164,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
       // Direct JWT login — OTP disabled for internal team use
       // Re-enable OTP when Brevo SMTP latency is resolved
       const accessToken = signToken(userData);
-      const refreshToken = await createRefreshToken(userData);
+      const refreshToken = await createRefreshToken(userData, !!rememberMe);
       setJwtCookie(res, accessToken);
       return res.json({ ...userData, jwt: accessToken, refreshToken });
     }
@@ -182,7 +184,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
         tenantSlug: req.tenantSlug,
       };
       const accessToken = signToken(userData);
-      const refreshToken = await createRefreshToken(userData);
+      const refreshToken = await createRefreshToken(userData, !!rememberMe);
       setJwtCookie(res, accessToken);
       return res.json({ ...userData, jwt: accessToken, refreshToken });
     }

@@ -17,7 +17,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }>;
+  login: (email: string, pass: string, rememberMe?: boolean) => Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }>;
   verifyOtp: (session: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -136,13 +136,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, resetTimer]);
 
-  const login = async (email: string, pass: string): Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }> => {
+  const login = async (email: string, pass: string, rememberMe = false): Promise<{ ok: boolean; error?: string; otpRequired?: boolean; session?: string }> => {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password: pass }),
+        body: JSON.stringify({ email, password: pass, rememberMe }),
       });
 
       if (!res.ok) {
