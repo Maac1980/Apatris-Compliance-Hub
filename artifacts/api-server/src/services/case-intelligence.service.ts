@@ -22,6 +22,7 @@
 
 import { query, queryOne } from "../lib/db.js";
 import { getWorkerLegalSnapshot, type LegalSnapshot } from "./legal-status.service.js";
+import { translateToEnglish } from "../lib/bilingual.js";
 
 // ═══ LEGAL REFERENCE TABLE ══════════════════════════════════════════════════
 
@@ -102,6 +103,7 @@ export interface CaseIntelligenceResult {
   nextActions: ActionItem[];
   risks: RiskItem[]; overallRiskLevel: RiskSeverity;
   appealDraftPL: string | null;
+  appealDraftEN: string | null;
   workerExplanation: string | null;
   clientStatusUpdate: string;
   legalReferences: Array<{ key: string; article: string; law: string; summary: string }>;
@@ -238,6 +240,7 @@ export async function analyzeCaseIntelligence(workerId: string, tenantId: string
 
   // Appeal draft (AI)
   let appealDraftPL: string | null = null;
+  let appealDraftEN: string | null = null;
   if (rejection) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (apiKey) {
@@ -256,12 +259,18 @@ export async function analyzeCaseIntelligence(workerId: string, tenantId: string
     }
   }
 
+  // Translate appeal to English if PL exists
+  if (appealDraftPL && appealDraftPL.length > 50) {
+    appealDraftEN = await translateToEnglish(appealDraftPL, `Appeal for ${worker.full_name}, ${worker.nationality ?? ""}`);
+    if (!appealDraftEN) appealDraftEN = "English translation not available — see Polish version.";
+  }
+
   const legalReferences = selectRelevantReferences(caseType, snapshot, rejection);
 
   return {
     workerId, workerName: worker.full_name, analyzedAt, caseSummary,
     readiness, readinessReason, completenessScore, documentsStatus,
-    nextActions, risks, overallRiskLevel, appealDraftPL, workerExplanation, clientStatusUpdate,
+    nextActions, risks, overallRiskLevel, appealDraftPL, appealDraftEN, workerExplanation, clientStatusUpdate,
     legalReferences, caseType, legalStatus: snapshot?.legalStatus ?? "UNKNOWN",
   };
 }
