@@ -51,7 +51,7 @@ export default function LegalAlerts() {
   const { data, isLoading } = useQuery({
     queryKey: ["legal-alerts"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/alerts`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/alerts`, { headers: authHeaders() });
       if (!res.ok) return { alerts: [] };
       return res.json() as Promise<{ alerts: LegalAlert[] }>;
     },
@@ -60,7 +60,7 @@ export default function LegalAlerts() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/scan/run`, { method: "POST", headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/scan/run`, { method: "POST", headers: authHeaders() });
       if (!res.ok) throw new Error("Scan failed");
       return res.json();
     },
@@ -73,7 +73,7 @@ export default function LegalAlerts() {
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await fetch(`${BASE}/api/v1/legal/alerts/${id}/read`, { method: "POST", headers: authHeaders() });
+      await fetch(`${BASE}api/v1/legal/alerts/${id}/read`, { method: "POST", headers: authHeaders() });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["legal-alerts"] }),
   });

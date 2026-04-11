@@ -76,7 +76,7 @@ export default function TRCService() {
   const totalCases = cases.length;
   const byStatus = (s: string) => cases.filter(c => c.status === s).length;
   const totalRevenue = cases.reduce((s, c) => s + c.fee, 0);
-  const missingDocs = cases.reduce((s, c) => s + c.documents.filter(d => d.required && !d.uploaded).length, 0);
+  const missingDocs = cases.reduce((s, c) => s + (c.documents ?? []).filter(d => d.required && !d.uploaded).length, 0);
 
   const handleCreate = async () => {
     if (!form.workerName || !form.employer) {
@@ -135,10 +135,11 @@ export default function TRCService() {
     }
   };
 
-  const docProgress = (docs: TRCDocument[]) => {
-    const required = docs.filter(d => d.required).length;
+  const docProgress = (docs: TRCDocument[] | undefined) => {
+    const safe = docs ?? [];
+    const required = safe.filter(d => d.required).length;
     if (required === 0) return 100;
-    const done = docs.filter(d => d.required && d.uploaded).length;
+    const done = safe.filter(d => d.required && d.uploaded).length;
     return Math.round((done / required) * 100);
   };
 

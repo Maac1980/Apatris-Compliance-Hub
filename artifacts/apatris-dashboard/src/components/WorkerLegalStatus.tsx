@@ -32,7 +32,7 @@ export function WorkerLegalStatus() {
   const { data, isLoading } = useQuery({
     queryKey: ["worker-legal-status-self"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/self-service/legal-status`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/self-service/legal-status`, { headers: authHeaders() });
       if (!res.ok) return null;
       return res.json() as Promise<WorkerLegalView>;
     },

@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
 import { SmartDocumentDrop } from "@/components/SmartDocumentDrop";
+import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
 import {
   AlertTriangle, FileText, Loader2, Brain, Shield,
   CheckCircle2, HelpCircle, Clock, Scale, Copy, Download,
@@ -135,6 +136,31 @@ export default function RejectionIntelligence() {
     navigator.clipboard.writeText(text);
     toast({ description: "Copied to clipboard" });
   };
+
+  // Decision Explanation — generated when result indicates review or low confidence
+  const { data: caseExplanationData } = useQuery({
+    queryKey: ["rejection-case-explanation", result?.id],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/v1/decision-explanations/case`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({
+          intelligence: {
+            overallRiskLevel: result!.reviewRequired ? "HIGH" : (result!.confidence < 0.5 ? "MEDIUM" : "LOW"),
+            readiness: result!.appealPossible ? "IN_PROGRESS" : "NOT_READY",
+            readinessReason: result!.appealPossible ? "Appeal is possible" : "Appeal is unlikely or not possible",
+            completenessScore: Math.round((result!.confidence ?? 0) * 100),
+            risks: [],
+            nextActions: (result!.nextSteps ?? []).map((s: string, i: number) => ({ priority: i, action: s })),
+          },
+          workerName: workers.find((w: any) => w.id === workerId)?.full_name,
+        }),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!result && (result.reviewRequired || result.confidence < 0.6),
+  });
+  const caseExplanation = caseExplanationData?.explanation ?? null;
 
   const daysUntilDeadline = appeal?.deadlineDate
     ? Math.ceil((new Date(appeal.deadlineDate).getTime() - Date.now()) / 86400000)
@@ -284,6 +310,11 @@ export default function RejectionIntelligence() {
                 )}
 
                 <ApprovalBadge entityType="rejection_analysis" entityId={result.id} isApproved={false} size="sm" />
+
+                {/* Decision Explanation */}
+                {caseExplanation && caseExplanation.decision !== "PROCEED" && (
+                  <DecisionExplanationCard explanation={caseExplanation} compact />
+                )}
 
                 {/* Generate Appeal Letter button */}
                 {result.appealPossible && (

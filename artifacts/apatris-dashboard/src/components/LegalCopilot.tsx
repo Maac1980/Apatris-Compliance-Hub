@@ -41,7 +41,7 @@ export function LegalCopilot({ workerId }: LegalCopilotProps) {
 
   const askMutation = useMutation({
     mutationFn: async (q: string) => {
-      const res = await fetch(`${BASE}/api/v1/legal/copilot/ask`, {
+      const res = await fetch(`${BASE}api/v1/legal/copilot/ask`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ workerId, question: q }),

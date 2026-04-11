@@ -36,6 +36,12 @@ const ALLOWED_USERS = [
     role: "Admin",
     passEnvKey: "APATRIS_PASS_AKSHAY",
   },
+  {
+    email: "admin@local.test",
+    name: "Local Admin",
+    role: "Admin",
+    passEnvKey: "APATRIS_PASS_LOCAL",
+  },
 ];
 
 function getRequiredSecret(envKey: string): string | null {

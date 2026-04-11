@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { authHeaders, BASE } from "@/lib/api";
 import {
   Search, Globe, BookOpen, ExternalLink, Loader2, History, Sparkles,
+  ChevronDown, ChevronUp, Shield, FileText, ListChecks, Clock,
+  AlertTriangle, ArrowRight, Scale, CheckCircle2, XOctagon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,8 +12,19 @@ import { useToast } from "@/hooks/use-toast";
 
 interface SearchResult {
   answer: string;
+  operator_summary?: string;
+  legal_summary?: string;
+  legal_basis?: { law: string; article: string; explanation: string }[];
+  applies_to?: string;
+  required_documents?: string[];
+  process_steps?: string[];
+  deadlines?: string[];
+  risks?: string[];
+  next_actions?: string[];
+  decision?: string;
   sources: { url: string; title?: string }[];
   confidence: number;
+  human_review_required?: boolean;
   actionItems: string[];
 }
 
@@ -22,6 +35,7 @@ export default function ImmigrationSearch() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState<"en" | "pl">(isPl ? "pl" : "en");
   const [popular, setPopular] = useState<{ en: string; pl: string }[]>([]);
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
@@ -29,8 +43,8 @@ export default function ImmigrationSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch(`${BASE}api/immigration/popular`)
-      .then((r) => r.json())
+    fetch(`${BASE}api/immigration/popular`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : { questions: [] })
       .then((d) => setPopular(d.questions ?? []))
       .catch((err) => { console.error("[ImmigrationSearch] Failed to load popular questions:", err); });
 
@@ -45,6 +59,7 @@ export default function ImmigrationSearch() {
     if (!searchQuery.trim()) return;
     setLoading(true);
     setResult(null);
+    setError(null);
     setShowHistory(false);
     try {
       const res = await fetch(`${BASE}api/immigration/search`, {
@@ -53,12 +68,17 @@ export default function ImmigrationSearch() {
         body: JSON.stringify({ query: searchQuery, language }),
       });
       const data = await res.json();
-      setResult({ ...data, actionItems: data.actionItems ?? data.action_items ?? [], sources: data.sources ?? [] });
-    } catch (err) {
-      console.error("[ImmigrationSearch] Search failed:", err);
-      toast({ title: isPl ? "Blad wyszukiwania" : "Search Failed", description: isPl ? "Nie udalo sie przeprowadzic wyszukiwania. Sprobuj ponownie." : "Search failed. Please try again.", variant: "destructive" });
+      if (!res.ok) {
+        throw new Error(data.error ?? `Search failed (${res.status})`);
+      }
+      const answer = data.answer || data.response || data.text || "No answer returned. Please try a different question.";
+      setResult({ answer, actionItems: data.actionItems ?? data.action_items ?? [], sources: data.sources ?? [], confidence: data.confidence ?? 0 });
+    } catch (err: any) {
+      const msg = err?.message ?? "Search failed";
+      console.error("[ImmigrationSearch] Search failed:", msg);
+      setError(msg);
       setResult({
-        answer: isPl ? "Wyszukiwanie niedostepne. Sprobuj ponownie pozniej." : "Search unavailable. Try again later.",
+        answer: msg,
         sources: [],
         confidence: 0,
         actionItems: [],
@@ -171,63 +191,17 @@ export default function ImmigrationSearch() {
           </div>
         )}
 
+        {/* Error */}
+        {error && !loading && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+            <p className="text-sm font-bold text-red-400 mb-1">Search Error</p>
+            <p className="text-xs text-red-300">{error}</p>
+          </div>
+        )}
+
         {/* Result */}
         {result && !loading && (
-          <div className="bg-card border border-border rounded-xl p-5 mb-6">
-            {/* Confidence */}
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                {isPl ? "Analiza AI" : "AI Analysis"}
-              </span>
-              {result.confidence > 0 && (
-                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                  result.confidence >= 0.8 ? "bg-green-500/10 text-green-400" :
-                  result.confidence >= 0.5 ? "bg-amber-500/10 text-amber-400" :
-                  "bg-red-500/10 text-red-400"
-                }`}>
-                  {Math.round(result.confidence * 100)}% {isPl ? "pewnosci" : "confident"}
-                </span>
-              )}
-            </div>
-
-            {/* Answer */}
-            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {result.answer}
-            </div>
-
-            {/* Action Items */}
-            {(result.actionItems ?? []).length > 0 && (
-              <div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                <div className="text-xs font-bold text-amber-400 mb-2">
-                  {isPl ? "Wymagane dzialania:" : "Action Required:"}
-                </div>
-                {(result.actionItems ?? []).map((a, i) => (
-                  <div key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-amber-500/50 mb-1.5">{a}</div>
-                ))}
-              </div>
-            )}
-
-            {/* Sources */}
-            {(result.sources ?? []).length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs font-bold text-muted-foreground mb-2">{isPl ? "Zrodla:" : "Sources:"}</div>
-                <div className="flex flex-wrap gap-2">
-                  {(result.sources ?? []).map((s, i) => (
-                    <a
-                      key={i}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-1 rounded transition-colors"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      {s.title ?? (() => { try { return new URL(s.url).hostname; } catch { return "Source"; } })()}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <StructuredResult result={result} isPl={isPl} />
         )}
 
         {/* Popular questions */}
@@ -256,6 +230,188 @@ export default function ImmigrationSearch() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ═══ STRUCTURED RESULT ══════════════════════════════════════════════════════
+
+const DECISION_CFG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
+  PROCEED: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/15 border-emerald-500/30", label: "PROCEED" },
+  CAUTION: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/15 border-amber-500/30", label: "CAUTION" },
+  BLOCKED: { icon: XOctagon, color: "text-red-400", bg: "bg-red-500/15 border-red-500/30", label: "BLOCKED" },
+};
+
+function StructuredResult({ result: r, isPl }: { result: SearchResult; isPl: boolean }) {
+  const d = DECISION_CFG[r.decision ?? ""] ?? DECISION_CFG.CAUTION;
+  const DIcon = d.icon;
+  const hasStructured = !!(r.operator_summary || r.legal_summary || (r.legal_basis?.length ?? 0) > 0 || (r.next_actions?.length ?? 0) > 0);
+
+  return (
+    <div className="space-y-4 mb-6">
+      {/* ── Top Bar ── */}
+      <div className={`rounded-xl border p-4 ${d.bg}`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <DIcon className={`w-5 h-5 ${d.color}`} />
+            <span className={`text-sm font-black uppercase tracking-wider ${d.color}`}>{d.label}</span>
+            {r.human_review_required && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">REVIEW REQUIRED</span>
+            )}
+          </div>
+          {r.confidence > 0 && (
+            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+              r.confidence >= 0.8 ? "bg-emerald-500/10 text-emerald-400" :
+              r.confidence >= 0.5 ? "bg-amber-500/10 text-amber-400" :
+              "bg-red-500/10 text-red-400"
+            }`}>
+              {Math.round(r.confidence * 100)}%
+            </span>
+          )}
+        </div>
+        {r.operator_summary && (
+          <p className="text-sm font-bold text-foreground mt-3 leading-relaxed">{r.operator_summary}</p>
+        )}
+        {r.applies_to && (
+          <p className="text-[11px] text-muted-foreground mt-1">Applies to: {r.applies_to}</p>
+        )}
+      </div>
+
+      {/* ── Main Body + Side Panel ── */}
+      <div className={hasStructured ? "grid grid-cols-1 lg:grid-cols-3 gap-4" : ""}>
+        {/* Left: structured sections */}
+        <div className={hasStructured ? "lg:col-span-2 space-y-2" : "space-y-2"}>
+          {/* Full answer — always shown */}
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {r.answer || "No answer returned."}
+            </div>
+            {/* Sources inline */}
+            {(r.sources ?? []).length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Sources</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(r.sources ?? []).map((s, i) => (
+                    <a key={i} href={s.url} target="_blank" rel="noopener"
+                      className="inline-flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded transition-colors">
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      {s.title ?? (() => { try { return new URL(s.url).hostname; } catch { return "Source"; } })()}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible sections */}
+          {r.legal_summary && (
+            <CollapsibleSection icon={Scale} title="Legal Summary">
+              <p className="text-xs text-foreground leading-relaxed">{r.legal_summary}</p>
+            </CollapsibleSection>
+          )}
+
+          {(r.legal_basis?.length ?? 0) > 0 && (
+            <CollapsibleSection icon={Shield} title="Legal Basis">
+              <div className="space-y-2">
+                {(r.legal_basis ?? []).map((b, i) => (
+                  <div key={i} className="bg-slate-800/50 rounded-lg p-2.5">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      {b.article && <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">{b.article}</span>}
+                      {b.law && <span className="text-[10px] text-muted-foreground">{b.law}</span>}
+                    </div>
+                    {b.explanation && <p className="text-xs text-foreground leading-relaxed">{b.explanation}</p>}
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {(r.required_documents?.length ?? 0) > 0 && (
+            <CollapsibleSection icon={FileText} title="Required Documents">
+              <ul className="space-y-1">
+                {(r.required_documents ?? []).map((d, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-foreground">
+                    <FileText className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />{d}
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleSection>
+          )}
+
+          {(r.process_steps?.length ?? 0) > 0 && (
+            <CollapsibleSection icon={ListChecks} title="Process Steps">
+              <ol className="space-y-1.5">
+                {(r.process_steps ?? []).map((s, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-foreground">
+                    <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">{i + 1}</span>
+                    {s}
+                  </li>
+                ))}
+              </ol>
+            </CollapsibleSection>
+          )}
+
+          {(r.deadlines?.length ?? 0) > 0 && (
+            <CollapsibleSection icon={Clock} title="Deadlines">
+              <ul className="space-y-1">
+                {(r.deadlines ?? []).map((dl, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-amber-300">
+                    <Clock className="w-3 h-3 text-amber-400 mt-0.5 shrink-0" />{dl}
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleSection>
+          )}
+
+          {(r.risks?.length ?? 0) > 0 && (
+            <CollapsibleSection icon={AlertTriangle} title="Risks">
+              <ul className="space-y-1">
+                {(r.risks ?? []).map((rk, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-red-300">
+                    <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 shrink-0" />{rk}
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleSection>
+          )}
+        </div>
+
+        {/* Right: Next Actions panel */}
+        {(r.next_actions?.length ?? 0) > 0 && hasStructured && (
+          <div className="lg:col-span-1">
+            <div className="bg-card border border-border rounded-xl p-4 sticky top-6">
+              <div className="flex items-center gap-1.5 mb-3">
+                <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Next Actions</span>
+              </div>
+              <div className="space-y-2">
+                {(r.next_actions ?? []).map((a, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-foreground bg-blue-500/5 border border-blue-500/10 rounded-lg p-2.5">
+                    <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">{i + 1}</span>
+                    {a}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleSection({ icon: SIcon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors">
+        <div className="flex items-center gap-2">
+          <SIcon className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</span>
+        </div>
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+      </button>
+      {open && <div className="px-4 pb-3">{children}</div>}
     </div>
   );
 }

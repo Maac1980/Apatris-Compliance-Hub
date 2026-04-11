@@ -86,7 +86,7 @@ export default function PIPInspectionReport() {
   const { data: sitesData } = useQuery({
     queryKey: ["worker-sites"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/workers`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
       if (!res.ok) return [];
       const json = await res.json();
       const workers = extractList<{ assigned_site: string | null }>(json, "workers");
@@ -97,7 +97,7 @@ export default function PIPInspectionReport() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/pip-report/generate`, {
+      const res = await fetch(`${BASE}api/v1/legal/pip-report/generate`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({

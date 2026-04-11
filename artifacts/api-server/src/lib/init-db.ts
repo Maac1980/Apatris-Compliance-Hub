@@ -2207,6 +2207,15 @@ export async function initializeDatabase(): Promise<void> {
     sources JSONB DEFAULT '[]'::jsonb, confidence REAL DEFAULT 0,
     action_items JSONB DEFAULT '[]'::jsonb, searched_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='immigration_searches' AND column_name='tenant_id') THEN ALTER TABLE immigration_searches ADD COLUMN tenant_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='immigration_searches' AND column_name='user_email') THEN ALTER TABLE immigration_searches ADD COLUMN user_email TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='immigration_searches' AND column_name='action_items') THEN ALTER TABLE immigration_searches ADD COLUMN action_items JSONB DEFAULT '[]'::jsonb; END IF;
+      END $$;
+    `);
+  } catch { /* column upgrades for pre-existing tables */ }
   await execute(`CREATE TABLE IF NOT EXISTS trc_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id TEXT NOT NULL,
     worker_id TEXT, worker_name TEXT NOT NULL, nationality TEXT, passport_number TEXT,
@@ -2597,7 +2606,31 @@ export async function initializeDatabase(): Promise<void> {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
-  // ── Invoice schema upgrades (previously in invoices.ts) ───────────────────
+  // ── Invoices table + schema upgrades ───────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_number TEXT NOT NULL,
+    client_id UUID,
+    client_name TEXT,
+    month_year TEXT,
+    items JSONB DEFAULT '[]',
+    subtotal NUMERIC(12,2) DEFAULT 0,
+    vat_rate NUMERIC(5,2) DEFAULT 23,
+    vat_amount NUMERIC(12,2) DEFAULT 0,
+    total NUMERIC(12,2) DEFAULT 0,
+    amount_net NUMERIC(12,2) DEFAULT 0,
+    amount_gross NUMERIC(12,2) DEFAULT 0,
+    issue_date DATE DEFAULT CURRENT_DATE,
+    due_date DATE,
+    status TEXT DEFAULT 'draft',
+    notes TEXT,
+    paid_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ,
+    tenant_id UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   try {
     await execute(`
       DO $$ BEGIN
@@ -2608,7 +2641,7 @@ export async function initializeDatabase(): Promise<void> {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='invoices' AND column_name='amount_gross') THEN ALTER TABLE invoices ADD COLUMN amount_gross NUMERIC(12,2) DEFAULT 0; END IF;
       END $$;
     `);
-  } catch { /* invoices table may not exist yet */ }
+  } catch { /* column upgrades for pre-existing tables */ }
 
   // OTP sessions — stored in DB so they work across multiple Fly.io machines
   await execute(`CREATE TABLE IF NOT EXISTS otp_sessions (
@@ -2767,6 +2800,253 @@ export async function initializeDatabase(): Promise<void> {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
 
+  // ── Regulatory Intelligence Stage 1 ─────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'rss',
+    base_url TEXT NOT NULL,
+    jurisdiction TEXT NOT NULL DEFAULT 'PL',
+    trust_level TEXT NOT NULL DEFAULT 'official',
+    polling_frequency TEXT NOT NULL DEFAULT 'daily',
+    parser_config_json JSONB DEFAULT '{}'::jsonb,
+    language TEXT DEFAULT 'pl',
+    active BOOLEAN DEFAULT true,
+    last_scanned_at TIMESTAMPTZ,
+    last_error TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // regulatory_updates Stage 1 columns (added to existing table via ALTER)
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='source_id') THEN ALTER TABLE regulatory_updates ADD COLUMN source_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='canonical_url') THEN ALTER TABLE regulatory_updates ADD COLUMN canonical_url TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='raw_text') THEN ALTER TABLE regulatory_updates ADD COLUMN raw_text TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='raw_html') THEN ALTER TABLE regulatory_updates ADD COLUMN raw_html TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='content_hash') THEN ALTER TABLE regulatory_updates ADD COLUMN content_hash TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='language') THEN ALTER TABLE regulatory_updates ADD COLUMN language TEXT DEFAULT 'pl'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='publication_date') THEN ALTER TABLE regulatory_updates ADD COLUMN publication_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='effective_date') THEN ALTER TABLE regulatory_updates ADD COLUMN effective_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='detected_at') THEN ALTER TABLE regulatory_updates ADD COLUMN detected_at TIMESTAMPTZ DEFAULT NOW(); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='update_type') THEN ALTER TABLE regulatory_updates ADD COLUMN update_type TEXT DEFAULT 'unknown'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='relevance_score') THEN ALTER TABLE regulatory_updates ADD COLUMN relevance_score NUMERIC(3,2) DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='confidence_score') THEN ALTER TABLE regulatory_updates ADD COLUMN confidence_score NUMERIC(3,2) DEFAULT 0; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='status') THEN ALTER TABLE regulatory_updates ADD COLUMN status TEXT DEFAULT 'NEW'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='summary_pl') THEN ALTER TABLE regulatory_updates ADD COLUMN summary_pl TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='summary_en') THEN ALTER TABLE regulatory_updates ADD COLUMN summary_en TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='authority_name') THEN ALTER TABLE regulatory_updates ADD COLUMN authority_name TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='jurisdiction') THEN ALTER TABLE regulatory_updates ADD COLUMN jurisdiction TEXT DEFAULT 'PL'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='requires_human_review') THEN ALTER TABLE regulatory_updates ADD COLUMN requires_human_review BOOLEAN DEFAULT true; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='archived') THEN ALTER TABLE regulatory_updates ADD COLUMN archived BOOLEAN DEFAULT false; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='relevant_topics') THEN ALTER TABLE regulatory_updates ADD COLUMN relevant_topics JSONB DEFAULT '[]'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='cited_articles') THEN ALTER TABLE regulatory_updates ADD COLUMN cited_articles JSONB DEFAULT '[]'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='affected_worker_types') THEN ALTER TABLE regulatory_updates ADD COLUMN affected_worker_types JSONB DEFAULT '[]'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='affected_document_types') THEN ALTER TABLE regulatory_updates ADD COLUMN affected_document_types JSONB DEFAULT '[]'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='affected_regions') THEN ALTER TABLE regulatory_updates ADD COLUMN affected_regions JSONB DEFAULT '[]'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='deadline_date') THEN ALTER TABLE regulatory_updates ADD COLUMN deadline_date DATE; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='regulatory_updates' AND column_name='classified_at') THEN ALTER TABLE regulatory_updates ADD COLUMN classified_at TIMESTAMPTZ; END IF;
+      END $$;
+    `);
+  } catch { /* regulatory_updates may not exist yet */ };
+
+  // ── Regulatory Stage 3: Impact + Simulation ────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_impacts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID NOT NULL,
+    impacted_module TEXT NOT NULL,
+    impact_type TEXT NOT NULL DEFAULT 'NO_ACTION',
+    impact_severity TEXT NOT NULL DEFAULT 'LOW',
+    recommended_change TEXT DEFAULT '',
+    reasoning TEXT DEFAULT '',
+    evidence_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_simulations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID NOT NULL UNIQUE,
+    affected_workers_count INTEGER DEFAULT 0,
+    affected_cases_count INTEGER DEFAULT 0,
+    affected_employers_count INTEGER DEFAULT 0,
+    affected_worker_ids_json JSONB DEFAULT '[]'::jsonb,
+    affected_case_ids_json JSONB DEFAULT '[]'::jsonb,
+    operational_risk_level TEXT DEFAULT 'LOW',
+    legal_risk_level TEXT DEFAULT 'LOW',
+    estimated_workload TEXT DEFAULT 'LOW',
+    reasoning TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Regulatory Stage 4: Review + Approval ──────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_review_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID NOT NULL,
+    assigned_role TEXT NOT NULL,
+    assigned_user_id TEXT,
+    review_type TEXT NOT NULL DEFAULT 'OPS',
+    task_status TEXT NOT NULL DEFAULT 'PENDING',
+    priority INTEGER DEFAULT 3,
+    due_date TIMESTAMPTZ,
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_approvals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID NOT NULL,
+    review_task_id UUID REFERENCES regulatory_review_tasks(id) ON DELETE CASCADE,
+    approver_user_id TEXT NOT NULL,
+    approval_decision TEXT NOT NULL,
+    approval_notes TEXT DEFAULT '',
+    approved_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Regulatory Stage 5: Deployment + Audit ─────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_deployments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID NOT NULL,
+    deployed_by TEXT,
+    deployment_type TEXT DEFAULT 'MANUAL_ACTION',
+    target_module TEXT,
+    version_before TEXT DEFAULT '',
+    version_after TEXT DEFAULT '',
+    rollback_available BOOLEAN DEFAULT true,
+    deployment_status TEXT NOT NULL DEFAULT 'PLANNED',
+    metadata_json JSONB DEFAULT '{}'::jsonb,
+    deployed_at TIMESTAMPTZ
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    update_id UUID,
+    actor_type TEXT NOT NULL DEFAULT 'SYSTEM',
+    actor_id TEXT DEFAULT '',
+    event_type TEXT NOT NULL,
+    metadata_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Stage 6: Obsidian + OODA + Readiness ───────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS obsidian_exports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL DEFAULT 'regulatory_update',
+    entity_id UUID,
+    update_id UUID,
+    file_name TEXT,
+    file_path TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    exported_by TEXT DEFAULT '',
+    exported_at TIMESTAMPTZ DEFAULT NOW(),
+    status TEXT DEFAULT 'EXPORTED',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS ooda_cycles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL DEFAULT 'REGULATORY',
+    entity_id UUID NOT NULL,
+    current_stage TEXT NOT NULL DEFAULT 'OBSERVE',
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS ooda_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cycle_id UUID NOT NULL,
+    stage TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    actor TEXT DEFAULT 'SYSTEM',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS ooda_decisions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cycle_id UUID NOT NULL,
+    decision_type TEXT NOT NULL,
+    reasoning TEXT DEFAULT '',
+    confidence INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Obsidian export columns (for existing tables) ───────────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='obsidian_exports' AND column_name='update_id') THEN ALTER TABLE obsidian_exports ADD COLUMN update_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='obsidian_exports' AND column_name='file_name') THEN ALTER TABLE obsidian_exports ADD COLUMN file_name TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='obsidian_exports' AND column_name='exported_at') THEN ALTER TABLE obsidian_exports ADD COLUMN exported_at TIMESTAMPTZ DEFAULT NOW(); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='obsidian_exports' AND column_name='status') THEN ALTER TABLE obsidian_exports ADD COLUMN status TEXT DEFAULT 'EXPORTED'; END IF;
+      END $$;
+    `);
+  } catch {}
+
+  // ── OODA table extensions + Human Overrides ─────────────────────────────
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_cycles' AND column_name='tenant_id') THEN ALTER TABLE ooda_cycles ADD COLUMN tenant_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_cycles' AND column_name='updated_at') THEN ALTER TABLE ooda_cycles ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(); END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_events' AND column_name='event_type') THEN ALTER TABLE ooda_events ADD COLUMN event_type TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_events' AND column_name='actor_type') THEN ALTER TABLE ooda_events ADD COLUMN actor_type TEXT DEFAULT 'SYSTEM'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_events' AND column_name='actor_id') THEN ALTER TABLE ooda_events ADD COLUMN actor_id TEXT DEFAULT ''; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_events' AND column_name='metadata_json') THEN ALTER TABLE ooda_events ADD COLUMN metadata_json JSONB DEFAULT '{}'::jsonb; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_decisions' AND column_name='requires_human_review') THEN ALTER TABLE ooda_decisions ADD COLUMN requires_human_review BOOLEAN DEFAULT false; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ooda_decisions' AND column_name='metadata_json') THEN ALTER TABLE ooda_decisions ADD COLUMN metadata_json JSONB DEFAULT '{}'::jsonb; END IF;
+      END $$;
+    `);
+  } catch {}
+
+  await execute(`CREATE TABLE IF NOT EXISTS human_overrides (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL, entity_id UUID NOT NULL,
+    field_changed TEXT NOT NULL, value_before TEXT DEFAULT '',
+    value_after TEXT NOT NULL DEFAULT '', reason TEXT DEFAULT '',
+    changed_by TEXT NOT NULL, ai_recommendation TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Stage 7: Notifications ─────────────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT, role TEXT, type TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
+    severity TEXT DEFAULT 'LOW', entity_type TEXT, entity_id UUID,
+    read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Stage 8: Regulatory Snapshots ──────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS regulatory_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    snapshot_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    total_updates INTEGER DEFAULT 0, critical_count INTEGER DEFAULT 0,
+    high_count INTEGER DEFAULT 0, medium_count INTEGER DEFAULT 0,
+    low_count INTEGER DEFAULT 0, under_review_count INTEGER DEFAULT 0,
+    approved_count INTEGER DEFAULT 0, deployed_count INTEGER DEFAULT 0,
+    avg_confidence NUMERIC(5,2) DEFAULT 0, review_required_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── Test Scenario Engine ───────────────────────────────────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS test_scenarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL, scenario_type TEXT NOT NULL DEFAULT 'REGULATORY',
+    description TEXT DEFAULT '', input_json JSONB DEFAULT '{}'::jsonb,
+    expected_output_json JSONB DEFAULT '{}'::jsonb,
+    created_by TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS test_scenario_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scenario_id UUID NOT NULL, actual_output_json JSONB DEFAULT '{}'::jsonb,
+    match_result BOOLEAN DEFAULT false, differences_json JSONB DEFAULT '[]'::jsonb,
+    run_by TEXT DEFAULT '', run_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   const indexes = [
     "CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(full_name)",
     "CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(assigned_site)",
@@ -2790,6 +3070,11 @@ export async function initializeDatabase(): Promise<void> {
     "CREATE INDEX IF NOT EXISTS idx_intake_worker ON document_intake(confirmed_worker_id)",
     "CREATE INDEX IF NOT EXISTS idx_intake_deadline ON document_intake(deadline_date)",
     "CREATE INDEX IF NOT EXISTS idx_intake_tenant_status ON document_intake(tenant_id, status)",
+    "CREATE INDEX IF NOT EXISTS idx_reg_sources_active ON regulatory_sources(active)",
+    "CREATE INDEX IF NOT EXISTS idx_reg_updates_hash ON regulatory_updates(content_hash)",
+    "CREATE INDEX IF NOT EXISTS idx_reg_updates_status ON regulatory_updates(status)",
+    "CREATE INDEX IF NOT EXISTS idx_reg_updates_url ON regulatory_updates(canonical_url)",
+    "CREATE INDEX IF NOT EXISTS idx_reg_updates_detected ON regulatory_updates(detected_at DESC)",
   ];
   for (const idx of indexes) {
     try { await execute(idx); } catch { /* index may already exist or table missing */ }

@@ -77,12 +77,13 @@ const port = Number(process.env["PORT"] || "8080");
 
   // Weekly report + monthly invoices — non-fatal
   try {
-    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan } = await import("./lib/scheduler.js");
+    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan, startDailyRegulatoryScan } = await import("./lib/scheduler.js");
     startWeeklyReport();
     startMonthlyInvoices();
     startWeeklyMoodPrompts();
     startWeeklyCompetitorScan();
     startWeeklySignalScan();
+    startDailyRegulatoryScan();
     console.log("[Startup] Schedulers started.");
   } catch (err) {
     console.error("[Startup] Scheduler init failed:", err instanceof Error ? err.message : err);

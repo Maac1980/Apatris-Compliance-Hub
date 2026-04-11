@@ -38,7 +38,7 @@ export function ApprovalBadge({
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/approve`, {
+      const res = await fetch(`${BASE}api/v1/legal/approve`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ entityType, entityId }),

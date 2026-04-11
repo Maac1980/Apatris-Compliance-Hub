@@ -623,3 +623,28 @@ export function startWeeklyReport(): void {
     sendWeeklyReport().finally(() => setTimeout(weekly, WEEK_MS));
   }, ms);
 }
+
+// Daily regulatory scan — every day at 06:00
+export function startDailyRegulatoryScan(): void {
+  function msUntilNext6am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(6, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next.getTime() - now.getTime();
+  }
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const ms = msUntilNext6am();
+  console.log(`[Scheduler] Daily regulatory scan scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (06:00).`);
+  setTimeout(function regScan() {
+    import("../services/regulatory-ingestion.service.js")
+      .then(m => m.runFullScan())
+      .then(r => {
+        console.log(`[Scheduler] Regulatory scan: ${r.totalIngested} ingested, ${r.totalDuplicates} duplicates`);
+        // Stage 8: daily snapshot after scan
+        return import("../services/regulatory-snapshot.service.js").then(s => s.createDailySnapshot());
+      })
+      .catch(err => console.error("[Scheduler] Regulatory scan/snapshot error:", err))
+      .finally(() => setTimeout(regScan, DAY_MS));
+  }, ms);
+}

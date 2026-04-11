@@ -111,6 +111,13 @@ import workerFilesRouter from "./worker-files.js";
 import caseIntelligenceRouter from "./case-intelligence.js";
 import legalIntelligenceRouter from "./legal-intelligence.js";
 import systemTestRouter from "./system-test.js";
+import regulatoryIntelRouter from "./regulatory-intel.js";
+import commandCenterRouter from "./command-center.js";
+import notificationsRouter from "./notifications.js";
+import testScenariosRouter from "./test-scenarios.js";
+import decisionExplanationsRouter from "./decision-explanations.js";
+import legalImmigrationCommandRouter from "./legal-immigration-command.js";
+import documentIntelligenceRouter from "./document-intelligence.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -225,5 +232,12 @@ router.use(workerFilesRouter);
 router.use(caseIntelligenceRouter);
 router.use(legalIntelligenceRouter);
 router.use(systemTestRouter);
+router.use(regulatoryIntelRouter);
+router.use(commandCenterRouter);
+router.use(notificationsRouter);
+router.use(testScenariosRouter);
+router.use(decisionExplanationsRouter);
+router.use(legalImmigrationCommandRouter);
+router.use(documentIntelligenceRouter);
 
 export default router;

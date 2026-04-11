@@ -55,7 +55,7 @@ export default function LinkedCases() {
   const { data, isLoading } = useQuery({
     queryKey: ["linked-cases"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/cases/linked`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/cases/linked`, { headers: authHeaders() });
       if (!res.ok) return { cases: [] };
       return res.json() as Promise<{ cases: LinkedCase[] }>;
     },
@@ -63,7 +63,7 @@ export default function LinkedCases() {
 
   const linkOrphansMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/cases/link-orphans`, { method: "POST", headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/cases/link-orphans`, { method: "POST", headers: authHeaders() });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },

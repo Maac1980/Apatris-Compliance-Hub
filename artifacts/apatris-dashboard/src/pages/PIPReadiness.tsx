@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { authHeaders, BASE } from "@/lib/api";
+import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
 import {
   Shield, AlertTriangle, CheckCircle2, Clock, XCircle, Loader2,
   Users, FileCheck, Sparkles, ChevronRight,
@@ -63,6 +64,32 @@ export default function PIPReadiness() {
 
   const cfg = LEVEL_CONFIG[data.riskLevel];
 
+  // Readiness explanation for HIGH risk
+  const needsExplanation = data.riskLevel === "HIGH" || data.counts.expired > 0 || data.counts.critical > 0;
+  const { data: pipExplanationData } = useQuery({
+    queryKey: ["pip-readiness-explanation", data.score],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/v1/decision-explanations/readiness`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({
+          workforce: {
+            total: data.totalWorkers,
+            blocked: data.counts.expired,
+            deployable: data.totalWorkers - data.counts.expired - data.counts.critical,
+            expiringPermits: data.counts.warning,
+            expiredPermits: data.counts.expired,
+          },
+          cases: { active: 0, needingAction: data.counts.critical, rejected: 0, overdueDeadline: 0, approachingDeadline: 0 },
+        }),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: needsExplanation,
+    staleTime: 60000,
+  });
+  const pipExplanation = pipExplanationData?.explanation ?? null;
+
   return (
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -121,6 +148,11 @@ export default function PIPReadiness() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Missing</p>
           </div>
         </div>
+
+        {/* Decision Explanation — shown for HIGH risk or critical items */}
+        {pipExplanation && pipExplanation.decision !== "PROCEED" && (
+          <DecisionExplanationCard explanation={pipExplanation} compact />
+        )}
 
         {/* Explanation */}
         <div className="bg-card border border-border rounded-xl p-5">

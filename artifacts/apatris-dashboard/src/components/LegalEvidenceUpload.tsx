@@ -86,7 +86,7 @@ export function LegalEvidenceUpload({ workerId, onUploadSuccess }: LegalEvidence
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE}/api/workers/${workerId}/legal-evidence`, {
+      const res = await fetch(`${BASE}api/workers/${workerId}/legal-evidence`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
@@ -119,7 +119,7 @@ export function LegalEvidenceUpload({ workerId, onUploadSuccess }: LegalEvidence
       const formData = new FormData();
       formData.append("file", f);
       const token = localStorage.getItem("apatris_jwt");
-      const res = await fetch(`${BASE}/api/v1/legal/evidence/${evidenceId}/extract`, {
+      const res = await fetch(`${BASE}api/v1/legal/evidence/${evidenceId}/extract`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../lib/auth-middleware.js";
 import { query, execute } from "../lib/db.js";
+import { mapAIResponseToStructuredAnswer } from "../services/legal-answer.service.js";
 
 const router = Router();
 
@@ -176,9 +177,25 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const anthropic = new Anthropic({ apiKey });
 
+    const jsonSchema = `{
+  "answer": "Full detailed answer to the question",
+  "operator_summary": "Simple, actionable explanation in 2-3 lines for the operations team",
+  "legal_summary": "Formal legal explanation citing relevant law",
+  "legal_basis": [{"law": "Name of the act", "article": "Art. number", "explanation": "Why it applies"}],
+  "applies_to": "Who exactly this applies to, e.g. non-EU nationals on Type A work permits in Poland",
+  "required_documents": ["Specific documents needed"],
+  "process_steps": ["Step-by-step procedure in order"],
+  "deadlines": ["Specific timeframes, e.g. 30 days from permit expiry"],
+  "risks": ["Penalties, fines, or consequences of non-compliance"],
+  "next_actions": ["Concrete actions the employer or worker should take now"],
+  "decision": "PROCEED or CAUTION or BLOCKED — overall assessment of whether the action can go ahead",
+  "sources": [{"url": "string", "title": "string"}],
+  "confidence": 0.85,
+  "human_review_required": false
+}`;
     const systemPrompt = language === "pl"
-      ? `Jestes ekspertem od polskiego prawa imigracyjnego i prawa pracy. Odpowiadaj na pytania dotyczace pozwolen na prace, wiz, ZUS, umow o prace w Polsce. Odpowiedz TYLKO w formacie JSON: { "answer": string, "sources": [{"url": string, "title": string}], "confidence": number (0-1), "actionItems": string[] }`
-      : `You are an expert on Polish immigration law and labor regulations. Answer questions about work permits, visas, ZUS contributions, employment contracts in Poland. Respond ONLY in JSON format: { "answer": string, "sources": [{"url": string, "title": string}], "confidence": number (0-1), "actionItems": string[] }`;
+      ? `Jestes ekspertem od polskiego prawa imigracyjnego i prawa pracy. Odpowiadaj na pytania dotyczace pozwolen na prace, wiz, ZUS, umow o prace w Polsce. Odpowiedz TYLKO czystym JSON (bez markdown, bez komentarzy). Schemat:\n${jsonSchema}`
+      : `You are an expert on Polish immigration law and labor regulations. Answer questions about work permits, visas, ZUS contributions, employment contracts in Poland. Respond ONLY with clean JSON (no markdown, no commentary). Schema:\n${jsonSchema}`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
@@ -187,22 +204,35 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
       messages: [{ role: "user", content: searchQuery }],
     });
 
-    const content = response.content[0]?.type === "text" ? response.content[0].text : "{}";
-    const parsed = JSON.parse(content);
+    let content = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+    // Strip markdown code fences if Claude wraps the JSON
+    content = content.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      // Last resort: try to extract a JSON object from the text
+      const m = content.match(/\{[\s\S]*\}/);
+      try {
+        parsed = m ? JSON.parse(m[0]) : null;
+      } catch { parsed = null; }
+      if (!parsed) {
+        parsed = { answer: content, sources: [], confidence: 0.5 };
+      }
+    }
+
+    const responseBody = mapAIResponseToStructuredAnswer(parsed);
 
     const userEmail = (req as any).user?.email ?? "unknown";
     await query(
       `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
-      [req.tenantId!, userEmail, searchQuery, language, parsed.answer ?? "", JSON.stringify(parsed.sources ?? []), parsed.confidence ?? 0, JSON.stringify(parsed.actionItems ?? [])]
+      [req.tenantId!, userEmail, searchQuery, language, responseBody.answer, JSON.stringify(responseBody.sources), responseBody.confidence, JSON.stringify(responseBody.next_actions)]
     );
 
-    res.json({
-      answer: parsed.answer ?? "No answer available",
-      sources: parsed.sources ?? [],
-      confidence: parsed.confidence ?? 0,
-      actionItems: parsed.actionItems ?? [],
-    });
+    console.log("[IMMIGRATION SEARCH] FINAL RESPONSE:", JSON.stringify(responseBody, null, 2));
+    res.json(responseBody);
   } catch (err: any) {
+    console.log("[IMMIGRATION SEARCH] ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

@@ -40,7 +40,7 @@ export default function InvoiceManagement() {
   const { data, isLoading } = useQuery({
     queryKey: ["invoices"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/invoices`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/invoices`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed");
       return res.json() as Promise<{ invoices: Invoice[]; outstanding: number }>;
     },
@@ -49,7 +49,7 @@ export default function InvoiceManagement() {
   const { data: companiesData } = useQuery({
     queryKey: ["crm-companies"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/crm/companies`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/crm/companies`, { headers: authHeaders() });
       if (!res.ok) return { companies: [] };
       return res.json();
     },
@@ -57,7 +57,7 @@ export default function InvoiceManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (body: Record<string, any>) => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/invoices`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+      const res = await fetch(`${BASE}api/invoices`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -67,7 +67,7 @@ export default function InvoiceManagement() {
 
   const sendMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/invoices/${id}/send`, { method: "POST", headers: authHeaders() });
+      const res = await fetch(`${BASE}api/invoices/${id}/send`, { method: "POST", headers: authHeaders() });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
       return res.json();
     },
@@ -77,7 +77,7 @@ export default function InvoiceManagement() {
 
   const markPaidMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/invoices/${id}`, {
+      const res = await fetch(`${BASE}api/invoices/${id}`, {
         method: "PATCH", headers: authHeaders(), body: JSON.stringify({ status: "paid" }),
       });
       if (!res.ok) throw new Error("Failed");

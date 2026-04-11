@@ -3,10 +3,11 @@
  * Select worker → Generate → View stage-by-stage results.
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
+import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
 import {
   Brain, Loader2, AlertTriangle, CheckCircle2, XOctagon, Scale, Gavel,
   FileText, Shield, Clock, ChevronDown, ChevronUp, Zap, Search, Copy,
@@ -57,6 +58,34 @@ export default function LegalBrief() {
     },
     onError: (err) => toast({ description: (err as Error).message, variant: "destructive" }),
   });
+
+  // Fetch decision explanation when brief is available
+  const { data: explanationData } = useQuery({
+    queryKey: ["legal-brief-explanation", brief?.id],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}api/v1/decision-explanations/legal-brief`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({
+          status: brief.status,
+          haltedAt: brief.haltedAt,
+          haltReason: brief.haltReason,
+          overallConfidence: brief.overallConfidence,
+          isValid: brief.isValid,
+          pressureLevel: brief.stage4?.pressureLevel,
+          stage1: brief.stage1,
+          stage2: brief.stage2,
+          stage3: brief.stage3,
+          stage4: brief.stage4,
+          workerName: brief.workerName,
+          hasRejectionText: !!rejectionText,
+        }),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!brief,
+  });
+  const explanation = explanationData?.explanation ?? null;
 
   const workers = workersData ?? [];
   const s1 = brief?.stage1;
@@ -134,6 +163,11 @@ export default function LegalBrief() {
                 </div>
                 <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded">REQUIRES LAWYER REVIEW</span>
               </div>
+
+              {/* Decision Explanation */}
+              {explanation && (explanation.decision !== "PROCEED" || explanation.confidence < 60) && (
+                <DecisionExplanationCard explanation={explanation} compact={brief.status === "COMPLETE"} />
+              )}
 
               {/* Pressure bar */}
               {s4 && (

@@ -105,7 +105,15 @@ const IntelligenceDashboard = lazy(() => import("@/pages/IntelligenceDashboard")
 const DocumentIntake = lazy(() => import("@/pages/DocumentIntake"));
 const LegalBrief = lazy(() => import("@/pages/LegalBrief"));
 const LegalIntelligence = lazy(() => import("@/pages/LegalIntelligence"));
+const LegalImmigrationCommand = lazy(() => import("@/pages/LegalImmigrationCommand"));
 const SystemTest = lazy(() => import("@/pages/SystemTest"));
+const RegulatoryDashboard = lazy(() => import("@/pages/RegulatoryDashboard"));
+const RegulatorySourceRegistry = lazy(() => import("@/pages/RegulatorySourceRegistry"));
+const RegulatoryReview = lazy(() => import("@/pages/RegulatoryReview"));
+const RegulatoryDeployments = lazy(() => import("@/pages/RegulatoryDeployments"));
+const ReadinessCommand = lazy(() => import("@/pages/ReadinessCommand"));
+const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
+const TestingPage = lazy(() => import("@/pages/TestingPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -178,7 +186,25 @@ function Router() {
         {() => <ProtectedRoute component={AiCopilot} />}
       </Route>
       <Route path="/regulatory">
-        {() => <ProtectedRoute component={RegulatoryIntelligence} />}
+        {() => <ProtectedRoute component={RegulatoryDashboard} />}
+      </Route>
+      <Route path="/regulatory/sources">
+        {() => <ProtectedRoute component={RegulatorySourceRegistry} />}
+      </Route>
+      <Route path="/regulatory/review">
+        {() => <ProtectedRoute component={RegulatoryReview} />}
+      </Route>
+      <Route path="/regulatory/deployments">
+        {() => <ProtectedRoute component={RegulatoryDeployments} />}
+      </Route>
+      <Route path="/readiness">
+        {() => <ProtectedRoute component={ReadinessCommand} />}
+      </Route>
+      <Route path="/knowledge">
+        {() => <ProtectedRoute component={KnowledgeBase} />}
+      </Route>
+      <Route path="/testing">
+        {() => <ProtectedRoute component={TestingPage} />}
       </Route>
       <Route path="/immigration-search">
         {() => <ProtectedRoute component={ImmigrationSearch} />}
@@ -251,6 +277,9 @@ function Router() {
       </Route>
       <Route path="/legal-intelligence">
         {() => <ProtectedRoute component={LegalIntelligence} />}
+      </Route>
+      <Route path="/legal-immigration">
+        {() => <ProtectedRoute component={LegalImmigrationCommand} />}
       </Route>
       <Route path="/system-test">
         {() => <ProtectedRoute component={SystemTest} />}

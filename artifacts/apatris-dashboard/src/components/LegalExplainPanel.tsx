@@ -30,7 +30,7 @@ export function LegalExplainPanel({ workerId }: LegalExplainPanelProps) {
 
   const explainMutation = useMutation({
     mutationFn: async (aud: "internal" | "worker") => {
-      const res = await fetch(`${BASE}/api/v1/legal/explain`, {
+      const res = await fetch(`${BASE}api/v1/legal/explain`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ workerId, audience: aud }),

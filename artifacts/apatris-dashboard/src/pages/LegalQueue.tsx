@@ -80,7 +80,7 @@ export default function LegalQueue() {
   const { data, isLoading } = useQuery({
     queryKey: ["legal-queue"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/queue`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/queue`, { headers: authHeaders() });
       if (!res.ok) return { items: [], total: 0, byUrgency: {}, byRisk: {} } as QueueResponse;
       return res.json() as Promise<QueueResponse>;
     },
@@ -91,7 +91,7 @@ export default function LegalQueue() {
   const { data: researchData } = useQuery({
     queryKey: ["legal-research-sidebar"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/v1/legal/research/articles`, { headers: authHeaders() });
+      const res = await fetch(`${BASE}api/v1/legal/research/articles`, { headers: authHeaders() });
       if (!res.ok) return { articles: [] };
       return res.json() as Promise<{ articles: Array<{ id: string; title: string; summary: string; created_at: string }> }>;
     },
@@ -99,7 +99,7 @@ export default function LegalQueue() {
 
   const approveMutation = useMutation({
     mutationFn: async (packId: string) => {
-      const res = await fetch(`${BASE}/api/v1/legal/authority-pack/${packId}/approve`, {
+      const res = await fetch(`${BASE}api/v1/legal/authority-pack/${packId}/approve`, {
         method: "POST", headers: authHeaders(),
       });
       if (!res.ok) throw new Error("Approval failed");
