@@ -249,11 +249,22 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       note: `Structured intake confirmed: ${Object.keys(approvedFields).length} fields, actions: ${result.appliedActions.join(", ") || "none"}`,
     });
 
+    // UPO auto-lock: if approved document is UPO and has a filing date, refresh legal snapshot to trigger Art. 108
+    if (resolvedDocType === "UPO" && resolvedWorkerId && mapped.filing_date) {
+      try {
+        const { refreshWorkerLegalSnapshot } = await import("../services/legal-status.service.js");
+        await refreshWorkerLegalSnapshot(resolvedWorkerId, req.tenantId!);
+        console.log(`[DocIntel] UPO approved for worker ${resolvedWorkerId} — Art. 108 status refreshed`);
+      } catch (e) { console.error("[DocIntel] Art. 108 auto-lock failed:", e instanceof Error ? e.message : e); }
+    }
+
     emitIntelligenceEvent({
       type: "doc_verified",
       workerId: resolvedWorkerId ?? intakeId,
       workerName: approvedFields.full_name ?? "Unknown",
-      message: `Document approved: ${Object.keys(approvedFields).length} fields confirmed`,
+      message: resolvedDocType === "UPO"
+        ? `UPO approved — Art. 108 status auto-refreshed`
+        : `Document approved: ${Object.keys(approvedFields).length} fields confirmed`,
       timestamp: new Date().toISOString(),
     });
 

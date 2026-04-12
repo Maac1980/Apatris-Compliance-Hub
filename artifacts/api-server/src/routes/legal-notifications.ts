@@ -129,6 +129,40 @@ export async function scanAndCreateNotifications(tenantId: string): Promise<{ cr
         created++;
       }
     }
+    // Check MOS signature deadlines — escalate at 7 days remaining
+    const sigWorkers = await query<any>(
+      `SELECT id, full_name, mos_signature_deadline FROM workers
+       WHERE tenant_id = $1 AND mos_signature_deadline IS NOT NULL`,
+      [tenantId]
+    );
+
+    for (const sw of sigWorkers) {
+      const deadline = new Date(sw.mos_signature_deadline).getTime();
+      const daysLeft = Math.ceil((deadline - now) / 86_400_000);
+      if (daysLeft <= 7 && daysLeft >= 0) {
+        const msg = `MOS signature deadline in ${daysLeft} day(s) — sign before ${new Date(deadline).toISOString().slice(0, 10)} to avoid digital paralysis.`;
+        const key = `${sw.id}:critical:MOS signature deadline`;
+        if (!recentSet.has(key)) {
+          await execute(
+            `INSERT INTO legal_notifications (tenant_id, worker_id, worker_name, type, message) VALUES ($1,$2,$3,$4,$5)`,
+            [tenantId, sw.id, sw.full_name ?? "Unknown", "critical", msg]
+          );
+          recentSet.add(key);
+          created++;
+        }
+      } else if (daysLeft > 7 && daysLeft <= 14) {
+        const msg = `MOS signature deadline approaching — ${daysLeft} days remaining (${new Date(deadline).toISOString().slice(0, 10)}).`;
+        const key = `${sw.id}:attention:MOS signature approaching`;
+        if (!recentSet.has(key)) {
+          await execute(
+            `INSERT INTO legal_notifications (tenant_id, worker_id, worker_name, type, message) VALUES ($1,$2,$3,$4,$5)`,
+            [tenantId, sw.id, sw.full_name ?? "Unknown", "attention", msg]
+          );
+          recentSet.add(key);
+          created++;
+        }
+      }
+    }
   } catch (err) {
     console.error("[Notifications] Scan failed:", err instanceof Error ? err.message : err);
   }
