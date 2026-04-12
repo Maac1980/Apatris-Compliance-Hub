@@ -108,6 +108,8 @@ const LegalIntelligence = lazy(() => import("@/pages/LegalIntelligence"));
 const LegalImmigrationCommand = lazy(() => import("@/pages/LegalImmigrationCommand"));
 const LegalCommandCenter = lazy(() => import("@/pages/LegalCommandCenter"));
 const DocumentApproval = lazy(() => import("@/pages/DocumentApproval"));
+const TRCWorkspace = lazy(() => import("@/pages/TRCWorkspace"));
+const SchengenCalculator = lazy(() => import("@/pages/SchengenCalculator"));
 const SystemTest = lazy(() => import("@/pages/SystemTest"));
 const RegulatoryDashboard = lazy(() => import("@/pages/RegulatoryDashboard"));
 const RegulatorySourceRegistry = lazy(() => import("@/pages/RegulatorySourceRegistry"));
@@ -288,6 +290,12 @@ function Router() {
       </Route>
       <Route path="/document-approval">
         {() => <ProtectedRoute component={DocumentApproval} />}
+      </Route>
+      <Route path="/trc-workspace">
+        {() => <ProtectedRoute component={TRCWorkspace} />}
+      </Route>
+      <Route path="/schengen-calculator">
+        {() => <ProtectedRoute component={SchengenCalculator} />}
       </Route>
       <Route path="/system-test">
         {() => <ProtectedRoute component={SystemTest} />}
