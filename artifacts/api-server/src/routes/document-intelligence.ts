@@ -41,11 +41,12 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
       return res.status(400).json({ error: `Unsupported file type: ${file.mimetype}. Allowed: PDF, JPEG, PNG, WebP` });
     }
 
-    // Run extraction — file buffer is threaded through for future real OCR
-    const result = extractStructuredDocumentData({
+    // Run extraction — uses Claude Vision when file is available
+    const result = await extractStructuredDocumentData({
       fileName,
       documentType: documentType || undefined,
       rawContent: file ? file.buffer.toString("base64") : undefined,
+      mimeType: file?.mimetype,
     });
 
     // Create document_intake row with real file metadata
