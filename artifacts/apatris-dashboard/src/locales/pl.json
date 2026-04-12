@@ -35,7 +35,8 @@
     "workers": "Pracownicy",
     "payroll": "Płace",
     "alerts": "Alerty Zgodności",
-    "history": "Historia i Analityka"
+    "history": "Historia i Analityka",
+    "legal": "Centrum Prawne"
   },
   "chart": {
     "compliant": "Zgodni",

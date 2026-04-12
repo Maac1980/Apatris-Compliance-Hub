@@ -13,7 +13,7 @@ import {
   Shield, Users, FileText, Gavel, Scale, Brain, Building2, Search,
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
   Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock, Gauge, Flame,
-  PanelRightOpen, PanelRightClose, ExternalLink, Globe, BookOpen, ScanSearch,
+  PanelLeftOpen, PanelLeftClose, ExternalLink, Globe, BookOpen, ScanSearch,
 } from "lucide-react";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
@@ -356,30 +356,17 @@ export default function LegalImmigrationCommand() {
         </div>
       </div>
 
-      {/* Content + Right Nav */}
+      {/* Content + Left Nav */}
       <div className="max-w-[1600px] mx-auto flex">
-        {/* Main content */}
-        <div className={`flex-1 min-w-0 px-6 py-6 transition-all ${navOpen ? "mr-0" : ""}`}>
-          {tab === "overview" && <OverviewTab overview={overview} loading={overviewLoading} explanation={overviewExplanation?.explanation} onTabSwitch={setTab} />}
-          {tab === "trc" && <TRCTab cases={trcData?.cases ?? []} loading={trcLoading} filter={filterRow} />}
-          {tab === "workers-legal" && <WorkersLegalTab workers={workersData?.workers ?? []} loading={workersLoading} search={q} />}
-          {tab === "appeals" && <AppealsTab cases={casesData?.cases ?? []} loading={casesLoading} filter={filterRow} />}
-          {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} workers={workersData?.workers ?? []} />}
-          {tab === "authority" && <AuthorityTab packs={authorityData ?? []} loading={authorityLoading} search={q} />}
-          {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
-          {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
-          {tab === "client-view" && <ClientViewTab />}
-        </div>
-
-        {/* ── Legal Navigation Panel (right side) ──────────────────────────── */}
-        <div className={`flex-shrink-0 border-l border-slate-800 bg-slate-900/40 transition-all overflow-hidden ${navOpen ? "w-56" : "w-10"}`}>
+        {/* ── Legal Navigation Panel (left side) ───────────────────────────── */}
+        <div className={`flex-shrink-0 border-r border-slate-800 bg-slate-900/40 transition-all overflow-hidden ${navOpen ? "w-56" : "w-10"}`}>
           {/* Toggle button */}
           <button
             onClick={() => setNavOpen(!navOpen)}
             className="w-full flex items-center justify-center py-3 text-slate-500 hover:text-white transition-colors border-b border-slate-800"
             title={navOpen ? "Collapse legal nav" : "Expand legal nav"}
           >
-            {navOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+            {navOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
           </button>
 
           {navOpen && (
@@ -404,7 +391,7 @@ export default function LegalImmigrationCommand() {
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors ${
                       isActive
-                        ? "text-white bg-[#C41E18]/10 border-r-2 border-[#C41E18]"
+                        ? "text-white bg-[#C41E18]/10 border-l-2 border-[#C41E18]"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                     }`}
                   >
@@ -416,6 +403,19 @@ export default function LegalImmigrationCommand() {
               })}
             </nav>
           )}
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0 px-6 py-6">
+          {tab === "overview" && <OverviewTab overview={overview} loading={overviewLoading} explanation={overviewExplanation?.explanation} onTabSwitch={setTab} />}
+          {tab === "trc" && <TRCTab cases={trcData?.cases ?? []} loading={trcLoading} filter={filterRow} />}
+          {tab === "workers-legal" && <WorkersLegalTab workers={workersData?.workers ?? []} loading={workersLoading} search={q} />}
+          {tab === "appeals" && <AppealsTab cases={casesData?.cases ?? []} loading={casesLoading} filter={filterRow} />}
+          {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} workers={workersData?.workers ?? []} />}
+          {tab === "authority" && <AuthorityTab packs={authorityData ?? []} loading={authorityLoading} search={q} />}
+          {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
+          {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
+          {tab === "client-view" && <ClientViewTab />}
         </div>
       </div>
     </div>

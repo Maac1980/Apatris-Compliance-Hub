@@ -11,7 +11,7 @@ import {
   Users, AlertTriangle, ShieldAlert, Clock, 
   Search, Filter, LogOut, FileText, Bell, RefreshCcw, Zap, Pencil, Building2, Settings,
   Phone, MessageSquare, TrendingUp, Calculator, Download, Upload, CalendarDays, ChevronLeft, ChevronRight,
-  CheckSquare, Square, Archive, X, Send, History, Loader2
+  CheckSquare, Square, Archive, X, Send, History, Loader2, Shield
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -428,10 +428,11 @@ export default function Dashboard() {
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-8">
 
         {/* ── Section Navigation Grid ───────────────────────────────────────── */}
-        <div className="hidden md:grid grid-cols-4 gap-4">
+        <div className="hidden md:grid grid-cols-5 gap-4">
           {([
             { path: "/",                  labelKey: "cards.workers",     icon: Users,         solidBg: "bg-[#ef4444]",  border: "border-red-500",    shadow: "hover:shadow-[0_6px_24px_rgba(239,68,68,0.45)]"  },
             { path: "/payroll",           labelKey: "cards.payroll",     icon: Calculator,    solidBg: "bg-[#22c55e]",  border: "border-green-500",  shadow: "hover:shadow-[0_6px_24px_rgba(34,197,94,0.40)]"  },
+            { path: "/legal-immigration", labelKey: "cards.legal",       icon: Shield,        solidBg: "bg-[#C41E18]",  border: "border-red-700",    shadow: "hover:shadow-[0_6px_24px_rgba(196,30,24,0.45)]"  },
             { path: "/compliance-alerts", labelKey: "cards.alerts",      icon: AlertTriangle, solidBg: "bg-[#f59e0b]",  border: "border-amber-500",  shadow: "hover:shadow-[0_6px_24px_rgba(245,158,11,0.40)]" },
             { path: "/history",           labelKey: "cards.history",     icon: History,       solidBg: "bg-[#a855f7]",  border: "border-purple-500", shadow: "hover:shadow-[0_6px_24px_rgba(168,85,247,0.40)]" },
           ] as const).map(({ path, labelKey, icon: Icon, solidBg, border, shadow }) => (

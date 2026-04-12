@@ -35,7 +35,8 @@
     "workers": "Workers",
     "payroll": "Payroll Ledger",
     "alerts": "Compliance Alerts",
-    "history": "History & Analytics"
+    "history": "History & Analytics",
+    "legal": "Legal Command"
   },
   "chart": {
     "compliant": "Compliant",
