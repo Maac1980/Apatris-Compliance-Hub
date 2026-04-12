@@ -46,6 +46,15 @@ const port = Number(process.env["PORT"] || "8080");
         console.log("[Startup] Production mode — skipping worker/comprehensive seeders.");
       }
 
+      // Test scenario workers — seeds realistic legal test data (idempotent, skips if >15 workers exist)
+      try {
+        const { seedTestScenarios } = await import("./lib/seed-test-scenarios.js");
+        const { getDefaultTenantId: getTid } = await import("./lib/tenant.js");
+        await seedTestScenarios(getTid());
+      } catch (err) {
+        console.error("[Startup] Test scenario seed failed:", err instanceof Error ? err.message : err);
+      }
+
       // Module demo data (clients, jobs, etc.) seeds in ALL environments
       // if tables are empty — it's idempotent and non-destructive
       try {
