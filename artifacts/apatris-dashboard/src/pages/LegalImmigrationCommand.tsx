@@ -608,8 +608,10 @@ function CaseTable({ rows }: { rows: any[] }) {
 
 function DocumentsTab({ documents, loading, search }: { documents: any[]; loading: boolean; search: string }) {
   const [extraction, setExtraction] = useState<any>(null);
+  const [intakeId, setIntakeId] = useState<string | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
-  const [approvedData, setApprovedData] = useState<Record<string, string> | null>(null);
+  const [approveResult, setApproveResult] = useState<any>(null);
+  const [approveError, setApproveError] = useState<string | null>(null);
 
   const extractMutation = useMutation({
     mutationFn: async ({ fileName, documentType }: { fileName: string; documentType: string }) => {
@@ -621,8 +623,29 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
       return data;
     },
-    onSuccess: (data) => { setExtraction(data); setExtractError(null); setApprovedData(null); },
-    onError: (err: any) => { setExtractError(err.message); setExtraction(null); },
+    onSuccess: (data) => {
+      setExtraction(data);
+      setIntakeId(data.intake_id ?? null);
+      setExtractError(null);
+      setApproveResult(null);
+      setApproveError(null);
+    },
+    onError: (err: any) => { setExtractError(err.message); setExtraction(null); setIntakeId(null); },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (approvedFields: Record<string, string>) => {
+      if (!intakeId) throw new Error("No intake record — extract a document first");
+      const res = await fetch(`${BASE}api/v1/document-intelligence/approve`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ intakeId, approvedFields }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Approval failed");
+      return data;
+    },
+    onSuccess: (data) => { setApproveResult(data); setApproveError(null); },
+    onError: (err: any) => { setApproveError(err.message); },
   });
 
   const handleExtract = (fileName: string, documentType: string) => {
@@ -630,8 +653,7 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
   };
 
   const handleApprove = (data: Record<string, string>) => {
-    setApprovedData(data);
-    // Future: POST approved data to persist into workers/trc_cases/documents tables
+    approveMutation.mutate(data);
   };
 
   const filtered = search ? documents.filter((d: any) => ((d.workerName ?? d.worker_name ?? "").toLowerCase().includes(search) || (d.documentType ?? d.document_type ?? "").toLowerCase().includes(search))) : documents;
@@ -654,10 +676,21 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
         </div>
       )}
 
-      {approvedData && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <p className="text-xs text-emerald-400">Data approved — {Object.keys(approvedData).length} fields ready for persistence</p>
+      {approveError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+          <p className="text-xs text-red-400">Approval failed: {approveError}</p>
+        </div>
+      )}
+
+      {approveResult && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <p className="text-xs text-emerald-400 font-bold">Data confirmed and saved</p>
+          </div>
+          <p className="text-[10px] text-emerald-400/70 mt-1">
+            {approveResult.fieldCount} fields confirmed by {approveResult.confirmedBy} · {approveResult.appliedActions?.length ?? 0} action(s) applied
+          </p>
         </div>
       )}
 
