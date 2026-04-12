@@ -871,6 +871,9 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
                 <button onClick={() => setShowPIP(true)} title="PIP Inspection Card" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-[10px] font-bold text-gray-400 hover:text-gray-200 uppercase tracking-wider">
                   <ClipboardCheck className="w-3 h-3" /> PIP
                 </button>
+                <a href={`/command-center?workerId=${workerId}`} title="Open in Legal Command Center" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-[10px] font-bold text-gray-400 hover:text-gray-200 uppercase tracking-wider">
+                  <Shield className="w-3 h-3" /> Legal
+                </a>
                 {!isEditing && (
                   <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg transition-colors text-[10px] font-bold text-white uppercase tracking-wider">
                     <Pencil className="w-3 h-3" /> Edit

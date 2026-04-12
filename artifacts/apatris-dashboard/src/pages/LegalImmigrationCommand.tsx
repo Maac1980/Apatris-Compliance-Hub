@@ -137,8 +137,18 @@ function Spinner() {
 
 export default function LegalImmigrationCommand() {
   const [, navigate] = useLocation();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [tab, setTab] = useState<TabKey>(() => {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get("tab");
+    return TABS.some(tb => tb.key === t) ? (t as TabKey) : "overview";
+  });
   const [navOpen, setNavOpen] = useState(false);
+
+  // Update URL when tab changes
+  React.useEffect(() => {
+    const url = tab === "overview" ? "/legal-immigration" : `/legal-immigration?tab=${tab}`;
+    if (window.location.pathname + window.location.search !== url) window.history.replaceState(null, "", url);
+  }, [tab]);
   const [search, setSearch] = useState("");
   const [workerFilter, setWorkerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -632,17 +642,42 @@ function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading
     });
 
     doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
-    doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate Compliance", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+    doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate Compliance. Polish characters transliterated for PDF compatibility.", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
 
     doc.save(`mos-package-${norm(pkg.workerName).replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`);
   }, []);
 
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchDone, setBatchDone] = useState(0);
+
   if (loading) return <Spinner />;
   const filtered = search ? workers.filter((w: any) => (w.full_name ?? "").toLowerCase().includes(search)) : workers;
 
+  const generateAllMOS = async () => {
+    setBatchLoading(true); setBatchDone(0);
+    for (const w of filtered) {
+      if (mosResult[w.id]) continue;
+      try {
+        const res = await fetch(`${BASE}api/workers/${w.id}/mos-package`, { method: "POST", headers: authHeaders() });
+        if (res.ok) { const pkg = await res.json(); setMosResult(prev => ({ ...prev, [w.id]: pkg })); }
+      } catch { /* continue */ }
+      setBatchDone(prev => prev + 1);
+    }
+    setBatchLoading(false);
+  };
+
   return (
     <div className="space-y-3">
-      <SectionHeader title="Workers Legal Status" count={filtered.length} />
+      <div className="flex items-center justify-between">
+        <SectionHeader title="Workers Legal Status" count={filtered.length} />
+        <button
+          onClick={generateAllMOS}
+          disabled={batchLoading || filtered.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C41E18]/10 border border-[#C41E18]/30 text-[10px] font-bold text-[#C41E18] hover:bg-[#C41E18]/20 disabled:opacity-50 transition-colors"
+        >
+          {batchLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Generating {batchDone}/{filtered.length}...</> : <><Stamp className="w-3 h-3" /> Generate All MOS</>}
+        </button>
+      </div>
       {filtered.length === 0 ? <EmptyState message="No workers found" /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
