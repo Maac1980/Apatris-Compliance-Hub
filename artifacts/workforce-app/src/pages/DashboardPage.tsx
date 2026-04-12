@@ -66,6 +66,8 @@ import { DeveloperTab } from "@/components/tabs/DeveloperTab";
 import { IntelFeedTab } from "@/components/tabs/IntelFeedTab";
 import { WellnessTab } from "@/components/tabs/WellnessTab";
 import { DeploymentTab } from "@/components/tabs/DeploymentTab";
+import { LegalStatusTab } from "@/components/tabs/LegalStatusTab";
+import { SchengenTab } from "@/components/tabs/SchengenTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -382,6 +384,14 @@ export function DashboardPage() {
       // ── DEPLOYMENTS ─────────────────────────────────────────────────────
       case "deploy":
         return <DeploymentTab />;
+
+      // ── LEGAL STATUS ──────────────────────────────────────────────────
+      case "legalstatus":
+        return <LegalStatusTab />;
+
+      // ── SCHENGEN 90/180 ───────────────────────────────────────────────
+      case "schengen":
+        return <SchengenTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

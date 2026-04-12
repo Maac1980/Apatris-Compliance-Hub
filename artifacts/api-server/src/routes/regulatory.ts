@@ -320,7 +320,50 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
       }
     }
 
-    // Fallback: knowledge base lookup
+    // Fallback 2: Perplexity live search (real-time web results)
+    const pplxKey = process.env.PERPLEXITY_API_KEY;
+    if (pplxKey && pplxKey.length > 10) {
+      try {
+        const pplxRes = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${pplxKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "sonar",
+            messages: [
+              { role: "system", content: `You are a Polish immigration and labor law expert. Answer questions about work permits, TRC, Art. 108, ZUS, MOS 2026, and employment law in Poland. Respond in JSON format: {"answer":"...","legal_basis":[{"law":"...","article":"...","explanation":"..."}],"risks":["..."],"deadlines":["..."],"next_actions":["..."],"decision":"PROCEED|CAUTION|BLOCKED","confidence":0.8,"sources":[{"url":"...","title":"..."}]}${language === "pl" ? " Odpowiedz po polsku." : ""}` },
+              { role: "user", content: searchQuery },
+            ],
+          }),
+        });
+        if (pplxRes.ok) {
+          const pplxData = await pplxRes.json();
+          let pplxContent = pplxData.choices?.[0]?.message?.content ?? "";
+          pplxContent = pplxContent.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+          let pplxParsed: any;
+          try { pplxParsed = JSON.parse(pplxContent); } catch {
+            const m = pplxContent.match(/\{[\s\S]*\}/);
+            try { pplxParsed = m ? JSON.parse(m[0]) : null; } catch { pplxParsed = null; }
+            if (!pplxParsed) pplxParsed = { answer: pplxContent, sources: pplxData.citations?.map((c: string) => ({ url: c, title: "Web Source" })) ?? [], confidence: 0.7 };
+          }
+          // Add Perplexity citations as sources
+          if (pplxData.citations?.length > 0 && (!pplxParsed.sources || pplxParsed.sources.length === 0)) {
+            pplxParsed.sources = pplxData.citations.map((c: string) => ({ url: c, title: "Web Source" }));
+          }
+          const responseBody = mapAIResponseToStructuredAnswer(pplxParsed);
+          const userEmail = (req as any).user?.email ?? "unknown";
+          await query(
+            `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
+            [req.tenantId!, userEmail, searchQuery, language, responseBody.answer, JSON.stringify(responseBody.sources), responseBody.confidence, JSON.stringify(responseBody.next_actions)]
+          ).catch(() => {});
+          console.log("[IMMIGRATION SEARCH] Perplexity response for:", searchQuery.slice(0, 60));
+          return res.json(responseBody);
+        }
+      } catch (pplxErr: any) {
+        console.error("[IMMIGRATION SEARCH] Perplexity failed:", pplxErr.message?.slice(0, 100));
+      }
+    }
+
+    // Fallback 3: knowledge base lookup
     const kbAnswer = findKBAnswer(searchQuery);
     if (kbAnswer) {
       const responseBody = mapAIResponseToStructuredAnswer(kbAnswer);
@@ -333,10 +376,10 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
       return res.json(responseBody);
     }
 
-    // No AI and no KB match
+    // No AI, no Perplexity, no KB match
     const fallback = mapAIResponseToStructuredAnswer({
-      answer: "This question requires AI-powered search which is not currently configured. Please contact your administrator to set up the ANTHROPIC_API_KEY, or try a more specific question about: work permits, ZUS contributions, oświadczenie declarations, PIP inspections, or processing times.",
-      operator_summary: "AI search is not available. Try asking about specific topics like work permits, ZUS, or processing times.",
+      answer: "This question could not be answered by the AI, live search, or knowledge base. Please try rephrasing or ask about: work permits, ZUS contributions, Art. 108, MOS 2026 filing, Schengen rules, or PIP inspections.",
+      operator_summary: "No answer available. Try a more specific legal question.",
       decision: "CAUTION",
       confidence: 0.3,
       human_review_required: true,

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
 import {
   Brain, Search, Gavel, FileText, Shield, Scale, Clock, Loader2,
-  Copy, AlertTriangle, CheckCircle2, Upload, ChevronDown, ChevronUp,
+  Copy, AlertTriangle, CheckCircle2, Upload, ChevronDown, ChevronUp, ArrowLeft,
 } from "lucide-react";
 
 const TABS = [
@@ -42,6 +42,7 @@ export default function LegalIntelligence() {
     <div className="min-h-screen bg-slate-950 text-slate-200 overflow-y-auto pb-20">
       <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <a href="/legal-immigration" className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"><ArrowLeft className="w-4 h-4" /></a>
           <div className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center">
             <Brain className="w-5 h-5 text-slate-300" />
           </div>

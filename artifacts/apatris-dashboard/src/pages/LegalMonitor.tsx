@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Scale, Play, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Scale, Play, CheckCircle2, AlertTriangle, ExternalLink, ArrowLeft } from "lucide-react";
 import { authHeaders, BASE } from "@/lib/api";
 
 
@@ -62,8 +62,9 @@ export default function LegalMonitor() {
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
+          <a href="/legal-immigration" className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"><ArrowLeft className="w-4 h-4" /></a>
           <Scale className="w-7 h-7 text-[#C41E18]" />
-          <h1 className="text-3xl font-bold text-white">Legal Change Monitor</h1>
+          <h1 className="text-2xl font-bold text-white">Legal Change Monitor</h1>
         </div>
         <p className="text-gray-400">AI-powered Polish and EU regulatory change tracking</p>
       </div>

@@ -10,7 +10,7 @@ import { authHeaders, BASE, extractList } from "@/lib/api";
 import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
 import {
   Brain, Loader2, AlertTriangle, CheckCircle2, XOctagon, Scale, Gavel,
-  FileText, Shield, Clock, ChevronDown, ChevronUp, Zap, Search, Copy,
+  FileText, Shield, Clock, ChevronDown, ChevronUp, Zap, Search, Copy, ArrowLeft,
 } from "lucide-react";
 
 const IMPACT_COLOR: Record<string, string> = {
@@ -102,8 +102,9 @@ export default function LegalBrief() {
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
+          <a href="/legal-immigration" className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"><ArrowLeft className="w-4 h-4" /></a>
           <Gavel className="w-7 h-7 text-[#C41E18]" />
-          <h1 className="text-3xl font-bold text-white">Legal Brief Generator</h1>
+          <h1 className="text-2xl font-bold text-white">Legal Brief Generator</h1>
         </div>
         <p className="text-gray-400">4-stage AI pipeline: Research → Case Review → Validation → Pressure Check</p>
       </div>

@@ -12,7 +12,16 @@
     "timesheet": "Timesheet",
     "calculator": "Calculator",
     "contracts": "Contracts",
-    "gps": "GPS"
+    "gps": "GPS",
+    "permits": "Permits",
+    "onboarding": "Onboarding",
+    "invoices": "Invoices",
+    "zus": "ZUS",
+    "fines": "Fines",
+    "advances": "Advances",
+    "leave": "Leave",
+    "legalStatus": "Legal Status",
+    "schengen": "Schengen 90/180"
   },
   "login": {
     "selectDesignation": "Select your designation",

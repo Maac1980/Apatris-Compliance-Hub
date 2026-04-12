@@ -12,7 +12,16 @@
     "timesheet": "Godziny",
     "calculator": "Kalkulator",
     "contracts": "Umowy",
-    "gps": "GPS"
+    "gps": "GPS",
+    "permits": "Pozwolenia",
+    "onboarding": "Wdrozenie",
+    "invoices": "Faktury",
+    "zus": "ZUS",
+    "fines": "Kary",
+    "advances": "Zaliczki",
+    "leave": "Urlop",
+    "legalStatus": "Status prawny",
+    "schengen": "Schengen 90/180"
   },
   "login": {
     "selectDesignation": "Wybierz stanowisko",
