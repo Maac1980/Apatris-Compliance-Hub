@@ -3107,6 +3107,8 @@ export async function initializeDatabase(): Promise<void> {
     await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS visa_expiry DATE`);
     await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_link_received_at TIMESTAMPTZ`);
     await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_signature_deadline DATE`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_portal_link TEXT`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_fee_amount NUMERIC(8,2)`);
   } catch { /* already exists */ }
 
   // ── Legal notifications ──────────────────────────────────────────────

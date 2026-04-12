@@ -33,6 +33,8 @@ export interface AnnexData {
     expiryDate: string | null;
     filingDate: string | null;
     trcSubmitted: boolean;
+    portalLink: string | null;
+    feeAmount: number | null;
   };
 }
 
@@ -72,7 +74,7 @@ export async function generateMOSPackage(workerId: string, tenantId: string): Pr
   const worker = await queryOne<any>(
     `SELECT id, full_name, date_of_birth, nationality, passport_number, passport_expiry,
             pesel, assigned_site, specialization, hourly_rate, monthly_hours,
-            trc_expiry, work_permit_expiry
+            trc_expiry, work_permit_expiry, mos_portal_link, mos_fee_amount
      FROM workers WHERE id = $1 AND tenant_id = $2`,
     [workerId, tenantId]
   );
@@ -127,6 +129,8 @@ export async function generateMOSPackage(workerId: string, tenantId: string): Pr
       expiryDate: snapshot.permitExpiresAt?.slice(0, 10) ?? worker.trc_expiry ?? worker.work_permit_expiry ?? null,
       filingDate: snapshot.authorityDraftContext?.filingDate ?? null,
       trcSubmitted: snapshot.trcApplicationSubmitted,
+      portalLink: worker.mos_portal_link ?? null,
+      feeAmount: worker.mos_fee_amount ? Number(worker.mos_fee_amount) : null,
     },
   };
 
