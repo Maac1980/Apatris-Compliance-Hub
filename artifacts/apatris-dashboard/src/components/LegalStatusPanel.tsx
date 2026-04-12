@@ -14,7 +14,7 @@
 import React, { useState } from "react";
 import {
   ShieldCheck, Shield, AlertTriangle, XOctagon, HelpCircle,
-  ChevronDown, ChevronUp, Info,
+  ChevronDown, ChevronUp, Info, FileCheck,
 } from "lucide-react";
 import {
   STATUS_DISPLAY, BASIS_LABELS, RISK_DISPLAY,
@@ -25,10 +25,18 @@ import {
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
+interface TrustedInput {
+  intakeId: string;
+  documentType: string;
+  field: string;
+  value: string;
+}
+
 interface LegalStatusPanelProps {
   snapshot: LegalSnapshotForExplanation & {
     deployability?: string;
     snapshotCreatedAt?: string;
+    trustedInputs?: TrustedInput[];
   };
   defaultAudience?: ExplanationAudience;
 }
@@ -42,6 +50,12 @@ const ICON_MAP = {
   "x-octagon": XOctagon,
   "help-circle": HelpCircle,
 } as const;
+
+const FIELD_LABELS: Record<string, string> = {
+  filing_date: "Filing Date", expiry_date: "Expiry", employer_name: "Employer",
+  work_position: "Role", case_reference: "Case Ref", decision_outcome: "Decision",
+  nationality: "Nationality", passport_number: "Passport",
+};
 
 // ═══ COMPONENT ══════════════════════════════════════════════════════════════
 
@@ -127,6 +141,25 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
           </button>
         </div>
       </div>
+
+      {/* ── Trusted approved inputs ─────────────────────────────────────── */}
+      {(snapshot.trustedInputs ?? []).length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <FileCheck className="w-3 h-3 text-emerald-400" />
+            <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-wider">Approved Document Inputs</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(snapshot.trustedInputs ?? []).map((ti, i) => (
+              <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/15 text-emerald-300 rounded px-1.5 py-0.5">
+                <span className="font-bold">{FIELD_LABELS[ti.field] ?? ti.field}:</span>
+                <span className="text-emerald-400">{ti.value}</span>
+                <span className="text-emerald-400/50">· {ti.documentType}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Expandable details ─────────────────────────────────────────── */}
       {hasDetails && (
