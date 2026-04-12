@@ -107,6 +107,7 @@ const LegalBrief = lazy(() => import("@/pages/LegalBrief"));
 const LegalIntelligence = lazy(() => import("@/pages/LegalIntelligence"));
 const LegalImmigrationCommand = lazy(() => import("@/pages/LegalImmigrationCommand"));
 const LegalCommandCenter = lazy(() => import("@/pages/LegalCommandCenter"));
+const DocumentApproval = lazy(() => import("@/pages/DocumentApproval"));
 const SystemTest = lazy(() => import("@/pages/SystemTest"));
 const RegulatoryDashboard = lazy(() => import("@/pages/RegulatoryDashboard"));
 const RegulatorySourceRegistry = lazy(() => import("@/pages/RegulatorySourceRegistry"));
@@ -284,6 +285,9 @@ function Router() {
       </Route>
       <Route path="/command-center">
         {() => <ProtectedRoute component={LegalCommandCenter} />}
+      </Route>
+      <Route path="/document-approval">
+        {() => <ProtectedRoute component={DocumentApproval} />}
       </Route>
       <Route path="/system-test">
         {() => <ProtectedRoute component={SystemTest} />}
