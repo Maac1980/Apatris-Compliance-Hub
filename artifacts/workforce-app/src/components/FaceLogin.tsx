@@ -2,7 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, X, Loader2, CheckCircle2, AlertCircle, ScanFace } from "lucide-react";
 import { cn } from "@/lib/utils";
-import * as faceapi from "face-api.js";
+// face-api.js loaded dynamically when face login is initiated
+let faceapi: typeof import("face-api.js") | null = null;
+const loadFaceApi = async () => {
+  if (!faceapi) faceapi = await import("face-api.js");
+  return faceapi;
+};
 
 const API_BASE = "/api";
 
@@ -29,11 +34,12 @@ export function FaceLogin({ onSuccess, onCancel }: FaceLoginProps) {
 
     async function loadModels() {
       try {
+        const fa = await loadFaceApi();
         const modelPath = `${import.meta.env.BASE_URL}models`;
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
-          faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
-          faceapi.nets.faceRecognitionNet.loadFromUri(modelPath),
+          fa.nets.tinyFaceDetector.loadFromUri(modelPath),
+          fa.nets.faceLandmark68Net.loadFromUri(modelPath),
+          fa.nets.faceRecognitionNet.loadFromUri(modelPath),
         ]);
         if (!cancelled) {
           setStatus("ready");
@@ -95,16 +101,17 @@ export function FaceLogin({ onSuccess, onCancel }: FaceLoginProps) {
     scanIntervalRef.current = window.setInterval(async () => {
       if (!videoRef.current || !canvasRef.current) return;
 
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+      const fa = await loadFaceApi();
+      const detection = await fa
+        .detectSingleFace(videoRef.current, new fa.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
       if (!detection) return;
 
       // Draw face detection overlay
-      const dims = faceapi.matchDimensions(canvasRef.current, videoRef.current, true);
-      const resized = faceapi.resizeResults(detection, dims);
+      const dims = fa.matchDimensions(canvasRef.current, videoRef.current, true);
+      const resized = fa.resizeResults(detection, dims);
       const ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);

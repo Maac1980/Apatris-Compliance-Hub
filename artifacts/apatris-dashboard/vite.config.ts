@@ -23,6 +23,25 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
+          "vendor-recharts": ["recharts"],
+          "vendor-tanstack": ["@tanstack/react-query"],
+          "vendor-radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tooltip",
+          ],
+          "vendor-pdf": ["jspdf", "jspdf-autotable"],
+          "vendor-i18n": ["i18next", "react-i18next"],
+          "vendor-dates": ["date-fns"],
+        },
+      },
+    },
   },
   server: {
     port,

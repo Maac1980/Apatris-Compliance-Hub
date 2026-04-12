@@ -8,8 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { format, parseISO } from "date-fns";
 import { useGetWorker, getGetWorkerQueryKey, getGetWorkersQueryKey } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jsPDF + autoTable loaded dynamically when PDF export is triggered
 import { StatusBadge } from "./ui/StatusBadge";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -531,9 +530,11 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
   const fmtPln = (n: number) => Number(n ?? 0).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Generate a single-month payslip PDF for download
-  const generateMonthlyPayslip = (r: any) => {
+  const generateMonthlyPayslip = async (r: any) => {
     if (!worker) return;
     const w = worker as any;
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     // Header
@@ -610,9 +611,11 @@ export function WorkerProfilePanel({ workerId, initialEditMode = false, onClose,
     } catch { toast({ title: "Error", description: "Failed to send payslip", variant: "destructive" }); }
   };
 
-  const handlePrintFinalSettlement = () => {
+  const handlePrintFinalSettlement = async () => {
     if (!worker) return;
     const w = worker as any;
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     // Header

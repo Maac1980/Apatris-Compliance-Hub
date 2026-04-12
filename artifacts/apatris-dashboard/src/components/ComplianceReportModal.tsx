@@ -3,10 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useGetComplianceReport } from "@workspace/api-client-react";
 import { Download, FileWarning, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-function exportPDF(report: any) {
+async function exportPDF(report: any) {
+  const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ orientation: "landscape" });
   const red: [number, number, number] = [196, 30, 24];
   const dark: [number, number, number] = [15, 23, 42];
