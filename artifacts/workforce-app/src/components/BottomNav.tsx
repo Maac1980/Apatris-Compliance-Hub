@@ -79,6 +79,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration",   label: "nav.permits",     icon: Stamp },
         ],
         overflow: [
+          { id: "zus",           label: "nav.zus",         icon: Calculator },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
           { id: "profile",       label: "nav.profile",     icon: User },
         ],
@@ -174,31 +175,31 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <>
-      {/* More menu overlay */}
+      {/* More menu — bottom sheet sliding up from nav bar */}
       {moreOpen && (
-        <div className="fixed inset-0 z-[60]">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMoreOpen(false)} />
-          <div className="absolute bottom-[76px] left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-3 z-[61] shadow-2xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-white/60 uppercase tracking-wider">More</span>
-              <button onClick={() => setMoreOpen(false)} className="p-1 text-slate-400 hover:text-white"><X className="w-3.5 h-3.5" /></button>
-            </div>
-            <div className="space-y-0.5">
-              {overflow.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
-                    className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors", isActive ? cn(activeStyle.bg, activeStyle.text) : "text-slate-400 hover:text-white hover:bg-slate-800")}
-                  >
-                    <Icon className="w-4.5 h-4.5 flex-shrink-0" />
-                    <span className="text-xs font-semibold">{t(tab.label)}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="fixed inset-0 z-[60]" onClick={() => setMoreOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+      )}
+      {moreOpen && (
+        <div className="fixed bottom-[68px] left-0 right-0 z-[61] bg-slate-900 border-t border-slate-700 shadow-[0_-8px_30px_rgba(0,0,0,0.5)]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="px-4 pt-3 pb-2">
+            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3" />
+            {overflow.map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
+                  className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-0.5", isActive ? cn(activeStyle.bg, activeStyle.text, "font-bold") : "text-white/60 active:bg-white/5")}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm">{t(tab.label)}</span>
+                  {isActive && <div className={cn("ml-auto w-2 h-2 rounded-full", BADGE_BG[role])} />}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
