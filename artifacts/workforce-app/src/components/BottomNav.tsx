@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus, MoreHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -17,79 +18,98 @@ interface BottomNavProps {
   onTabChange: (tab: string) => void;
 }
 
-function getTabsForRole(role: Role): Tab[] {
+// Primary tabs shown in bottom bar (max 5) + overflow in "More" menu
+function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
   switch (role) {
     case "Executive":
-      return [
-        { id: "home",       label: "nav.home",       icon: Home },
-        { id: "workers",    label: "nav.directory",  icon: Users },
-        { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
-        { id: "alerts",     label: "nav.alerts",     icon: Bell },
-        { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
-        { id: "gps",           label: "nav.gps",        icon: Navigation },
-        { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-        { id: "crm",           label: "nav.crm",         icon: Briefcase },
-        { id: "invoices",      label: "nav.invoices",    icon: Receipt },
-        { id: "zus",           label: "nav.zus",         icon: Calculator },
-        { id: "matching",      label: "nav.matching",    icon: Users },
-        { id: "bench",         label: "nav.bench",       icon: UserMinus },
-        { id: "calendar",     label: "nav.calendar",    icon: Clock },
-        { id: "contractgen",  label: "nav.contracts",   icon: FileSignature },
-        { id: "roi",          label: "nav.roi",         icon: DollarSign },
-        { id: "fines",        label: "nav.fines",       icon: Bell },
-        { id: "profile",       label: "nav.profile",     icon: User },
-      ];
+      return {
+        primary: [
+          { id: "home",       label: "nav.home",       icon: Home },
+          { id: "workers",    label: "nav.directory",  icon: Users },
+          { id: "alerts",     label: "nav.alerts",     icon: Bell },
+          { id: "immigration", label: "nav.permits",   icon: Stamp },
+        ],
+        overflow: [
+          { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
+          { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
+          { id: "gps",        label: "nav.gps",        icon: Navigation },
+          { id: "onboarding", label: "nav.onboarding", icon: ClipboardCheck },
+          { id: "crm",        label: "nav.crm",        icon: Briefcase },
+          { id: "invoices",   label: "nav.invoices",   icon: Receipt },
+          { id: "zus",        label: "nav.zus",        icon: Calculator },
+          { id: "matching",   label: "nav.matching",   icon: Users },
+          { id: "bench",      label: "nav.bench",      icon: UserMinus },
+          { id: "calendar",   label: "nav.calendar",   icon: Clock },
+          { id: "roi",        label: "nav.roi",        icon: DollarSign },
+          { id: "fines",      label: "nav.fines",      icon: Bell },
+          { id: "profile",    label: "nav.profile",    icon: User },
+        ],
+      };
     case "LegalHead":
-      return [
-        { id: "home",          label: "nav.home",        icon: Home },
-        { id: "workers",       label: "nav.directory",   icon: Users },
-        { id: "alerts",        label: "nav.alerts",      icon: Bell },
-        { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-        { id: "crm",           label: "nav.crm",         icon: Briefcase },
-        { id: "invoices",      label: "nav.invoices",    icon: Receipt },
-        { id: "zus",           label: "nav.zus",         icon: Calculator },
-        { id: "matching",      label: "nav.matching",    icon: Users },
-        { id: "bench",         label: "nav.bench",       icon: UserMinus },
-        { id: "calendar",     label: "nav.calendar",    icon: Clock },
-        { id: "contractgen",  label: "nav.contracts",   icon: FileSignature },
-        { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
-        { id: "profile",       label: "nav.profile",     icon: User },
-      ];
+      return {
+        primary: [
+          { id: "home",          label: "nav.home",      icon: Home },
+          { id: "workers",       label: "nav.directory", icon: Users },
+          { id: "alerts",        label: "nav.alerts",    icon: Bell },
+          { id: "immigration",   label: "nav.permits",   icon: Stamp },
+        ],
+        overflow: [
+          { id: "queue",         label: "nav.docQueue",   icon: ClipboardList },
+          { id: "onboarding",    label: "nav.onboarding", icon: ClipboardCheck },
+          { id: "crm",           label: "nav.crm",        icon: Briefcase },
+          { id: "invoices",      label: "nav.invoices",   icon: Receipt },
+          { id: "zus",           label: "nav.zus",        icon: Calculator },
+          { id: "matching",      label: "nav.matching",   icon: Users },
+          { id: "bench",         label: "nav.bench",      icon: UserMinus },
+          { id: "calendar",      label: "nav.calendar",   icon: Clock },
+          { id: "contractgen",   label: "nav.contracts",  icon: FileSignature },
+          { id: "profile",       label: "nav.profile",    icon: User },
+        ],
+      };
     case "TechOps":
-      return [
-        { id: "home",          label: "nav.directory",   icon: Users },
-        { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
-        { id: "sites",         label: "nav.sites",       icon: MapPin },
-        { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-        { id: "crm",           label: "nav.crm",         icon: Briefcase },
-        { id: "profile",       label: "nav.profile",     icon: User },
-      ];
+      return {
+        primary: [
+          { id: "home",          label: "nav.directory",   icon: Users },
+          { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
+          { id: "sites",         label: "nav.sites",       icon: MapPin },
+          { id: "immigration",   label: "nav.permits",     icon: Stamp },
+        ],
+        overflow: [
+          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+          { id: "crm",           label: "nav.crm",         icon: Briefcase },
+          { id: "profile",       label: "nav.profile",     icon: User },
+        ],
+      };
     case "Coordinator":
-      return [
-        { id: "home",          label: "nav.directory",   icon: Users },
-        { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
-        { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
-        { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-        { id: "profile",       label: "nav.profile",     icon: User },
-      ];
+      return {
+        primary: [
+          { id: "home",          label: "nav.directory",   icon: Users },
+          { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
+          { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
+          { id: "immigration",   label: "nav.permits",     icon: Stamp },
+        ],
+        overflow: [
+          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+          { id: "profile",       label: "nav.profile",     icon: User },
+        ],
+      };
     case "Professional":
-      return [
-        { id: "home",          label: "nav.home",        icon: Home },
-        { id: "docs",          label: "nav.myDocs",      icon: FileText },
-        { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-        { id: "gps",           label: "nav.gps",         icon: Navigation },
-        { id: "mood",          label: "nav.mood",        icon: SmilePlus },
-        { id: "advances",     label: "nav.advances",    icon: DollarSign },
-        { id: "signatures",   label: "nav.signatures",  icon: FileSignature },
-        { id: "leave",        label: "nav.leave",       icon: CalendarDays },
-        { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
-        { id: "profile",       label: "nav.profile",     icon: User },
-      ];
+      return {
+        primary: [
+          { id: "home",          label: "nav.home",        icon: Home },
+          { id: "docs",          label: "nav.myDocs",      icon: FileText },
+          { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
+          { id: "gps",           label: "nav.gps",         icon: Navigation },
+        ],
+        overflow: [
+          { id: "immigration",   label: "nav.permits",     icon: Stamp },
+          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
+          { id: "mood",          label: "nav.mood",        icon: SmilePlus },
+          { id: "advances",      label: "nav.advances",    icon: DollarSign },
+          { id: "signatures",    label: "nav.signatures",  icon: FileSignature },
+          { id: "profile",       label: "nav.profile",     icon: User },
+        ],
+      };
   }
 }
 
@@ -113,10 +133,12 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
   const { workers } = useWorkers();
   const { t } = useTranslation();
+  const [moreOpen, setMoreOpen] = useState(false);
   if (!role) return null;
 
-  const tabs = getTabsForRole(role);
+  const { primary, overflow } = getTabsForRole(role);
   const activeStyle = ACTIVE_COLORS[role];
+  const isOverflowActive = overflow.some(tab => tab.id === activeTab);
 
   const alertCount = workers.filter(
     w => w.status === "Non-Compliant" || w.status === "Missing Docs"
@@ -129,58 +151,90 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     return 0;
   }
 
-  return (
-    <div className="shrink-0 premium-nav relative z-50">
-      {/* Top highlight line */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-      <div className="flex items-center justify-around h-[68px] px-2">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          const badge = getBadge(tab.id);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={cn(
-                "relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90",
-                isActive ? activeStyle.text : "text-white/30 hover:text-white/50"
-              )}
-            >
-              {/* Active pill background */}
-              {isActive && (
-                <motion.div
-                  layoutId="navPill"
-                  className={cn("absolute inset-x-2 top-[8px] bottom-[8px] rounded-2xl", activeStyle.bg, activeStyle.glow)}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
+  const renderTab = (tab: Tab, isActive: boolean) => {
+    const Icon = tab.icon;
+    const badge = getBadge(tab.id);
+    return (
+      <button
+        key={tab.id}
+        onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
+        className={cn(
+          "relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90",
+          isActive ? activeStyle.text : "text-white/30 hover:text-white/50"
+        )}
+      >
+        {isActive && (
+          <motion.div
+            layoutId="navPill"
+            className={cn("absolute inset-x-2 top-[8px] bottom-[8px] rounded-2xl", activeStyle.bg, activeStyle.glow)}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        <div className="relative z-10 flex flex-col items-center gap-0.5">
+          <div className="relative">
+            <Icon className={cn("w-[22px] h-[22px] transition-all duration-200", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
+            {badge > 0 && (
+              <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white bg-red-500 shadow-lg shadow-red-500/30">{badge}</span>
+            )}
+          </div>
+          <span className={cn("text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase", isActive ? "font-black" : "font-semibold")}>{t(tab.label)}</span>
+        </div>
+      </button>
+    );
+  };
 
-              <div className="relative z-10 flex flex-col items-center gap-0.5">
-                <div className="relative">
-                  <Icon className={cn(
-                    "w-[22px] h-[22px] transition-all duration-200",
-                    isActive ? "stroke-[2.5px]" : "stroke-[1.5px]"
-                  )} />
-                  {badge > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white bg-red-500 shadow-lg shadow-red-500/30">
-                      {badge}
-                    </span>
-                  )}
-                </div>
-                <span className={cn(
-                  "text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase",
-                  isActive ? "font-black" : "font-semibold"
-                )}>
-                  {t(tab.label)}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+  return (
+    <>
+      {/* More menu overlay */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-[60]">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-[76px] left-3 right-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 z-[61] shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-white uppercase tracking-wider">More</span>
+              <button onClick={() => setMoreOpen(false)} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              {overflow.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
+                    className={cn("flex flex-col items-center gap-1.5 py-3 rounded-xl transition-colors", isActive ? cn(activeStyle.bg, activeStyle.text) : "text-slate-400 hover:text-white hover:bg-slate-800")}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider">{t(tab.label)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom nav bar */}
+      <div className="shrink-0 premium-nav relative z-50">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="flex items-center justify-around h-[68px] px-2">
+          {primary.map(tab => renderTab(tab, activeTab === tab.id))}
+          {/* More button */}
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className={cn(
+              "relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90",
+              isOverflowActive || moreOpen ? activeStyle.text : "text-white/30 hover:text-white/50"
+            )}
+          >
+            <div className="relative z-10 flex flex-col items-center gap-0.5">
+              <MoreHorizontal className={cn("w-[22px] h-[22px] transition-all duration-200", moreOpen ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
+              <span className={cn("text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase", moreOpen ? "font-black" : "font-semibold")}>More</span>
+            </div>
+          </button>
+        </div>
+        <div className="h-[env(safe-area-inset-bottom)]" />
       </div>
-      {/* Safe area padding for notched devices */}
-      <div className="h-[env(safe-area-inset-bottom)]" />
-    </div>
+    </>
   );
 }
