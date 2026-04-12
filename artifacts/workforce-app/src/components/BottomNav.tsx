@@ -30,6 +30,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration", label: "nav.permits",   icon: Stamp },
         ],
         overflow: [
+          { id: "docs",       label: "nav.myDocs",     icon: FileText },
           { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
           { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
           { id: "gps",        label: "nav.gps",        icon: Navigation },
@@ -49,6 +50,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration",   label: "nav.permits",   icon: Stamp },
         ],
         overflow: [
+          { id: "docs",          label: "nav.myDocs",     icon: FileText },
           { id: "queue",         label: "nav.docQueue",   icon: ClipboardList },
           { id: "onboarding",    label: "nav.onboarding", icon: ClipboardCheck },
           { id: "invoices",      label: "nav.invoices",   icon: Receipt },
@@ -66,6 +68,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration",   label: "nav.permits",     icon: Stamp },
         ],
         overflow: [
+          { id: "docs",          label: "nav.myDocs",      icon: FileText },
           { id: "zus",           label: "nav.zus",         icon: Calculator },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
           { id: "profile",       label: "nav.profile",     icon: User },
@@ -80,6 +83,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration",   label: "nav.permits",     icon: Stamp },
         ],
         overflow: [
+          { id: "docs",          label: "nav.myDocs",      icon: FileText },
           { id: "zus",           label: "nav.zus",         icon: Calculator },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
           { id: "profile",       label: "nav.profile",     icon: User },
