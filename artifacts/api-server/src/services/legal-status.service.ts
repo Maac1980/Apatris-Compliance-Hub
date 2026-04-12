@@ -42,6 +42,8 @@ export interface LegalSnapshot {
   warnings: string[];
   requiredActions: string[];
   snapshotCreatedAt: string;
+  /** Which approved document intake records contributed to this evaluation */
+  trustedInputs?: Array<{ intakeId: string; documentType: string; field: string; value: string }>;
 }
 
 export interface DeployabilityInput {
@@ -98,26 +100,42 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
     [workerId, tenantId]
   );
 
-  // Determine filing date: MOS submission > evidence > TRC case > permit flag
-  const trcSubmitted = !!mosCase?.mos_submission_date
+  // 6. Resolve approved structured document data (highest-trust human-approved facts)
+  const approvedDocs = await resolveApprovedDocumentFacts(workerId, tenantId);
+
+  // Determine filing date: approved doc > MOS submission > evidence > TRC case > permit flag
+  // Precedence: approved confirmed data → existing data → legacy fallback
+  const trcSubmitted = !!approvedDocs.filing_date
+    || !!mosCase?.mos_submission_date
     || permit?.trc_application_submitted === true
     || (trcCase?.status && trcCase.status !== "intake")
     || !!evidence?.filing_date;
-  const filingDate = mosCase?.mos_submission_date
+  const filingDate = approvedDocs.filing_date
+    ?? mosCase?.mos_submission_date
     ?? evidence?.filing_date
     ?? (trcSubmitted ? (trcCase?.start_date ?? trcCase?.created_at ?? permit?.created_at ?? null) : null);
+
+  // Expiry: approved doc > permit > worker fields
+  const resolvedExpiryStr = approvedDocs.expiry_date ?? permitExpiryStr;
 
   // Check for formal defect
   const formalDefect = trcCase?.status === "formal_defect";
 
+  // Employer/role consistency from approved documents
+  const sameEmployerFromDocs = approvedDocs.employer_name
+    ? (trcCase?.employer_name?.toLowerCase() === approvedDocs.employer_name.toLowerCase() || !trcCase?.employer_name)
+    : undefined;
+  const sameRoleFromDocs = approvedDocs.work_position ? true : undefined;
+
   // No permit at all
-  if (!permit && !worker.trc_expiry && !worker.work_permit_expiry) {
+  if (!permit && !worker.trc_expiry && !worker.work_permit_expiry && !approvedDocs.expiry_date) {
     return buildSnapshot(workerId, workerName, "PL", "NO_PERMIT", {
       legalBasis: "NO_LEGAL_BASIS",
       riskLevel: "CRITICAL",
       summary: `No immigration permits or TRC records found for ${workerName}.`,
       warnings: ["No work authorization on file."],
       requiredActions: ["Verify worker's right to work. Upload relevant permits."],
+      trustedInputs: approvedDocs._sources,
     });
   }
 
@@ -125,34 +143,35 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
   const { evaluateWorkerLegalProtection } = await import("./legal-engine.js");
   const engineResult = evaluateWorkerLegalProtection({
     filingDate,
-    permitExpiryDate: permitExpiryStr,
-    nationality: permit?.country?.toUpperCase(),
-    hasCukrApplication: false, // Would need a dedicated field — safe default
-    sameEmployer: trcCase?.employer_name ? true : undefined,
-    sameRole: undefined, // Unknown from current data
+    permitExpiryDate: resolvedExpiryStr,
+    nationality: permit?.country?.toUpperCase() ?? approvedDocs.nationality?.toUpperCase(),
+    hasCukrApplication: false,
+    sameEmployer: sameEmployerFromDocs ?? (trcCase?.employer_name ? true : undefined),
+    sameRole: sameRoleFromDocs,
     sameLocation: undefined,
     formalDefect,
     hadPriorRightToWork: permit?.status === "active" || trcSubmitted ? true : undefined,
   });
 
   // Map engine result to snapshot
-  const mappedStatus: LegalStatus = engineResult.status === "VALID" && permitExpiryStr
-    ? (Math.ceil((new Date(permitExpiryStr).getTime() - Date.now()) / 86_400_000) <= 60 ? "EXPIRING_SOON" : "VALID")
+  const mappedStatus: LegalStatus = engineResult.status === "VALID" && resolvedExpiryStr
+    ? (Math.ceil((new Date(resolvedExpiryStr).getTime() - Date.now()) / 86_400_000) <= 60 ? "EXPIRING_SOON" : "VALID")
     : engineResult.status as LegalStatus;
 
   return buildSnapshot(workerId, workerName, permit?.country ?? "PL", mappedStatus, {
     legalBasis: engineResult.legalBasis,
     riskLevel: engineResult.riskLevel,
-    permitExpiresAt: permitExpiryStr ? new Date(permitExpiryStr).toISOString() : null,
+    permitExpiresAt: resolvedExpiryStr ? new Date(resolvedExpiryStr).toISOString() : null,
     trcApplicationSubmitted: trcSubmitted,
-    sameEmployerFlag: trcCase?.employer_name ? true : false,
-    sameRoleFlag: false,
+    sameEmployerFlag: sameEmployerFromDocs ?? (trcCase?.employer_name ? true : false),
+    sameRoleFlag: sameRoleFromDocs ?? false,
     legalProtectionFlag: engineResult.status === "PROTECTED_PENDING",
     formalDefectStatus: formalDefect ? "formal_defect" : null,
     summary: engineResult.summary,
     conditions: engineResult.conditions,
     warnings: engineResult.warnings,
     requiredActions: engineResult.requiredActions,
+    trustedInputs: approvedDocs._sources,
   });
 }
 
@@ -227,4 +246,84 @@ function buildSnapshot(workerId: string, workerName: string, countryCode: string
     snapshotCreatedAt: new Date().toISOString(),
     ...overrides,
   };
+}
+
+// ═══ APPROVED DOCUMENT FACT RESOLVER ══════════════════════════════════════════
+//
+// Reads CONFIRMED document_intake rows for a worker and extracts
+// trusted legal facts from confirmed_fields_json.
+//
+// Precedence when multiple confirmed intakes exist:
+//   1. Most recently confirmed wins per field
+//   2. TRC-type intakes preferred for filing_date / expiry_date
+//   3. Null/empty confirmed values are ignored (not treated as "cleared")
+
+interface ApprovedFacts {
+  filing_date: string | null;
+  expiry_date: string | null;
+  employer_name: string | null;
+  work_position: string | null;
+  case_reference: string | null;
+  decision_outcome: string | null;
+  nationality: string | null;
+  passport_number: string | null;
+  _sources: Array<{ intakeId: string; documentType: string; field: string; value: string }>;
+}
+
+async function resolveApprovedDocumentFacts(workerId: string, tenantId: string): Promise<ApprovedFacts> {
+  const empty: ApprovedFacts = {
+    filing_date: null, expiry_date: null, employer_name: null, work_position: null,
+    case_reference: null, decision_outcome: null, nationality: null, passport_number: null,
+    _sources: [],
+  };
+
+  try {
+    // Get confirmed intakes for this worker, newest first
+    const rows = await query<any>(
+      `SELECT id, ai_classification, confirmed_fields_json, confirmed_at
+       FROM document_intake
+       WHERE tenant_id = $1
+         AND (confirmed_worker_id = $2 OR matched_worker_id = $2)
+         AND status = 'CONFIRMED'
+         AND confirmed_fields_json IS NOT NULL
+       ORDER BY confirmed_at DESC
+       LIMIT 10`,
+      [tenantId, workerId]
+    );
+
+    if (rows.length === 0) return empty;
+
+    const facts: ApprovedFacts = { ...empty };
+    const LEGAL_FIELDS = ["filing_date", "expiry_date", "employer_name", "work_position", "case_reference", "decision_outcome", "nationality", "passport_number"] as const;
+
+    for (const row of rows) {
+      let fields: Record<string, any>;
+      try {
+        fields = typeof row.confirmed_fields_json === "string"
+          ? JSON.parse(row.confirmed_fields_json)
+          : row.confirmed_fields_json ?? {};
+      } catch { continue; }
+
+      const docType = row.ai_classification ?? "UNKNOWN";
+
+      for (const key of LEGAL_FIELDS) {
+        if (facts[key] !== null) continue; // already resolved from a newer intake
+
+        const raw = fields[key];
+        const value = typeof raw === "object" && raw !== null ? raw.value : raw;
+        if (!value || value === "") continue;
+
+        // Date validation for date fields
+        if ((key === "filing_date" || key === "expiry_date") && isNaN(new Date(value).getTime())) continue;
+
+        (facts as any)[key] = String(value);
+        facts._sources.push({ intakeId: row.id, documentType: docType, field: key, value: String(value) });
+      }
+    }
+
+    return facts;
+  } catch (err) {
+    console.error("[LegalStatus] Approved document resolver failed:", err instanceof Error ? err.message : err);
+    return empty;
+  }
 }
