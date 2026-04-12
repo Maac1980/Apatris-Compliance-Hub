@@ -399,7 +399,8 @@ export function DashboardPage() {
   const accentGradient = ROLE_ACCENT_GRADIENT[role];
 
   return (
-    <div className="flex flex-col h-full bg-[#0c0c0e]">
+    <div className="app-screen">
+    <div className="app-container">
       {/* Premium Header */}
       <header className="premium-header shrink-0 sticky top-0 z-40 relative overflow-hidden">
         {/* Subtle role-colored accent glow at top */}
@@ -448,6 +449,7 @@ export function DashboardPage() {
       </main>
 
       <BottomNav activeTab={activeTab} onTabChange={navigateTab} />
+    </div>
     </div>
   );
 }

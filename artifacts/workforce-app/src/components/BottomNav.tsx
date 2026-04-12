@@ -176,33 +176,31 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <>
-      {/* More menu — bottom sheet sliding up from nav bar */}
+      {/* More menu — bottom sheet within app container */}
       {moreOpen && (
-        <div className="fixed inset-0 z-[60]" onClick={() => setMoreOpen(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-        </div>
-      )}
-      {moreOpen && (
-        <div className="fixed bottom-[68px] left-0 right-0 z-[61] bg-slate-900 border-t border-slate-700 shadow-[0_-8px_30px_rgba(0,0,0,0.5)]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-          <div className="px-4 pt-3 pb-2">
-            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3" />
-            {overflow.map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
-                  className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-0.5", isActive ? cn(activeStyle.bg, activeStyle.text, "font-bold") : "text-white/60 active:bg-white/5")}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">{t(tab.label)}</span>
-                  {isActive && <div className={cn("ml-auto w-2 h-2 rounded-full", BADGE_BG[role])} />}
-                </button>
-              );
-            })}
+        <>
+          <div className="absolute inset-0 bg-black/50 z-[60]" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-[68px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+            <div className="px-4 pt-3 pb-2">
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-3" />
+              {overflow.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
+                    className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-0.5", isActive ? cn(activeStyle.bg, activeStyle.text, "font-bold") : "text-white/60 active:bg-white/5")}
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm">{t(tab.label)}</span>
+                    {isActive && <div className={cn("ml-auto w-2 h-2 rounded-full", BADGE_BG[role])} />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Bottom nav bar */}
