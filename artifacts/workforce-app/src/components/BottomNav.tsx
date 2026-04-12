@@ -34,13 +34,8 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
           { id: "gps",        label: "nav.gps",        icon: Navigation },
           { id: "onboarding", label: "nav.onboarding", icon: ClipboardCheck },
-          { id: "crm",        label: "nav.crm",        icon: Briefcase },
           { id: "invoices",   label: "nav.invoices",   icon: Receipt },
           { id: "zus",        label: "nav.zus",        icon: Calculator },
-          { id: "matching",   label: "nav.matching",   icon: Users },
-          { id: "bench",      label: "nav.bench",      icon: UserMinus },
-          { id: "calendar",   label: "nav.calendar",   icon: Clock },
-          { id: "roi",        label: "nav.roi",        icon: DollarSign },
           { id: "fines",      label: "nav.fines",      icon: Bell },
           { id: "profile",    label: "nav.profile",    icon: User },
         ],
@@ -56,12 +51,8 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         overflow: [
           { id: "queue",         label: "nav.docQueue",   icon: ClipboardList },
           { id: "onboarding",    label: "nav.onboarding", icon: ClipboardCheck },
-          { id: "crm",           label: "nav.crm",        icon: Briefcase },
           { id: "invoices",      label: "nav.invoices",   icon: Receipt },
           { id: "zus",           label: "nav.zus",        icon: Calculator },
-          { id: "matching",      label: "nav.matching",   icon: Users },
-          { id: "bench",         label: "nav.bench",      icon: UserMinus },
-          { id: "calendar",      label: "nav.calendar",   icon: Clock },
           { id: "contractgen",   label: "nav.contracts",  icon: FileSignature },
           { id: "profile",       label: "nav.profile",    icon: User },
         ],
@@ -76,7 +67,6 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         ],
         overflow: [
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-          { id: "crm",           label: "nav.crm",         icon: Briefcase },
           { id: "profile",       label: "nav.profile",     icon: User },
         ],
       };
@@ -104,9 +94,8 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         overflow: [
           { id: "immigration",   label: "nav.permits",     icon: Stamp },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-          { id: "mood",          label: "nav.mood",        icon: SmilePlus },
           { id: "advances",      label: "nav.advances",    icon: DollarSign },
-          { id: "signatures",    label: "nav.signatures",  icon: FileSignature },
+          { id: "leave",         label: "nav.leave",       icon: Clock },
           { id: "profile",       label: "nav.profile",     icon: User },
         ],
       };
