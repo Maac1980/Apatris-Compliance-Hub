@@ -638,7 +638,7 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
       if (!intakeId) throw new Error("No intake record — extract a document first");
       const res = await fetch(`${BASE}api/v1/document-intelligence/approve`, {
         method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ intakeId, approvedFields }),
+        body: JSON.stringify({ intakeId, approvedFields, documentType: extraction?.document_type }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Approval failed");
@@ -668,6 +668,8 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
         onExtract={handleExtract}
         onApprove={handleApprove}
         loading={extractMutation.isPending}
+        approving={approveMutation.isPending}
+        approved={!!approveResult}
       />
 
       {extractError && (

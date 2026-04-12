@@ -69,6 +69,17 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
     }
 
     const userName = (req as any).user?.name ?? (req as any).user?.email ?? "unknown";
+    const docType = (req.body.documentType ?? "").toUpperCase();
+
+    // Pre-check intake status to return 409 on double approval instead of 500
+    const existing = await queryOne<any>(
+      "SELECT status FROM document_intake WHERE id = $1 AND tenant_id = $2",
+      [intakeId, req.tenantId!]
+    );
+    if (!existing) return res.status(404).json({ error: "Intake record not found" });
+    if (existing.status !== "PENDING_REVIEW") {
+      return res.status(409).json({ error: `Intake already ${existing.status}`, status: existing.status });
+    }
 
     // Update case linkage if provided and column exists
     if (caseId) {
@@ -80,26 +91,48 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       } catch { /* linked_case_id column may not exist on older schemas */ }
     }
 
-    // Determine which apply-actions are safe based on available data
+    // Build confirmed_fields with metadata preserved
+    const confirmedWithMeta: Record<string, any> = {};
+    for (const [key, value] of Object.entries(approvedFields)) {
+      confirmedWithMeta[key] = typeof value === "object" && value !== null
+        ? value  // already has {value, confidence, source}
+        : { value, confidence: 1.0, source: "manual" };
+    }
+
+    // Map extracted field names to confirmIntake's camelCase keys — DOCUMENT-TYPE-AWARE
+    const mapped: Record<string, any> = {};
+    for (const [key, val] of Object.entries(approvedFields)) {
+      const v = typeof val === "object" && val !== null ? (val as any).value : val;
+      if (v) mapped[key] = v;
+    }
+
     const applyActions: string[] = [];
     if (workerId) {
-      // Check if any expiry/identity fields are present in approved data
-      const expiryKeys = ["expiry_date", "passport_expiry", "trc_expiry", "work_permit_expiry", "bhp_expiry", "issue_date"];
-      const identityKeys = ["passport_number", "nationality", "date_of_birth"];
-      const hasExpiry = expiryKeys.some(k => approvedFields[k]);
-      const hasIdentity = identityKeys.some(k => approvedFields[k]);
+      // Expiry field mapping depends on document type
+      const EXPIRY_MAP: Record<string, Record<string, string>> = {
+        TRC:            { expiry_date: "trcExpiry", filing_date: "trcExpiry" },
+        WORK_PERMIT:    { expiry_date: "workPermitExpiry" },
+        PASSPORT:       { expiry_date: "passportExpiry" },
+        BHP:            { expiry_date: "bhpExpiry" },
+        CONTRACT:       { end_date: "contractEndDate" },
+        MEDICAL_CERT:   { expiry_date: "medicalExamExpiry" },
+        UDT_CERT:       { expiry_date: "udtCertExpiry" },
+      };
+      const typeMap = EXPIRY_MAP[docType] ?? {};
 
-      if (hasExpiry || hasIdentity) {
-        // Map extracted field names to the camelCase keys confirmIntake expects
-        const mapped: Record<string, any> = { ...approvedFields };
-        if (approvedFields.expiry_date) mapped.trcExpiry = approvedFields.expiry_date;
-        if (approvedFields.passport_number) mapped.passportNumber = approvedFields.passport_number;
-        if (approvedFields.nationality) mapped.nationality = approvedFields.nationality;
-        if (approvedFields.date_of_birth) mapped.dateOfBirth = approvedFields.date_of_birth;
-        // Replace approvedFields with mapped version for confirmIntake
-        Object.assign(approvedFields, mapped);
-        applyActions.push("UPDATE_EXPIRY_FIELD");
+      for (const [extractedKey, camelKey] of Object.entries(typeMap)) {
+        if (mapped[extractedKey]) mapped[camelKey] = mapped[extractedKey];
       }
+
+      // Identity fields (universal across document types)
+      if (mapped.passport_number) mapped.passportNumber = mapped.passport_number;
+      if (mapped.nationality) mapped.nationality = mapped.nationality;
+      if (mapped.date_of_birth) mapped.dateOfBirth = mapped.date_of_birth;
+
+      const hasUpdatable = Object.keys(typeMap).some(k => mapped[k]) ||
+        mapped.passportNumber || mapped.nationality || mapped.dateOfBirth;
+
+      if (hasUpdatable) applyActions.push("UPDATE_EXPIRY_FIELD");
     }
 
     const result = await confirmIntake(
@@ -107,9 +140,17 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       req.tenantId!,
       userName,
       workerId ?? "",
-      approvedFields,
+      mapped,
       applyActions,
     );
+
+    // Also persist the metadata-enriched version
+    try {
+      await execute(
+        "UPDATE document_intake SET confirmed_fields_json = $1 WHERE id = $2",
+        [JSON.stringify(confirmedWithMeta), intakeId]
+      );
+    } catch { /* non-critical — flat fields already saved by confirmIntake */ }
 
     // Audit log
     appendAuditLog({

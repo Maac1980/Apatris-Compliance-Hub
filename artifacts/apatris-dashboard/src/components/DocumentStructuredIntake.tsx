@@ -34,6 +34,10 @@ interface Props {
   onApprove?: (data: Record<string, string>) => void;
   /** Loading state from parent */
   loading?: boolean;
+  /** Whether approval is in progress (disables button) */
+  approving?: boolean;
+  /** Whether approval succeeded (shows confirmed state) */
+  approved?: boolean;
 }
 
 // ─── Confidence helpers ─────────────────────────────────────────────────────
@@ -91,11 +95,10 @@ const FIELD_LABELS: Record<string, string> = {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loading }: Props) {
+export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loading, approving, approved }: Props) {
   const [fileName, setFileName] = useState("");
   const [docType, setDocType] = useState("TRC");
   const [edits, setEdits] = useState<Record<string, string>>({});
-  const [approved, setApproved] = useState(false);
 
   // Upload trigger view
   if (!extraction) {
@@ -148,7 +151,6 @@ export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loa
     for (const [key, field] of fields) {
       data[key] = edits[key] !== undefined ? edits[key] : (field.value ?? "");
     }
-    setApproved(true);
     onApprove?.(data);
   };
 
@@ -229,12 +231,12 @@ export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loa
         </p>
         {approved ? (
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Approved
+            <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed
           </div>
         ) : (
-          <button onClick={handleApprove}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors">
-            <Shield className="w-3.5 h-3.5" /> Approve Data
+          <button onClick={handleApprove} disabled={approving}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+            {approving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Shield className="w-3.5 h-3.5" /> Approve Data</>}
           </button>
         )}
       </div>
