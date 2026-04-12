@@ -90,7 +90,12 @@ export default function ImmigrationSearch() {
   return (
     <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background">
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
+        {/* Back + Header */}
+        <div className="flex items-center mb-4">
+          <a href="/legal-immigration" className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors" title="Back">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+          </a>
+        </div>
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary mb-3">
             <Sparkles className="w-3 h-3" /> AI-Powered

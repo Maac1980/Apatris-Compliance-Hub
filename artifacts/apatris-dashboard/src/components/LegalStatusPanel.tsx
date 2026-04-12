@@ -12,6 +12,7 @@
  */
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ShieldCheck, Shield, AlertTriangle, XOctagon, HelpCircle,
   ChevronDown, ChevronUp, Info, FileCheck, GitBranch, CircleAlert, CircleMinus, Lightbulb,
@@ -98,9 +99,23 @@ const ORIGIN_LABELS: Record<string, string> = {
   worker_record: "Worker Profile",
 };
 
+// Polish translations for section headers
+const PL_LABELS: Record<string, string> = {
+  "Legal Basis": "Podstawa prawna", "Risk Level": "Poziom ryzyka", "Deployability": "Zdolnosc do pracy",
+  "Approved Document Inputs": "Zatwierdzone dane dokumentow", "Decision Trace": "Slad decyzji",
+  "Why this status?": "Dlaczego ten status?", "Reasons": "Powody", "Missing": "Brakujace", "Recommended": "Zalecane",
+  "Appeal Signal": "Sygnal odwolania", "Authority Draft Context": "Kontekst pisma urzedowego",
+  "Key Facts": "Kluczowe fakty", "Missing Documents": "Brakujace dokumenty",
+  "Worker": "Pracownik", "Employer": "Pracodawca", "Case Ref": "Nr sprawy", "Doc Type": "Typ dokumentu",
+  "Status": "Status", "Decision": "Decyzja", "Internal": "Wewnetrzne", "Worker-facing": "Dla pracownika",
+};
+
 // ═══ COMPONENT ══════════════════════════════════════════════════════════════
 
 export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: LegalStatusPanelProps) {
+  const { i18n } = useTranslation();
+  const isPl = i18n.language === "pl";
+  const L = (key: string) => isPl ? (PL_LABELS[key] ?? key) : key;
   const [audience, setAudience] = useState<ExplanationAudience>(defaultAudience);
   const [expanded, setExpanded] = useState(false);
 
@@ -139,16 +154,16 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
         {/* ── Key fields grid ──────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-2 text-[11px] mb-2">
           <div className="rounded bg-slate-900/60 px-2 py-1.5">
-            <div className="text-slate-500 mb-0.5">Legal Basis</div>
+            <div className="text-slate-500 mb-0.5">{L("Legal Basis")}</div>
             <div className="text-slate-200 font-medium">{basisLabel}</div>
           </div>
           <div className="rounded bg-slate-900/60 px-2 py-1.5">
-            <div className="text-slate-500 mb-0.5">Risk Level</div>
+            <div className="text-slate-500 mb-0.5">{L("Risk Level")}</div>
             <div className={`font-semibold ${riskCfg.color}`}>{riskCfg.label}</div>
           </div>
           {snapshot.deployability && (
             <div className="rounded bg-slate-900/60 px-2 py-1.5">
-              <div className="text-slate-500 mb-0.5">Deployability</div>
+              <div className="text-slate-500 mb-0.5">{L("Deployability")}</div>
               <div className={`font-semibold ${deployColor}`}>{snapshot.deployability}</div>
             </div>
           )}
@@ -170,7 +185,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
               audience === "internal" ? "bg-slate-700 text-slate-200" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            Internal
+            {L("Internal")}
           </button>
           <button
             onClick={() => setAudience("worker")}
@@ -178,7 +193,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
               audience === "worker" ? "bg-slate-700 text-slate-200" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            Worker-facing
+            {L("Worker-facing")}
           </button>
         </div>
       </div>
@@ -188,7 +203,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
         <div className="px-4 pb-2">
           <div className="flex items-center gap-1.5 mb-1.5">
             <FileCheck className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-wider">Approved Document Inputs</span>
+            <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-wider">{L("Approved Document Inputs")}</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(snapshot.trustedInputs ?? []).map((ti, i) => (
@@ -226,7 +241,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
         <div className="px-4 pb-2">
           <div className="flex items-center gap-1.5 mb-1.5">
             <GitBranch className="w-3 h-3 text-slate-400" />
-            <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">Decision Trace</span>
+            <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">{L("Decision Trace")}</span>
           </div>
           <div className="space-y-1">
             {(snapshot.decisionTrace ?? []).map((dt, i) => (
@@ -260,7 +275,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
       ) && (
         <div className="px-4 pb-2">
           <div className="rounded bg-red-500/5 border border-red-500/15 px-3 py-2.5 space-y-2">
-            <p className="text-[10px] font-bold text-red-400/90 uppercase tracking-wider">Why this status?</p>
+            <p className="text-[10px] font-bold text-red-400/90 uppercase tracking-wider">{L("Why this status?")}</p>
 
             {(snapshot.rejectionReasons?.length ?? 0) > 0 && (
               <div>
@@ -323,7 +338,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Scale className="w-3 h-3 text-purple-400" />
-                <span className="text-[10px] font-bold text-purple-400/90 uppercase tracking-wider">Appeal Signal</span>
+                <span className="text-[10px] font-bold text-purple-400/90 uppercase tracking-wider">{L("Appeal Signal")}</span>
               </div>
               {snapshot.appealUrgency && (
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
@@ -361,7 +376,7 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
           <div className="rounded bg-slate-800/50 border border-slate-700/40 px-3 py-2.5 space-y-2">
             <div className="flex items-center gap-1.5">
               <FileSignature className="w-3 h-3 text-slate-400" />
-              <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">Authority Draft Context</span>
+              <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">{L("Authority Draft Context")}</span>
             </div>
 
             {/* Identity row */}

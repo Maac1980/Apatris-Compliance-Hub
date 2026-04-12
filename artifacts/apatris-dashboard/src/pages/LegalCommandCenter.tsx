@@ -11,9 +11,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 import { authHeaders, BASE } from "@/lib/api";
 import { LegalStatusPanel } from "@/components/LegalStatusPanel";
+import { useLocation } from "wouter";
 import {
   Shield, Users, XOctagon, AlertTriangle, CheckCircle2, Loader2, Stamp,
-  Scale, FileSignature, Brain, ChevronRight, Radio, Zap, Search, BookOpen,
+  Scale, FileSignature, Brain, ChevronRight, Radio, Zap, Search, BookOpen, ArrowLeft,
 } from "lucide-react";
 
 // ═══ WORKER CLASSIFICATION (reused from Client View) ═══════════════════════
@@ -439,6 +440,9 @@ export default function LegalCommandCenter() {
     <div className="h-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden">
       {/* Header */}
       <div className="border-b border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <a href="/legal-immigration" className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors" title="Back to Legal Immigration">
+          <ArrowLeft className="w-4 h-4" />
+        </a>
         <div className="w-8 h-8 rounded-lg bg-[#C41E18]/10 border border-[#C41E18]/30 flex items-center justify-center">
           <Zap className="w-4 h-4 text-[#C41E18]" />
         </div>
