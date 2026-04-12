@@ -142,7 +142,7 @@ export default function LegalImmigrationCommand() {
     const t = p.get("tab");
     return TABS.some(tb => tb.key === t) ? (t as TabKey) : "overview";
   });
-  const [navOpen, setNavOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);
 
   // Update URL when tab changes
   React.useEffect(() => {

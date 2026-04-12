@@ -41,7 +41,7 @@ router.post("/legal-kb/articles", requireAuth, requireRole("Admin", "Executive",
 router.post("/legal-kb/query", requireAuth, async (req, res) => {
   try {
     const { question, language } = req.body as { question?: string; language?: string };
-    if (!question) return res.status(400).json({ error: "question required" });
+    if (!question?.trim()) return res.status(400).json({ error: "question required" });
 
     // Search knowledge base for relevant articles
     const searchTerms = question.toLowerCase().split(" ").filter(w => w.length > 3);

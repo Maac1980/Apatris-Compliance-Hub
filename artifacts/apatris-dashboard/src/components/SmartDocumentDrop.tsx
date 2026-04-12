@@ -62,13 +62,11 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
       const body: Record<string, string> = { name: result.extractedFields.workerName };
       if (result.extractedFields.pesel) body.pesel = result.extractedFields.pesel;
       const url = `${BASE}api/workers`;
-      console.log("[SmartDocDrop] Creating worker at:", url, body);
       const res = await fetch(url, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify(body),
       });
-      console.log("[SmartDocDrop] Response:", res.status, res.statusText);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any).error ?? `Create failed (${res.status})`);
@@ -76,7 +74,6 @@ export function SmartDocumentDrop({ onResult, onWorkerSelected, label, hint }: S
       const worker = await res.json();
       onWorkerSelected?.(worker.id, worker.name ?? result.extractedFields.workerName);
     } catch (err) {
-      console.error("[SmartDocDrop] Create error:", err);
       setError(err instanceof Error ? err.message : "Failed to create worker");
     } finally {
       setCreating(false);
