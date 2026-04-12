@@ -12,7 +12,7 @@ import { useLocation } from "wouter";
 import {
   Shield, Users, FileText, Gavel, Scale, Brain, Building2, Search,
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
-  Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock,
+  Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock, Gauge, Flame,
   PanelRightOpen, PanelRightClose, ExternalLink, Globe, BookOpen, ScanSearch,
 } from "lucide-react";
 
@@ -1216,6 +1216,16 @@ function ClientViewTab() {
     },
   });
 
+  // Deployability gauge
+  const { data: gaugeData } = useQuery({
+    queryKey: ["deployability-gauge"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/deployability/gauge`, { headers: authHeaders() });
+      if (!r.ok) return null;
+      return r.json();
+    },
+  });
+
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollToWorker = useCallback((id: string) => {
     cardRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1520,6 +1530,71 @@ function ClientViewTab() {
             </p>
           </div>
         </div>
+
+        {/* Deployability Gauge + Tonnage Capacity */}
+        {gaugeData && (
+          <div className="mt-3 space-y-3">
+            {/* Main gauge */}
+            <div className="bg-slate-800/40 border border-slate-700/30 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-[#C41E18]" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Site Deployability</span>
+                </div>
+                <span className={`text-2xl font-black ${gaugeData.clearPercentage >= 80 ? "text-emerald-400" : gaugeData.clearPercentage >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                  {gaugeData.clearPercentage}%
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {gaugeData.deployableWorkers} deployable · {gaugeData.atRiskWorkers} at risk · {gaugeData.blockedWorkers} blocked — of {gaugeData.totalWorkers} workers
+              </p>
+              {/* Progress bar */}
+              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex mt-2">
+                {gaugeData.deployableWorkers > 0 && <div className="h-full bg-emerald-500" style={{ width: `${(gaugeData.deployableWorkers / gaugeData.totalWorkers) * 100}%` }} />}
+                {gaugeData.atRiskWorkers > 0 && <div className="h-full bg-amber-500" style={{ width: `${(gaugeData.atRiskWorkers / gaugeData.totalWorkers) * 100}%` }} />}
+                {gaugeData.blockedWorkers > 0 && <div className="h-full bg-red-500" style={{ width: `${(gaugeData.blockedWorkers / gaugeData.totalWorkers) * 100}%` }} />}
+              </div>
+            </div>
+
+            {/* Capacity by specialization */}
+            {gaugeData.bySpecialization?.length > 0 && (
+              <div className="bg-slate-800/40 border border-slate-700/30 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Flame className="w-3.5 h-3.5 text-orange-400" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Welding Capacity by Specialization</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {gaugeData.bySpecialization.map((s: any) => (
+                    <div key={s.specialization} className="bg-slate-900/50 rounded px-2.5 py-1.5">
+                      <p className="text-[10px] font-bold text-white">{s.specialization}</p>
+                      <p className={`text-lg font-black ${s.blocked > 0 ? "text-red-400" : s.atRisk > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                        {s.deployable}/{s.total}
+                      </p>
+                      <p className="text-[9px] text-slate-500">
+                        {s.deployable} clear{s.atRisk > 0 ? ` · ${s.atRisk} risk` : ""}{s.blocked > 0 ? ` · ${s.blocked} blocked` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* MOS Signature Aging */}
+            {gaugeData.mosSignerAging?.length > 0 && (
+              <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg p-3">
+                <p className="text-[10px] font-bold text-amber-400/80 uppercase tracking-wider mb-1.5">MOS Signature Deadlines</p>
+                {gaugeData.mosSignerAging.map((m: any) => (
+                  <div key={m.workerId} className="flex items-center justify-between text-[10px] py-0.5">
+                    <span className="text-slate-300">{m.workerName}</span>
+                    <span className={`font-mono ${m.daysLeft <= 7 ? "text-red-400 font-bold" : "text-amber-400"}`}>
+                      {m.daysLeft}d left — {m.deadline}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {lastUpdated && (
           <p className="text-[10px] text-slate-600 mt-3 flex items-center gap-1.5">

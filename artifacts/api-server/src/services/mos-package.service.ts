@@ -60,8 +60,9 @@ export interface MOSPackage {
 const APATRIS_EMPLOYER = {
   name: "Apatris Sp. z o.o.",
   nip: "5252828706",
-  address: "Warsaw, Poland",
   regon: "525282870600000",
+  krs: "0001058153",
+  address: "ul. Chlodna 51, 00-867 Warszawa, Poland",
 };
 
 // ═══ PACKAGE GENERATOR ═════════════════════════════════════════════════════

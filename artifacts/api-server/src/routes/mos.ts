@@ -7,6 +7,7 @@ import {
 } from "../services/mos-engine.service.js";
 import { generateMOSPackage } from "../services/mos-package.service.js";
 import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
+import { calculateDeployabilityGauge } from "../services/deployability-gauge.service.js";
 
 const router = Router();
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
@@ -101,6 +102,16 @@ router.post("/workers/:id/mos-package", requireAuth, requireRole(...LEGAL_ROLES)
   } catch (err) {
     console.error("[MOS] Package generation failed:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: err instanceof Error ? err.message : "MOS package generation failed" });
+  }
+});
+
+// GET /api/deployability/gauge — site readiness report
+router.get("/deployability/gauge", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
+  try {
+    const report = await calculateDeployabilityGauge(req.tenantId!);
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Gauge calculation failed" });
   }
 });
 
