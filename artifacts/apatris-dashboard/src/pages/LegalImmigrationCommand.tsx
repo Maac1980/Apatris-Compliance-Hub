@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { authHeaders, BASE } from "@/lib/api";
 import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
+import { DocumentStructuredIntake } from "@/components/DocumentStructuredIntake";
 import {
   Shield, Users, FileText, Gavel, Scale, Brain, Building2, Search,
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
@@ -606,14 +607,61 @@ function CaseTable({ rows }: { rows: any[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function DocumentsTab({ documents, loading, search }: { documents: any[]; loading: boolean; search: string }) {
-  if (loading) return <Spinner />;
-  const filtered = search ? documents.filter((d: any) => ((d.workerName ?? d.worker_name ?? "").toLowerCase().includes(search) || (d.documentType ?? d.document_type ?? "").toLowerCase().includes(search))) : documents;
+  const [extraction, setExtraction] = useState<any>(null);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [approvedData, setApprovedData] = useState<Record<string, string> | null>(null);
 
+  const extractMutation = useMutation({
+    mutationFn: async ({ fileName, documentType }: { fileName: string; documentType: string }) => {
+      const res = await fetch(`${BASE}api/v1/document-intelligence/extract`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ fileName, documentType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Extraction failed");
+      return data;
+    },
+    onSuccess: (data) => { setExtraction(data); setExtractError(null); setApprovedData(null); },
+    onError: (err: any) => { setExtractError(err.message); setExtraction(null); },
+  });
+
+  const handleExtract = (fileName: string, documentType: string) => {
+    extractMutation.mutate({ fileName, documentType });
+  };
+
+  const handleApprove = (data: Record<string, string>) => {
+    setApprovedData(data);
+    // Future: POST approved data to persist into workers/trc_cases/documents tables
+  };
+
+  const filtered = search ? documents.filter((d: any) => ((d.workerName ?? d.worker_name ?? "").toLowerCase().includes(search) || (d.documentType ?? d.document_type ?? "").toLowerCase().includes(search))) : documents;
   const expired = filtered.filter((d: any) => d.status === "EXPIRED" || d.status === "expired");
   const critical = filtered.filter((d: any) => d.status === "RED" || d.status === "critical");
 
   return (
     <div className="space-y-4">
+      {/* Structured Document Intake */}
+      <DocumentStructuredIntake
+        extraction={extraction}
+        onExtract={handleExtract}
+        onApprove={handleApprove}
+        loading={extractMutation.isPending}
+      />
+
+      {extractError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+          <p className="text-xs text-red-400">Extraction failed: {extractError}</p>
+        </div>
+      )}
+
+      {approvedData && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="text-xs text-emerald-400">Data approved — {Object.keys(approvedData).length} fields ready for persistence</p>
+        </div>
+      )}
+
+      {/* Existing document list */}
       <SectionHeader title="Documents & Evidence" count={filtered.length} />
 
       {(expired.length > 0 || critical.length > 0) && (
@@ -625,7 +673,7 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
         </div>
       )}
 
-      {filtered.length === 0 ? <EmptyState message="No documents found" /> : (
+      {loading ? <Spinner /> : filtered.length === 0 ? <EmptyState message="No documents found" /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
