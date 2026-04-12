@@ -338,7 +338,7 @@ async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIEx
 
 // ═══ MULTI-SIGNAL WORKER MATCHING ═══════════════════════════════════════════
 
-async function matchWorkerMultiSignal(identity: ExtractedIdentity, tenantId: string): Promise<WorkerMatchResult> {
+export async function matchWorkerMultiSignal(identity: ExtractedIdentity, tenantId: string): Promise<WorkerMatchResult> {
   const signals: MatchSignal[] = [];
   const none: WorkerMatchResult = { workerId: null, workerName: null, confidence: 0, matchType: "NONE", signals: [], suggestions: [] };
 

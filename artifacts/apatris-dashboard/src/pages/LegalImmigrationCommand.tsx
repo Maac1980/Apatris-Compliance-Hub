@@ -638,6 +638,10 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
     onSuccess: (data) => {
       setExtraction(data);
       setIntakeId(data.intake_id ?? null);
+      // Auto-select suggested worker if confidence is high enough
+      if (data.suggested_worker?.workerId && data.suggested_worker.confidence >= 0.6 && !selectedWorkerId) {
+        setSelectedWorkerId(data.suggested_worker.workerId);
+      }
       setExtractError(null);
       setApproveResult(null);
       setApproveError(null);
@@ -679,8 +683,8 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
 
   return (
     <div className="space-y-4">
-      {/* Worker context selector */}
-      <div className="flex items-center gap-2">
+      {/* Worker context selector + auto-match suggestion */}
+      <div className="flex items-center gap-2 flex-wrap">
         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Link to Worker</label>
         <select value={selectedWorkerId} onChange={e => setSelectedWorkerId(e.target.value)}
           className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-300 max-w-xs">
@@ -688,6 +692,15 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
           {workers.map((w: any) => <option key={w.id} value={w.id}>{w.full_name}</option>)}
         </select>
         {selectedWorkerId && <span className="text-[9px] text-emerald-400 font-bold">Linked</span>}
+        {extraction?.suggested_worker && !selectedWorkerId && (
+          <button onClick={() => setSelectedWorkerId(extraction.suggested_worker.workerId)}
+            className="text-[10px] text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-2 py-0.5 hover:bg-blue-500/20 transition-colors">
+            Suggested: {extraction.suggested_worker.displayName} ({Math.round(extraction.suggested_worker.confidence * 100)}%)
+          </button>
+        )}
+        {extraction?.suggested_worker && selectedWorkerId === extraction.suggested_worker.workerId && (
+          <span className="text-[9px] text-blue-400 font-bold">Auto-matched</span>
+        )}
       </div>
 
       {/* Structured Document Intake */}

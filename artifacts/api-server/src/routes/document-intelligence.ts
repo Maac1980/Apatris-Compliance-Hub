@@ -14,7 +14,7 @@ import {
   getFieldDefinitions,
   type DocumentType,
 } from "../services/document-intelligence.service.js";
-import { confirmIntake } from "../services/document-intake.service.js";
+import { confirmIntake, matchWorkerMultiSignal } from "../services/document-intake.service.js";
 
 const router = Router();
 const VIEW = ["Admin", "Executive", "LegalHead", "TechOps", "Coordinator"];
@@ -49,13 +49,38 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
       mimeType: file?.mimetype,
     });
 
-    // Create document_intake row with real file metadata
+    // Worker auto-matching from extracted identity fields
+    const ef = result.extracted_fields;
+    const val = (key: string) => ef[key]?.value ?? null;
+    let workerMatch: { workerId: string | null; workerName: string | null; confidence: number; matchType: string; signals: any[]; suggestions: any[] } | null = null;
+
+    if (!workerId) {
+      // Only auto-match if user didn't already select a worker
+      try {
+        workerMatch = await matchWorkerMultiSignal({
+          fullName: val("full_name"),
+          passportNumber: val("passport_number"),
+          pesel: val("pesel"),
+          dateOfBirth: val("date_of_birth"),
+          nationality: val("nationality"),
+          issuingCountry: val("issuing_country"),
+        }, req.tenantId!);
+      } catch (err) {
+        console.error("[DocIntel] Worker matching failed:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    // Use explicit workerId if provided, otherwise use high-confidence match
+    const resolvedWorkerId = workerId ?? (workerMatch && workerMatch.confidence >= 0.6 ? workerMatch.workerId : null);
+
+    // Create document_intake row with real file metadata + match data
     const row = await queryOne<any>(
       `INSERT INTO document_intake (
         tenant_id, uploaded_by, file_name, mime_type, file_size,
         ai_classification, ai_extracted_json, ai_confidence,
-        matched_worker_id, linked_case_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING_REVIEW')
+        matched_worker_id, match_confidence, match_signals_json,
+        linked_case_id, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PENDING_REVIEW')
       RETURNING id, created_at`,
       [
         req.tenantId!,
@@ -66,7 +91,9 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
         result.document_type,
         JSON.stringify(result.extracted_fields),
         result.overall_confidence,
-        workerId ?? null,
+        resolvedWorkerId,
+        workerMatch?.confidence ?? null,
+        workerMatch ? JSON.stringify({ matchType: workerMatch.matchType, signals: workerMatch.signals, suggestions: workerMatch.suggestions }) : null,
         caseId ?? null,
       ]
     );
@@ -78,6 +105,14 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
       file_name: fileName,
       file_size: file?.size ?? null,
       mime_type: file?.mimetype ?? null,
+      suggested_worker: workerMatch && workerMatch.confidence >= 0.3 ? {
+        workerId: workerMatch.workerId,
+        displayName: workerMatch.workerName,
+        confidence: workerMatch.confidence,
+        matchType: workerMatch.matchType,
+        signals: workerMatch.signals,
+        suggestions: workerMatch.suggestions,
+      } : null,
     });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Extraction failed" });
