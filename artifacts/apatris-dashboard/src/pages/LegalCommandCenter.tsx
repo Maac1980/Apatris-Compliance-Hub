@@ -13,7 +13,7 @@ import { authHeaders, BASE } from "@/lib/api";
 import { LegalStatusPanel } from "@/components/LegalStatusPanel";
 import {
   Shield, Users, XOctagon, AlertTriangle, CheckCircle2, Loader2, Stamp,
-  Scale, FileSignature, Brain, ChevronRight, Radio, Zap, Search,
+  Scale, FileSignature, Brain, ChevronRight, Radio, Zap, Search, BookOpen,
 } from "lucide-react";
 
 // ═══ WORKER CLASSIFICATION (reused from Client View) ═══════════════════════
@@ -85,7 +85,7 @@ function useSSEStream(): TickerEvent[] {
 
 // ═══ TOOLKIT TABS ═══════════════════════════════════════════════════════════
 
-type ToolkitTab = "appeal" | "authority" | "reasoning";
+type ToolkitTab = "appeal" | "authority" | "reasoning" | "brief";
 
 function AppealDraftingTab({ snapshot }: { snapshot: any }) {
   const [draft, setDraft] = useState("");
@@ -202,6 +202,147 @@ function LegalReasoningTab({ snapshot }: { snapshot: any }) {
   );
 }
 
+// ═══ TAB 4: LEGAL BRIEF ══════════════════════════════════════════════════════
+
+const PRESET_QUESTIONS = [
+  { label: "Work permit status", q: "What is the current work permit status and what actions are needed?" },
+  { label: "TRC renewal steps", q: "What are the steps to renew a TRC (Temporary Residence Card) application?" },
+  { label: "Art. 108 eligibility", q: "Is this worker eligible for Art. 108 continuity protection?" },
+  { label: "Employer obligations", q: "What are the employer obligations for this worker under Polish law?" },
+  { label: "Penalty risks", q: "What fines or penalties could apply if compliance is not maintained?" },
+  { label: "Document checklist", q: "What documents are required for this worker's legal compliance?" },
+];
+
+function LegalBriefTab({ snapshot, workerName }: { snapshot: any; workerName: string }) {
+  const [answer, setAnswer] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeQ, setActiveQ] = useState<string | null>(null);
+
+  const askQuestion = useCallback(async (question: string) => {
+    setLoading(true);
+    setActiveQ(question);
+    setAnswer(null);
+    try {
+      const status = snapshot?.legalStatus ?? "unknown";
+      const missing = (snapshot?.missingRequirements ?? []).join(", ") || "none identified";
+      const contextQuery = `Regarding worker "${workerName}" (current status: ${status}, missing documents: ${missing}): ${question}`;
+
+      const res = await fetch(`${BASE}api/immigration/search`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ query: contextQuery, language: "en" }),
+      });
+      if (!res.ok) throw new Error("Search failed");
+      setAnswer(await res.json());
+    } catch {
+      setAnswer({ answer: "Failed to retrieve answer. Please try again.", decision: "CAUTION", confidence: 0 });
+    }
+    setLoading(false);
+  }, [snapshot, workerName]);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Legal Brief — Quick Q&A</p>
+
+      {/* Preset buttons */}
+      <div className="flex flex-wrap gap-1.5">
+        {PRESET_QUESTIONS.map((pq, i) => (
+          <button
+            key={i}
+            onClick={() => askQuestion(pq.q)}
+            disabled={loading}
+            className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors disabled:opacity-50 ${
+              activeQ === pq.q ? "bg-[#C41E18]/10 border-[#C41E18]/30 text-white" : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600"
+            }`}
+          >
+            {pq.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center gap-2 py-4 justify-center">
+          <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
+          <span className="text-xs text-slate-500">Searching legal knowledge...</span>
+        </div>
+      )}
+
+      {/* Answer */}
+      {answer && !loading && (
+        <div className="space-y-2.5">
+          {/* Decision badge + confidence */}
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+              answer.decision === "PROCEED" ? "bg-emerald-500/20 text-emerald-400" :
+              answer.decision === "BLOCKED" ? "bg-red-500/20 text-red-400" :
+              "bg-amber-500/20 text-amber-400"
+            }`}>{answer.decision ?? "CAUTION"}</span>
+            {typeof answer.confidence === "number" && (
+              <span className="text-[9px] text-slate-500">{Math.round(answer.confidence * 100)}% confidence</span>
+            )}
+          </div>
+
+          {/* Main answer */}
+          <p className="text-[11px] text-slate-300 leading-relaxed">{answer.answer}</p>
+
+          {/* Structured fields */}
+          {answer.legal_basis?.length > 0 && (
+            <div>
+              <p className="text-[9px] text-slate-500 uppercase font-bold mb-0.5">Legal Basis</p>
+              {answer.legal_basis.map((lb: any, i: number) => (
+                <p key={i} className="text-[10px] text-slate-400 ml-2">
+                  {typeof lb === "string" ? lb : `${lb.law ?? ""} ${lb.article ?? ""} — ${lb.explanation ?? ""}`}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {answer.risks?.length > 0 && (
+            <div>
+              <p className="text-[9px] text-red-400/70 uppercase font-bold mb-0.5">Risks</p>
+              {answer.risks.map((r: string, i: number) => (
+                <p key={i} className="text-[10px] text-red-300/80 ml-2">- {r}</p>
+              ))}
+            </div>
+          )}
+
+          {answer.deadlines?.length > 0 && (
+            <div>
+              <p className="text-[9px] text-amber-400/70 uppercase font-bold mb-0.5">Deadlines</p>
+              {answer.deadlines.map((d: string, i: number) => (
+                <p key={i} className="text-[10px] text-amber-300/80 ml-2">- {d}</p>
+              ))}
+            </div>
+          )}
+
+          {(answer.next_actions?.length > 0 || answer.actionItems?.length > 0) && (
+            <div>
+              <p className="text-[9px] text-blue-400/70 uppercase font-bold mb-0.5">Next Actions</p>
+              {(answer.next_actions ?? answer.actionItems ?? []).map((a: string, i: number) => (
+                <p key={i} className="text-[10px] text-blue-300/80 ml-2">{i + 1}. {a}</p>
+              ))}
+            </div>
+          )}
+
+          {answer.required_documents?.length > 0 && (
+            <div>
+              <p className="text-[9px] text-slate-500 uppercase font-bold mb-0.5">Required Documents</p>
+              {answer.required_documents.map((d: string, i: number) => (
+                <p key={i} className="text-[10px] text-slate-400 ml-2">- {d}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!answer && !loading && (
+        <p className="text-xs text-slate-600 py-4">Select a question above to get a worker-specific legal brief.</p>
+      )}
+    </div>
+  );
+}
+
 // ═══ MAIN COMPONENT ═════════════════════════════════════════════════════════
 
 export default function LegalCommandCenter() {
@@ -291,6 +432,7 @@ export default function LegalCommandCenter() {
     { key: "appeal", label: "Appeal Drafting", icon: Scale },
     { key: "authority", label: "Authority Letters", icon: FileSignature },
     { key: "reasoning", label: "Legal Reasoning", icon: Brain },
+    { key: "brief", label: "Legal Brief", icon: BookOpen },
   ];
 
   return (
@@ -425,6 +567,7 @@ export default function LegalCommandCenter() {
                   {toolkitTab === "appeal" && <AppealDraftingTab snapshot={legalStatus} />}
                   {toolkitTab === "authority" && <AuthorityLettersTab snapshot={legalStatus} />}
                   {toolkitTab === "reasoning" && <LegalReasoningTab snapshot={legalStatus} />}
+                  {toolkitTab === "brief" && <LegalBriefTab snapshot={legalStatus} workerName={legalStatus?.workerName ?? "Worker"} />}
                 </div>
               </div>
             </div>
