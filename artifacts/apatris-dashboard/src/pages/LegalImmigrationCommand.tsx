@@ -615,10 +615,21 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
   const [approveError, setApproveError] = useState<string | null>(null);
 
   const extractMutation = useMutation({
-    mutationFn: async ({ fileName, documentType }: { fileName: string; documentType: string }) => {
+    mutationFn: async ({ file, fileName, documentType }: { file: File | null; fileName: string; documentType: string }) => {
+      // Build multipart FormData for real file upload
+      const formData = new FormData();
+      if (file) formData.append("file", file);
+      else formData.append("fileName", fileName);
+      formData.append("documentType", documentType);
+      if (selectedWorkerId) formData.append("workerId", selectedWorkerId);
+
+      // Use auth headers WITHOUT Content-Type — browser sets multipart boundary
+      const token = localStorage.getItem("apatris_jwt");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(`${BASE}api/v1/document-intelligence/extract`, {
-        method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ fileName, documentType, workerId: selectedWorkerId || undefined }),
+        method: "POST", headers, body: formData,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
@@ -654,8 +665,8 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
     onError: (err: any) => { setApproveError(err.message); },
   });
 
-  const handleExtract = (fileName: string, documentType: string) => {
-    extractMutation.mutate({ fileName, documentType });
+  const handleExtract = (file: File | null, fileName: string, documentType: string) => {
+    extractMutation.mutate({ file, fileName, documentType });
   };
 
   const handleApprove = (data: Record<string, string>) => {

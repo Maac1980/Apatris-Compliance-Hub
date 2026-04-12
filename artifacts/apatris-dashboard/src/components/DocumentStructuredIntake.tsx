@@ -28,8 +28,8 @@ interface ExtractionResult {
 interface Props {
   /** If provided, renders this extraction. Otherwise shows the upload trigger. */
   extraction?: ExtractionResult | null;
-  /** Called when user triggers extraction */
-  onExtract?: (fileName: string, documentType: string) => void;
+  /** Called when user triggers extraction — with file if available */
+  onExtract?: (file: File | null, fileName: string, documentType: string) => void;
   /** Called when user approves the corrected data */
   onApprove?: (data: Record<string, string>) => void;
   /** Loading state from parent */
@@ -96,9 +96,16 @@ const FIELD_LABELS: Record<string, string> = {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loading, approving, approved }: Props) {
-  const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docType, setDocType] = useState("TRC");
   const [edits, setEdits] = useState<Record<string, string>>({});
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setSelectedFile(f);
+  };
+
+  const canExtract = !!(selectedFile) && !loading;
 
   // Upload trigger view
   if (!extraction) {
@@ -108,13 +115,16 @@ export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loa
           <FileText className="w-5 h-5 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Document Structured Intake</h3>
         </div>
-        <p className="text-xs text-muted-foreground">Upload a document to extract structured data for review.</p>
+        <p className="text-xs text-muted-foreground">Upload a document (PDF, JPEG, PNG) to extract structured data for review.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">File Name</label>
-            <input type="text" placeholder="e.g. trc_petrov_2025.pdf" value={fileName} onChange={e => setFileName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Document File</label>
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFileChange}
+              className="w-full text-xs text-slate-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-slate-300 hover:file:bg-slate-600" />
+            {selectedFile && (
+              <p className="text-[10px] text-slate-500">{selectedFile.name} · {(selectedFile.size / 1024).toFixed(0)} KB</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Document Type</label>
@@ -125,7 +135,7 @@ export function DocumentStructuredIntake({ extraction, onExtract, onApprove, loa
           </div>
         </div>
 
-        <button onClick={() => onExtract?.(fileName, docType)} disabled={!fileName.trim() || loading}
+        <button onClick={() => onExtract?.(selectedFile, selectedFile?.name ?? "", docType)} disabled={!canExtract}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors">
           {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extracting...</> : <><FileText className="w-3.5 h-3.5" /> Extract Document</>}
         </button>

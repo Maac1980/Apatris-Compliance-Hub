@@ -5,6 +5,7 @@
  */
 
 import { Router } from "express";
+import multer from "multer";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { execute, queryOne } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
@@ -17,29 +18,50 @@ import { confirmIntake } from "../services/document-intake.service.js";
 
 const router = Router();
 const VIEW = ["Admin", "Executive", "LegalHead", "TechOps", "Coordinator"];
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
 // POST /api/v1/document-intelligence/extract
-// Extracts structured fields AND creates a document_intake row for later confirmation.
-router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIEW), async (req, res) => {
+// Accepts real file upload (multipart) or JSON-only (backward compat).
+// Creates a document_intake row for later confirmation.
+router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIEW), upload.single("file"), async (req, res) => {
   try {
-    const { fileName, documentType, workerId, caseId } = req.body as {
-      fileName?: string; documentType?: DocumentType; workerId?: string; caseId?: string;
-    };
-    if (!fileName) return res.status(400).json({ error: "fileName is required" });
+    // Support both multipart (form fields) and JSON body
+    const documentType = (req.body.documentType ?? "") as DocumentType;
+    const workerId = req.body.workerId as string | undefined;
+    const caseId = req.body.caseId as string | undefined;
+    const file = req.file;
 
-    const result = extractStructuredDocumentData({ fileName, documentType });
+    // Determine filename: from uploaded file or from body field
+    const fileName = file?.originalname ?? req.body.fileName;
+    if (!fileName) return res.status(400).json({ error: "fileName or file upload is required" });
 
-    // Create document_intake row — bridges into existing confirmation pipeline
+    // Validate file type if real file was uploaded
+    if (file && !ALLOWED_MIME.includes(file.mimetype)) {
+      return res.status(400).json({ error: `Unsupported file type: ${file.mimetype}. Allowed: PDF, JPEG, PNG, WebP` });
+    }
+
+    // Run extraction — file buffer is threaded through for future real OCR
+    const result = extractStructuredDocumentData({
+      fileName,
+      documentType: documentType || undefined,
+      rawContent: file ? file.buffer.toString("base64") : undefined,
+    });
+
+    // Create document_intake row with real file metadata
     const row = await queryOne<any>(
       `INSERT INTO document_intake (
-        tenant_id, uploaded_by, file_name, ai_classification,
-        ai_extracted_json, ai_confidence, matched_worker_id, linked_case_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING_REVIEW')
+        tenant_id, uploaded_by, file_name, mime_type, file_size,
+        ai_classification, ai_extracted_json, ai_confidence,
+        matched_worker_id, linked_case_id, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING_REVIEW')
       RETURNING id, created_at`,
       [
         req.tenantId!,
         (req as any).user?.email ?? (req as any).user?.name ?? "unknown",
         fileName,
+        file?.mimetype ?? null,
+        file?.size ?? null,
         result.document_type,
         JSON.stringify(result.extracted_fields),
         result.overall_confidence,
@@ -48,7 +70,14 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
       ]
     );
 
-    res.json({ ...result, intake_id: row.id, intake_created_at: row.created_at });
+    res.json({
+      ...result,
+      intake_id: row.id,
+      intake_created_at: row.created_at,
+      file_name: fileName,
+      file_size: file?.size ?? null,
+      mime_type: file?.mimetype ?? null,
+    });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Extraction failed" });
   }
