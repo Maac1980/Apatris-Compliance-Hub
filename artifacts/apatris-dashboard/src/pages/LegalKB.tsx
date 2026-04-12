@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Send, ExternalLink } from "lucide-react";
 import { authHeaders, BASE } from "@/lib/api";
@@ -27,11 +27,20 @@ export default function LegalKB() {
     enabled: tab === "articles",
   });
 
-  const askMutation = useMutation({
-    mutationFn: async (q: string) => { const r = await fetch(`${import.meta.env.BASE_URL}api/legal-kb/query`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ question: q }) }); if (!r.ok) throw new Error("Failed"); return r.json(); },
-    onSuccess: (d) => setAnswer(d),
-    onError: (err) => toast({ description: err instanceof Error ? err.message : "Failed", variant: "destructive" }),
-  });
+  const [askLoading, setAskLoading] = useState(false);
+  const handleAsk = async () => {
+    if (!question.trim()) return;
+    setAskLoading(true);
+    setAnswer(null);
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/legal-kb/query`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ question }) });
+      if (!r.ok) throw new Error("Failed");
+      setAnswer(await r.json());
+    } catch (err) {
+      toast({ description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+    setAskLoading(false);
+  };
 
   const categories = catData?.categories ?? [];
   const articles = artData?.articles ?? [];
@@ -54,9 +63,9 @@ export default function LegalKB() {
             <textarea value={question} onChange={e => setQuestion(e.target.value)} rows={3}
               placeholder="Ask any question about Polish immigration law, work permits, ZUS, tax..."
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-500 resize-none mb-3 focus:outline-none focus:ring-1 focus:ring-[#C41E18]" />
-            <button onClick={() => askMutation.mutate(question)} disabled={!question.trim() || askMutation.isPending}
+            <button onClick={handleAsk} disabled={!question.trim() || askLoading}
               className="flex items-center gap-2 px-4 py-2 bg-[#C41E18] text-white rounded-lg text-sm font-bold hover:bg-[#a51914] disabled:opacity-50">
-              {askMutation.isPending ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Send className="w-4 h-4" />}
+              {askLoading ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Send className="w-4 h-4" />}
               Ask
             </button>
           </div>
