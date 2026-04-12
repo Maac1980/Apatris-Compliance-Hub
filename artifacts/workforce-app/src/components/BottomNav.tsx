@@ -66,6 +66,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
           { id: "immigration",   label: "nav.permits",     icon: Stamp },
         ],
         overflow: [
+          { id: "zus",           label: "nav.zus",         icon: Calculator },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
           { id: "profile",       label: "nav.profile",     icon: User },
         ],
