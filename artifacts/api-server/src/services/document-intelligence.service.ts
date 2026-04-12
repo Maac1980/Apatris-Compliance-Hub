@@ -7,7 +7,12 @@
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type DocumentType = "TRC" | "WORK_PERMIT" | "UPO" | "PASSPORT" | "BHP" | "CONTRACT" | "DECISION_LETTER" | "UNKNOWN";
+export type DocumentType =
+  | "TRC" | "WORK_PERMIT" | "UPO" | "PASSPORT" | "BHP" | "CONTRACT" | "DECISION_LETTER"
+  | "MEDICAL_EXAM" | "UDT_CERT" | "A1_CERTIFICATE" | "OSWIADCZENIE" | "POWER_OF_ATTORNEY"
+  | "ZUS_REGISTRATION" | "TAX_CERTIFICATE" | "LABOUR_MARKET_TEST" | "ACCOMMODATION_PROOF"
+  | "BANK_STATEMENT" | "INSURANCE_CERT" | "QUALIFICATION" | "PHOTO_ID" | "MOS_RECEIPT"
+  | "UNKNOWN";
 
 export interface ExtractedField {
   value: string | null;
@@ -104,6 +109,122 @@ const FIELD_DEFS: Record<DocumentType, { key: string; label: string; required: b
     { key: "appeal_deadline",     label: "Appeal Deadline",      required: false },
     { key: "decision_outcome",    label: "Outcome (positive/negative)", required: true },
     { key: "legal_basis",         label: "Legal Basis Cited",    required: false },
+  ],
+  MEDICAL_EXAM: [
+    { key: "full_name",           label: "Full Name",            required: true },
+    { key: "exam_date",           label: "Examination Date",     required: true },
+    { key: "expiry_date",         label: "Valid Until",           required: true },
+    { key: "doctor_name",         label: "Doctor Name",          required: false },
+    { key: "medical_center",      label: "Medical Center",       required: false },
+    { key: "fitness_status",      label: "Fitness for Work",     required: true },
+    { key: "restrictions",        label: "Restrictions",         required: false },
+  ],
+  UDT_CERT: [
+    { key: "full_name",           label: "Full Name",            required: true },
+    { key: "certificate_number",  label: "Certificate Number",   required: true },
+    { key: "equipment_type",      label: "Equipment Type",       required: true },
+    { key: "issue_date",          label: "Issue Date",           required: true },
+    { key: "expiry_date",         label: "Expiry Date",          required: true },
+    { key: "issuing_office",      label: "UDT Office",           required: false },
+  ],
+  A1_CERTIFICATE: [
+    { key: "full_name",           label: "Worker Name",          required: true },
+    { key: "pesel",               label: "PESEL",                required: true },
+    { key: "employer_name",       label: "Employer Name",        required: true },
+    { key: "sending_country",     label: "Sending Country",      required: true },
+    { key: "receiving_country",   label: "Receiving Country",    required: true },
+    { key: "start_date",          label: "Posting Start",        required: true },
+    { key: "end_date",            label: "Posting End",          required: true },
+    { key: "certificate_number",  label: "A1 Number",            required: false },
+    { key: "social_security_no",  label: "Social Security No.",  required: false },
+  ],
+  OSWIADCZENIE: [
+    { key: "full_name",           label: "Worker Name",          required: true },
+    { key: "passport_number",     label: "Passport Number",      required: true },
+    { key: "nationality",         label: "Nationality",          required: true },
+    { key: "employer_name",       label: "Employer Name",        required: true },
+    { key: "employer_nip",        label: "Employer NIP",         required: true },
+    { key: "work_position",       label: "Work Position",        required: true },
+    { key: "start_date",          label: "Start Date",           required: true },
+    { key: "end_date",            label: "End Date",             required: true },
+    { key: "pup_office",          label: "PUP Office",           required: false },
+    { key: "registration_number", label: "Registration Number",  required: false },
+  ],
+  POWER_OF_ATTORNEY: [
+    { key: "grantor_name",        label: "Grantor (Worker)",     required: true },
+    { key: "attorney_name",       label: "Attorney (Representative)", required: true },
+    { key: "scope",               label: "Scope of Authority",   required: true },
+    { key: "issue_date",          label: "Issue Date",           required: true },
+    { key: "expiry_date",         label: "Expiry Date",          required: false },
+    { key: "notary",              label: "Notary/Witness",       required: false },
+  ],
+  ZUS_REGISTRATION: [
+    { key: "full_name",           label: "Worker Name",          required: true },
+    { key: "pesel",               label: "PESEL",                required: true },
+    { key: "employer_nip",        label: "Employer NIP",         required: true },
+    { key: "registration_date",   label: "Registration Date",    required: true },
+    { key: "form_type",           label: "Form Type (ZUA/ZZA)",  required: true },
+    { key: "insurance_code",      label: "Insurance Code",       required: false },
+  ],
+  TAX_CERTIFICATE: [
+    { key: "full_name",           label: "Taxpayer Name",        required: true },
+    { key: "nip",                 label: "NIP",                  required: true },
+    { key: "tax_office",          label: "Tax Office",           required: true },
+    { key: "issue_date",          label: "Issue Date",           required: true },
+    { key: "valid_until",         label: "Valid Until",           required: false },
+    { key: "status",              label: "Status (clear/arrears)", required: true },
+  ],
+  LABOUR_MARKET_TEST: [
+    { key: "employer_name",       label: "Employer Name",        required: true },
+    { key: "work_position",       label: "Position",             required: true },
+    { key: "starost_office",      label: "Starost Office",       required: true },
+    { key: "issue_date",          label: "Issue Date",           required: true },
+    { key: "validity_period",     label: "Validity Period",      required: false },
+    { key: "result",              label: "Result (positive/negative)", required: true },
+  ],
+  ACCOMMODATION_PROOF: [
+    { key: "full_name",           label: "Resident Name",        required: true },
+    { key: "address",             label: "Address",              required: true },
+    { key: "registration_date",   label: "Registration Date",    required: true },
+    { key: "registration_type",   label: "Type (temporary/permanent)", required: false },
+    { key: "office",              label: "Issuing Office",       required: false },
+  ],
+  BANK_STATEMENT: [
+    { key: "account_holder",      label: "Account Holder",       required: true },
+    { key: "iban",                label: "IBAN",                 required: true },
+    { key: "bank_name",           label: "Bank Name",            required: false },
+    { key: "statement_date",      label: "Statement Date",       required: true },
+    { key: "balance",             label: "Balance (PLN)",        required: false },
+  ],
+  INSURANCE_CERT: [
+    { key: "full_name",           label: "Insured Name",         required: true },
+    { key: "policy_number",       label: "Policy Number",        required: true },
+    { key: "insurer",             label: "Insurance Company",    required: true },
+    { key: "coverage_type",       label: "Coverage Type",        required: true },
+    { key: "start_date",          label: "Start Date",           required: true },
+    { key: "end_date",            label: "End Date",             required: true },
+  ],
+  QUALIFICATION: [
+    { key: "full_name",           label: "Holder Name",          required: true },
+    { key: "qualification",       label: "Qualification/Diploma", required: true },
+    { key: "issuing_institution", label: "Institution",          required: true },
+    { key: "issue_date",          label: "Issue Date",           required: true },
+    { key: "certificate_number",  label: "Certificate Number",   required: false },
+    { key: "specialization",      label: "Specialization",       required: false },
+  ],
+  PHOTO_ID: [
+    { key: "full_name",           label: "Name on Photo",        required: true },
+    { key: "photo_date",          label: "Photo Date",           required: false },
+    { key: "dimensions",          label: "Dimensions",           required: false },
+    { key: "compliant",           label: "Meets Requirements",   required: true },
+  ],
+  MOS_RECEIPT: [
+    { key: "full_name",           label: "Applicant Name",       required: true },
+    { key: "submission_number",   label: "MOS Submission Number", required: true },
+    { key: "submission_date",     label: "Submission Date",      required: true },
+    { key: "application_type",    label: "Application Type",     required: true },
+    { key: "portal_reference",    label: "Portal Reference",     required: false },
+    { key: "status",              label: "Status",               required: true },
   ],
   UNKNOWN: [
     { key: "full_name",           label: "Full Name",            required: false },
@@ -348,5 +469,19 @@ function detectDocumentType(fileName: string): DocumentType {
   if (lower.includes("bhp") || lower.includes("safety"))                                         return "BHP";
   if (lower.includes("contract") || lower.includes("umowa"))                                     return "CONTRACT";
   if (lower.includes("decision") || lower.includes("decyzja"))                                   return "DECISION_LETTER";
+  if (lower.includes("medical") || lower.includes("badania") || lower.includes("lekarsk"))       return "MEDICAL_EXAM";
+  if (lower.includes("udt"))                                                                      return "UDT_CERT";
+  if (lower.includes("a1") || lower.includes("posted"))                                           return "A1_CERTIFICATE";
+  if (lower.includes("oswiadczenie") || lower.includes("declaration"))                            return "OSWIADCZENIE";
+  if (lower.includes("poa") || lower.includes("pelnomocnictwo") || lower.includes("attorney"))   return "POWER_OF_ATTORNEY";
+  if (lower.includes("zus") || lower.includes("zua") || lower.includes("zza"))                   return "ZUS_REGISTRATION";
+  if (lower.includes("tax") || lower.includes("us ") || lower.includes("niezaleganie"))          return "TAX_CERTIFICATE";
+  if (lower.includes("starost") || lower.includes("labour") || lower.includes("labor"))          return "LABOUR_MARKET_TEST";
+  if (lower.includes("zameldowanie") || lower.includes("accommodation") || lower.includes("meldunek")) return "ACCOMMODATION_PROOF";
+  if (lower.includes("bank") || lower.includes("statement") || lower.includes("wyciag"))         return "BANK_STATEMENT";
+  if (lower.includes("insurance") || lower.includes("ubezpieczeni"))                              return "INSURANCE_CERT";
+  if (lower.includes("diploma") || lower.includes("qualification") || lower.includes("certyfikat")) return "QUALIFICATION";
+  if (lower.includes("photo") || lower.includes("zdjecie") || lower.includes("35x45"))           return "PHOTO_ID";
+  if (lower.includes("mos") || lower.includes("submission receipt"))                              return "MOS_RECEIPT";
   return "UNKNOWN";
 }

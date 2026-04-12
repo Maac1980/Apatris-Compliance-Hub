@@ -61,7 +61,12 @@ function confLabel(c: number): string {
   return "MISSING";
 }
 
-const DOC_TYPES = ["TRC", "WORK_PERMIT", "UPO", "PASSPORT", "BHP", "CONTRACT", "DECISION_LETTER"] as const;
+const DOC_TYPES = [
+  "TRC", "WORK_PERMIT", "UPO", "PASSPORT", "BHP", "CONTRACT", "DECISION_LETTER",
+  "MEDICAL_EXAM", "UDT_CERT", "A1_CERTIFICATE", "OSWIADCZENIE", "POWER_OF_ATTORNEY",
+  "ZUS_REGISTRATION", "TAX_CERTIFICATE", "LABOUR_MARKET_TEST", "ACCOMMODATION_PROOF",
+  "BANK_STATEMENT", "INSURANCE_CERT", "QUALIFICATION", "PHOTO_ID", "MOS_RECEIPT",
+] as const;
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   TRC: "TRC / Karta Pobytu",
@@ -71,6 +76,20 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   BHP: "BHP Safety Certificate",
   CONTRACT: "Employment Contract",
   DECISION_LETTER: "Decision Letter",
+  MEDICAL_EXAM: "Medical Examination",
+  UDT_CERT: "UDT Certificate",
+  A1_CERTIFICATE: "A1 Certificate (Posted Workers)",
+  OSWIADCZENIE: "Oswiadczenie (Declaration)",
+  POWER_OF_ATTORNEY: "Power of Attorney",
+  ZUS_REGISTRATION: "ZUS Registration (ZUA/ZZA)",
+  TAX_CERTIFICATE: "Tax Certificate (US)",
+  LABOUR_MARKET_TEST: "Labour Market Test",
+  ACCOMMODATION_PROOF: "Accommodation (Zameldowanie)",
+  BANK_STATEMENT: "Bank Statement",
+  INSURANCE_CERT: "Insurance Certificate",
+  QUALIFICATION: "Qualification / Diploma",
+  PHOTO_ID: "Photo ID (35x45mm)",
+  MOS_RECEIPT: "MOS Submission Receipt",
   UNKNOWN: "Unknown Document",
 };
 
