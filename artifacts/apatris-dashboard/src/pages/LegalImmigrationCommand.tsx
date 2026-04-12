@@ -359,11 +359,11 @@ export default function LegalImmigrationCommand() {
       {/* Content + Left Nav */}
       <div className="max-w-[1600px] mx-auto flex">
         {/* ── Legal Navigation Panel (left side) ───────────────────────────── */}
-        <div className={`flex-shrink-0 border-r border-slate-800 bg-slate-900/40 transition-all overflow-hidden ${navOpen ? "w-56" : "w-10"}`}>
+        <div className={`flex-shrink-0 border-r border-slate-700 transition-all overflow-hidden ${navOpen ? "w-56 bg-slate-900/60" : "w-11 bg-slate-800/80"}`}>
           {/* Toggle button */}
           <button
             onClick={() => setNavOpen(!navOpen)}
-            className="w-full flex items-center justify-center py-3 text-slate-500 hover:text-white transition-colors border-b border-slate-800"
+            className={`w-full flex items-center justify-center py-3 transition-colors border-b border-slate-700 ${navOpen ? "text-slate-400 hover:text-white" : "text-[#C41E18] hover:text-white bg-slate-800/60"}`}
             title={navOpen ? "Collapse legal nav" : "Expand legal nav"}
           >
             {navOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
