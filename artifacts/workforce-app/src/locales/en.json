@@ -21,7 +21,8 @@
     "advances": "Advances",
     "leave": "Leave",
     "legalStatus": "Legal Status",
-    "schengen": "Schengen 90/180"
+    "schengen": "Schengen 90/180",
+    "upo": "UPO Certificates"
   },
   "login": {
     "selectDesignation": "Select your designation",

@@ -68,6 +68,7 @@ import { WellnessTab } from "@/components/tabs/WellnessTab";
 import { DeploymentTab } from "@/components/tabs/DeploymentTab";
 import { LegalStatusTab } from "@/components/tabs/LegalStatusTab";
 import { SchengenTab } from "@/components/tabs/SchengenTab";
+import { UpoTab } from "@/components/tabs/UpoTab";
 import { useTranslation } from "react-i18next";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
@@ -392,6 +393,10 @@ export function DashboardPage() {
       // ── SCHENGEN 90/180 ───────────────────────────────────────────────
       case "schengen":
         return <SchengenTab />;
+
+      // ── UPO CERTIFICATES ──────────────────────────────────────────────
+      case "upo":
+        return <UpoTab />;
 
       // ── CONTRACTS ─────────────────────────────────────────────────────────
       case "contracts":

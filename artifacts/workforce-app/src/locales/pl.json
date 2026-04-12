@@ -21,7 +21,8 @@
     "advances": "Zaliczki",
     "leave": "Urlop",
     "legalStatus": "Status prawny",
-    "schengen": "Schengen 90/180"
+    "schengen": "Schengen 90/180",
+    "upo": "Certyfikaty UPO"
   },
   "login": {
     "selectDesignation": "Wybierz stanowisko",

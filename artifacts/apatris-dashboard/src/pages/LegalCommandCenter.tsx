@@ -100,9 +100,25 @@ function downloadAsDoc(content: string, filename: string) {
 
 function AppealDraftingTab({ snapshot }: { snapshot: any }) {
   const [draft, setDraft] = useState("");
+  const [copied, setCopied] = useState(false);
   const basis = snapshot?.appealBasis ?? [];
   const deadline = snapshot?.appealDeadlineNote;
   const workerName = snapshot?.workerName ?? "Worker";
+
+  const getPlainText = () => {
+    const lines = [
+      `APPEAL DRAFT — ${workerName}`,
+      `Date: ${new Date().toLocaleDateString("en-GB")}`,
+      `Employer: Apatris Sp. z o.o., NIP: 5252828706`,
+      ``,
+      `APPEAL BASIS:`,
+      ...basis.map((b: string) => `- ${b}`),
+      deadline ? `\nDeadline Note: ${deadline}` : "",
+      `\nAPPEAL TEXT:`,
+      draft || "(Draft your appeal text in the textarea above)",
+    ].filter(Boolean);
+    return lines.join("\n");
+  };
 
   const exportAppeal = () => {
     const content = [
@@ -121,14 +137,23 @@ function AppealDraftingTab({ snapshot }: { snapshot: any }) {
     downloadAsDoc(content, `appeal-${workerName.replace(/\s+/g, "-").toLowerCase()}`);
   };
 
+  const copyAppeal = () => {
+    navigator.clipboard.writeText(getPlainText()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Appeal Drafting</p>
         {basis.length > 0 && (
-          <button onClick={exportAppeal} className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/20 text-purple-400 text-[9px] font-bold hover:bg-purple-500/30">
-            <Download className="w-3 h-3" /> Export .doc
-          </button>
+          <div className="flex gap-1">
+            <button onClick={copyAppeal} className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-300 text-[9px] font-bold hover:bg-slate-600">
+              <Copy className="w-3 h-3" /> {copied ? "Copied!" : "Copy"}
+            </button>
+            <button onClick={exportAppeal} className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/20 text-purple-400 text-[9px] font-bold hover:bg-purple-500/30">
+              <Download className="w-3 h-3" /> Export .doc
+            </button>
+          </div>
         )}
       </div>
       {basis.length > 0 ? (
@@ -156,8 +181,28 @@ function AppealDraftingTab({ snapshot }: { snapshot: any }) {
 }
 
 function AuthorityLettersTab({ snapshot }: { snapshot: any }) {
+  const [copied, setCopied] = useState(false);
   const ctx = snapshot?.authorityDraftContext;
   if (!ctx) return <p className="text-xs text-slate-600 py-4">No authority draft context available. This section activates for non-VALID legal statuses.</p>;
+
+  const getPlainText = () => {
+    const lines = [
+      `AUTHORITY LETTER — ${ctx.workerName ?? "Worker"}`,
+      `Date: ${new Date().toLocaleDateString("en-GB")}`,
+      `From: Apatris Sp. z o.o., NIP: 5252828706, ul. Chlodna 51, 00-867 Warszawa`,
+      ctx.caseReference ? `Case Reference: ${ctx.caseReference}` : "",
+      ``,
+      `Worker: ${ctx.workerName ?? "—"}`,
+      ctx.employerName ? `Employer: ${ctx.employerName}` : "",
+      `Current Status: ${ctx.currentStatus?.replace(/_/g, " ") ?? "—"}`,
+      ctx.decisionOutcome ? `Decision: ${ctx.decisionOutcome}` : "",
+      ctx.keyFacts?.length > 0 ? `\nKEY FACTS:\n${ctx.keyFacts.map((f: string) => `- ${f}`).join("\n")}` : "",
+      ctx.missingDocuments?.length > 0 ? `\nMISSING DOCUMENTS:\n${ctx.missingDocuments.map((d: string) => `- ${d}`).join("\n")}` : "",
+      ctx.nextAuthorityActions?.length > 0 ? `\nREQUIRED ACTIONS:\n${ctx.nextAuthorityActions.map((a: string, i: number) => `${i + 1}. ${a}`).join("\n")}` : "",
+      `\n\nSincerely,\n_________________________\nApatris Sp. z o.o.`,
+    ].filter(Boolean);
+    return lines.join("\n");
+  };
 
   const exportLetter = () => {
     const content = [
@@ -183,13 +228,22 @@ function AuthorityLettersTab({ snapshot }: { snapshot: any }) {
     downloadAsDoc(content, `authority-letter-${(ctx.workerName ?? "worker").replace(/\s+/g, "-").toLowerCase()}`);
   };
 
+  const copyLetter = () => {
+    navigator.clipboard.writeText(getPlainText()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Authority Letter Context</p>
-        <button onClick={exportLetter} className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-300 text-[9px] font-bold hover:bg-slate-600">
-          <Download className="w-3 h-3" /> Export .doc
-        </button>
+        <div className="flex gap-1">
+          <button onClick={copyLetter} className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-300 text-[9px] font-bold hover:bg-slate-600">
+            <Copy className="w-3 h-3" /> {copied ? "Copied!" : "Copy"}
+          </button>
+          <button onClick={exportLetter} className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-300 text-[9px] font-bold hover:bg-slate-600">
+            <Download className="w-3 h-3" /> Export .doc
+          </button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
         {ctx.workerName && <div><span className="text-slate-500">Worker:</span> <span className="text-white">{ctx.workerName}</span></div>}
@@ -282,6 +336,17 @@ function LegalBriefTab({ snapshot, workerName }: { snapshot: any; workerName: st
   const [answer, setAnswer] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeQ, setActiveQ] = useState<string | null>(null);
+  const [briefCopied, setBriefCopied] = useState(false);
+
+  const copyBrief = () => {
+    if (!answer) return;
+    const text = [
+      answer.answer,
+      answer.legal_basis?.length > 0 ? `\nLegal Basis:\n${answer.legal_basis.map((lb: any) => typeof lb === "string" ? `- ${lb}` : `- ${lb.law ?? ""} ${lb.article ?? ""}: ${lb.explanation ?? ""}`).join("\n")}` : "",
+      answer.next_actions?.length > 0 || answer.actionItems?.length > 0 ? `\nNext Actions:\n${(answer.next_actions ?? answer.actionItems ?? []).map((a: string, i: number) => `${i + 1}. ${a}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(text).then(() => { setBriefCopied(true); setTimeout(() => setBriefCopied(false), 2000); });
+  };
 
   const askQuestion = useCallback(async (question: string) => {
     setLoading(true);
@@ -336,7 +401,7 @@ function LegalBriefTab({ snapshot, workerName }: { snapshot: any; workerName: st
       {/* Answer */}
       {answer && !loading && (
         <div className="space-y-2.5">
-          {/* Decision badge + confidence */}
+          {/* Decision badge + confidence + copy */}
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
               answer.decision === "PROCEED" ? "bg-emerald-500/20 text-emerald-400" :
@@ -346,6 +411,9 @@ function LegalBriefTab({ snapshot, workerName }: { snapshot: any; workerName: st
             {typeof answer.confidence === "number" && (
               <span className="text-[9px] text-slate-500">{Math.round(answer.confidence * 100)}% confidence</span>
             )}
+            <button onClick={copyBrief} className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[9px] font-bold hover:bg-slate-600">
+              <Copy className="w-3 h-3" /> {briefCopied ? "Copied!" : "Copy"}
+            </button>
           </div>
 
           {/* Main answer */}

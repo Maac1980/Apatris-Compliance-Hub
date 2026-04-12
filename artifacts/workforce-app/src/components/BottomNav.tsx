@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus, MoreHorizontal, X, Shield, Globe } from "lucide-react";
+import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus, MoreHorizontal, X, Shield, Globe, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -32,6 +32,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         overflow: [
           { id: "legalstatus", label: "nav.legalStatus", icon: Shield },
           { id: "schengen",   label: "nav.schengen",   icon: Globe },
+          { id: "upo",        label: "nav.upo",        icon: FileCheck },
           { id: "docs",       label: "nav.myDocs",     icon: FileText },
           { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
           { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
@@ -54,6 +55,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         overflow: [
           { id: "legalstatus",   label: "nav.legalStatus", icon: Shield },
           { id: "schengen",      label: "nav.schengen",   icon: Globe },
+          { id: "upo",           label: "nav.upo",        icon: FileCheck },
           { id: "docs",          label: "nav.myDocs",     icon: FileText },
           { id: "queue",         label: "nav.docQueue",   icon: ClipboardList },
           { id: "onboarding",    label: "nav.onboarding", icon: ClipboardCheck },
@@ -89,6 +91,7 @@ function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
         overflow: [
           { id: "legalstatus",   label: "nav.legalStatus", icon: Shield },
           { id: "schengen",      label: "nav.schengen",    icon: Globe },
+          { id: "upo",           label: "nav.upo",         icon: FileCheck },
           { id: "docs",          label: "nav.myDocs",      icon: FileText },
           { id: "zus",           label: "nav.zus",         icon: Calculator },
           { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
