@@ -178,12 +178,12 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
       {moreOpen && (
         <div className="fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMoreOpen(false)} />
-          <div className="absolute bottom-[76px] left-3 right-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 z-[61] shadow-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">More</span>
-              <button onClick={() => setMoreOpen(false)} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <div className="absolute bottom-[76px] left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-3 z-[61] shadow-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-white/60 uppercase tracking-wider">More</span>
+              <button onClick={() => setMoreOpen(false)} className="p-1 text-slate-400 hover:text-white"><X className="w-3.5 h-3.5" /></button>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-0.5">
               {overflow.map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -191,10 +191,10 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   <button
                     key={tab.id}
                     onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
-                    className={cn("flex flex-col items-center gap-1.5 py-3 rounded-xl transition-colors", isActive ? cn(activeStyle.bg, activeStyle.text) : "text-slate-400 hover:text-white hover:bg-slate-800")}
+                    className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors", isActive ? cn(activeStyle.bg, activeStyle.text) : "text-slate-400 hover:text-white hover:bg-slate-800")}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider">{t(tab.label)}</span>
+                    <Icon className="w-4.5 h-4.5 flex-shrink-0" />
+                    <span className="text-xs font-semibold">{t(tab.label)}</span>
                   </button>
                 );
               })}
