@@ -549,6 +549,93 @@ function TRCTab({ cases, loading, filter }: { cases: any[]; loading: boolean; fi
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading: boolean; search: string }) {
+  const [mosLoading, setMosLoading] = useState<string | null>(null);
+  const [mosResult, setMosResult] = useState<Record<string, any>>({});
+
+  const generateMOS = useCallback(async (workerId: string) => {
+    setMosLoading(workerId);
+    try {
+      const res = await fetch(`${BASE}api/workers/${workerId}/mos-package`, {
+        method: "POST", headers: authHeaders(),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error((d as any).error ?? "Failed"); }
+      const pkg = await res.json();
+      setMosResult(prev => ({ ...prev, [workerId]: pkg }));
+    } catch (err) {
+      setMosResult(prev => ({ ...prev, [workerId]: { error: err instanceof Error ? err.message : "Failed" } }));
+    } finally {
+      setMosLoading(null);
+    }
+  }, []);
+
+  const downloadMOSPdf = useCallback(async (pkg: any) => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const norm = (s: string) => (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0142/g, "l").replace(/\u0141/g, "L");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(16); doc.setFont("helvetica", "bold");
+    doc.text("MOS 2026 Readiness Package", W / 2, 18, { align: "center" });
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(120);
+    doc.text(`${norm(pkg.workerName)} — Generated ${new Date(pkg.generatedAt).toLocaleDateString("en-GB")}`, W / 2, 24, { align: "center" });
+    doc.text(`Readiness: ${pkg.mosReadiness.toUpperCase()} | Status: ${pkg.legalStatus} | Risk: ${pkg.riskLevel}`, W / 2, 29, { align: "center" });
+
+    // Employer + Worker
+    doc.setDrawColor(200); doc.line(14, 33, W - 14, 33);
+    doc.setFontSize(10); doc.setTextColor(0); doc.setFont("helvetica", "bold");
+    doc.text("Annex 1 — Employer & Worker Data", 14, 39);
+
+    autoTable(doc, {
+      startY: 42, margin: { left: 14, right: 14 },
+      head: [["Field", "Value"]],
+      body: [
+        ["Employer", `${pkg.annex.employer.name} (NIP: ${pkg.annex.employer.nip})`],
+        ["Worker", norm(pkg.annex.worker.fullName)],
+        ["Nationality", pkg.annex.worker.nationality ?? "—"],
+        ["Passport", pkg.annex.worker.passportNumber ?? "—"],
+        ["Passport Expiry", pkg.annex.worker.passportExpiry ?? "—"],
+        ["PESEL", pkg.annex.worker.pesel ?? "—"],
+        ["Site", pkg.annex.worker.assignedSite ?? "—"],
+        ["Specialization", pkg.annex.worker.specialization ?? "—"],
+        ["Permit Type", pkg.annex.permit.type ?? "—"],
+        ["Permit Expiry", pkg.annex.permit.expiryDate ?? "—"],
+        ["TRC Filed", pkg.annex.permit.trcSubmitted ? `Yes${pkg.annex.permit.filingDate ? ` (${pkg.annex.permit.filingDate})` : ""}` : "No"],
+      ],
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 245, 248] },
+    });
+
+    let y = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(0);
+    doc.text("9-Point Strategy Brief", 14, y); y += 4;
+
+    autoTable(doc, {
+      startY: y, margin: { left: 14, right: 14 },
+      head: [["#", "Area", "Assessment", "Status"]],
+      body: pkg.strategyBrief.map((p: any) => [
+        String(p.id), p.title, norm(p.value), p.status.toUpperCase(),
+      ]),
+      styles: { fontSize: 7.5, cellPadding: 2 },
+      headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0: { cellWidth: 8 }, 3: { cellWidth: 18 } },
+      didParseCell: (data: any) => {
+        if (data.section === "body" && data.column.index === 3) {
+          const v = data.cell.raw;
+          data.cell.styles.textColor = v === "OK" ? [34, 197, 94] : v === "WARNING" ? [245, 158, 11] : v === "CRITICAL" ? [239, 68, 68] : [148, 163, 184];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+
+    doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
+    doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate Compliance", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+
+    doc.save(`mos-package-${norm(pkg.workerName).replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }, []);
+
   if (loading) return <Spinner />;
   const filtered = search ? workers.filter((w: any) => (w.full_name ?? "").toLowerCase().includes(search)) : workers;
 
@@ -560,29 +647,28 @@ function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Worker</th>
-              <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Nationality</th>
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">TRC Expiry</th>
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Passport</th>
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Work Permit</th>
-              <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Contract</th>
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Cases</th>
               <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">Status</th>
+              <th className="text-left px-3 py-2 text-slate-500 uppercase font-bold">MOS 2026</th>
             </tr></thead>
             <tbody>
               {filtered.map((w: any) => {
                 const trcDays = daysUntil(w.trc_expiry);
                 const blocked = (trcDays !== null && trcDays < 0) || (daysUntil(w.work_permit_expiry) !== null && daysUntil(w.work_permit_expiry)! < 0);
+                const pkg = mosResult[w.id];
+                const isGenerating = mosLoading === w.id;
                 return (
                   <tr key={w.id} className={`border-b border-slate-800 hover:bg-slate-800/40 ${blocked ? "bg-red-500/5" : ""}`}>
                     <td className="px-3 py-2.5">
                       <p className="text-white font-bold">{w.full_name}</p>
                       <p className="text-slate-500 text-[10px]">{w.specialization ?? ""}{w.assigned_site ? ` · ${w.assigned_site}` : ""}</p>
                     </td>
-                    <td className="px-3 py-2.5 text-slate-400">{w.nationality ?? "—"}</td>
                     <td className={`px-3 py-2.5 font-mono ${expiryZone(w.trc_expiry)}`}>{fmtDate(w.trc_expiry)}</td>
                     <td className={`px-3 py-2.5 font-mono ${expiryZone(w.passport_expiry)}`}>{fmtDate(w.passport_expiry)}</td>
                     <td className={`px-3 py-2.5 font-mono ${expiryZone(w.work_permit_expiry)}`}>{fmtDate(w.work_permit_expiry)}</td>
-                    <td className={`px-3 py-2.5 font-mono ${expiryZone(w.contract_end_date)}`}>{fmtDate(w.contract_end_date)}</td>
                     <td className="px-3 py-2.5">
                       {(w.active_cases > 0 || w.rejected_cases > 0) ? (
                         <div className="flex gap-1">
@@ -597,6 +683,27 @@ function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading
                         : trcDays !== null && trcDays <= 30
                           ? <Badge label="EXPIRING" style="bg-amber-500/20 text-amber-400 border-amber-500/30" />
                           : <Badge label="OK" style="bg-emerald-500/20 text-emerald-400 border-emerald-500/30" />}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {pkg && !pkg.error ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            label={pkg.mosReadiness === "ready" ? "READY" : pkg.mosReadiness === "needs_attention" ? "ATTENTION" : "BLOCKED"}
+                            style={pkg.mosReadiness === "ready" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : pkg.mosReadiness === "needs_attention" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"}
+                          />
+                          <button onClick={() => downloadMOSPdf(pkg)} className="text-[9px] text-blue-400 hover:text-blue-300 underline">PDF</button>
+                        </div>
+                      ) : pkg?.error ? (
+                        <span className="text-[10px] text-red-400">{pkg.error.slice(0, 20)}</span>
+                      ) : (
+                        <button
+                          onClick={() => generateMOS(w.id)}
+                          disabled={isGenerating}
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-[#C41E18]/10 border border-[#C41E18]/30 text-[10px] font-bold text-[#C41E18] hover:bg-[#C41E18]/20 transition-colors disabled:opacity-50"
+                        >
+                          {isGenerating ? <><Loader2 className="w-3 h-3 animate-spin" /> Generating...</> : <><Stamp className="w-3 h-3" /> Generate MOS</>}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

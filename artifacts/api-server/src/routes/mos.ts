@@ -5,6 +5,7 @@ import {
   checkPermanentResidenceEligibility, getCitizenshipRoadmap,
   type MOSStatus, type SignatureMethod,
 } from "../services/mos-engine.service.js";
+import { generateMOSPackage } from "../services/mos-package.service.js";
 
 const router = Router();
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
@@ -79,6 +80,18 @@ router.get("/v1/legal/citizenship-roadmap/:workerId", requireAuth, requireRole(.
     res.json(roadmap);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
+// POST /api/workers/:id/mos-package — generate MOS 2026 readiness package
+router.post("/workers/:id/mos-package", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
+  try {
+    const pkg = await generateMOSPackage(req.params.id, req.tenantId!);
+    console.log(`[MOS] Package generated for ${pkg.workerName} — readiness: ${pkg.mosReadiness}`);
+    res.json(pkg);
+  } catch (err) {
+    console.error("[MOS] Package generation failed:", err instanceof Error ? err.message : err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "MOS package generation failed" });
   }
 });
 

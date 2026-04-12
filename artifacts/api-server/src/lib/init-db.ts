@@ -3093,6 +3093,17 @@ export async function initializeDatabase(): Promise<void> {
     )`);
   } catch { /* already exists */ }
 
+  // ── MOS 2026 + worker metadata columns ──────────────────────────────
+  try {
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_status TEXT DEFAULT 'not_started'`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS mos_package_url TEXT`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS compliance_status TEXT DEFAULT 'unknown'`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS nationality TEXT`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS date_of_birth DATE`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS passport_number TEXT`);
+    await execute(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS oswiadczenie_expiry DATE`);
+  } catch { /* already exists */ }
+
   // ── Legal notifications ──────────────────────────────────────────────
   try {
     await execute(`CREATE TABLE IF NOT EXISTS legal_notifications (
