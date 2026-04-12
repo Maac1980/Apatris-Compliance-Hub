@@ -969,24 +969,24 @@ export default function Dashboard() {
                       <td className="px-4 py-4 overflow-hidden">
                         <StatusBadge status={worker.complianceStatus} />
                       </td>
-                      <td className="px-4 py-4 overflow-hidden">
+                      <td className="px-4 py-4">
                         <div className="flex justify-center items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); setPanelEditMode(true); setSelectedWorkerId(worker.id); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white border border-red-500 hover:border-red-400 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_10px_rgba(196,30,24,0.3)] whitespace-nowrap"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C41E18] hover:bg-[#a51914] text-white border border-red-400/50 text-xs font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(196,30,24,0.4)] whitespace-nowrap"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             <span>{t("table.viewEdit")}</span>
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDocMenuWorker(worker); }}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-700/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-500/40 text-blue-300 border border-blue-400/40 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap"
                             title="Dokumenty"
                           >
                             <FileText className="w-3.5 h-3.5" />
-                            <span className="hidden lg:inline">Dokumenty</span>
+                            <span className="hidden lg:inline">Docs</span>
                           </button>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => handleNotify(e, worker)}
                               className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
