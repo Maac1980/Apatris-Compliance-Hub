@@ -51,6 +51,8 @@ const LEGAL_NAV = [
   { id: "doc-approval",   label: "Document Approval",      icon: FileText,      route: "/document-approval" },
   { id: "trc-workspace",  label: "TRC Workspace",          icon: FileCheck,     route: "/trc-workspace" },
   { id: "schengen-calc",  label: "Schengen Calculator",    icon: Globe,         route: "/schengen-calculator" },
+  { id: "emp-signatures", label: "Employer Signatures",    icon: FileCheck,     route: "/employer-signatures" },
+  { id: "digital-safe",   label: "Digital Safe",            icon: Shield,        route: "/digital-safe" },
   { id: "imm-search",     label: "Immigration Search",     icon: ScanSearch,    route: "/immigration-search" },
   { id: "imm-permits",    label: "Immigration Permits",    icon: Stamp,         route: "/immigration" },
 

@@ -110,6 +110,8 @@ const LegalCommandCenter = lazy(() => import("@/pages/LegalCommandCenter"));
 const DocumentApproval = lazy(() => import("@/pages/DocumentApproval"));
 const TRCWorkspace = lazy(() => import("@/pages/TRCWorkspace"));
 const SchengenCalculator = lazy(() => import("@/pages/SchengenCalculator"));
+const EmployerSignatures = lazy(() => import("@/pages/EmployerSignatures"));
+const DigitalSafe = lazy(() => import("@/pages/DigitalSafe"));
 const SystemTest = lazy(() => import("@/pages/SystemTest"));
 const RegulatoryDashboard = lazy(() => import("@/pages/RegulatoryDashboard"));
 const RegulatorySourceRegistry = lazy(() => import("@/pages/RegulatorySourceRegistry"));
@@ -296,6 +298,12 @@ function Router() {
       </Route>
       <Route path="/schengen-calculator">
         {() => <ProtectedRoute component={SchengenCalculator} />}
+      </Route>
+      <Route path="/employer-signatures">
+        {() => <ProtectedRoute component={EmployerSignatures} />}
+      </Route>
+      <Route path="/digital-safe">
+        {() => <ProtectedRoute component={DigitalSafe} />}
       </Route>
       <Route path="/system-test">
         {() => <ProtectedRoute component={SystemTest} />}
