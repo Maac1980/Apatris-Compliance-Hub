@@ -24,6 +24,13 @@ export const JWT_SECRET =
 const JWT_EXPIRES_IN = "15m"; // 15 minutes (short-lived access token)
 
 const ALLOWED_USERS = [
+  // ── Apatris Admin Team ──
+  {
+    email: "manish@apatris.pl",
+    name: "Manish",
+    role: "Admin",
+    passEnvKey: "APATRIS_PASS_MANISH",
+  },
   {
     email: "manishshetty79@gmail.com",
     name: "Manish",
@@ -36,12 +43,18 @@ const ALLOWED_USERS = [
     role: "Admin",
     passEnvKey: "APATRIS_PASS_AKSHAY",
   },
+  // ── Local Dev ──
   {
     email: "admin@local.test",
     name: "Local Admin",
     role: "Admin",
     passEnvKey: "APATRIS_PASS_LOCAL",
   },
+  // ── Team Members (add new members below) ──
+  // To add a team member:
+  // 1. Add entry here with email, name, role, and passEnvKey
+  // 2. Set the env var (locally in .env, on Fly with: fly secrets set PASS_NAME=password)
+  // Roles: "Admin" | "Executive" | "LegalHead" | "TechOps" | "Coordinator"
 ];
 
 function getRequiredSecret(envKey: string): string | null {
