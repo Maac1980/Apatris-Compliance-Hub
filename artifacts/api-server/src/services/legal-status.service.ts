@@ -43,7 +43,46 @@ export interface LegalSnapshot {
   requiredActions: string[];
   snapshotCreatedAt: string;
   /** Which approved document intake records contributed to this evaluation */
-  trustedInputs?: Array<{ intakeId: string; documentType: string; field: string; value: string }>;
+  trustedInputs?: Array<{
+    intakeId: string;
+    documentType: string;
+    field: string;
+    value: string;
+    confidence: number;
+    source: "ai" | "manual";
+    approvedAt: string | null;
+  }>;
+  /** Decision trace: which fields influenced the decision and their origin */
+  decisionTrace?: Array<{
+    field: string;
+    value: string;
+    origin: "approved_document" | "immigration_permit" | "trc_case" | "legal_evidence" | "worker_record";
+    overriddenBy?: string;
+  }>;
+  /** Rejection intelligence — populated when status is not VALID */
+  rejectionReasons?: string[];
+  missingRequirements?: string[];
+  recommendedActions?: string[];
+  /** Appeals intelligence — populated when an appeal may be relevant */
+  appealRelevant?: boolean;
+  appealUrgency?: "low" | "medium" | "high" | null;
+  appealBasis?: string[];
+  appealDeadlineNote?: string | null;
+  /** Authority draft context — structured facts for future letter generation */
+  authorityDraftContext?: {
+    workerName: string | null;
+    employerName: string | null;
+    documentType: string | null;
+    caseReference: string | null;
+    currentStatus: string;
+    filingDate: string | null;
+    expiryDate: string | null;
+    decisionOutcome: string | null;
+    decisionDate: string | null;
+    keyFacts: string[];
+    missingDocuments: string[];
+    nextAuthorityActions: string[];
+  } | null;
 }
 
 export interface DeployabilityInput {
@@ -136,6 +175,9 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
       warnings: ["No work authorization on file."],
       requiredActions: ["Verify worker's right to work. Upload relevant permits."],
       trustedInputs: approvedDocs._sources,
+      rejectionReasons: ["No immigration permit, TRC, or work authorization record exists for this worker."],
+      missingRequirements: ["Valid work permit or TRC", "Passport with valid entry stamp or visa"],
+      recommendedActions: ["Verify the worker's right to work and upload their permit documents."],
     });
   }
 
@@ -194,6 +236,119 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
     }
   }
 
+  // Build decision trace — shows where each key fact came from
+  const decisionTrace: LegalSnapshot["decisionTrace"] = [];
+  // Filing date
+  if (filingDate) {
+    const origin = approvedDocs.filing_date ? "approved_document"
+      : mosCase?.mos_submission_date ? "legal_evidence"
+      : evidence?.filing_date ? "legal_evidence"
+      : trcCase ? "trc_case" : "immigration_permit";
+    const overriddenBy = approvedDocs.filing_date && (mosCase?.mos_submission_date || evidence?.filing_date || trcCase)
+      ? "approved_document" : undefined;
+    decisionTrace.push({ field: "filing_date", value: String(filingDate).slice(0, 10), origin: origin as any, overriddenBy });
+  }
+  // Expiry date
+  if (resolvedExpiryStr) {
+    const origin = approvedDocs.expiry_date ? "approved_document"
+      : permit?.expiry_date ? "immigration_permit" : "worker_record";
+    const overriddenBy = approvedDocs.expiry_date && permitExpiryStr ? "approved_document" : undefined;
+    decisionTrace.push({ field: "expiry_date", value: String(resolvedExpiryStr).slice(0, 10), origin: origin as any, overriddenBy });
+  }
+  // Employer
+  if (sameEmployerFromDocs !== undefined) {
+    decisionTrace.push({ field: "employer_match", value: sameEmployerFromDocs ? "same" : "different", origin: "approved_document" });
+  } else if (trcCase?.employer_name) {
+    decisionTrace.push({ field: "employer_match", value: "same", origin: "trc_case" });
+  }
+  // Decision outcome
+  if (normalizedOutcome) {
+    decisionTrace.push({ field: "decision_outcome", value: normalizedOutcome, origin: "approved_document" });
+  }
+
+  // ── Rejection Intelligence — explain non-VALID statuses deterministically ──
+  const rejectionReasons: string[] = [];
+  const missingRequirements: string[] = [];
+  const recommendedActions: string[] = [];
+
+  if (mappedStatus !== "VALID") {
+    // Expired permit without protection
+    if (mappedStatus === "EXPIRED_NOT_PROTECTED") {
+      if (resolvedExpiryStr) {
+        const daysExpired = Math.ceil((Date.now() - new Date(resolvedExpiryStr).getTime()) / 86_400_000);
+        rejectionReasons.push(`Permit expired ${daysExpired} day(s) ago (${String(resolvedExpiryStr).slice(0, 10)}).`);
+      } else {
+        rejectionReasons.push("Permit has expired.");
+      }
+      if (!trcSubmitted) {
+        rejectionReasons.push("No TRC application was filed before expiry — Art. 108 continuity protection does not apply.");
+        missingRequirements.push("TRC application filing proof (UPO or MoS confirmation)");
+        recommendedActions.push("File a new TRC application immediately if the worker is still in Poland.");
+      }
+      if (formalDefect) {
+        rejectionReasons.push("TRC application has a formal defect — legal protection is suspended until corrected.");
+        recommendedActions.push("Correct the formal defect and resubmit the required documents to the voivodeship office.");
+      }
+    }
+
+    // Review required — insufficient data
+    if (mappedStatus === "REVIEW_REQUIRED") {
+      if (!resolvedExpiryStr && !permit) {
+        missingRequirements.push("Immigration permit record (TRC, work permit, or visa)");
+        recommendedActions.push("Upload the worker's current permit or TRC to the system.");
+      }
+      if (!filingDate && !trcSubmitted) {
+        missingRequirements.push("TRC application filing date");
+        recommendedActions.push("Upload TRC application proof (UPO filing confirmation) to establish filing date.");
+      }
+      if (normalizedOutcome === "REJECTED") {
+        rejectionReasons.push("A decision letter confirms this application was rejected.");
+        recommendedActions.push("File an appeal within 14 days of the decision or submit a new application.");
+      }
+      if (missingRequirements.length === 0 && rejectionReasons.length === 0) {
+        rejectionReasons.push("Insufficient documentation to determine legal status.");
+        recommendedActions.push("Upload relevant work authorization documents for review.");
+      }
+    }
+
+    // No permit at all
+    if (mappedStatus === "NO_PERMIT") {
+      rejectionReasons.push("No immigration permit, TRC, or work authorization record exists for this worker.");
+      missingRequirements.push("Valid work permit or TRC");
+      missingRequirements.push("Passport with valid entry stamp or visa");
+      recommendedActions.push("Verify the worker's right to work and upload their permit documents.");
+    }
+
+    // Expiring soon — not blocked but at risk
+    if (mappedStatus === "EXPIRING_SOON") {
+      if (resolvedExpiryStr) {
+        const daysLeft = Math.ceil((new Date(resolvedExpiryStr).getTime() - Date.now()) / 86_400_000);
+        rejectionReasons.push(`Permit expires in ${daysLeft} day(s) (${String(resolvedExpiryStr).slice(0, 10)}).`);
+      }
+      if (!trcSubmitted) {
+        missingRequirements.push("TRC renewal application (must be filed before expiry for Art. 108 protection)");
+        recommendedActions.push("File TRC renewal application before permit expiry to maintain legal continuity.");
+      } else {
+        recommendedActions.push("TRC application is filed — monitor for voivodeship decision.");
+      }
+    }
+
+    // Protected pending — explain conditions
+    if (mappedStatus === "PROTECTED_PENDING") {
+      if (sameEmployerFromDocs === false) {
+        rejectionReasons.push("Employer on the TRC application does not match the current employer — Art. 108 protection may not apply.");
+        recommendedActions.push("Verify employer continuity or update the TRC application.");
+      }
+      if (formalDefect) {
+        rejectionReasons.push("TRC application has a formal defect — protection is conditional on correction.");
+        missingRequirements.push("Formal defect correction documents");
+        recommendedActions.push("Submit correction documents to the voivodeship office within the deadline.");
+      }
+    }
+  }
+
+  const appealResult = deriveAppealIntelligence(mappedStatus, normalizedOutcome, formalDefect, approvedDocs);
+
   return buildSnapshot(workerId, workerName, permit?.country ?? "PL", mappedStatus, {
     legalBasis: engineResult.legalBasis,
     riskLevel: resolvedRisk,
@@ -210,7 +365,135 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
     warnings: [...engineResult.warnings, ...extraWarnings],
     requiredActions: engineResult.requiredActions,
     trustedInputs: approvedDocs._sources,
+    decisionTrace,
+    ...(mappedStatus !== "VALID" ? { rejectionReasons, missingRequirements, recommendedActions } : {}),
+    ...appealResult,
+    authorityDraftContext: buildAuthorityDraftContext(
+      mappedStatus, workerName, approvedDocs, normalizedOutcome,
+      filingDate, resolvedExpiryStr,
+      sameEmployerFromDocs, sameRoleFromDocs,
+      missingRequirements, recommendedActions, appealResult.appealBasis ?? [],
+    ),
   });
+}
+
+// ═══ AUTHORITY DRAFT CONTEXT ════════════════════════════════════════════════
+
+function buildAuthorityDraftContext(
+  status: LegalStatus,
+  workerName: string,
+  approvedDocs: ApprovedFacts,
+  normalizedOutcome: string | null,
+  filingDate: string | null,
+  expiryDate: string | null,
+  sameEmployer: boolean | undefined,
+  sameRole: boolean | undefined,
+  missingRequirements: string[],
+  recommendedActions: string[],
+  appealBasis: string[],
+): LegalSnapshot["authorityDraftContext"] {
+  // Only populate for non-VALID statuses
+  if (status === "VALID") return null;
+
+  // Determine the dominant document type from approved sources
+  const docTypes = approvedDocs._sources.map(s => s.documentType);
+  const documentType = docTypes.length > 0
+    ? docTypes.sort((a, b) => docTypes.filter(d => d === b).length - docTypes.filter(d => d === a).length)[0]
+    : null;
+
+  // Build key facts from strongest signals
+  const keyFacts: string[] = [];
+  if (filingDate) keyFacts.push(`TRC application filed on ${String(filingDate).slice(0, 10)}.`);
+  if (expiryDate) {
+    const expired = new Date(expiryDate).getTime() < Date.now();
+    keyFacts.push(`Permit ${expired ? "expired" : "expires"} on ${String(expiryDate).slice(0, 10)}.`);
+  }
+  if (sameEmployer === true) keyFacts.push("Employer continuity confirmed — same employer as TRC application.");
+  if (sameEmployer === false) keyFacts.push("Employer mismatch — current employer differs from TRC application.");
+  if (sameRole === true) keyFacts.push("Role continuity confirmed.");
+  if (normalizedOutcome) keyFacts.push(`Decision outcome: ${normalizedOutcome}.`);
+  if (approvedDocs.case_reference) keyFacts.push(`Case reference: ${approvedDocs.case_reference}.`);
+  if (approvedDocs.nationality) keyFacts.push(`Worker nationality: ${approvedDocs.nationality}.`);
+
+  // Merge recommended + appeal basis into next authority actions (deduplicated)
+  const nextAuthorityActions: string[] = [];
+  const seen = new Set<string>();
+  for (const a of [...recommendedActions, ...appealBasis]) {
+    const key = a.toLowerCase().slice(0, 40);
+    if (!seen.has(key)) { seen.add(key); nextAuthorityActions.push(a); }
+  }
+
+  // Find decision date from approved sources
+  const decisionDateSource = approvedDocs._sources.find(s => s.field === "decision_outcome");
+  const decisionDate = decisionDateSource?.approvedAt?.slice(0, 10) ?? null;
+
+  return {
+    workerName,
+    employerName: approvedDocs.employer_name,
+    documentType,
+    caseReference: approvedDocs.case_reference,
+    currentStatus: status,
+    filingDate: filingDate ? String(filingDate).slice(0, 10) : null,
+    expiryDate: expiryDate ? String(expiryDate).slice(0, 10) : null,
+    decisionOutcome: normalizedOutcome,
+    decisionDate,
+    keyFacts,
+    missingDocuments: missingRequirements,
+    nextAuthorityActions,
+  };
+}
+
+// ═══ APPEAL INTELLIGENCE ════════════════════════════════════════════════════
+
+function deriveAppealIntelligence(
+  status: LegalStatus,
+  normalizedOutcome: string | null,
+  formalDefect: boolean,
+  approvedDocs: ApprovedFacts,
+): Pick<LegalSnapshot, "appealRelevant" | "appealUrgency" | "appealBasis" | "appealDeadlineNote"> {
+  const none = { appealRelevant: false, appealUrgency: null, appealBasis: undefined, appealDeadlineNote: null } as const;
+
+  // VALID or PROTECTED_PENDING — no appeal needed
+  if (status === "VALID" || status === "PROTECTED_PENDING") return none;
+
+  // Rejection decision exists — appeal is relevant
+  if (normalizedOutcome === "REJECTED") {
+    const basis: string[] = [
+      "Review refusal grounds stated in the decision letter.",
+      "Check if filing continuity / Art. 108 protection was ignored in the assessment.",
+      "Check employer / role continuity evidence — ensure it was presented.",
+    ];
+    if (formalDefect) {
+      basis.push("Verify whether formal defect was properly notified and deadline was reasonable.");
+    }
+    if (approvedDocs.employer_name) {
+      basis.push(`Employer on file (${approvedDocs.employer_name}) — confirm it matches the TRC application.`);
+    }
+
+    let deadlineNote: string | null = null;
+    const decisionDate = approvedDocs._sources.find(s => s.field === "decision_outcome")?.approvedAt
+      ?? approvedDocs._sources.find(s => s.field === "filing_date")?.approvedAt;
+    if (decisionDate) {
+      deadlineNote = `Appeal deadline typically 14 days from decision service date. Decision recorded: ${new Date(decisionDate).toLocaleDateString("en-GB")}. Verify exact service date.`;
+    } else {
+      deadlineNote = "Appeal deadline is typically 14 days from the date the decision was served — verify exact service date.";
+    }
+
+    return { appealRelevant: true, appealUrgency: "high", appealBasis: basis, appealDeadlineNote: deadlineNote };
+  }
+
+  // EXPIRED_NOT_PROTECTED — appeal only if there's a contradictory signal
+  // (e.g., filing was done but not recognized). Without a rejection decision, no appeal.
+  if (status === "EXPIRED_NOT_PROTECTED") return none;
+
+  // REVIEW_REQUIRED — no appeal unless rejection decision exists (handled above)
+  if (status === "REVIEW_REQUIRED") return none;
+
+  // EXPIRING_SOON — no appeal, this is a proactive status
+  if (status === "EXPIRING_SOON") return none;
+
+  // NO_PERMIT — no appeal relevant
+  return none;
 }
 
 // ═══ REFRESH (persist snapshot) ═════════════════════════════════════════════
@@ -338,7 +621,15 @@ interface ApprovedFacts {
   decision_outcome: string | null;
   nationality: string | null;
   passport_number: string | null;
-  _sources: Array<{ intakeId: string; documentType: string; field: string; value: string }>;
+  _sources: Array<{
+    intakeId: string;
+    documentType: string;
+    field: string;
+    value: string;
+    confidence: number;
+    source: "ai" | "manual";
+    approvedAt: string | null;
+  }>;
 }
 
 async function resolveApprovedDocumentFacts(workerId: string, tenantId: string): Promise<ApprovedFacts> {
@@ -388,7 +679,16 @@ async function resolveApprovedDocumentFacts(workerId: string, tenantId: string):
         if ((key === "filing_date" || key === "expiry_date") && isNaN(new Date(value).getTime())) continue;
 
         (facts as any)[key] = String(value);
-        facts._sources.push({ intakeId: row.id, documentType: docType, field: key, value: String(value) });
+        const fieldMeta = typeof raw === "object" && raw !== null ? raw : {};
+        facts._sources.push({
+          intakeId: row.id,
+          documentType: docType,
+          field: key,
+          value: String(value),
+          confidence: typeof fieldMeta.confidence === "number" ? fieldMeta.confidence : 1.0,
+          source: fieldMeta.source === "ai" ? "ai" : "manual",
+          approvedAt: row.confirmed_at ? new Date(row.confirmed_at).toISOString() : null,
+        });
       }
     }
 

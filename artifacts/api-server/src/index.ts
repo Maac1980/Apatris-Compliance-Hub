@@ -84,6 +84,29 @@ const port = Number(process.env["PORT"] || "8080");
     startWeeklyCompetitorScan();
     startWeeklySignalScan();
     startDailyRegulatoryScan();
+
+    // Report scheduler + notification scanner — checks every hour
+    try {
+      const { runScheduledReports } = await import("./routes/reports.js");
+      const { scanAndCreateNotifications } = await import("./routes/legal-notifications.js");
+      const { getDefaultTenantId } = await import("./lib/tenant.js");
+
+      // Run notification scan once at startup
+      scanAndCreateNotifications(getDefaultTenantId()).catch(() => {});
+
+      setInterval(async () => {
+        const tid = getDefaultTenantId();
+        try {
+          const r = await runScheduledReports(tid);
+          if (r.sent > 0 || r.errors > 0) console.log(`[Scheduler] Reports: ${r.sent} sent, ${r.errors} errors`);
+        } catch (e) { console.error("[Scheduler] Report run failed:", e instanceof Error ? e.message : e); }
+        try {
+          await scanAndCreateNotifications(tid);
+        } catch (e) { console.error("[Scheduler] Notification scan failed:", e instanceof Error ? e.message : e); }
+      }, 60 * 60 * 1000); // every hour
+      console.log("[Scheduler] Report + notification scheduler active (hourly check).");
+    } catch (e) { console.error("[Scheduler] Scheduler init failed:", e instanceof Error ? e.message : e); }
+
     console.log("[Startup] Schedulers started.");
   } catch (err) {
     console.error("[Startup] Scheduler init failed:", err instanceof Error ? err.message : err);

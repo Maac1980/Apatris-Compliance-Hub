@@ -162,6 +162,97 @@ router.post("/regulatory/updates/read-all", requireAuth, async (_req: Request, r
   }
 });
 
+// ─── Immigration Search Knowledge Base (fallback when AI unavailable) ────────
+
+const IMMIGRATION_KB: Array<{ patterns: RegExp[]; answer: any }> = [
+  {
+    patterns: [/type\s*a\s*work\s*permit/i, /zezwolenie.*typ.*a/i, /work\s*permit.*type\s*a/i],
+    answer: {
+      answer: "A Type A work permit (zezwolenie na pracę typ A) allows a foreign national to work in Poland for a specific employer. It is the most common type, issued by the voivode (wojewoda) of the region where the employer is registered. Valid for up to 3 years.",
+      operator_summary: "Type A is the standard employer-specific work permit. Employer applies to the voivode. Valid up to 3 years.",
+      legal_summary: "Regulated by the Act of 20 April 2004 on Employment Promotion and Labour Market Institutions (Art. 88).",
+      legal_basis: [{ law: "Act on Employment Promotion", article: "Art. 88", explanation: "Defines types of work permits for foreigners" }],
+      applies_to: "Non-EU/EEA nationals working for a Polish employer",
+      required_documents: ["Passport copy", "Employment contract or preliminary agreement", "Employer's KRS/CEIDG extract", "Labour market test (informacja starosty) unless exempt", "Power of attorney if applying via representative"],
+      process_steps: ["Employer files application at the voivodeship office", "Labour market test conducted (14 days)", "Voivode reviews application (1-2 months)", "Permit issued — worker applies for visa or TRC"],
+      deadlines: ["Labour market test: 14 working days", "Permit processing: 1-2 months standard", "Permit valid: up to 3 years"],
+      risks: ["Employing without a valid permit: fine up to 30,000 PLN", "Worker working without permit: may face deportation"],
+      next_actions: ["Verify if labour market test exemption applies", "Prepare employment contract", "Submit application to voivodeship office"],
+      decision: "PROCEED", sources: [], confidence: 0.9, human_review_required: false,
+    },
+  },
+  {
+    patterns: [/processing\s*time/i, /how\s*long/i, /czas.*rozpatrzenia/i, /ile.*trwa/i],
+    answer: {
+      answer: "Standard processing times in Poland: Work permit (Type A): 1-2 months. TRC (Temporary Residence Card): 1-6 months depending on voivodeship. Oświadczenie (declaration): 7 working days. Visa: 15-60 calendar days.",
+      operator_summary: "Work permits take 1-2 months, TRC takes 1-6 months, Oświadczenie is 7 days, visas 15-60 days.",
+      legal_summary: "Processing times governed by KPA (Code of Administrative Procedure) Art. 35 — standard 1 month, complex cases 2 months.",
+      legal_basis: [{ law: "Code of Administrative Procedure (KPA)", article: "Art. 35", explanation: "Sets standard processing deadlines" }],
+      applies_to: "All applicants for work permits, TRC, and visas in Poland",
+      required_documents: [], process_steps: [],
+      deadlines: ["Work permit: 1-2 months", "TRC: 1-6 months", "Oświadczenie: 7 working days", "Visa: 15-60 calendar days"],
+      risks: ["Delays possible in Warsaw and other major voivodeships", "Incomplete applications reset the processing clock"],
+      next_actions: ["Submit complete applications to avoid delays", "Track application status via voivodeship portal"],
+      decision: "PROCEED", sources: [], confidence: 0.85, human_review_required: false,
+    },
+  },
+  {
+    patterns: [/zus/i, /social\s*security/i, /contribution/i, /składk/i],
+    answer: {
+      answer: "ZUS (Social Insurance Institution) contributions in Poland: Employee pays ~13.71% of gross salary (pension 9.76%, disability 1.5%, sickness 2.45%). Employer pays ~19.48-22.14% (pension 9.76%, disability 6.5%, accident 0.67-3.33%, Labour Fund 2.45%, FGŚP 0.10%). Health insurance: 9% of gross (deducted from salary).",
+      operator_summary: "Employee ZUS ~13.71% + 9% health. Employer ZUS ~20%. Both mandatory for all employment contracts.",
+      legal_summary: "Governed by the Act on Social Insurance System of 13 October 1998.",
+      legal_basis: [{ law: "Act on Social Insurance System", article: "Art. 6-12", explanation: "Defines mandatory contributions" }],
+      applies_to: "All workers on employment contracts (umowa o pracę) in Poland, including foreign nationals",
+      required_documents: ["ZUS ZUA registration form", "Worker's PESEL or passport", "Employment contract"],
+      process_steps: ["Register worker with ZUS within 7 days of employment start", "Calculate monthly contributions", "Submit ZUS DRA declaration monthly", "Pay contributions by the 15th of following month"],
+      deadlines: ["ZUS registration: within 7 days", "Monthly declaration: by 15th of following month"],
+      risks: ["Late registration: fine up to 5,000 PLN", "Unpaid contributions: interest + enforcement proceedings"],
+      next_actions: ["Verify worker registration status", "Ensure monthly DRA declarations are current"],
+      decision: "PROCEED", sources: [], confidence: 0.9, human_review_required: false,
+    },
+  },
+  {
+    patterns: [/oświadczenie|oswiadczenie|declaration.*employ/i],
+    answer: {
+      answer: "Oświadczenie o powierzeniu pracy (Employer's Declaration) allows citizens of Armenia, Belarus, Georgia, Moldova, Ukraine, and Russia to work in Poland for up to 24 months without a full work permit. Registered at the local PUP (Powiatowy Urząd Pracy).",
+      operator_summary: "Simplified work authorization for 6 nationalities. Max 24 months. Registered at local PUP office.",
+      legal_summary: "Based on Art. 87 and Art. 88z of the Act on Employment Promotion and Labour Market Institutions.",
+      legal_basis: [{ law: "Act on Employment Promotion", article: "Art. 88z", explanation: "Oświadczenie procedure for specific nationalities" }],
+      applies_to: "Citizens of Armenia, Belarus, Georgia, Moldova, Ukraine, Russia",
+      required_documents: ["Passport copy", "Employer's KRS/CEIDG", "Oświadczenie form", "Fee payment (100 PLN)"],
+      process_steps: ["Employer registers oświadczenie at PUP", "PUP processes within 7 working days", "Worker starts employment", "Must notify PUP of employment start within 7 days"],
+      deadlines: ["PUP processing: 7 working days", "Notify PUP of start: within 7 days", "Maximum duration: 24 months"],
+      risks: ["Working without registered oświadczenie: fine up to 30,000 PLN", "Failing to notify PUP: administrative penalty"],
+      next_actions: ["Check if worker's nationality qualifies", "Register oświadczenie at local PUP"],
+      decision: "PROCEED", sources: [], confidence: 0.88, human_review_required: false,
+    },
+  },
+  {
+    patterns: [/pip|inspection|fine|penalty|kara|kontrola/i],
+    answer: {
+      answer: "PIP (Państwowa Inspekcja Pracy — National Labour Inspectorate) can impose fines for employing foreigners without valid work authorization: up to 30,000 PLN per worker. Additional fines for: no written contract (up to 30,000 PLN), health and safety violations (up to 30,000 PLN), unpaid wages. Criminal penalties possible for repeat offenders.",
+      operator_summary: "PIP fines up to 30,000 PLN per violation. Covers illegal employment, missing contracts, safety breaches.",
+      legal_summary: "Enforcement under the Act on Employment Promotion Art. 120-121 and Labour Code Art. 281-283.",
+      legal_basis: [{ law: "Act on Employment Promotion", article: "Art. 120", explanation: "Penalties for illegal employment of foreigners" }],
+      applies_to: "All employers in Poland employing foreign nationals",
+      required_documents: [], process_steps: [],
+      deadlines: ["Inspection can occur without notice"],
+      risks: ["Fine up to 30,000 PLN per worker", "Criminal proceedings for repeat offenders", "Deportation of illegally employed workers"],
+      next_actions: ["Audit all worker permits for validity", "Ensure written contracts exist for all workers", "Verify BHP (safety) certificates are current"],
+      decision: "CAUTION", sources: [], confidence: 0.85, human_review_required: false,
+    },
+  },
+];
+
+function findKBAnswer(searchQuery: string): any | null {
+  const q = searchQuery.toLowerCase();
+  for (const entry of IMMIGRATION_KB) {
+    if (entry.patterns.some(p => p.test(q))) return entry.answer;
+  }
+  return null;
+}
+
 // ─── Immigration Search Engine ───────────────────────────────────────────────
 
 router.post("/immigration/search", requireAuth, async (req: Request, res: Response) => {
@@ -170,14 +261,15 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
     if (!searchQuery) return res.status(400).json({ error: "query required" });
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.status(503).json({ error: "ANTHROPIC_API_KEY not configured" });
-    }
+    const isKeyValid = apiKey && !apiKey.includes("REPLACE") && apiKey.length > 20;
 
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const anthropic = new Anthropic({ apiKey });
+    // Try AI-powered search first
+    if (isKeyValid) {
+      try {
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
+        const anthropic = new Anthropic({ apiKey });
 
-    const jsonSchema = `{
+        const jsonSchema = `{
   "answer": "Full detailed answer to the question",
   "operator_summary": "Simple, actionable explanation in 2-3 lines for the operations team",
   "legal_summary": "Formal legal explanation citing relevant law",
@@ -193,47 +285,68 @@ router.post("/immigration/search", requireAuth, async (req: Request, res: Respon
   "confidence": 0.85,
   "human_review_required": false
 }`;
-    const systemPrompt = language === "pl"
-      ? `Jestes ekspertem od polskiego prawa imigracyjnego i prawa pracy. Odpowiadaj na pytania dotyczace pozwolen na prace, wiz, ZUS, umow o prace w Polsce. Odpowiedz TYLKO czystym JSON (bez markdown, bez komentarzy). Schemat:\n${jsonSchema}`
-      : `You are an expert on Polish immigration law and labor regulations. Answer questions about work permits, visas, ZUS contributions, employment contracts in Poland. Respond ONLY with clean JSON (no markdown, no commentary). Schema:\n${jsonSchema}`;
+        const systemPrompt = language === "pl"
+          ? `Jestes ekspertem od polskiego prawa imigracyjnego i prawa pracy. Odpowiadaj na pytania dotyczace pozwolen na prace, wiz, ZUS, umow o prace w Polsce. Odpowiedz TYLKO czystym JSON (bez markdown, bez komentarzy). Schemat:\n${jsonSchema}`
+          : `You are an expert on Polish immigration law and labor regulations. Answer questions about work permits, visas, ZUS contributions, employment contracts in Poland. Respond ONLY with clean JSON (no markdown, no commentary). Schema:\n${jsonSchema}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: "user", content: searchQuery }],
-    });
+        const response = await anthropic.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: [{ role: "user", content: searchQuery }],
+        });
 
-    let content = response.content[0]?.type === "text" ? response.content[0].text : "{}";
-    // Strip markdown code fences if Claude wraps the JSON
-    content = content.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-    let parsed: any;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      // Last resort: try to extract a JSON object from the text
-      const m = content.match(/\{[\s\S]*\}/);
-      try {
-        parsed = m ? JSON.parse(m[0]) : null;
-      } catch { parsed = null; }
-      if (!parsed) {
-        parsed = { answer: content, sources: [], confidence: 0.5 };
+        let content = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+        content = content.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch {
+          const m = content.match(/\{[\s\S]*\}/);
+          try { parsed = m ? JSON.parse(m[0]) : null; } catch { parsed = null; }
+          if (!parsed) parsed = { answer: content, sources: [], confidence: 0.5 };
+        }
+
+        const responseBody = mapAIResponseToStructuredAnswer(parsed);
+        const userEmail = (req as any).user?.email ?? "unknown";
+        await query(
+          `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
+          [req.tenantId!, userEmail, searchQuery, language, responseBody.answer, JSON.stringify(responseBody.sources), responseBody.confidence, JSON.stringify(responseBody.next_actions)]
+        ).catch(() => {});
+
+        console.log("[IMMIGRATION SEARCH] AI response for:", searchQuery.slice(0, 60));
+        return res.json(responseBody);
+      } catch (aiErr: any) {
+        console.error("[IMMIGRATION SEARCH] AI failed, trying knowledge base:", aiErr.message?.slice(0, 100));
+        // Fall through to knowledge base
       }
     }
 
-    const responseBody = mapAIResponseToStructuredAnswer(parsed);
+    // Fallback: knowledge base lookup
+    const kbAnswer = findKBAnswer(searchQuery);
+    if (kbAnswer) {
+      const responseBody = mapAIResponseToStructuredAnswer(kbAnswer);
+      const userEmail = (req as any).user?.email ?? "unknown";
+      await query(
+        `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
+        [req.tenantId!, userEmail, searchQuery, language, responseBody.answer, JSON.stringify(responseBody.sources), responseBody.confidence, JSON.stringify(responseBody.next_actions)]
+      ).catch(() => {});
+      console.log("[IMMIGRATION SEARCH] KB response for:", searchQuery.slice(0, 60));
+      return res.json(responseBody);
+    }
 
-    const userEmail = (req as any).user?.email ?? "unknown";
-    await query(
-      `INSERT INTO immigration_searches (tenant_id, user_email, question, language, answer, sources, confidence, action_items) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb)`,
-      [req.tenantId!, userEmail, searchQuery, language, responseBody.answer, JSON.stringify(responseBody.sources), responseBody.confidence, JSON.stringify(responseBody.next_actions)]
-    );
-
-    console.log("[IMMIGRATION SEARCH] FINAL RESPONSE:", JSON.stringify(responseBody, null, 2));
-    res.json(responseBody);
+    // No AI and no KB match
+    const fallback = mapAIResponseToStructuredAnswer({
+      answer: "This question requires AI-powered search which is not currently configured. Please contact your administrator to set up the ANTHROPIC_API_KEY, or try a more specific question about: work permits, ZUS contributions, oświadczenie declarations, PIP inspections, or processing times.",
+      operator_summary: "AI search is not available. Try asking about specific topics like work permits, ZUS, or processing times.",
+      decision: "CAUTION",
+      confidence: 0.3,
+      human_review_required: true,
+      sources: [], next_actions: ["Configure ANTHROPIC_API_KEY for full AI-powered search", "Consult an immigration lawyer for complex questions"],
+    });
+    console.log("[IMMIGRATION SEARCH] No AI, no KB match for:", searchQuery.slice(0, 60));
+    res.json(fallback);
   } catch (err: any) {
-    console.log("[IMMIGRATION SEARCH] ERROR:", err.message);
-    res.status(500).json({ error: err.message });
+    console.error("[IMMIGRATION SEARCH] ERROR:", err.message);
+    res.status(500).json({ error: "Immigration search failed. Please try again or rephrase your question." });
   }
 });
 

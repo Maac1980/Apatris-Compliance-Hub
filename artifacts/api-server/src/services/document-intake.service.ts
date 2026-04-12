@@ -621,7 +621,7 @@ export async function confirmIntake(
   intakeId: string,
   tenantId: string,
   confirmedBy: string,
-  confirmedWorkerId: string,
+  confirmedWorkerId: string | null,
   confirmedFields: Record<string, any>,
   applyActions: string[],
 ): Promise<{ success: boolean; appliedActions: string[] }> {
@@ -639,6 +639,7 @@ export async function confirmIntake(
     try {
       switch (action) {
         case "UPDATE_EXPIRY_FIELD": {
+          if (!confirmedWorkerId) { applied.push("UPDATE_EXPIRY_FIELD: skipped — no worker linked"); break; }
           const fields = confirmedFields;
           const updates: string[] = [];
           const values: any[] = [];

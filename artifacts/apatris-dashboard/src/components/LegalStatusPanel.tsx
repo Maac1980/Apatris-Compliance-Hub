@@ -14,7 +14,8 @@
 import React, { useState } from "react";
 import {
   ShieldCheck, Shield, AlertTriangle, XOctagon, HelpCircle,
-  ChevronDown, ChevronUp, Info, FileCheck,
+  ChevronDown, ChevronUp, Info, FileCheck, GitBranch, CircleAlert, CircleMinus, Lightbulb,
+  Scale, Clock, FileSignature,
 } from "lucide-react";
 import {
   STATUS_DISPLAY, BASIS_LABELS, RISK_DISPLAY,
@@ -30,6 +31,16 @@ interface TrustedInput {
   documentType: string;
   field: string;
   value: string;
+  confidence?: number;
+  source?: "ai" | "manual";
+  approvedAt?: string | null;
+}
+
+interface DecisionTraceEntry {
+  field: string;
+  value: string;
+  origin: "approved_document" | "immigration_permit" | "trc_case" | "legal_evidence" | "worker_record";
+  overriddenBy?: string;
 }
 
 interface LegalStatusPanelProps {
@@ -37,6 +48,28 @@ interface LegalStatusPanelProps {
     deployability?: string;
     snapshotCreatedAt?: string;
     trustedInputs?: TrustedInput[];
+    decisionTrace?: DecisionTraceEntry[];
+    rejectionReasons?: string[];
+    missingRequirements?: string[];
+    recommendedActions?: string[];
+    appealRelevant?: boolean;
+    appealUrgency?: "low" | "medium" | "high" | null;
+    appealBasis?: string[];
+    appealDeadlineNote?: string | null;
+    authorityDraftContext?: {
+      workerName: string | null;
+      employerName: string | null;
+      documentType: string | null;
+      caseReference: string | null;
+      currentStatus: string;
+      filingDate: string | null;
+      expiryDate: string | null;
+      decisionOutcome: string | null;
+      decisionDate: string | null;
+      keyFacts: string[];
+      missingDocuments: string[];
+      nextAuthorityActions: string[];
+    } | null;
   };
   defaultAudience?: ExplanationAudience;
 }
@@ -54,7 +87,15 @@ const ICON_MAP = {
 const FIELD_LABELS: Record<string, string> = {
   filing_date: "Filing Date", expiry_date: "Expiry", employer_name: "Employer",
   work_position: "Role", case_reference: "Case Ref", decision_outcome: "Decision",
-  nationality: "Nationality", passport_number: "Passport",
+  nationality: "Nationality", passport_number: "Passport", employer_match: "Employer Match",
+};
+
+const ORIGIN_LABELS: Record<string, string> = {
+  approved_document: "Approved Doc",
+  immigration_permit: "Permit Record",
+  trc_case: "TRC Case",
+  legal_evidence: "Filing Evidence",
+  worker_record: "Worker Profile",
 };
 
 // ═══ COMPONENT ══════════════════════════════════════════════════════════════
@@ -151,12 +192,225 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(snapshot.trustedInputs ?? []).map((ti, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/15 text-emerald-300 rounded px-1.5 py-0.5">
+              <span
+                key={i}
+                className="group relative inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/15 text-emerald-300 rounded px-1.5 py-0.5"
+                title={`Intake: ${ti.intakeId?.slice(0, 8) ?? "—"}… · Approved: ${ti.approvedAt ? new Date(ti.approvedAt).toLocaleString("en-GB") : "—"}`}
+              >
                 <span className="font-bold">{FIELD_LABELS[ti.field] ?? ti.field}:</span>
                 <span className="text-emerald-400">{ti.value}</span>
                 <span className="text-emerald-400/50">· {ti.documentType}</span>
+                {ti.source && (
+                  <span className={`ml-0.5 px-1 py-px rounded text-[8px] font-bold uppercase ${
+                    ti.source === "ai" ? "bg-blue-500/20 text-blue-300" : "bg-slate-500/20 text-slate-300"
+                  }`}>
+                    {ti.source === "ai" ? "AI" : "Manual"}
+                  </span>
+                )}
+                {/* Hover tooltip */}
+                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:flex flex-col items-center z-50">
+                  <span className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[9px] text-slate-300 whitespace-nowrap shadow-lg">
+                    {ti.intakeId ? `Intake: ${ti.intakeId.slice(0, 8)}…` : ""}
+                    {ti.approvedAt ? ` · ${new Date(ti.approvedAt).toLocaleDateString("en-GB")}` : ""}
+                    {typeof ti.confidence === "number" ? ` · ${Math.round(ti.confidence * 100)}%` : ""}
+                  </span>
+                </span>
               </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Decision Trace ──────────────────────────────────────────────── */}
+      {(snapshot.decisionTrace ?? []).length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <GitBranch className="w-3 h-3 text-slate-400" />
+            <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">Decision Trace</span>
+          </div>
+          <div className="space-y-1">
+            {(snapshot.decisionTrace ?? []).map((dt, i) => (
+              <div key={i} className="flex items-center gap-2 text-[10px]">
+                <span className="text-slate-400 font-medium w-24 flex-shrink-0">{FIELD_LABELS[dt.field] ?? dt.field}</span>
+                <span className="text-slate-200 font-mono">{dt.value}</span>
+                <span className="text-slate-500">←</span>
+                <span className={`px-1 py-px rounded text-[9px] font-bold ${
+                  dt.origin === "approved_document" ? "bg-emerald-500/15 text-emerald-400" :
+                  dt.origin === "immigration_permit" ? "bg-blue-500/15 text-blue-400" :
+                  dt.origin === "trc_case" ? "bg-purple-500/15 text-purple-400" :
+                  dt.origin === "legal_evidence" ? "bg-amber-500/15 text-amber-400" :
+                  "bg-slate-500/15 text-slate-400"
+                }`}>
+                  {ORIGIN_LABELS[dt.origin] ?? dt.origin}
+                </span>
+                {dt.overriddenBy && (
+                  <span className="text-[9px] text-amber-500/70 italic">overrode fallback</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Rejection Intelligence — Why this status? ───────────────────── */}
+      {snapshot.legalStatus !== "VALID" && (
+        (snapshot.rejectionReasons?.length ?? 0) > 0 ||
+        (snapshot.missingRequirements?.length ?? 0) > 0 ||
+        (snapshot.recommendedActions?.length ?? 0) > 0
+      ) && (
+        <div className="px-4 pb-2">
+          <div className="rounded bg-red-500/5 border border-red-500/15 px-3 py-2.5 space-y-2">
+            <p className="text-[10px] font-bold text-red-400/90 uppercase tracking-wider">Why this status?</p>
+
+            {(snapshot.rejectionReasons?.length ?? 0) > 0 && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <CircleAlert className="w-3 h-3 text-red-400" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reasons</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {snapshot.rejectionReasons!.map((r, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-red-300/90">
+                      <span className="text-red-400/60 mt-0.5 flex-shrink-0">-</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {(snapshot.missingRequirements?.length ?? 0) > 0 && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <CircleMinus className="w-3 h-3 text-amber-400" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Missing</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {snapshot.missingRequirements!.map((m, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-amber-300/90">
+                      <span className="text-amber-400/60 mt-0.5 flex-shrink-0">-</span>
+                      <span>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {(snapshot.recommendedActions?.length ?? 0) > 0 && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <Lightbulb className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recommended</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {snapshot.recommendedActions!.map((a, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-blue-300/90">
+                      <span className="text-blue-400/60 mt-0.5 flex-shrink-0">{i + 1}.</span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Appeal Signal ────────────────────────────────────────────────── */}
+      {snapshot.appealRelevant && (snapshot.appealBasis?.length ?? 0) > 0 && (
+        <div className="px-4 pb-2">
+          <div className="rounded bg-purple-500/5 border border-purple-500/15 px-3 py-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Scale className="w-3 h-3 text-purple-400" />
+                <span className="text-[10px] font-bold text-purple-400/90 uppercase tracking-wider">Appeal Signal</span>
+              </div>
+              {snapshot.appealUrgency && (
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                  snapshot.appealUrgency === "high" ? "bg-red-500/20 text-red-300" :
+                  snapshot.appealUrgency === "medium" ? "bg-amber-500/20 text-amber-300" :
+                  "bg-slate-500/20 text-slate-300"
+                }`}>
+                  {snapshot.appealUrgency} urgency
+                </span>
+              )}
+            </div>
+
+            <ul className="space-y-0.5">
+              {snapshot.appealBasis!.map((b, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-[11px] text-purple-300/90">
+                  <span className="text-purple-400/60 mt-0.5 flex-shrink-0">-</span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+
+            {snapshot.appealDeadlineNote && (
+              <div className="flex items-start gap-1.5 pt-1 border-t border-purple-500/10">
+                <Clock className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
+                <span className="text-[10px] text-amber-300/80 leading-relaxed">{snapshot.appealDeadlineNote}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Authority Draft Context ──────────────────────────────────────── */}
+      {snapshot.authorityDraftContext && (
+        <div className="px-4 pb-2">
+          <div className="rounded bg-slate-800/50 border border-slate-700/40 px-3 py-2.5 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <FileSignature className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider">Authority Draft Context</span>
+            </div>
+
+            {/* Identity row */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+              {snapshot.authorityDraftContext.workerName && (
+                <div><span className="text-slate-500">Worker:</span> <span className="text-slate-200">{snapshot.authorityDraftContext.workerName}</span></div>
+              )}
+              {snapshot.authorityDraftContext.employerName && (
+                <div><span className="text-slate-500">Employer:</span> <span className="text-slate-200">{snapshot.authorityDraftContext.employerName}</span></div>
+              )}
+              {snapshot.authorityDraftContext.caseReference && (
+                <div><span className="text-slate-500">Case Ref:</span> <span className="text-slate-200 font-mono">{snapshot.authorityDraftContext.caseReference}</span></div>
+              )}
+              {snapshot.authorityDraftContext.documentType && (
+                <div><span className="text-slate-500">Doc Type:</span> <span className="text-slate-200">{snapshot.authorityDraftContext.documentType}</span></div>
+              )}
+              <div><span className="text-slate-500">Status:</span> <span className="text-slate-200">{snapshot.authorityDraftContext.currentStatus.replace(/_/g, " ")}</span></div>
+              {snapshot.authorityDraftContext.decisionOutcome && (
+                <div><span className="text-slate-500">Decision:</span> <span className="text-red-400 font-medium">{snapshot.authorityDraftContext.decisionOutcome}</span></div>
+              )}
+            </div>
+
+            {/* Key facts */}
+            {snapshot.authorityDraftContext.keyFacts.length > 0 && (
+              <div>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Key Facts</p>
+                <ul className="space-y-0.5">
+                  {snapshot.authorityDraftContext.keyFacts.map((f, i) => (
+                    <li key={i} className="text-[10px] text-slate-300 flex items-start gap-1">
+                      <span className="text-slate-500 mt-0.5 flex-shrink-0">·</span><span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Missing documents */}
+            {snapshot.authorityDraftContext.missingDocuments.length > 0 && (
+              <div>
+                <p className="text-[9px] font-bold text-amber-500/70 uppercase tracking-wider mb-0.5">Missing Documents</p>
+                <ul className="space-y-0.5">
+                  {snapshot.authorityDraftContext.missingDocuments.map((m, i) => (
+                    <li key={i} className="text-[10px] text-amber-300/80 flex items-start gap-1">
+                      <span className="text-amber-500/50 mt-0.5 flex-shrink-0">-</span><span>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}

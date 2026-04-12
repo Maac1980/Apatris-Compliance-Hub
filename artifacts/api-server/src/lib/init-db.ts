@@ -3080,5 +3080,33 @@ export async function initializeDatabase(): Promise<void> {
     try { await execute(idx); } catch { /* index may already exist or table missing */ }
   }
 
+  // ── Report schedules ─────────────────────────────────────────────────
+  try {
+    await execute(`CREATE TABLE IF NOT EXISTS report_schedules (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      frequency TEXT NOT NULL DEFAULT 'weekly',
+      created_by TEXT,
+      last_sent_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+  } catch { /* already exists */ }
+
+  // ── Legal notifications ──────────────────────────────────────────────
+  try {
+    await execute(`CREATE TABLE IF NOT EXISTS legal_notifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+      worker_id UUID,
+      worker_name TEXT,
+      type TEXT NOT NULL DEFAULT 'attention',
+      message TEXT NOT NULL,
+      read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await execute(`CREATE INDEX IF NOT EXISTS idx_legal_notif_tenant ON legal_notifications(tenant_id, read, created_at DESC)`);
+  } catch { /* already exists */ }
+
   console.log("[init-db] Database initialization complete.");
 }

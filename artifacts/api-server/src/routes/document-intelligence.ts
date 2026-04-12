@@ -20,6 +20,9 @@ const router = Router();
 const VIEW = ["Admin", "Executive", "LegalHead", "TechOps", "Coordinator"];
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const toUuidOrNull = (v: unknown): string | null =>
+  typeof v === "string" && UUID_RE.test(v) ? v : null;
 
 // POST /api/v1/document-intelligence/extract
 // Accepts real file upload (multipart) or JSON-only (backward compat).
@@ -147,18 +150,21 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
     }
 
     // Resolve linkage: prefer explicit params, fall back to intake's existing values
-    const resolvedWorkerId = workerId || intake.matched_worker_id || null;
-    const resolvedCaseId = caseId || intake.linked_case_id || null;
+    // Normalize to null when empty — PostgreSQL UUID columns reject empty strings
+    const resolvedWorkerId = toUuidOrNull(workerId) ?? toUuidOrNull(intake.matched_worker_id);
+    const resolvedCaseId = toUuidOrNull(caseId) ?? toUuidOrNull(intake.linked_case_id);
     const resolvedDocType = (docType || intake.ai_classification || "").toUpperCase();
 
     // Update linkage on the intake row if new context was provided
-    if (caseId || workerId) {
+    const safeWorkerId = toUuidOrNull(workerId);
+    const safeCaseId = toUuidOrNull(caseId);
+    if (safeCaseId || safeWorkerId) {
       try {
         const sets: string[] = [];
         const vals: any[] = [];
         let idx = 1;
-        if (workerId && workerId !== intake.matched_worker_id) { sets.push(`matched_worker_id = $${idx++}`); vals.push(workerId); }
-        if (caseId && caseId !== intake.linked_case_id) { sets.push(`linked_case_id = $${idx++}`); vals.push(caseId); }
+        if (safeWorkerId && safeWorkerId !== intake.matched_worker_id) { sets.push(`matched_worker_id = $${idx++}`); vals.push(safeWorkerId); }
+        if (safeCaseId && safeCaseId !== intake.linked_case_id) { sets.push(`linked_case_id = $${idx++}`); vals.push(safeCaseId); }
         if (sets.length > 0) {
           vals.push(intakeId, req.tenantId!);
           await execute(`UPDATE document_intake SET ${sets.join(", ")} WHERE id = $${idx} AND tenant_id = $${idx + 1}`, vals);
@@ -218,7 +224,7 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       intakeId,
       req.tenantId!,
       userName,
-      resolvedWorkerId ?? "",
+      resolvedWorkerId ?? null,
       mapped,
       applyActions,
     );
@@ -227,7 +233,7 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
     try {
       await execute(
         "UPDATE document_intake SET confirmed_fields_json = $1, confirmed_worker_id = $2 WHERE id = $3",
-        [JSON.stringify(confirmedWithMeta), resolvedWorkerId, intakeId]
+        [JSON.stringify(confirmedWithMeta), resolvedWorkerId ?? null, intakeId]
       );
     } catch { /* non-critical */ }
 
@@ -237,7 +243,7 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       actor: userName,
       actorEmail: (req as any).user?.email ?? "",
       action: "DOCUMENT_UPDATE",
-      workerId: workerId ?? intakeId,
+      workerId: resolvedWorkerId ?? intakeId,
       workerName: approvedFields.full_name ?? "—",
       note: `Structured intake confirmed: ${Object.keys(approvedFields).length} fields, actions: ${result.appliedActions.join(", ") || "none"}`,
     });

@@ -3,15 +3,17 @@
  * and worker legality tasks. Aggregates existing modules via their APIs.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authHeaders, BASE } from "@/lib/api";
 import { DecisionExplanationCard } from "@/components/DecisionExplanationCard";
 import { DocumentStructuredIntake } from "@/components/DocumentStructuredIntake";
+import { useLocation } from "wouter";
 import {
   Shield, Users, FileText, Gavel, Scale, Brain, Building2, Search,
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
-  Zap, Stamp, FileCheck, X, Briefcase, ArrowRight,
+  Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock,
+  PanelRightOpen, PanelRightClose, ExternalLink, Globe, BookOpen, ScanSearch,
 } from "lucide-react";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
@@ -29,6 +31,33 @@ const TABS = [
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
+
+// ── Legal navigation panel items ────────────────────────────────────────────
+// Items that are internal tabs use `tab`, items that are standalone pages use `route`
+const LEGAL_NAV = [
+  { id: "section-command", label: "COMMAND CENTER", section: true },
+  { id: "overview",        label: "Overview",               icon: Zap,           tab: "overview" as TabKey },
+  { id: "workers-legal",   label: "Workers Legal",          icon: Users,         tab: "workers-legal" as TabKey },
+  { id: "trc",             label: "TRC Cases",              icon: Stamp,         tab: "trc" as TabKey },
+  { id: "documents",       label: "Documents / AI Intake",  icon: FileText,      tab: "documents" as TabKey },
+  { id: "appeals",         label: "Appeals & Rejections",   icon: Gavel,         tab: "appeals" as TabKey },
+  { id: "authority",       label: "Authority Drafts",       icon: Shield,        tab: "authority" as TabKey },
+  { id: "queue",           label: "Legal Queue",            icon: Scale,         tab: "queue" as TabKey },
+  { id: "research",        label: "Research",               icon: Brain,         tab: "research" as TabKey },
+  { id: "client-view",     label: "Client View",            icon: Building2,     tab: "client-view" as TabKey },
+
+  { id: "section-tools", label: "LEGAL TOOLS", section: true },
+  { id: "imm-search",     label: "Immigration Search",     icon: ScanSearch,    route: "/immigration-search" },
+  { id: "imm-permits",    label: "Immigration Permits",    icon: Stamp,         route: "/immigration" },
+
+  { id: "section-modules", label: "LEGAL MODULES", section: true },
+  { id: "legal-monitor",  label: "Legal Monitor",          icon: Shield,        route: "/legal" },
+  { id: "legal-alerts",   label: "Legal Alerts",           icon: AlertTriangle, route: "/legal-alerts" },
+  { id: "legal-docs",     label: "Legal Documents",        icon: FileText,      route: "/legal-documents" },
+  { id: "legal-intel",    label: "Legal Intelligence",     icon: Brain,         route: "/legal-intelligence" },
+  { id: "legal-brief",    label: "Legal Briefs",           icon: BookOpen,      route: "/legal-brief" },
+  { id: "legal-kb",       label: "Knowledge Base",         icon: Globe,         route: "/legal-kb" },
+] as const;
 
 const SEV_BADGE: Record<string, string> = {
   CRITICAL: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -106,7 +135,9 @@ function Spinner() {
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────
 
 export default function LegalImmigrationCommand() {
+  const [, navigate] = useLocation();
   const [tab, setTab] = useState<TabKey>("overview");
+  const [navOpen, setNavOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [workerFilter, setWorkerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -314,17 +345,67 @@ export default function LegalImmigrationCommand() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {tab === "overview" && <OverviewTab overview={overview} loading={overviewLoading} explanation={overviewExplanation?.explanation} onTabSwitch={setTab} />}
-        {tab === "trc" && <TRCTab cases={trcData?.cases ?? []} loading={trcLoading} filter={filterRow} />}
-        {tab === "workers-legal" && <WorkersLegalTab workers={workersData?.workers ?? []} loading={workersLoading} search={q} />}
-        {tab === "appeals" && <AppealsTab cases={casesData?.cases ?? []} loading={casesLoading} filter={filterRow} />}
-        {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} workers={workersData?.workers ?? []} />}
-        {tab === "authority" && <AuthorityTab packs={authorityData ?? []} loading={authorityLoading} search={q} />}
-        {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
-        {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
-        {tab === "client-view" && <ClientViewTab clients={clientData?.clients ?? []} loading={clientLoading} />}
+      {/* Content + Right Nav */}
+      <div className="max-w-[1600px] mx-auto flex">
+        {/* Main content */}
+        <div className={`flex-1 min-w-0 px-6 py-6 transition-all ${navOpen ? "mr-0" : ""}`}>
+          {tab === "overview" && <OverviewTab overview={overview} loading={overviewLoading} explanation={overviewExplanation?.explanation} onTabSwitch={setTab} />}
+          {tab === "trc" && <TRCTab cases={trcData?.cases ?? []} loading={trcLoading} filter={filterRow} />}
+          {tab === "workers-legal" && <WorkersLegalTab workers={workersData?.workers ?? []} loading={workersLoading} search={q} />}
+          {tab === "appeals" && <AppealsTab cases={casesData?.cases ?? []} loading={casesLoading} filter={filterRow} />}
+          {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} workers={workersData?.workers ?? []} />}
+          {tab === "authority" && <AuthorityTab packs={authorityData ?? []} loading={authorityLoading} search={q} />}
+          {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
+          {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
+          {tab === "client-view" && <ClientViewTab />}
+        </div>
+
+        {/* ── Legal Navigation Panel (right side) ──────────────────────────── */}
+        <div className={`flex-shrink-0 border-l border-slate-800 bg-slate-900/40 transition-all overflow-hidden ${navOpen ? "w-56" : "w-10"}`}>
+          {/* Toggle button */}
+          <button
+            onClick={() => setNavOpen(!navOpen)}
+            className="w-full flex items-center justify-center py-3 text-slate-500 hover:text-white transition-colors border-b border-slate-800"
+            title={navOpen ? "Collapse legal nav" : "Expand legal nav"}
+          >
+            {navOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </button>
+
+          {navOpen && (
+            <nav className="py-2 overflow-y-auto" style={{ maxHeight: "calc(100vh - 180px)" }}>
+              {LEGAL_NAV.map(item => {
+                if ("section" in item && item.section) {
+                  return (
+                    <p key={item.id} className="px-3 pt-3 pb-1 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+                      {item.label}
+                    </p>
+                  );
+                }
+                const Icon = (item as any).icon;
+                const isTab = "tab" in item;
+                const isActive = isTab && tab === (item as any).tab;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (isTab) { setTab((item as any).tab); }
+                      else { navigate((item as any).route); }
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors ${
+                      isActive
+                        ? "text-white bg-[#C41E18]/10 border-r-2 border-[#C41E18]"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                    <span className="truncate">{item.label}</span>
+                    {!isTab && <ExternalLink className="w-2.5 h-2.5 ml-auto flex-shrink-0 opacity-40" />}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -909,65 +990,595 @@ function ResearchTab({ briefs, articles, loading }: { briefs: any[]; articles: a
 // TAB 9 — CLIENT SERVICE VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ClientViewTab({ clients, loading }: { clients: any[]; loading: boolean }) {
-  if (loading) return <Spinner />;
+type WorkerGroup = "ok" | "attention" | "critical";
+
+function classifyWorker(w: any): { group: WorkerGroup; message: string; nextStep: string | null; appealTag: boolean } {
+  const now = Date.now();
+  const trcExp = w.trc_expiry ? new Date(w.trc_expiry).getTime() : null;
+  const wpExp = w.work_permit_expiry ? new Date(w.work_permit_expiry).getTime() : null;
+  const nearestExpiry = [trcExp, wpExp].filter(Boolean).sort()[0] as number | undefined;
+  const rejected = (w.rejected_cases ?? 0) > 0;
+
+  // Critical: expired or rejected
+  if (rejected) {
+    return {
+      group: "critical",
+      message: "Application rejected — action required.",
+      nextStep: "File appeal or submit new application.",
+      appealTag: true,
+    };
+  }
+  if (nearestExpiry && nearestExpiry < now) {
+    const days = Math.ceil((now - nearestExpiry) / 86_400_000);
+    return {
+      group: "critical",
+      message: `Permit expired ${days} day(s) ago.`,
+      nextStep: "Begin renewal or new application process.",
+      appealTag: false,
+    };
+  }
+
+  // Attention: expiring within 60 days or has active cases
+  if (nearestExpiry && nearestExpiry < now + 60 * 86_400_000) {
+    const days = Math.ceil((nearestExpiry - now) / 86_400_000);
+    return {
+      group: "attention",
+      message: `Permit expires in ${days} day(s).`,
+      nextStep: "Start renewal process before expiry.",
+      appealTag: false,
+    };
+  }
+  if ((w.active_cases ?? 0) > 0) {
+    return {
+      group: "attention",
+      message: "Legal case under review.",
+      nextStep: "Monitor case progress.",
+      appealTag: false,
+    };
+  }
+
+  // OK
+  return {
+    group: "ok",
+    message: "No action required.",
+    nextStep: null,
+    appealTag: false,
+  };
+}
+
+const GROUP_CONFIG = {
+  critical: { label: "Critical", color: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/5", icon: XOctagon, dot: "bg-red-500" },
+  attention: { label: "Attention Needed", color: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/5", icon: AlertTriangle, dot: "bg-amber-500" },
+  ok: { label: "OK", color: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5", icon: CheckCircle2, dot: "bg-emerald-500" },
+} as const;
+
+function ClientViewTab() {
+  const { data, isLoading, dataUpdatedAt } = useQuery({
+    queryKey: ["client-view-workers"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
+      if (!r.ok) return [];
+      const j = await r.json();
+      return (j.workers ?? j ?? []).map((w: any) => ({
+        id: w.id,
+        full_name: w.name ?? w.full_name,
+        specialization: w.specialization,
+        assigned_site: w.assignedSite ?? w.assigned_site,
+        trc_expiry: w.trcExpiry ?? w.trc_expiry,
+        work_permit_expiry: w.workPermitExpiry ?? w.work_permit_expiry,
+        active_cases: w.active_cases ?? 0,
+        rejected_cases: w.rejected_cases ?? 0,
+      }));
+    },
+  });
+
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const scrollToWorker = useCallback((id: string) => {
+    cardRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Brief highlight
+    const el = cardRefs.current[id];
+    if (el) { el.classList.add("ring-2", "ring-white/30"); setTimeout(() => el.classList.remove("ring-2", "ring-white/30"), 1500); }
+  }, []);
+
+  // Classify workers into groups (memoized to stabilize references)
+  const { classified, grouped, total, counts, alerts } = useMemo(() => {
+    const workers = (data ?? []) as any[];
+    const cls = workers.map(w => ({ ...w, ...classifyWorker(w) }));
+    const grps: WorkerGroup[] = ["critical", "attention", "ok"];
+    const grpd = grps.map(g => ({ key: g, ...GROUP_CONFIG[g], workers: cls.filter(w => w.group === g) }));
+    return {
+      classified: cls,
+      grouped: grpd,
+      total: workers.length,
+      counts: { ok: grpd[2].workers.length, attention: grpd[1].workers.length, critical: grpd[0].workers.length },
+      alerts: cls.filter(w => w.group === "critical" || w.group === "attention")
+        .sort((a, b) => (a.group === "critical" ? 0 : 1) - (b.group === "critical" ? 0 : 1))
+        .slice(0, 5),
+    };
+  }, [data]);
+
+  // PDF generation — returns jsPDF doc for reuse (download or base64)
+  const buildPdf = useCallback(async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0142/g, "l").replace(/\u0141/g, "L");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+    const now = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    doc.setFontSize(18); doc.setFont("helvetica", "bold");
+    doc.text("Workforce Legal Status Report", W / 2, 20, { align: "center" });
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(120);
+    doc.text(`Generated ${now}  ·  ${total} workers`, W / 2, 27, { align: "center" });
+
+    doc.setDrawColor(200); doc.line(14, 31, W - 14, 31);
+    doc.setFontSize(10); doc.setTextColor(0); doc.setFont("helvetica", "bold");
+    doc.text(`OK: ${counts.ok}    Attention: ${counts.attention}    Critical: ${counts.critical}`, W / 2, 37, { align: "center" });
+
+    let y = 43;
+    const STATUS_LABEL: Record<string, string> = { critical: "Critical", attention: "Attention", ok: "OK" };
+
+    for (const { key, workers: gw } of grouped) {
+      if (gw.length === 0) continue;
+      doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(key === "critical" ? 180 : key === "attention" ? 160 : 60, key === "critical" ? 40 : key === "attention" ? 120 : 140, key === "ok" ? 80 : 40);
+      doc.text(STATUS_LABEL[key]!, 14, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y, margin: { left: 14, right: 14 },
+        head: [["Worker", "Status", "Details", "Next Step"]],
+        body: gw.map((w: any) => [norm(w.full_name), key === "ok" ? "Clear" : key === "attention" ? "Monitor" : "Action Needed", norm(w.message), w.nextStep ? norm(w.nextStep) : "—"]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: key === "critical" ? [180, 40, 40] : key === "attention" ? [180, 140, 40] : [40, 140, 80], textColor: 255, fontStyle: "bold", fontSize: 8 },
+        alternateRowStyles: { fillColor: [245, 245, 248] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
+    doc.text("This report is for informational purposes only and does not constitute legal advice.", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+    return doc;
+  }, [grouped, total, counts]);
+
+  const exportPdf = useCallback(async () => {
+    const doc = await buildPdf();
+    doc.save(`workforce-status-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }, [buildPdf]);
+
+  // Send Report modal state
+  const [sendModal, setSendModal] = useState(false);
+  const [sendEmail, setSendEmail] = useState("");
+  const [sendMessage, setSendMessage] = useState("");
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [sendError, setSendError] = useState("");
+
+  const handleSend = useCallback(async () => {
+    if (!sendEmail) return;
+    setSendStatus("sending");
+    setSendError("");
+    try {
+      const doc = await buildPdf();
+      const pdfBase64 = doc.output("datauristring").split(",")[1];
+      const res = await fetch(`${BASE}api/reports/send`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          email: sendEmail,
+          pdfBase64,
+          subject: "Workforce Legal Status Report",
+          message: sendMessage || undefined,
+          summary: { ...counts, total },
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error((d as any).error ?? "Send failed");
+      }
+      setSendStatus("sent");
+      setToast("Report sent to " + sendEmail);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
+      setSendStatus("error");
+    }
+  }, [sendEmail, sendMessage, buildPdf, counts, total]);
+
+  // Schedule Report modal state
+  const [schedModal, setSchedModal] = useState(false);
+  const [schedEmail, setSchedEmail] = useState("");
+  const [schedFreq, setSchedFreq] = useState<"daily" | "weekly">("weekly");
+  const [schedStatus, setSchedStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [schedError, setSchedError] = useState("");
+
+  const handleSchedule = useCallback(async () => {
+    if (!schedEmail) return;
+    setSchedStatus("saving");
+    setSchedError("");
+    try {
+      const res = await fetch(`${BASE}api/reports/schedule`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ email: schedEmail, frequency: schedFreq }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error((d as any).error ?? "Schedule failed");
+      }
+      setSchedStatus("saved");
+      setToast("Report scheduled (" + schedFreq + ") for " + schedEmail);
+    } catch (err) {
+      setSchedError(err instanceof Error ? err.message : "Schedule failed");
+      setSchedStatus("error");
+    }
+  }, [schedEmail, schedFreq]);
+
+  // Notifications
+  const { data: notifData, refetch: refetchNotifs } = useQuery({
+    queryKey: ["legal-notifications"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/legal-notifications`, { headers: authHeaders() });
+      if (!r.ok) return { notifications: [], unread: 0 };
+      return r.json();
+    },
+    refetchInterval: 60_000, // poll every 60s
+  });
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unread = (notifData as any)?.unread ?? 0;
+  const notifications = ((notifData as any)?.notifications ?? []).slice(0, 20);
+
+  const [markingRead, setMarkingRead] = useState(false);
+  const markAllRead = useCallback(async () => {
+    setMarkingRead(true);
+    await fetch(`${BASE}api/legal-notifications/read`, { method: "POST", headers: authHeaders(), body: JSON.stringify({}) }).catch(() => {});
+    await refetchNotifs();
+    setMarkingRead(false);
+    setToast("Notifications marked as read");
+  }, [refetchNotifs]);
+
+  // Toast state
+  const [toast, setToast] = useState<string | null>(null);
+  React.useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
+
+  if (isLoading || !data) return <Spinner />;
+
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
 
   return (
-    <div className="space-y-3">
-      <SectionHeader title="Client / Employer Service View" count={clients.length} />
-      <p className="text-[11px] text-slate-500 -mt-2 mb-3">Internal view grouped by employer/site. Shows worker legality status per client.</p>
+    <div className="space-y-4">
+      {/* ── Workforce Compliance Overview ─────────────────────────────────── */}
+      <div className="rounded-xl border border-slate-700/50 bg-gradient-to-r from-slate-900 to-slate-900/80 p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">Workforce Compliance Overview</h2>
+            <p className="text-[12px] text-slate-400 mt-1 leading-relaxed max-w-lg">
+              This system monitors workforce legal status across all active workers,
+              highlights permits that need attention, and recommends next steps to maintain compliance.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Notification bell */}
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="relative p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+              >
+                <Bell className="w-4 h-4" />
+                {unread > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">{unread > 9 ? "9+" : unread}</span>
+                )}
+              </button>
 
-      {clients.length === 0 ? <EmptyState message="No employer data available" /> : (
-        <div className="space-y-3">
-          {clients.map((c: any, i: number) => {
-            const total = c.total_workers ?? 0;
-            const blocked = c.blocked ?? 0;
-            const expiring = c.expiring ?? 0;
-            const ok = c.ok ?? 0;
-            const blockedPct = total > 0 ? Math.round((blocked / total) * 100) : 0;
+            {notifOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-[100] overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+                  <span className="text-xs font-bold text-white">Notifications</span>
+                  {unread > 0 && (
+                    <button onClick={markAllRead} disabled={markingRead} className="text-[10px] text-blue-400 hover:text-blue-300 disabled:opacity-50">
+                      {markingRead ? "Marking..." : "Mark all read"}
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="text-xs text-slate-600 text-center py-6">No notifications</p>
+                  ) : (
+                    notifications.map((n: any) => (
+                      <div key={n.id} className={`px-3 py-2.5 border-b border-slate-800/50 ${n.read ? "" : "bg-slate-800/30"}`}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="flex items-center gap-1.5">
+                            {n.type === "critical" ? <XOctagon className="w-3 h-3 text-red-400" /> : <AlertTriangle className="w-3 h-3 text-amber-400" />}
+                            <span className="text-[11px] font-semibold text-white">{n.worker_name}</span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${n.type === "critical" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>
+                            {n.type}
+                          </span>
+                        </div>
+                        <p className={`text-[10px] ml-4.5 ${n.type === "critical" ? "text-red-300/80" : "text-amber-300/80"}`}>{n.message}</p>
+                        <p className="text-[9px] text-slate-600 ml-4.5 mt-0.5">{new Date(n.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
+          <span className="text-[10px] text-slate-600 font-mono">{total} items</span>
+          <button
+            onClick={exportPdf}
+            disabled={total === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white hover:border-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-300 disabled:hover:border-slate-700"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            onClick={() => { setSendModal(true); setSendStatus("idle"); setSendError(""); }}
+            disabled={total === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white hover:border-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-300 disabled:hover:border-slate-700"
+          >
+            <Send className="w-3.5 h-3.5" />
+            Send
+          </button>
+          <button
+            onClick={() => { setSchedModal(true); setSchedStatus("idle"); setSchedError(""); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white hover:border-slate-600 transition-colors"
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            Schedule
+          </button>
+        </div>
+      </div>
+
+        {/* Summary counts inside overview card */}
+        <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="bg-slate-800/60 rounded-lg px-3 py-2 text-center">
+            <p className="text-xl font-black text-white">{total}</p>
+            <p className="text-[9px] text-slate-500 uppercase font-bold">Total</p>
+          </div>
+          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-3 py-2 text-center">
+            <p className="text-xl font-black text-emerald-400">{counts.ok}</p>
+            <p className="text-[9px] text-emerald-400/60 uppercase font-bold">OK</p>
+          </div>
+          <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg px-3 py-2 text-center">
+            <p className="text-xl font-black text-amber-400">{counts.attention}</p>
+            <p className="text-[9px] text-amber-400/60 uppercase font-bold">Attention</p>
+          </div>
+          <div className="bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2 text-center">
+            <p className="text-xl font-black text-red-400">{counts.critical}</p>
+            <p className="text-[9px] text-red-400/60 uppercase font-bold">Critical</p>
+          </div>
+        </div>
+
+        {lastUpdated && (
+          <p className="text-[10px] text-slate-600 mt-3 flex items-center gap-1.5">
+            <Clock className="w-3 h-3" /> Last updated: {lastUpdated}
+          </p>
+        )}
+      </div>
+
+      {/* ── Schedule Report Modal ────────────────────────────────────────── */}
+      {schedModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSchedModal(false)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-slate-400" />
+                <h3 className="text-sm font-bold text-white">Schedule Report</h3>
+              </div>
+              <button onClick={() => setSchedModal(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-[11px] text-slate-500">Automatically generate and send the workforce report on a recurring schedule.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Recipient Email</label>
+                <input
+                  type="email" value={schedEmail} onChange={e => setSchedEmail(e.target.value)}
+                  placeholder="client@company.com"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Frequency</label>
+                <select
+                  value={schedFreq} onChange={e => setSchedFreq(e.target.value as "daily" | "weekly")}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-slate-500"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="daily">Daily</option>
+                </select>
+              </div>
+            </div>
+
+            {schedStatus === "error" && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-[11px] text-red-400">{schedError}</div>
+            )}
+            {schedStatus === "saved" && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-[11px] text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Report scheduled ({schedFreq}) for {schedEmail}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setSchedModal(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+              <button
+                onClick={handleSchedule}
+                disabled={!schedEmail || schedStatus === "saving" || schedStatus === "saved"}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 transition-colors"
+              >
+                {schedStatus === "saving" ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><CalendarClock className="w-3.5 h-3.5" /> Save Schedule</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Send Report Modal ────────────────────────────────────────────── */}
+      {sendModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSendModal(false)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl p-5 w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Send className="w-4 h-4 text-slate-400" />
+                <h3 className="text-sm font-bold text-white">Send Workforce Report</h3>
+              </div>
+              <button onClick={() => setSendModal(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+
+            <p className="text-[11px] text-slate-500">The report PDF will be generated and sent as an email attachment.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Recipient Email</label>
+                <input
+                  type="email"
+                  value={sendEmail}
+                  onChange={e => setSendEmail(e.target.value)}
+                  placeholder="client@company.com"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Message (optional)</label>
+                <textarea
+                  value={sendMessage}
+                  onChange={e => setSendMessage(e.target.value)}
+                  placeholder="Please find attached the latest workforce status report."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-lg px-3 py-2 text-[10px] text-slate-500">
+              Summary: OK {counts.ok} · Attention {counts.attention} · Critical {counts.critical} ({total} workers)
+            </div>
+
+            {sendStatus === "error" && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-[11px] text-red-400">{sendError}</div>
+            )}
+            {sendStatus === "sent" && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-[11px] text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Report sent to {sendEmail}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setSendModal(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+              <button
+                onClick={handleSend}
+                disabled={!sendEmail || sendStatus === "sending" || sendStatus === "sent"}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 transition-colors"
+              >
+                {sendStatus === "sending" ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</> : <><Send className="w-3.5 h-3.5" /> Send</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Alerts ────────────────────────────────────────────────────────── */}
+      {alerts.length > 0 && (
+        <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Alerts</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/20 text-red-300">{alerts.length}</span>
+            </div>
+            <span className="text-[9px] text-slate-600 uppercase">Requires attention</span>
+          </div>
+          <div className="space-y-1.5">
+            {alerts.map((a: any) => {
+              const isCrit = a.group === "critical";
+              return (
+                <div
+                  key={a.id}
+                  className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${isCrit ? "bg-red-500/5 border border-red-500/15" : "bg-amber-500/5 border border-amber-500/15"} cursor-pointer hover:brightness-110 transition-all`}
+                  onClick={() => scrollToWorker(a.id)}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {isCrit ? <XOctagon className="w-3.5 h-3.5 text-red-400 flex-shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-white truncate">{a.full_name}</p>
+                      <p className={`text-[10px] ${isCrit ? "text-red-300/80" : "text-amber-300/80"}`}>{a.message}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${isCrit ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}`}>
+                      {isCrit ? "CRITICAL" : "ATTENTION"}
+                    </span>
+                    <ChevronRight className="w-3 h-3 text-slate-600" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {total === 0 ? <EmptyState message="No workers found" /> : (
+        <div className="space-y-5">
+          {grouped.map(({ key, label, color, border, bg, icon: GIcon, dot, workers: gWorkers }) => {
+            if (gWorkers.length === 0) return null;
             return (
-              <div key={i} className={`bg-slate-900 border rounded-xl p-4 ${blocked > 0 ? "border-red-500/20" : "border-slate-800"}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm font-bold text-white">{c.employer}</span>
-                  </div>
-                  <span className="text-xs text-slate-500">{total} workers</span>
+              <div key={key}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`w-2 h-2 rounded-full ${dot}`} />
+                  <h3 className={`text-xs font-bold uppercase tracking-wider ${color}`}>{label}</h3>
+                  <span className="text-[10px] text-slate-600">{gWorkers.length}</span>
                 </div>
+                <div className="space-y-2">
+                  {gWorkers.map((w: any) => (
+                    <div key={w.id} ref={el => { cardRefs.current[w.id] = el; }} className={`${bg} border ${border} rounded-lg px-4 py-3 transition-all`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <GIcon className={`w-3.5 h-3.5 ${color} flex-shrink-0`} />
+                          <div>
+                            <p className="text-sm font-semibold text-white">{w.full_name}</p>
+                            <p className="text-[10px] text-slate-500">{w.assigned_site ?? "Unassigned"}{w.specialization ? ` · ${w.specialization}` : ""}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {w.appealTag && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/20">
+                              Appeal may be required
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                            key === "ok" ? "bg-emerald-500/15 text-emerald-400" :
+                            key === "attention" ? "bg-amber-500/15 text-amber-400" :
+                            "bg-red-500/15 text-red-400"
+                          }`}>
+                            {key === "ok" ? "CLEAR" : key === "attention" ? "MONITOR" : "ACTION NEEDED"}
+                          </span>
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-2 text-center">
-                    <p className="text-lg font-black text-emerald-400">{ok}</p>
-                    <p className="text-[9px] text-emerald-400/60 uppercase font-bold">OK</p>
-                  </div>
-                  <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg p-2 text-center">
-                    <p className="text-lg font-black text-amber-400">{expiring}</p>
-                    <p className="text-[9px] text-amber-400/60 uppercase font-bold">Expiring</p>
-                  </div>
-                  <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-2 text-center">
-                    <p className="text-lg font-black text-red-400">{blocked}</p>
-                    <p className="text-[9px] text-red-400/60 uppercase font-bold">Blocked</p>
-                  </div>
+                      <p className="text-[11px] text-slate-300 mt-1.5 ml-6">{w.message}</p>
+
+                      {w.nextStep && (
+                        <div className="flex items-center gap-1.5 mt-1 ml-6">
+                          <ArrowRight className="w-3 h-3 text-slate-500" />
+                          <p className="text-[10px] text-slate-400">{w.nextStep}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                {/* Status bar */}
-                {total > 0 && (
-                  <div className="mt-2 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
-                    {ok > 0 && <div className="h-full bg-emerald-500" style={{ width: `${(ok / total) * 100}%` }} />}
-                    {expiring > 0 && <div className="h-full bg-amber-500" style={{ width: `${(expiring / total) * 100}%` }} />}
-                    {blocked > 0 && <div className="h-full bg-red-500" style={{ width: `${blockedPct}%` }} />}
-                  </div>
-                )}
-
-                {blocked > 0 && (
-                  <p className="text-[10px] text-red-400 mt-2">
-                    {blocked} worker(s) blocked — expired permits need immediate attention
-                  </p>
-                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Toast ──────────────────────────────────────────────────────────── */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[400] flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 shadow-xl">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="text-xs text-slate-200">{toast}</span>
         </div>
       )}
     </div>

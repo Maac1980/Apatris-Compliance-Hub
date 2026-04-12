@@ -118,6 +118,8 @@ import testScenariosRouter from "./test-scenarios.js";
 import decisionExplanationsRouter from "./decision-explanations.js";
 import legalImmigrationCommandRouter from "./legal-immigration-command.js";
 import documentIntelligenceRouter from "./document-intelligence.js";
+import reportsRouter from "./reports.js";
+import legalNotificationsRouter from "./legal-notifications.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -239,5 +241,7 @@ router.use(testScenariosRouter);
 router.use(decisionExplanationsRouter);
 router.use(legalImmigrationCommandRouter);
 router.use(documentIntelligenceRouter);
+router.use(reportsRouter);
+router.use(legalNotificationsRouter);
 
 export default router;
