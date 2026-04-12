@@ -154,22 +154,60 @@ export async function getWorkerLegalSnapshot(workerId: string, tenantId: string)
   });
 
   // Map engine result to snapshot
-  const mappedStatus: LegalStatus = engineResult.status === "VALID" && resolvedExpiryStr
+  let mappedStatus: LegalStatus = engineResult.status === "VALID" && resolvedExpiryStr
     ? (Math.ceil((new Date(resolvedExpiryStr).getTime() - Date.now()) / 86_400_000) <= 60 ? "EXPIRING_SOON" : "VALID")
     : engineResult.status as LegalStatus;
 
+  let resolvedRisk = engineResult.riskLevel;
+  const extraWarnings: string[] = [];
+
+  // Apply approved decision-letter outcome (post-engine override)
+  const normalizedOutcome = normalizeDecisionOutcome(approvedDocs.decision_outcome);
+  if (normalizedOutcome) {
+    switch (normalizedOutcome) {
+      case "APPROVED":
+        // Approved decision confirms legality — only upgrade if consistent
+        if (mappedStatus === "REVIEW_REQUIRED" || mappedStatus === "PROTECTED_PENDING") {
+          if (resolvedExpiryStr && new Date(resolvedExpiryStr).getTime() > Date.now()) {
+            mappedStatus = "VALID";
+            resolvedRisk = "LOW";
+          } else {
+            // Approved but expiry already passed — keep as review
+            extraWarnings.push("Decision letter shows approval but permit expiry date has passed. Verify current validity.");
+          }
+        }
+        break;
+      case "REJECTED":
+        // Rejected decision is a strong negative signal
+        if (mappedStatus !== "EXPIRED_NOT_PROTECTED") {
+          mappedStatus = "REVIEW_REQUIRED";
+        }
+        if (resolvedRisk === "LOW" || resolvedRisk === "MEDIUM") resolvedRisk = "HIGH";
+        extraWarnings.push("A confirmed decision letter shows this application was rejected. Appeal or new application may be required.");
+        break;
+      case "PENDING":
+        // Pending reinforces protected-pending if already in that state
+        if (mappedStatus === "REVIEW_REQUIRED" && trcSubmitted) {
+          mappedStatus = "PROTECTED_PENDING";
+        }
+        break;
+    }
+  }
+
   return buildSnapshot(workerId, workerName, permit?.country ?? "PL", mappedStatus, {
     legalBasis: engineResult.legalBasis,
-    riskLevel: engineResult.riskLevel,
+    riskLevel: resolvedRisk,
     permitExpiresAt: resolvedExpiryStr ? new Date(resolvedExpiryStr).toISOString() : null,
     trcApplicationSubmitted: trcSubmitted,
     sameEmployerFlag: sameEmployerFromDocs ?? (trcCase?.employer_name ? true : false),
     sameRoleFlag: sameRoleFromDocs ?? false,
-    legalProtectionFlag: engineResult.status === "PROTECTED_PENDING",
+    legalProtectionFlag: mappedStatus === "PROTECTED_PENDING",
     formalDefectStatus: formalDefect ? "formal_defect" : null,
-    summary: engineResult.summary,
+    summary: normalizedOutcome
+      ? `${engineResult.summary} Decision letter outcome: ${normalizedOutcome}.`
+      : engineResult.summary,
     conditions: engineResult.conditions,
-    warnings: engineResult.warnings,
+    warnings: [...engineResult.warnings, ...extraWarnings],
     requiredActions: engineResult.requiredActions,
     trustedInputs: approvedDocs._sources,
   });
@@ -246,6 +284,39 @@ function buildSnapshot(workerId: string, workerName: string, countryCode: string
     snapshotCreatedAt: new Date().toISOString(),
     ...overrides,
   };
+}
+
+// ═══ DECISION OUTCOME NORMALIZATION ══════════════════════════════════════════
+//
+// Maps raw decision-letter outcome text to a canonical category.
+// Only explicit, clear phrases are recognized. Ambiguous text returns null.
+
+type NormalizedOutcome = "APPROVED" | "REJECTED" | "PENDING" | null;
+
+const APPROVED_PATTERNS = [
+  "approved", "granted", "positive", "pozytywna", "udzielono",
+  "zezwolono", "wydano", "accepted",
+];
+const REJECTED_PATTERNS = [
+  "rejected", "refused", "denied", "negative", "negatywna",
+  "odmówiono", "odmowa", "declined", "uchylono",
+];
+const PENDING_PATTERNS = [
+  "pending", "under review", "in progress", "w toku",
+  "rozpatrywane", "awaiting", "oczekuje",
+];
+
+function normalizeDecisionOutcome(raw: string | null): NormalizedOutcome {
+  if (!raw) return null;
+  const lower = raw.trim().toLowerCase();
+  if (!lower) return null;
+
+  if (APPROVED_PATTERNS.some(p => lower.includes(p))) return "APPROVED";
+  if (REJECTED_PATTERNS.some(p => lower.includes(p))) return "REJECTED";
+  if (PENDING_PATTERNS.some(p => lower.includes(p))) return "PENDING";
+
+  // Ambiguous — do not force a mapping
+  return null;
 }
 
 // ═══ APPROVED DOCUMENT FACT RESOLVER ══════════════════════════════════════════
