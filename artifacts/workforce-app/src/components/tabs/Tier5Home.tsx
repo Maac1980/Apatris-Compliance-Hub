@@ -14,6 +14,7 @@ import {
   fetchMyWorkerProfile, fetchMyHours, submitHours, fetchMyLegalStatus,
   type WorkerProfile, type HoursEntry, type WorkerLegalView,
 } from "@/lib/api";
+import { ComplianceCard } from "@/components/ComplianceCard";
 
 const MY_COORDINATORS = [
   {
@@ -205,6 +206,7 @@ export function Tier5Home() {
   const [legalStatus, setLegalStatus] = useState<WorkerLegalView | null>(null);
   const [profLoading, setProfLoading] = useState(true);
   const [hoursSheetOpen, setHoursSheetOpen] = useState(false);
+  const [showComplianceCard, setShowComplianceCard] = useState(false);
 
   const loadData = useCallback(() => {
     if (!jwt) return;
@@ -253,6 +255,50 @@ export function Tier5Home() {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-5 pb-28 relative"
     >
+      {/* ── Compliance Card (fullscreen overlay for border/PIP checks) ───── */}
+      {showComplianceCard && profile && (
+        <div className="fixed inset-0 z-[200] bg-slate-950 overflow-y-auto">
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-[#C41E18]" />
+                <span className="text-sm font-black text-white uppercase tracking-wider">Compliance Card</span>
+              </div>
+              <button onClick={() => setShowComplianceCard(false)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <ComplianceCard
+              worker={{
+                name: profile.name ?? displayName,
+                specialization: profile.specialization,
+                assignedSite: profile.assignedSite,
+                nationality: (profile as any).nationality,
+                passportNumber: (profile as any).passportNumber,
+                passportExpiry: profile.passportExpiry,
+                pesel: (profile as any).pesel,
+                trcExpiry: profile.trcExpiry,
+                workPermitExpiry: profile.workPermitExpiry,
+                bhpExpiry: profile.bhpExpiry,
+                medicalExamExpiry: profile.medicalExamExpiry,
+                udtCertExpiry: profile.udtCertExpiry,
+                contractEndDate: profile.contractEndDate,
+              }}
+              legalStatus={legalStatus ?? undefined}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Show Compliance Card Button ─────────────────────────────────── */}
+      <button
+        onClick={() => setShowComplianceCard(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#C41E18] text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-red-900/30 active:scale-[0.98] transition-transform"
+      >
+        <Shield className="w-5 h-5" />
+        Show Compliance Card
+      </button>
+
       {/* ── Digital Site Pass ──────────────────────────────────────────────── */}
       <div className={cn("bg-gradient-to-br rounded-2xl shadow-lg p-5 text-white relative overflow-hidden", complianceGradient(cStatus))}>
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/10 -translate-y-10 translate-x-10" />
