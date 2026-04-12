@@ -189,10 +189,10 @@ export default function SchengenCalculator() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Border Crossings</p>
                 <div className="flex gap-1">
-                  <button onClick={() => addCrossing("entry")} className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                  <button onClick={() => addCrossing("entry")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors">
                     <Plus className="w-3 h-3" /> Entry
                   </button>
-                  <button onClick={() => addCrossing("exit")} className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold">
+                  <button onClick={() => addCrossing("exit")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 text-xs font-bold hover:bg-amber-500/30 transition-colors">
                     <Plus className="w-3 h-3" /> Exit
                   </button>
                 </div>
