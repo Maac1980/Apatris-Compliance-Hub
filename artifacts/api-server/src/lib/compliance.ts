@@ -34,6 +34,7 @@ export interface Worker {
   pit2: boolean;
   complianceStatus: "critical" | "warning" | "compliant" | "non-compliant";
   daysUntilNextExpiry: number | null;
+  mosStatus: string | null;
   passportAttachments: Attachment[];
   trcAttachments: Attachment[];
   bhpAttachments: Attachment[];
@@ -129,6 +130,7 @@ export function mapRowToWorker(row: WorkerRow): Worker {
     pit2: !!row.pit2,
     complianceStatus,
     daysUntilNextExpiry,
+    mosStatus: (row as any).mos_status ?? null,
     passportAttachments: [],
     trcAttachments: [],
     bhpAttachments: [],

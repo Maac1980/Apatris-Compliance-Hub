@@ -1176,6 +1176,7 @@ function ClientViewTab() {
         work_permit_expiry: w.workPermitExpiry ?? w.work_permit_expiry,
         active_cases: w.active_cases ?? 0,
         rejected_cases: w.rejected_cases ?? 0,
+        mos_status: w.mosStatus ?? w.mos_status ?? "not_started",
       }));
     },
   });
@@ -1457,6 +1458,34 @@ function ClientViewTab() {
           </div>
         </div>
 
+        {/* Project Health */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] text-blue-400/70 uppercase font-bold">MOS Ready</p>
+              <Stamp className="w-3 h-3 text-blue-400/40" />
+            </div>
+            <p className="text-xl font-black text-blue-400 mt-0.5">
+              {total > 0 ? Math.round((classified.filter((w: any) => w.mos_status === "ready" || w.mos_status === "needs_attention").length / total) * 100) : 0}%
+            </p>
+            <p className="text-[9px] text-slate-500">
+              {classified.filter((w: any) => w.mos_status === "ready").length} ready · {classified.filter((w: any) => w.mos_status === "needs_attention").length} attention · {classified.filter((w: any) => w.mos_status === "not_started" || !w.mos_status).length} pending
+            </p>
+          </div>
+          <div className="bg-purple-500/5 border border-purple-500/10 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] text-purple-400/70 uppercase font-bold">Art. 108 Protected</p>
+              <Shield className="w-3 h-3 text-purple-400/40" />
+            </div>
+            <p className="text-xl font-black text-purple-400 mt-0.5">
+              {total > 0 ? Math.round((classified.filter((w: any) => { const t = w.trc_expiry ? new Date(w.trc_expiry).getTime() : null; return t && t > Date.now(); }).length / total) * 100) : 0}%
+            </p>
+            <p className="text-[9px] text-slate-500">
+              {classified.filter((w: any) => { const t = w.trc_expiry ? new Date(w.trc_expiry).getTime() : null; return t && t > Date.now(); }).length} with valid TRC · {classified.filter((w: any) => { const t = w.trc_expiry ? new Date(w.trc_expiry).getTime() : null; return !t || t <= Date.now(); }).length} expired or missing
+            </p>
+          </div>
+        </div>
+
         {lastUpdated && (
           <p className="text-[10px] text-slate-600 mt-3 flex items-center gap-1.5">
             <Clock className="w-3 h-3" /> Last updated: {lastUpdated}
@@ -1667,12 +1696,43 @@ function ClientViewTab() {
 
                       <p className="text-[11px] text-slate-300 mt-1.5 ml-6">{w.message}</p>
 
-                      {w.nextStep && (
-                        <div className="flex items-center gap-1.5 mt-1 ml-6">
-                          <ArrowRight className="w-3 h-3 text-slate-500" />
-                          <p className="text-[10px] text-slate-400">{w.nextStep}</p>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3 mt-1.5 ml-6">
+                        {w.nextStep && (
+                          <div className="flex items-center gap-1.5">
+                            <ArrowRight className="w-3 h-3 text-slate-500" />
+                            <p className="text-[10px] text-slate-400">{w.nextStep}</p>
+                          </div>
+                        )}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const btn = e.currentTarget;
+                            btn.textContent = "Loading..."; btn.disabled = true;
+                            try {
+                              const r = await fetch(`${BASE}api/workers/${w.id}/mos-package`, { method: "POST", headers: authHeaders() });
+                              if (!r.ok) throw new Error();
+                              const pkg = await r.json();
+                              // Reuse MOS PDF generator from Workers Legal tab
+                              const { default: jsPDF } = await import("jspdf");
+                              const { default: autoTable } = await import("jspdf-autotable");
+                              const norm = (s: string) => (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0142/g, "l").replace(/\u0141/g, "L");
+                              const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+                              const W = doc.internal.pageSize.getWidth();
+                              doc.setFontSize(16); doc.setFont("helvetica", "bold");
+                              doc.text("MOS 2026 Strategy Brief", W / 2, 18, { align: "center" });
+                              doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(120);
+                              doc.text(`${norm(pkg.workerName)} — ${pkg.mosReadiness?.toUpperCase()} | ${pkg.legalStatus} | ${pkg.riskLevel}`, W / 2, 24, { align: "center" });
+                              doc.setDrawColor(200); doc.line(14, 28, W - 14, 28);
+                              autoTable(doc, { startY: 32, margin: { left: 14, right: 14 }, head: [["#", "Area", "Assessment", "Status"]], body: pkg.strategyBrief?.map((p: any) => [String(p.id), p.title, norm(p.value), p.status.toUpperCase()]) ?? [], styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold" }, columnStyles: { 0: { cellWidth: 8 }, 3: { cellWidth: 18 } }, didParseCell: (data: any) => { if (data.section === "body" && data.column.index === 3) { const v = data.cell.raw; data.cell.styles.textColor = v === "OK" ? [34, 197, 94] : v === "WARNING" ? [245, 158, 11] : v === "CRITICAL" ? [239, 68, 68] : [148, 163, 184]; data.cell.styles.fontStyle = "bold"; } } });
+                              doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
+                              doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+                              doc.save(`strategy-${norm(pkg.workerName).replace(/\s+/g, "-").toLowerCase()}.pdf`);
+                            } catch { /* silent */ }
+                            btn.textContent = "Strategy PDF"; btn.disabled = false;
+                          }}
+                          className="text-[9px] text-blue-400 hover:text-blue-300 underline flex-shrink-0"
+                        >Strategy PDF</button>
+                      </div>
                     </div>
                   ))}
                 </div>
