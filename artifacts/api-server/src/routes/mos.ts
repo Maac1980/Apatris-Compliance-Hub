@@ -6,6 +6,7 @@ import {
   type MOSStatus, type SignatureMethod,
 } from "../services/mos-engine.service.js";
 import { generateMOSPackage } from "../services/mos-package.service.js";
+import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
 
 const router = Router();
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
@@ -87,6 +88,14 @@ router.get("/v1/legal/citizenship-roadmap/:workerId", requireAuth, requireRole(.
 router.post("/workers/:id/mos-package", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const pkg = await generateMOSPackage(req.params.id, req.tenantId!);
+    emitIntelligenceEvent({
+      type: "mos_ready",
+      workerId: req.params.id,
+      workerName: pkg.workerName,
+      message: `MOS package generated — ${pkg.mosReadiness.toUpperCase()}`,
+      timestamp: new Date().toISOString(),
+      meta: { readiness: pkg.mosReadiness, riskLevel: pkg.riskLevel },
+    });
     console.log(`[MOS] Package generated for ${pkg.workerName} — readiness: ${pkg.mosReadiness}`);
     res.json(pkg);
   } catch (err) {

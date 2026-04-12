@@ -47,6 +47,7 @@ const LEGAL_NAV = [
   { id: "client-view",     label: "Client View",            icon: Building2,     tab: "client-view" as TabKey },
 
   { id: "section-tools", label: "LEGAL TOOLS", section: true },
+  { id: "cmd-center",     label: "Command Center",         icon: Zap,           route: "/command-center" },
   { id: "imm-search",     label: "Immigration Search",     icon: ScanSearch,    route: "/immigration-search" },
   { id: "imm-permits",    label: "Immigration Permits",    icon: Stamp,         route: "/immigration" },
 

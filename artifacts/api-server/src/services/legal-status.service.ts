@@ -13,6 +13,7 @@
 
 import { query, queryOne, execute } from "../lib/db.js";
 import type { LegalBasis, RiskLevel } from "./legal-engine.js";
+import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -520,6 +521,15 @@ export async function refreshWorkerLegalSnapshot(workerId: string, tenantId: str
     snapshot.formalDefectStatus,
     JSON.stringify({ summary: snapshot.summary, conditions: snapshot.conditions, warnings: snapshot.warnings, requiredActions: snapshot.requiredActions }),
   ]);
+
+  emitIntelligenceEvent({
+    type: "status_change",
+    workerId: snapshot.workerId,
+    workerName: snapshot.workerName,
+    message: `Legal status: ${snapshot.legalStatus} (${snapshot.riskLevel} risk)`,
+    timestamp: new Date().toISOString(),
+    meta: { legalStatus: snapshot.legalStatus, riskLevel: snapshot.riskLevel },
+  });
 
   return snapshot;
 }

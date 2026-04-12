@@ -15,6 +15,7 @@ import {
   type DocumentType,
 } from "../services/document-intelligence.service.js";
 import { confirmIntake, matchWorkerMultiSignal } from "../services/document-intake.service.js";
+import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
 
 const router = Router();
 const VIEW = ["Admin", "Executive", "LegalHead", "TechOps", "Coordinator"];
@@ -246,6 +247,14 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       workerId: resolvedWorkerId ?? intakeId,
       workerName: approvedFields.full_name ?? "—",
       note: `Structured intake confirmed: ${Object.keys(approvedFields).length} fields, actions: ${result.appliedActions.join(", ") || "none"}`,
+    });
+
+    emitIntelligenceEvent({
+      type: "doc_verified",
+      workerId: resolvedWorkerId ?? intakeId,
+      workerName: approvedFields.full_name ?? "Unknown",
+      message: `Document approved: ${Object.keys(approvedFields).length} fields confirmed`,
+      timestamp: new Date().toISOString(),
     });
 
     res.json({
