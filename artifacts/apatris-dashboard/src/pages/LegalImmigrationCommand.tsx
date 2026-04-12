@@ -320,7 +320,7 @@ export default function LegalImmigrationCommand() {
         {tab === "trc" && <TRCTab cases={trcData?.cases ?? []} loading={trcLoading} filter={filterRow} />}
         {tab === "workers-legal" && <WorkersLegalTab workers={workersData?.workers ?? []} loading={workersLoading} search={q} />}
         {tab === "appeals" && <AppealsTab cases={casesData?.cases ?? []} loading={casesLoading} filter={filterRow} />}
-        {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} />}
+        {tab === "documents" && <DocumentsTab documents={docsData?.documents ?? []} loading={docsLoading} search={q} workers={workersData?.workers ?? []} />}
         {tab === "authority" && <AuthorityTab packs={authorityData ?? []} loading={authorityLoading} search={q} />}
         {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
         {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
@@ -606,9 +606,10 @@ function CaseTable({ rows }: { rows: any[] }) {
 // TAB 5 — DOCUMENTS & EVIDENCE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function DocumentsTab({ documents, loading, search }: { documents: any[]; loading: boolean; search: string }) {
+function DocumentsTab({ documents, loading, search, workers }: { documents: any[]; loading: boolean; search: string; workers: any[] }) {
   const [extraction, setExtraction] = useState<any>(null);
   const [intakeId, setIntakeId] = useState<string | null>(null);
+  const [selectedWorkerId, setSelectedWorkerId] = useState("");
   const [extractError, setExtractError] = useState<string | null>(null);
   const [approveResult, setApproveResult] = useState<any>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
@@ -617,7 +618,7 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
     mutationFn: async ({ fileName, documentType }: { fileName: string; documentType: string }) => {
       const res = await fetch(`${BASE}api/v1/document-intelligence/extract`, {
         method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ fileName, documentType }),
+        body: JSON.stringify({ fileName, documentType, workerId: selectedWorkerId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
@@ -638,7 +639,12 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
       if (!intakeId) throw new Error("No intake record — extract a document first");
       const res = await fetch(`${BASE}api/v1/document-intelligence/approve`, {
         method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ intakeId, approvedFields, documentType: extraction?.document_type }),
+        body: JSON.stringify({
+          intakeId,
+          approvedFields,
+          documentType: extraction?.document_type,
+          workerId: selectedWorkerId || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Approval failed");
@@ -662,6 +668,17 @@ function DocumentsTab({ documents, loading, search }: { documents: any[]; loadin
 
   return (
     <div className="space-y-4">
+      {/* Worker context selector */}
+      <div className="flex items-center gap-2">
+        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Link to Worker</label>
+        <select value={selectedWorkerId} onChange={e => setSelectedWorkerId(e.target.value)}
+          className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-300 max-w-xs">
+          <option value="">— No worker selected —</option>
+          {workers.map((w: any) => <option key={w.id} value={w.id}>{w.full_name}</option>)}
+        </select>
+        {selectedWorkerId && <span className="text-[9px] text-emerald-400 font-bold">Linked</span>}
+      </div>
+
       {/* Structured Document Intake */}
       <DocumentStructuredIntake
         extraction={extraction}

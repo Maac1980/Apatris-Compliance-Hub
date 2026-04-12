@@ -71,46 +71,56 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
     const userName = (req as any).user?.name ?? (req as any).user?.email ?? "unknown";
     const docType = (req.body.documentType ?? "").toUpperCase();
 
-    // Pre-check intake status to return 409 on double approval instead of 500
-    const existing = await queryOne<any>(
-      "SELECT status FROM document_intake WHERE id = $1 AND tenant_id = $2",
+    // Load full intake row — check status + get existing linkage
+    const intake = await queryOne<any>(
+      "SELECT status, matched_worker_id, linked_case_id, ai_classification FROM document_intake WHERE id = $1 AND tenant_id = $2",
       [intakeId, req.tenantId!]
     );
-    if (!existing) return res.status(404).json({ error: "Intake record not found" });
-    if (existing.status !== "PENDING_REVIEW") {
-      return res.status(409).json({ error: `Intake already ${existing.status}`, status: existing.status });
+    if (!intake) return res.status(404).json({ error: "Intake record not found" });
+    if (intake.status !== "PENDING_REVIEW") {
+      return res.status(409).json({ error: `Intake already ${intake.status}`, status: intake.status });
     }
 
-    // Update case linkage if provided and column exists
-    if (caseId) {
+    // Resolve linkage: prefer explicit params, fall back to intake's existing values
+    const resolvedWorkerId = workerId || intake.matched_worker_id || null;
+    const resolvedCaseId = caseId || intake.linked_case_id || null;
+    const resolvedDocType = (docType || intake.ai_classification || "").toUpperCase();
+
+    // Update linkage on the intake row if new context was provided
+    if (caseId || workerId) {
       try {
-        await execute(
-          "UPDATE document_intake SET linked_case_id = $1 WHERE id = $2 AND tenant_id = $3",
-          [caseId, intakeId, req.tenantId!]
-        );
-      } catch { /* linked_case_id column may not exist on older schemas */ }
+        const sets: string[] = [];
+        const vals: any[] = [];
+        let idx = 1;
+        if (workerId && workerId !== intake.matched_worker_id) { sets.push(`matched_worker_id = $${idx++}`); vals.push(workerId); }
+        if (caseId && caseId !== intake.linked_case_id) { sets.push(`linked_case_id = $${idx++}`); vals.push(caseId); }
+        if (sets.length > 0) {
+          vals.push(intakeId, req.tenantId!);
+          await execute(`UPDATE document_intake SET ${sets.join(", ")} WHERE id = $${idx} AND tenant_id = $${idx + 1}`, vals);
+        }
+      } catch { /* linkage columns may not exist on older schemas */ }
     }
 
     // Build confirmed_fields with metadata preserved
     const confirmedWithMeta: Record<string, any> = {};
     for (const [key, value] of Object.entries(approvedFields)) {
       confirmedWithMeta[key] = typeof value === "object" && value !== null
-        ? value  // already has {value, confidence, source}
+        ? value
         : { value, confidence: 1.0, source: "manual" };
     }
 
-    // Map extracted field names to confirmIntake's camelCase keys — DOCUMENT-TYPE-AWARE
+    // Flatten to plain values for confirmIntake action mapping
     const mapped: Record<string, any> = {};
     for (const [key, val] of Object.entries(approvedFields)) {
       const v = typeof val === "object" && val !== null ? (val as any).value : val;
       if (v) mapped[key] = v;
     }
 
+    // Action mapping — only runs with a valid worker AND matching document type
     const applyActions: string[] = [];
-    if (workerId) {
-      // Expiry field mapping depends on document type
+    if (resolvedWorkerId) {
       const EXPIRY_MAP: Record<string, Record<string, string>> = {
-        TRC:            { expiry_date: "trcExpiry", filing_date: "trcExpiry" },
+        TRC:            { expiry_date: "trcExpiry" },
         WORK_PERMIT:    { expiry_date: "workPermitExpiry" },
         PASSPORT:       { expiry_date: "passportExpiry" },
         BHP:            { expiry_date: "bhpExpiry" },
@@ -118,18 +128,22 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
         MEDICAL_CERT:   { expiry_date: "medicalExamExpiry" },
         UDT_CERT:       { expiry_date: "udtCertExpiry" },
       };
-      const typeMap = EXPIRY_MAP[docType] ?? {};
+      const typeMap = EXPIRY_MAP[resolvedDocType] ?? {};
 
+      // Map expiry fields with date validation
       for (const [extractedKey, camelKey] of Object.entries(typeMap)) {
-        if (mapped[extractedKey]) mapped[camelKey] = mapped[extractedKey];
+        const val = mapped[extractedKey];
+        if (val && !isNaN(new Date(val).getTime())) {
+          mapped[camelKey] = val;
+        }
       }
 
-      // Identity fields (universal across document types)
-      if (mapped.passport_number) mapped.passportNumber = mapped.passport_number;
-      if (mapped.nationality) mapped.nationality = mapped.nationality;
-      if (mapped.date_of_birth) mapped.dateOfBirth = mapped.date_of_birth;
+      // Identity fields (universal) with basic validation
+      if (mapped.passport_number && typeof mapped.passport_number === "string") mapped.passportNumber = mapped.passport_number;
+      if (mapped.nationality && typeof mapped.nationality === "string") mapped.nationality = mapped.nationality;
+      if (mapped.date_of_birth && !isNaN(new Date(mapped.date_of_birth).getTime())) mapped.dateOfBirth = mapped.date_of_birth;
 
-      const hasUpdatable = Object.keys(typeMap).some(k => mapped[k]) ||
+      const hasUpdatable = Object.values(typeMap).some(camel => mapped[camel]) ||
         mapped.passportNumber || mapped.nationality || mapped.dateOfBirth;
 
       if (hasUpdatable) applyActions.push("UPDATE_EXPIRY_FIELD");
@@ -139,18 +153,18 @@ router.post("/v1/document-intelligence/approve", requireAuth, requireRole(...VIE
       intakeId,
       req.tenantId!,
       userName,
-      workerId ?? "",
+      resolvedWorkerId ?? "",
       mapped,
       applyActions,
     );
 
-    // Also persist the metadata-enriched version
+    // Overwrite confirmed_fields_json with metadata-enriched version
     try {
       await execute(
-        "UPDATE document_intake SET confirmed_fields_json = $1 WHERE id = $2",
-        [JSON.stringify(confirmedWithMeta), intakeId]
+        "UPDATE document_intake SET confirmed_fields_json = $1, confirmed_worker_id = $2 WHERE id = $3",
+        [JSON.stringify(confirmedWithMeta), resolvedWorkerId, intakeId]
       );
-    } catch { /* non-critical — flat fields already saved by confirmIntake */ }
+    } catch { /* non-critical */ }
 
     // Audit log
     appendAuditLog({
