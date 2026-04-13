@@ -19,6 +19,7 @@ import { ProfileTab } from "@/components/tabs/ProfileTab";
 import { BottomNav } from "@/components/BottomNav";
 import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
+import { DocUploadTab } from "@/components/tabs/DocUploadTab";
 import { GpsCheckinTab } from "@/components/tabs/GpsCheckinTab";
 import { ContractTab } from "@/components/tabs/ContractTab";
 import { ImmigrationTab } from "@/components/tabs/ImmigrationTab";
@@ -197,6 +198,9 @@ export function DashboardPage() {
       // ── MY DOCS — focused document status view ────────────────────────────
       case "docs":
         return <DocsTab />;
+
+      case "docupload":
+        return <DocUploadTab />;
 
       // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":

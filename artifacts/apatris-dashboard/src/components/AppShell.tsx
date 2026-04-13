@@ -106,6 +106,8 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/doc-workflow",   label: "Doc Workflow",  icon: FileCheck },
       { path: "/contract-gen",          label: "AI Contracts",  icon: FileSignature },
       { path: "/certified-signatures", label: "Certified Sigs", icon: FileSignature },
+      { path: "/digital-safe",  label: "Digital Safe",   icon: FileCheck },
+      { path: "/document-approval", label: "Doc Approval", icon: FileCheck },
     ],
   },
   {

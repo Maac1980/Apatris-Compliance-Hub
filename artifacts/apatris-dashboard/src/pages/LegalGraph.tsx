@@ -11,6 +11,7 @@ import {
   Users, FileText, Scale, Gavel, Building2, Briefcase, Shield,
   ChevronRight, X,
 } from "lucide-react";
+import { QuickDocUpload } from "@/components/QuickDocUpload";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -168,6 +169,9 @@ export default function LegalGraph() {
           <p className="text-sm text-slate-400">{(allNodesData ?? []).length} nodes — click any node to explore connections</p>
         </div>
       </div>
+
+      {/* Quick upload — auto-links to graph */}
+      <QuickDocUpload label="Upload Document — auto-links to Knowledge Graph" />
 
       {/* Filter + legend */}
       <div className="flex flex-wrap items-center gap-2 mb-4">

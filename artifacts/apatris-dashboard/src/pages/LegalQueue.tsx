@@ -12,6 +12,7 @@ import {
   Filter, ChevronRight, ThumbsUp, Loader2, X, Flame, BookOpen,
   Ban, AlertOctagon, ArrowRight, Timer,
 } from "lucide-react";
+import { QuickDocUpload } from "@/components/QuickDocUpload";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -180,6 +181,9 @@ export default function LegalQueue() {
         </div>
         <p className="text-gray-400">8-stage case pipeline with blockers, SLA tracking, and urgency priority</p>
       </div>
+
+      {/* Quick upload */}
+      <QuickDocUpload label="Upload Case Document — AI extracts and links to case" />
 
       {/* ── Pipeline visualization ──────────────────────────────────── */}
       <div className="mb-6 bg-slate-900 border border-slate-700 rounded-xl p-4">

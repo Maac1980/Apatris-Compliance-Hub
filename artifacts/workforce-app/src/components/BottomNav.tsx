@@ -4,6 +4,7 @@ import {
   Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin,
   DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp,
   ClipboardCheck, Receipt, MoreHorizontal, X, Shield, Globe, FileCheck,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
@@ -84,6 +85,7 @@ function getModuleGroups(role: Role): ModuleGroup[] {
 
   const documents: ModuleCard[] = [
     { id: "docs",        label: "Documents",      sublabel: "Expiry · Upload",     icon: FileText,   iconColor: "#3B82F6", iconBg: "bg-blue-500/15" },
+    { id: "docupload",   label: "AI Upload",      sublabel: "Scan · Extract",      icon: Upload,     iconColor: "#C41E18", iconBg: "bg-red-500/15" },
     { id: "queue",       label: "Doc Queue",      sublabel: "Review · Approve",    icon: ClipboardList, iconColor: "#F59E0B", iconBg: "bg-amber-500/15" },
   ];
 

@@ -11,6 +11,7 @@ import {
   Calendar as CalIcon, ChevronLeft, ChevronRight, AlertTriangle,
   Shield, Clock, X, FileText, ArrowLeft,
 } from "lucide-react";
+import { QuickDocUpload } from "@/components/QuickDocUpload";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -163,6 +164,9 @@ export default function ExpiryCalendar() {
           <p className="text-sm text-slate-400">Document expirations across all workers — visual timeline</p>
         </div>
       </div>
+
+      {/* Quick upload */}
+      <QuickDocUpload label="Upload Document — AI extracts expiry dates" />
 
       {/* Zone summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
