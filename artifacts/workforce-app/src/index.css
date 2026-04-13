@@ -230,10 +230,11 @@
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
 
-  /* Bottom nav premium */
+  /* Bottom nav — solid, grounded, not floating */
   .premium-nav {
-    background: linear-gradient(180deg, hsl(220 16% 10%) 0%, hsl(220 14% 8%) 100%);
-    border-top: 1px solid rgba(255,255,255,0.06);
+    background: hsl(220 14% 8%);
+    border-top: 2px solid rgba(255,255,255,0.10);
+    flex-shrink: 0;
   }
 
   /* Subtle glow behind active elements */

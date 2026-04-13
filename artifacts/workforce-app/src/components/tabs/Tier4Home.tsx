@@ -5,6 +5,7 @@ import {
   UserPlus, MapPin, Stethoscope, Users,
   AlertCircle, ChevronRight, Loader2, RefreshCw,
 } from "lucide-react";
+import { LegalSearchBar } from "@/components/LegalSearchBar";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -95,6 +96,9 @@ export function Tier4Home() {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-6 pb-28 relative"
     >
+      {/* Legal Search */}
+      <LegalSearchBar />
+
       {/* Shared workspace badge */}
       <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">

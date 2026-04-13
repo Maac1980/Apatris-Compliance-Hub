@@ -5,6 +5,7 @@ import {
   LayoutGrid, MapPin, FileText, Loader2,
   ChevronRight,
 } from "lucide-react";
+import { LegalSearchBar } from "@/components/LegalSearchBar";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -135,6 +136,9 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-6 pb-28 relative"
     >
+      {/* Legal Search */}
+      <LegalSearchBar />
+
       {/* Financial firewall notice */}
       <div className="bg-violet-500/10 border border-violet-500/25 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm shadow-violet-500/5">
         <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center shrink-0">

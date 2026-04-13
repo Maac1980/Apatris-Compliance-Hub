@@ -91,7 +91,8 @@ function getModuleGroups(role: Role): ModuleGroup[] {
 
   const finance: ModuleCard[] = [
     { id: "payroll",     label: "Payroll",         sublabel: "ZUS · PIT · Netto",   icon: DollarSign,  iconColor: "#10B981", iconBg: "bg-emerald-500/15" },
-    { id: "zus",         label: "ZUS Calculator",  sublabel: "Contributions",       icon: Calculator,  iconColor: "#1B2A4A", iconBg: "bg-slate-500/15" },
+    { id: "calculator",  label: "ZUS Calculator",  sublabel: "Brutto → Netto",      icon: Calculator,  iconColor: "#1B2A4A", iconBg: "bg-slate-500/15" },
+    { id: "zus",         label: "ZUS Filings",     sublabel: "DRA · Monthly",       icon: Calculator,  iconColor: "#6B7280", iconBg: "bg-slate-500/15" },
     { id: "invoices",    label: "Invoices",        sublabel: "Client · VAT",        icon: Receipt,     iconColor: "#0EA5E9", iconBg: "bg-cyan-500/15" },
   ];
 
@@ -132,8 +133,8 @@ function getModuleGroups(role: Role): ModuleGroup[] {
     case "Coordinator":
       return [
         { title: "Legal & Compliance", modules: legal },
-        { title: "Documents", modules: [documents[0]] },
-        { title: "Finance", modules: [finance[1]] }, // ZUS only
+        { title: "Documents", modules: documents }, // All 3: Documents, AI Upload, Doc Queue
+        { title: "Finance", modules: [finance[1], finance[2]] }, // ZUS Calculator + ZUS Filings
         { title: "Operations", modules: [operations[0]] }, // Onboarding
         { title: "Account", modules: account },
       ];
@@ -160,11 +161,11 @@ function getAllOverflowIds(role: Role): string[] {
 // ═══ STYLING ═══════════════════════════════════════════════════════════════
 
 const ACTIVE_COLORS: Record<Role, { text: string; bg: string; glow: string }> = {
-  Executive:    { text: "text-indigo-400",  bg: "bg-indigo-500/15",  glow: "shadow-[0_0_12px_-2px_rgba(99,102,241,0.4)]" },
-  LegalHead:    { text: "text-violet-400",  bg: "bg-violet-500/15",  glow: "shadow-[0_0_12px_-2px_rgba(139,92,246,0.4)]" },
-  TechOps:      { text: "text-blue-400",    bg: "bg-blue-500/15",    glow: "shadow-[0_0_12px_-2px_rgba(59,130,246,0.4)]" },
-  Coordinator:  { text: "text-emerald-400", bg: "bg-emerald-500/15", glow: "shadow-[0_0_12px_-2px_rgba(16,185,129,0.4)]" },
-  Professional: { text: "text-amber-400",   bg: "bg-amber-500/15",   glow: "shadow-[0_0_12px_-2px_rgba(245,158,11,0.4)]" },
+  Executive:    { text: "text-indigo-400",  bg: "bg-indigo-500/15",  glow: "" },
+  LegalHead:    { text: "text-violet-400",  bg: "bg-violet-500/15",  glow: "" },
+  TechOps:      { text: "text-blue-400",    bg: "bg-blue-500/15",    glow: "" },
+  Coordinator:  { text: "text-emerald-400", bg: "bg-emerald-500/15", glow: "" },
+  Professional: { text: "text-amber-400",   bg: "bg-amber-500/15",   glow: "" },
 };
 
 const BADGE_BG: Record<Role, string> = {
@@ -240,7 +241,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         <>
           <div className="absolute inset-0 bg-black/60 z-[60] backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-[68px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
+            className="absolute bottom-[56px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
             {/* Handle bar */}
@@ -294,8 +295,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
       {/* ── Bottom nav bar ─────────────────────────────────────────── */}
       <div className="shrink-0 premium-nav relative z-50">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-        <div className="flex items-center justify-around h-[68px] px-2">
+        <div className="flex items-center justify-around h-[56px] px-2">
           {primary.map(tab => renderTab(tab, activeTab === tab.id))}
           {/* More button */}
           <button

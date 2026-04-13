@@ -5,6 +5,7 @@ import {
   LayoutGrid, MapPin, ClipboardList, FileText,
   ChevronRight, Bell, Loader2,
 } from "lucide-react";
+import { LegalSearchBar } from "@/components/LegalSearchBar";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,9 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-6 pb-28 relative"
     >
+      {/* Legal Search */}
+      <LegalSearchBar />
+
       {/* KPI strip — live */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
