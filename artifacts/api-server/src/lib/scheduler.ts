@@ -625,6 +625,54 @@ export function startWeeklyReport(): void {
 }
 
 // Daily regulatory scan — every day at 06:00
+export function startEscalationEngine(): void {
+  // Run every 4 hours — check SLA breaches and escalate
+  const INTERVAL = 4 * 60 * 60 * 1000;
+  console.log("[Scheduler] Escalation engine active (every 4 hours).");
+  setInterval(async () => {
+    try {
+      const { getDefaultTenantId } = await import("./tenant.js");
+      const { runEscalationScan } = await import("../services/escalation-engine.service.js");
+      const result = await runEscalationScan(getDefaultTenantId());
+      if (result.escalations > 0 || result.docAlerts > 0) {
+        console.log(`[Escalation] ${result.escalations} escalations, ${result.docAlerts} doc alerts, ${result.errors} errors`);
+      }
+    } catch (err) { console.error("[Escalation] Error:", err instanceof Error ? err.message : err); }
+  }, INTERVAL);
+  // Also run once at startup (after 2 min delay)
+  setTimeout(async () => {
+    try {
+      const { getDefaultTenantId } = await import("./tenant.js");
+      const { runEscalationScan } = await import("../services/escalation-engine.service.js");
+      await runEscalationScan(getDefaultTenantId());
+    } catch { /* non-critical */ }
+  }, 120_000);
+}
+
+export function startWeeklyDigest(): void {
+  // Every Monday at 8am
+  function msUntilNextMonday8am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(8, 0, 0, 0);
+    const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
+    next.setDate(next.getDate() + daysUntilMonday);
+    if (next <= now) next.setDate(next.getDate() + 7);
+    return next.getTime() - now.getTime();
+  }
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const ms = msUntilNextMonday8am();
+  console.log(`[Scheduler] Weekly digest scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 08:00).`);
+  setTimeout(function digestSend() {
+    import("./tenant.js").then(({ getDefaultTenantId }) =>
+      import("../services/weekly-digest.service.js").then(m => m.sendWeeklyDigestEmail(getDefaultTenantId()))
+    )
+    .then(() => console.log("[Scheduler] Weekly digest sent."))
+    .catch(err => console.error("[Scheduler] Weekly digest error:", err))
+    .finally(() => setTimeout(digestSend, WEEK_MS));
+  }, ms);
+}
+
 export function startDailyRegulatoryScan(): void {
   function msUntilNext6am(): number {
     const now = new Date();

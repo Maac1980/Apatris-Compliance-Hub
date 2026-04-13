@@ -346,6 +346,29 @@
     "creationFailed": "Tworzenie nie powiodło się",
     "tryAgain": "Spróbuj ponownie"
   },
+  "search": {
+    "placeholder": "Zapytaj o prawo imigracyjne...",
+    "ask": "Zapytaj",
+    "verifiedLaw": "Zweryfikowane prawo",
+    "legalSearch": "Wyszukiwanie prawne",
+    "aiAnalysis": "Analiza AI",
+    "noResult": "Brak wyniku",
+    "confidence": "pewność"
+  },
+  "upload": {
+    "scanDocument": "Skanuj dokument",
+    "complianceCard": "Karta zgodności",
+    "aiUpload": "Przesyłanie AI",
+    "scanExtract": "Skanuj i wyodrębnij",
+    "documentScanned": "Dokument zeskanowany! Sprawdź wyniki z koordynatorem.",
+    "uploadFailed": "Przesyłanie nie powiodło się. Spróbuj ponownie."
+  },
+  "notebook": {
+    "caseNotebook": "Notatnik sprawy",
+    "entries": "wpisów",
+    "noEntries": "Brak wpisów w sprawie",
+    "caseChanges": "Zmiany statusu spraw i dokumenty pojawią się tutaj"
+  },
   "common": {
     "tier": "Poziom",
     "tier1Only": "TYLKO POZIOM 1",

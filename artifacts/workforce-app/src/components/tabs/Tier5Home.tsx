@@ -294,14 +294,45 @@ export function Tier5Home() {
         </div>
       )}
 
-      {/* ── Show Compliance Card Button ─────────────────────────────────── */}
-      <button
-        onClick={() => setShowComplianceCard(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#C41E18] text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-red-900/30 active:scale-[0.98] transition-transform"
-      >
-        <Shield className="w-5 h-5" />
-        Show Compliance Card
-      </button>
+      {/* ── Action Buttons ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setShowComplianceCard(true)}
+          className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#C41E18] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-900/30 active:scale-[0.98] transition-transform"
+        >
+          <Shield className="w-4 h-4" />
+          Compliance Card
+        </button>
+        <button
+          onClick={() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.capture = "environment";
+            input.onchange = async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              const form = new FormData();
+              form.append("file", file);
+              try {
+                const res = await fetch("/api/v1/intake/process", {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${jwt}` },
+                  body: form,
+                });
+                if (res.ok) {
+                  alert("Document scanned! Check with your coordinator for results.");
+                }
+              } catch { alert("Upload failed. Try again."); }
+            };
+            input.click();
+          }}
+          className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/[0.06] border border-white/[0.1] text-white font-bold text-xs uppercase tracking-wider active:scale-[0.98] transition-transform"
+        >
+          <UploadCloud className="w-4 h-4" />
+          Scan Document
+        </button>
+      </div>
 
       {/* ── Digital Site Pass ──────────────────────────────────────────────── */}
       <div className={cn("bg-gradient-to-br rounded-2xl shadow-lg p-5 text-white relative overflow-hidden", complianceGradient(cStatus))}>

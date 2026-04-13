@@ -86,13 +86,15 @@ const port = Number(process.env["PORT"] || "8080");
 
   // Weekly report + monthly invoices — non-fatal
   try {
-    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan, startDailyRegulatoryScan } = await import("./lib/scheduler.js");
+    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan, startDailyRegulatoryScan, startEscalationEngine, startWeeklyDigest } = await import("./lib/scheduler.js");
     startWeeklyReport();
     startMonthlyInvoices();
     startWeeklyMoodPrompts();
     startWeeklyCompetitorScan();
     startWeeklySignalScan();
     startDailyRegulatoryScan();
+    startEscalationEngine();
+    startWeeklyDigest();
 
     // Report scheduler + notification scanner — checks every hour
     try {

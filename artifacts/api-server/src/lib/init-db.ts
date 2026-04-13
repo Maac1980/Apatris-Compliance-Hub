@@ -2209,6 +2209,21 @@ export async function initializeDatabase(): Promise<void> {
     worker_name TEXT, worker_email TEXT, stage TEXT DEFAULT 'New',
     match_score REAL DEFAULT 0, notes TEXT, applied_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  // Public recruitment form columns
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='tenant_id') THEN ALTER TABLE job_applications ADD COLUMN tenant_id UUID; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='first_name') THEN ALTER TABLE job_applications ADD COLUMN first_name TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='last_name') THEN ALTER TABLE job_applications ADD COLUMN last_name TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='email') THEN ALTER TABLE job_applications ADD COLUMN email TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='experience') THEN ALTER TABLE job_applications ADD COLUMN experience TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='specialization') THEN ALTER TABLE job_applications ADD COLUMN specialization TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='source') THEN ALTER TABLE job_applications ADD COLUMN source TEXT DEFAULT 'direct'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='job_applications' AND column_name='status') THEN ALTER TABLE job_applications ADD COLUMN status TEXT DEFAULT 'new'; END IF;
+      END $$;
+    `);
+  } catch { /* columns may already exist */ }
   await execute(`CREATE TABLE IF NOT EXISTS clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL,
     contact_person TEXT, email TEXT, phone TEXT, nip TEXT, address TEXT,
@@ -2391,6 +2406,14 @@ export async function initializeDatabase(): Promise<void> {
       END $$;
     `);
     // Expand status CHECK to include all 8 stages (safe — drops old, adds new)
+    // Voivodeship tracking
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='voivodeship') THEN
+          ALTER TABLE legal_cases ADD COLUMN voivodeship TEXT;
+        END IF;
+      END $$;
+    `);
     await execute(`ALTER TABLE legal_cases DROP CONSTRAINT IF EXISTS legal_cases_status_check`);
     await execute(`ALTER TABLE legal_cases ADD CONSTRAINT legal_cases_status_check CHECK (status IN ('NEW','DOCS_PENDING','READY_TO_FILE','FILED','UNDER_REVIEW','DEFECT_NOTICE','DECISION_RECEIVED','APPROVED','REJECTED'))`);
   } catch { /* columns/constraint may already exist */ }
@@ -2437,6 +2460,29 @@ export async function initializeDatabase(): Promise<void> {
   )`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_case ON case_notebook_entries(case_id, tenant_id)`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_search ON case_notebook_entries USING GIN(to_tsvector('english', title || ' ' || content))`);
+
+  // ── Verification Tokens — public compliance verification via QR ──────
+  await execute(`CREATE TABLE IF NOT EXISTS verification_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_verify_token ON verification_tokens(token)`);
+
+  // ── Client Portal Tokens — read-only compliance links for clients ───
+  await execute(`CREATE TABLE IF NOT EXISTS client_portal_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    client_name TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    worker_ids UUID[] DEFAULT '{}',
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_client_portal_token ON client_portal_links(token)`);
 
   // ── Error Reports — tenant-aware user error reporting ────────────────
   await execute(`CREATE TABLE IF NOT EXISTS error_reports (

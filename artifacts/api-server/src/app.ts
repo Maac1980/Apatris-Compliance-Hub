@@ -23,6 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(tenantMiddleware);
 
+// Public routes (no auth required) — must be before apiLimiter
+import publicVerifyRouter from "./routes/public-verify.js";
+app.use("/api", publicVerifyRouter);
+
 app.use("/api", apiLimiter);
 app.use("/api", router);
 
