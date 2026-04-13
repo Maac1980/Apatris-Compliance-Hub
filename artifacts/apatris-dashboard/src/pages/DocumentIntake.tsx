@@ -11,6 +11,7 @@ import {
   Upload, FileText, Loader2, User, AlertTriangle, CheckCircle2,
   Shield, Clock, Scale, Brain, Fingerprint, CalendarClock,
   ChevronDown, ChevronUp, Gavel, Eye, XOctagon, Zap,
+  MessageSquareWarning, Send, X,
 } from "lucide-react";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
@@ -82,6 +83,14 @@ export default function DocumentIntake() {
   const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set());
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>("");
   const [showSignals, setShowSignals] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [fbField, setFbField] = useState("");
+  const [fbCorrection, setFbCorrection] = useState("");
+  const [fbErrorType, setFbErrorType] = useState("extraction_error");
+  const [fbSeverity, setFbSeverity] = useState("medium");
+  const [fbNotes, setFbNotes] = useState("");
+  const [fbSent, setFbSent] = useState(false);
+  const [fbSending, setFbSending] = useState(false);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -487,6 +496,120 @@ export default function DocumentIntake() {
                   </div>
                 </div>
               )}
+
+              {/* ═══ DEVELOPER FEEDBACK / CORRECT DATA ═══ */}
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquareWarning className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-amber-400 uppercase">Developer Feedback</span>
+                  </div>
+                  <button onClick={() => { setFeedbackOpen(!feedbackOpen); setFbSent(false); }}
+                    className="px-3 py-1 rounded-md text-[11px] font-bold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors flex items-center gap-1.5">
+                    {feedbackOpen ? <><X className="w-3 h-3" /> Close</> : <>Correct Data</>}
+                  </button>
+                </div>
+
+                {fbSent && (
+                  <div className="flex items-center gap-2 text-xs text-green-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Feedback logged — will improve OCR in next iteration
+                  </div>
+                )}
+
+                {feedbackOpen && !fbSent && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-[11px] text-slate-400">Log OCR errors so the extraction prompt can be tuned for better accuracy.</p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase block mb-0.5">Field with error</label>
+                        <select value={fbField} onChange={e => setFbField(e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs">
+                          <option value="">— Select —</option>
+                          {result.identity.fullName && <option value="fullName">fullName</option>}
+                          {result.identity.passportNumber && <option value="passportNumber">passportNumber</option>}
+                          {result.identity.pesel && <option value="pesel">pesel</option>}
+                          {result.identity.dateOfBirth && <option value="dateOfBirth">dateOfBirth</option>}
+                          {result.identity.nationality && <option value="nationality">nationality</option>}
+                          {result.credentials.expiryDate && <option value="expiryDate">expiryDate</option>}
+                          {result.credentials.issueDate && <option value="issueDate">issueDate</option>}
+                          {result.credentials.filingDate && <option value="filingDate">filingDate</option>}
+                          {result.credentials.caseReference && <option value="caseReference">caseReference</option>}
+                          {result.credentials.employer && <option value="employer">employer</option>}
+                          {result.credentials.role && <option value="role">role</option>}
+                          <option value="classification">classification (doc type)</option>
+                          <option value="missing_field">missing field</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase block mb-0.5">Error type</label>
+                        <select value={fbErrorType} onChange={e => setFbErrorType(e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs">
+                          <option value="extraction_error">Extraction error</option>
+                          <option value="classification_error">Classification error</option>
+                          <option value="date_format">Date format wrong</option>
+                          <option value="name_mismatch">Name mismatch</option>
+                          <option value="missing_field">Missing field</option>
+                          <option value="wrong_field">Wrong field value</option>
+                          <option value="confidence_too_high">Confidence too high</option>
+                          <option value="mrz_parse_error">MRZ parse error</option>
+                          <option value="language_error">Language/encoding error</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase block mb-0.5">Correct value</label>
+                        <input type="text" value={fbCorrection} onChange={e => setFbCorrection(e.target.value)}
+                          placeholder="What should the value be?"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs placeholder-slate-600" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase block mb-0.5">Severity</label>
+                        <select value={fbSeverity} onChange={e => setFbSeverity(e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs">
+                          <option value="low">Low — minor</option>
+                          <option value="medium">Medium — wrong value</option>
+                          <option value="high">High — critical field</option>
+                          <option value="critical">Critical — completely wrong</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase block mb-0.5">Notes (optional)</label>
+                      <input type="text" value={fbNotes} onChange={e => setFbNotes(e.target.value)}
+                        placeholder="Additional context for prompt tuning..."
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs placeholder-slate-600" />
+                    </div>
+
+                    <button onClick={async () => {
+                      if (!fbField || !fbCorrection) return;
+                      setFbSending(true);
+                      try {
+                        await fetch(`${BASE}api/v1/first-contact/ocr-feedback`, {
+                          method: "POST", headers: authHeaders(),
+                          body: JSON.stringify({
+                            documentId: result.id, workerId: result.workerMatch.workerId,
+                            docType: result.classification, fieldName: fbField,
+                            ocrValue: (result.identity as any)[fbField] ?? (result.credentials as any)[fbField] ?? null,
+                            correctedValue: fbCorrection, errorType: fbErrorType, severity: fbSeverity, notes: fbNotes || null,
+                          }),
+                        });
+                        setFbSent(true); setFbField(""); setFbCorrection(""); setFbNotes("");
+                        toast({ description: "OCR feedback logged" });
+                        setTimeout(() => setFbSent(false), 3000);
+                      } catch { toast({ description: "Failed to log feedback", variant: "destructive" }); }
+                      setFbSending(false);
+                    }}
+                      disabled={!fbField || !fbCorrection || fbSending}
+                      className="w-full py-2 rounded-md text-xs font-bold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                      {fbSending ? <><Loader2 className="w-3 h-3 animate-spin" /> Submitting...</> : <><Send className="w-3 h-3" /> Log OCR Feedback</>}
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="text-center py-20 text-slate-500">

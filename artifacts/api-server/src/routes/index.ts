@@ -121,6 +121,7 @@ import documentIntelligenceRouter from "./document-intelligence.js";
 import reportsRouter from "./reports.js";
 import legalNotificationsRouter from "./legal-notifications.js";
 import intelligenceStreamRouter from "./intelligence-stream.js";
+import firstContactRouter from "./first-contact-verification.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -245,5 +246,6 @@ router.use(documentIntelligenceRouter);
 router.use(reportsRouter);
 router.use(legalNotificationsRouter);
 router.use(intelligenceStreamRouter);
+router.use(firstContactRouter);
 
 export default router;
