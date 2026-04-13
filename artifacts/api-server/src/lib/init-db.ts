@@ -3155,5 +3155,89 @@ export async function initializeDatabase(): Promise<void> {
     await execute(`CREATE INDEX IF NOT EXISTS idx_legal_notif_tenant ON legal_notifications(tenant_id, read, created_at DESC)`);
   } catch { /* already exists */ }
 
+  // ── Performance Indexes (tenant-aware composites) ─────────────────────
+  console.log("[init-db] Creating performance indexes…");
+
+  const perfIndexes = [
+    // Workers — most queried table
+    `CREATE INDEX IF NOT EXISTS idx_workers_tenant ON workers(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_workers_tenant_status ON workers(tenant_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_workers_tenant_name ON workers(tenant_id, full_name)`,
+    `CREATE INDEX IF NOT EXISTS idx_workers_tenant_site ON workers(tenant_id, site)`,
+    `CREATE INDEX IF NOT EXISTS idx_workers_tenant_specialization ON workers(tenant_id, specialization)`,
+
+    // Compliance — time-critical queries
+    `CREATE INDEX IF NOT EXISTS idx_compliance_snapshots_tenant_date ON compliance_snapshots(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_documents_tenant_worker ON documents(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_documents_tenant_status ON documents(tenant_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_document_workflows_tenant_status ON document_workflows(tenant_id, status)`,
+
+    // Payroll
+    `CREATE INDEX IF NOT EXISTS idx_payroll_snapshots_tenant_month ON payroll_snapshots(tenant_id, month)`,
+    `CREATE INDEX IF NOT EXISTS idx_payroll_commits_tenant_month ON payroll_commits(tenant_id, month)`,
+    `CREATE INDEX IF NOT EXISTS idx_hours_log_tenant_worker ON hours_log(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_hours_log_tenant_month ON hours_log(tenant_id, month)`,
+
+    // Legal
+    `CREATE INDEX IF NOT EXISTS idx_trc_cases_tenant_status ON trc_cases(tenant_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_trc_cases_tenant_worker ON trc_cases(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_legal_cases_tenant_status ON legal_cases(tenant_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_legal_documents_tenant ON legal_documents(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_immigration_permits_tenant_expiry ON immigration_permits(tenant_id, expiry_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_immigration_permits_worker ON immigration_permits(worker_id, expiry_date DESC)`,
+
+    // Auth & Sessions
+    `CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_otp_sessions_email ON otp_sessions(email)`,
+    `CREATE INDEX IF NOT EXISTS idx_mobile_pins_worker ON mobile_pins(worker_id)`,
+
+    // Audit & Logging
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_created ON audit_logs(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_action ON audit_logs(tenant_id, action)`,
+    `CREATE INDEX IF NOT EXISTS idx_notification_log_tenant_created ON notification_log(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_gdpr_log_tenant ON gdpr_log(tenant_id, created_at DESC)`,
+
+    // GPS & Tracking
+    `CREATE INDEX IF NOT EXISTS idx_gps_checkins_tenant_worker ON gps_checkins(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_gps_checkins_tenant_date ON gps_checkins(tenant_id, checked_in_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_voice_checkins_worker_site ON voice_checkins(worker_id, site)`,
+
+    // Contracts & Signatures
+    `CREATE INDEX IF NOT EXISTS idx_contracts_tenant_worker ON contracts(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_contracts_tenant_status ON contracts(tenant_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_signatures_tenant ON signatures(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_generated_contracts_tenant ON generated_contracts(tenant_id, created_at DESC)`,
+
+    // CRM & Clients
+    `CREATE INDEX IF NOT EXISTS idx_crm_deals_tenant_stage ON crm_deals(tenant_id, stage)`,
+    `CREATE INDEX IF NOT EXISTS idx_crm_companies_tenant ON crm_companies(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_clients_tenant ON clients(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_invoices_tenant_status ON invoices(tenant_id, status)`,
+
+    // Intelligence & AI
+    `CREATE INDEX IF NOT EXISTS idx_regulatory_updates_category ON regulatory_updates(category, severity)`,
+    `CREATE INDEX IF NOT EXISTS idx_regulatory_updates_fetched ON regulatory_updates(fetched_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_immigration_searches_email ON immigration_searches(user_email, searched_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_ai_audit_log_tenant ON ai_audit_log(tenant_id, created_at DESC)`,
+
+    // Worker Relations
+    `CREATE INDEX IF NOT EXISTS idx_worker_skills_worker ON worker_skills(worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_worker_files_worker ON worker_files(worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_worker_matches_tenant ON worker_matches(tenant_id, score DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_trust_scores_tenant ON trust_scores(tenant_id, score DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_salary_advances_tenant_worker ON salary_advances(tenant_id, worker_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_worker ON leave_requests(tenant_id, worker_id)`,
+
+    // Multi-tenant core
+    `CREATE INDEX IF NOT EXISTS idx_site_coordinators_tenant ON site_coordinators(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_site_geofences_tenant ON site_geofences(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_posting_assignments_tenant ON posting_assignments(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_consent_records_tenant ON consent_records(tenant_id)`,
+  ];
+
+  for (const idx of perfIndexes) {
+    try { await execute(idx); } catch { /* column may not exist yet */ }
+  }
+
   console.log("[init-db] Database initialization complete.");
 }
