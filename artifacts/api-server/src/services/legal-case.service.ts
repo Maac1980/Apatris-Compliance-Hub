@@ -275,6 +275,12 @@ export async function updateCaseStatus(
     await recordCaseInGraph(tenantId, caseId, existing.worker_id, existing.case_type, newStatus);
   } catch { /* non-blocking */ }
 
+  // Auto-generate AI document for this stage (non-blocking)
+  try {
+    const { generateDocumentForStage } = await import("./case-doc-generator.service.js");
+    await generateDocumentForStage(caseId, tenantId, newStatus);
+  } catch { /* non-blocking */ }
+
   return updated;
 }
 

@@ -124,6 +124,7 @@ import intelligenceStreamRouter from "./intelligence-stream.js";
 import firstContactRouter from "./first-contact-verification.js";
 import knowledgeGraphRouter from "./knowledge-graph.js";
 import caseNotebookRouter from "./case-notebook.js";
+import caseDocGeneratorRouter from "./case-doc-generator.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -251,5 +252,6 @@ router.use(intelligenceStreamRouter);
 router.use(firstContactRouter);
 router.use(knowledgeGraphRouter);
 router.use(caseNotebookRouter);
+router.use(caseDocGeneratorRouter);
 
 export default router;

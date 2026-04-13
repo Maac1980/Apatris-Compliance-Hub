@@ -1960,6 +1960,44 @@ function VaultTab() {
     enabled: !!selectedCaseId,
   });
 
+  // Review queue — AI-generated documents awaiting lawyer review
+  const { data: queueData, refetch: refetchQueue } = useQuery({
+    queryKey: ["vault-doc-queue"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/v1/vault/docs/queue`, { headers: authHeaders() });
+      if (!r.ok) return { docs: [] };
+      return r.json();
+    },
+  });
+
+  const { data: queueStats } = useQuery({
+    queryKey: ["vault-doc-stats"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/v1/vault/docs/stats`, { headers: authHeaders() });
+      if (!r.ok) return { drafts: 0, underReview: 0, approved: 0, rejected: 0, sent: 0 };
+      return r.json();
+    },
+  });
+
+  const [previewDoc, setPreviewDoc] = React.useState<any>(null);
+  const [previewLang, setPreviewLang] = React.useState<"pl" | "en">("pl");
+
+  const handleApprove = async (docId: string) => {
+    try {
+      await fetch(`${BASE}api/v1/vault/docs/${docId}/approve`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      refetchQueue(); refetchNotebook();
+    } catch { /* ignore */ }
+  };
+
+  const handleReject = async (docId: string) => {
+    const notes = prompt("Rejection reason:");
+    if (!notes) return;
+    try {
+      await fetch(`${BASE}api/v1/vault/docs/${docId}/reject`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ notes }) });
+      refetchQueue();
+    } catch { /* ignore */ }
+  };
+
   // Active cases for case selector
   const { data: activeCases } = useQuery({
     queryKey: ["vault-active-cases"],
@@ -2068,6 +2106,117 @@ function VaultTab() {
           </div>
         )}
       </div>
+
+      {/* ── Lawyer Review Queue ─────────────────────────────────── */}
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Gavel className="w-5 h-5 text-amber-400" />
+            <h3 className="text-sm font-bold text-white">Lawyer Review Queue</h3>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold">
+              {(queueData?.docs ?? []).length} pending
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[9px]">
+            {Object.entries(queueStats ?? {}).filter(([, v]) => (v as number) > 0).map(([k, v]) => (
+              <span key={k} className={`px-1.5 py-0.5 rounded font-bold ${
+                k === "drafts" ? "bg-slate-700 text-slate-300" :
+                k === "approved" ? "bg-emerald-500/10 text-emerald-400" :
+                k === "sent" ? "bg-blue-500/10 text-blue-400" :
+                k === "rejected" ? "bg-red-500/10 text-red-400" : "bg-slate-700 text-slate-400"
+              }`}>{k}: {v as number}</span>
+            ))}
+          </div>
+        </div>
+
+        {(queueData?.docs ?? []).length === 0 ? (
+          <p className="text-center text-slate-500 text-xs py-6">No documents awaiting review — AI generates drafts automatically when cases change stage</p>
+        ) : (
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {(queueData?.docs ?? []).map((doc: any) => (
+              <div key={doc.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 font-bold">{doc.doc_type}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">{doc.stage_trigger}</span>
+                      {doc.ai_confidence && (
+                        <span className="text-[9px] text-slate-500">{Math.round(doc.ai_confidence)}% AI</span>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold text-white">{doc.title}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{(doc as any).worker_name ?? "Worker"} · {(doc as any).case_type ?? doc.case_id?.slice(0, 8)}</p>
+                    {doc.legal_basis?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {doc.legal_basis.slice(0, 4).map((basis: string, i: number) => (
+                          <span key={i} className="text-[8px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">{basis}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button onClick={() => { setPreviewDoc(doc); setPreviewLang("pl"); }}
+                      className="px-2 py-1 bg-slate-700 text-white rounded text-[9px] font-bold hover:bg-slate-600">Preview</button>
+                    <button onClick={() => handleApprove(doc.id)}
+                      className="px-2 py-1 bg-emerald-600/20 text-emerald-400 rounded text-[9px] font-bold hover:bg-emerald-600/30">Approve</button>
+                    <button onClick={() => handleReject(doc.id)}
+                      className="px-2 py-1 bg-red-600/20 text-red-400 rounded text-[9px] font-bold hover:bg-red-600/30">Reject</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Document Preview Modal ─────────────────────────────────── */}
+      {previewDoc && (
+        <div className="fixed inset-0 bg-black/70 z-[500] flex items-center justify-center p-4" onClick={() => setPreviewDoc(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div>
+                <p className="text-sm font-bold text-white">{previewDoc.title}</p>
+                <p className="text-[10px] text-slate-400">{previewDoc.doc_type} · {previewDoc.stage_trigger}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex bg-slate-800 rounded-lg p-0.5">
+                  <button onClick={() => setPreviewLang("pl")}
+                    className={`px-3 py-1 rounded text-[10px] font-bold ${previewLang === "pl" ? "bg-white/10 text-white" : "text-slate-500"}`}>PL</button>
+                  <button onClick={() => setPreviewLang("en")}
+                    className={`px-3 py-1 rounded text-[10px] font-bold ${previewLang === "en" ? "bg-white/10 text-white" : "text-slate-500"}`}>EN</button>
+                </div>
+                <button onClick={() => setPreviewDoc(null)} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[65vh]">
+              {previewDoc.legal_basis?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {previewDoc.legal_basis.map((basis: string, i: number) => (
+                    <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">{basis}</span>
+                  ))}
+                </div>
+              )}
+              <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed font-mono">
+                {previewLang === "pl" ? previewDoc.content_pl : previewDoc.content_en}
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 border-t border-slate-700">
+              <div className="flex items-center gap-2 text-[9px] text-slate-500">
+                <span>{previewDoc.ai_model}</span>
+                <span>{Math.round(previewDoc.ai_confidence ?? 0)}% confidence</span>
+                <span>{previewDoc.similar_cases_used} similar cases</span>
+                <span>{previewDoc.kb_articles_used?.length ?? 0} KB articles</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { handleReject(previewDoc.id); setPreviewDoc(null); }}
+                  className="px-3 py-1.5 bg-red-600/20 text-red-400 rounded-lg text-[10px] font-bold hover:bg-red-600/30">Reject</button>
+                <button onClick={() => { handleApprove(previewDoc.id); setPreviewDoc(null); }}
+                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-700">Approve & Lock</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Knowledge Graph Stats ─────────────────────────────────── */}

@@ -2438,6 +2438,35 @@ export async function initializeDatabase(): Promise<void> {
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_case ON case_notebook_entries(case_id, tenant_id)`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_search ON case_notebook_entries USING GIN(to_tsvector('english', title || ' ' || content))`);
 
+  // ── AI-Generated Case Documents — lawyer review queue ────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS case_generated_docs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES legal_cases(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    doc_type TEXT NOT NULL,
+    stage_trigger TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content_pl TEXT NOT NULL,
+    content_en TEXT NOT NULL,
+    legal_basis TEXT[] DEFAULT '{}',
+    similar_cases_used INTEGER DEFAULT 0,
+    kb_articles_used TEXT[] DEFAULT '{}',
+    ai_model TEXT,
+    ai_confidence NUMERIC(5,2),
+    status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','UNDER_REVIEW','APPROVED','REJECTED','SENT')),
+    reviewed_by TEXT,
+    reviewed_at TIMESTAMPTZ,
+    review_notes TEXT,
+    sent_to TEXT,
+    sent_at TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_case_gen_docs_case ON case_generated_docs(case_id, tenant_id)`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_case_gen_docs_status ON case_generated_docs(tenant_id, status)`);
+
   // Authority response packs — formal evidence-backed response drafts for authorities
   await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
