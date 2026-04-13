@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users, ShieldCheck, AlertTriangle, FileWarning, ShieldX,
   Receipt, Clock, Scale, FileSignature, Stethoscope,
   LayoutGrid, MapPin, ClipboardList, FileText,
-  ChevronRight, Bell, Loader2,
+  ChevronRight, Bell, Loader2, Activity, Shield, FileCheck,
 } from "lucide-react";
 import { LegalSearchBar } from "@/components/LegalSearchBar";
 import { motion } from "framer-motion";
@@ -14,6 +15,12 @@ import { TimesheetsSheet } from "@/components/TimesheetsSheet";
 import { SiteDeploymentsSheet } from "@/components/SiteDeploymentsSheet";
 import { LegalDossiersSheet } from "@/components/LegalDossiersSheet";
 import { UDTSheet } from "@/components/UDTSheet";
+
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("apatris_token") || localStorage.getItem("apatris_jwt") || "";
+  return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {};
+}
+const API = import.meta.env.VITE_API_URL ?? "";
 
 interface OwnerHomeProps {
   onNavigate: (tab: string) => void;
@@ -226,6 +233,15 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
         </div>
       </div>
 
+      {/* ── Document Health (EEJ-style bars) ─────────────────────────── */}
+      <DocHealthWidget workers={workers} loading={loading} />
+
+      {/* ── Regulatory Intelligence Widget ──────────────────────────── */}
+      <RegulatoryWidget onNavigate={onNavigate} />
+
+      {/* ── Review Queue (AI-generated docs awaiting approval) ──────── */}
+      <ReviewQueueWidget onNavigate={onNavigate} />
+
       {/* Tier 1 Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
@@ -324,5 +340,165 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       <LegalDossiersSheet isOpen={dossiersOpen} onClose={() => setDossiersOpen(false)} workers={workers} loading={loading} />
       <UDTSheet isOpen={udtOpen} onClose={() => setUdtOpen(false)} workers={workers} loading={loading} />
     </motion.div>
+  );
+}
+
+// ═══ DOCUMENT HEALTH WIDGET ═════════════════════════════════════════════
+
+function DocHealthWidget({ workers, loading }: { workers: any[]; loading: boolean }) {
+  if (loading || workers.length === 0) return null;
+
+  const total = workers.length;
+  const compliant = workers.filter(w => w.status === "Compliant").length;
+  const expiring = workers.filter(w => w.status === "Expiring Soon").length;
+  const action = workers.filter(w => w.status === "Non-Compliant" || w.status === "Missing Docs").length;
+
+  const pctCompliant = Math.round((compliant / total) * 100);
+  const pctExpiring = Math.round((expiring / total) * 100);
+  const pctAction = Math.round((action / total) * 100);
+
+  return (
+    <div className="premium-card rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <FileCheck className="w-4 h-4 text-emerald-500" />
+        <span className="text-sm font-bold text-white">Document Health</span>
+      </div>
+      <div className="space-y-2.5">
+        <HealthBar label="Cleared" pct={pctCompliant} color="bg-emerald-500" textColor="text-emerald-400" />
+        <HealthBar label="Expiring Soon" pct={pctExpiring} color="bg-amber-400" textColor="text-amber-400" />
+        <HealthBar label="Action Required" pct={pctAction} color="bg-red-500" textColor="text-red-400" />
+      </div>
+    </div>
+  );
+}
+
+function HealthBar({ label, pct, color, textColor }: { label: string; pct: number; color: string; textColor: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-white/50">{label}</span>
+        <span className={cn("text-[10px] font-bold", textColor)}>{pct}%</span>
+      </div>
+      <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+          className={cn("h-full rounded-full", color)}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ═══ REGULATORY INTELLIGENCE WIDGET ═════════════════════════════════════
+
+function RegulatoryWidget({ onNavigate }: { onNavigate: (tab: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ["home-regulatory"],
+    queryFn: async () => {
+      try {
+        const r = await fetch(`${API}api/regulatory/updates?limit=3`, { headers: authHeaders() });
+        if (!r.ok) return { updates: [], critical: 0, warning: 0, affected: 0 };
+        const d = await r.json();
+        const updates = d.updates ?? [];
+        return {
+          updates,
+          critical: updates.filter((u: any) => u.severity === "critical").length,
+          warning: updates.filter((u: any) => u.severity === "warning" || u.severity === "high").length,
+          affected: updates.reduce((s: number, u: any) => s + (u.workers_affected ?? 0), 0),
+        };
+      } catch { return { updates: [], critical: 0, warning: 0, affected: 0 }; }
+    },
+  });
+
+  const { critical = 0, warning = 0, affected = 0, updates = [] } = data ?? {};
+
+  return (
+    <div className="premium-card rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-amber-400" />
+          <span className="text-sm font-bold text-white">Regulatory Intelligence</span>
+        </div>
+        <button onClick={() => onNavigate("legal")} className="text-[9px] text-white/30 hover:text-white/50">View All</button>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="bg-red-500/10 rounded-xl p-2.5 text-center">
+          <div className="text-lg font-black text-red-400">{critical}</div>
+          <div className="text-[9px] text-white/30">Critical</div>
+        </div>
+        <div className="bg-amber-500/10 rounded-xl p-2.5 text-center">
+          <div className="text-lg font-black text-amber-400">{warning}</div>
+          <div className="text-[9px] text-white/30">Warning</div>
+        </div>
+        <div className="bg-blue-500/10 rounded-xl p-2.5 text-center">
+          <div className="text-lg font-black text-blue-400">{affected}</div>
+          <div className="text-[9px] text-white/30">Affected</div>
+        </div>
+      </div>
+      {updates.length > 0 ? (
+        <div className="space-y-1.5">
+          {updates.slice(0, 2).map((u: any, i: number) => (
+            <div key={i} className="text-[10px] text-white/40 bg-white/[0.03] rounded-lg px-3 py-2 flex items-center gap-2">
+              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", u.severity === "critical" ? "bg-red-400" : "bg-amber-400")} />
+              <span className="truncate">{u.title ?? u.summary?.slice(0, 60) ?? "Update"}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[10px] text-white/20 text-center py-2">No recent updates</p>
+      )}
+    </div>
+  );
+}
+
+// ═══ REVIEW QUEUE WIDGET (AI-generated docs awaiting approval) ══════════
+
+function ReviewQueueWidget({ onNavigate }: { onNavigate: (tab: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ["home-review-queue"],
+    queryFn: async () => {
+      try {
+        const r = await fetch(`${API}api/v1/vault/docs/stats`, { headers: authHeaders() });
+        if (!r.ok) return { drafts: 0, approved: 0, sent: 0 };
+        return r.json();
+      } catch { return { drafts: 0, approved: 0, sent: 0 }; }
+    },
+  });
+
+  const { drafts = 0, approved = 0, sent = 0 } = data ?? {};
+  if (drafts === 0 && approved === 0 && sent === 0) return null;
+
+  return (
+    <button onClick={() => onNavigate("legalstatus")} className="w-full premium-card rounded-2xl p-4 text-left active:scale-[0.98] transition-transform">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-violet-400" />
+          <span className="text-sm font-bold text-white">Lawyer Review Queue</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-white/20" />
+      </div>
+      <div className="flex items-center gap-3 mt-2.5">
+        {drafts > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-xs text-amber-400 font-bold">{drafts} drafts</span>
+          </div>
+        )}
+        {approved > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-xs text-emerald-400 font-bold">{approved} approved</span>
+          </div>
+        )}
+        {sent > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-400" />
+            <span className="text-xs text-blue-400 font-bold">{sent} sent</span>
+          </div>
+        )}
+      </div>
+    </button>
   );
 }
