@@ -7,6 +7,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter } from "../lib/rate-limit.js";
 import { execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { cached, cacheInvalidate } from "../lib/cache.js";
 
 let anthropic: any = null;
 import("@anthropic-ai/sdk").then(m => {
@@ -114,9 +115,15 @@ const router: IRouter = Router();
 router.get("/workers", requireAuth, async (req, res) => {
   try {
     const { search, specialization, status, site } = req.query as Record<string, string>;
-    const rows = await fetchAllWorkers(req.tenantId!);
-    const allWorkers = rows.map(mapRowToWorker).filter(
-      (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
+    const allWorkers = await cached(
+      `workers:${req.tenantId}`,
+      async () => {
+        const rows = await fetchAllWorkers(req.tenantId!);
+        return rows.map(mapRowToWorker).filter(
+          (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
+        );
+      },
+      15_000 // 15s cache — workers list doesn't change every second
     );
     const filtered = filterWorkers(allWorkers, search, specialization, status, site);
     res.json({ workers: filtered, total: filtered.length });
@@ -427,6 +434,7 @@ router.post("/workers", requireAuth, requireRole("Admin", "Executive", "TechOps"
     const row = await fetchWorkerById(newRecord.id, req.tenantId!);
     const mapped = mapRowToWorker(row!);
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "CREATE_WORKER", workerId: newRecord.id, workerName: mapped.name, note: `Worker created with fields: ${Object.keys(body).join(", ")}` });
+    cacheInvalidate(`workers:${req.tenantId}`);
     res.status(201).json(mapped);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -454,6 +462,7 @@ router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "Leg
     const updated = await updateWorker(req.params.id, body, req.tenantId!);
     const mapped = mapRowToWorker(updated);
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "UPDATE_WORKER", workerId: req.params.id, workerName: mapped.name, note: `Fields updated: ${Object.keys(body).join(", ")}` });
+    cacheInvalidate(`workers:${req.tenantId}`);
     res.json(mapped);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

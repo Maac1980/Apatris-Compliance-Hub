@@ -126,6 +126,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 30_000,       // 30s — avoid refetching on tab switches
+      gcTime: 5 * 60_000,     // 5min — keep cache for back navigation
     },
   },
 });
