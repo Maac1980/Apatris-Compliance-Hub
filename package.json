@@ -10,6 +10,7 @@
   },
   "private": true,
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@rollup/rollup-darwin-arm64": "^4.60.0",
     "lightningcss-darwin-arm64": "^1.32.0",
     "prettier": "^3.8.1",
