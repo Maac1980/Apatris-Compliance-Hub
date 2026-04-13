@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Role, TIER_CONFIGS } from "@/types";
 import { OwnerHome } from "@/components/tabs/OwnerHome";
@@ -455,20 +455,9 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {/* Main content — EEJ pattern: wrapper is overflow:hidden, each tab scrolls itself */}
-      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }} className="bg-[#0c0c0e]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
+      {/* Main content — stable container, no animation on switch to prevent jump */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }} className="bg-[#0c0c0e] no-scrollbar">
+        {renderContent()}
       </div>
 
       <BottomNav activeTab={activeTab} onTabChange={navigateTab} />

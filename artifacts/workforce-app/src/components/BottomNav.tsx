@@ -241,28 +241,26 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <>
-      {/* ── More sheet — card grid overlay ──────────────────────────── */}
+      {/* ── More sheet — compact square grid ───────────────────────── */}
       {moreOpen && (
         <>
-          <div className="absolute inset-0 bg-black/60 z-[60] backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 z-[60]" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-[56px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
+            className="absolute bottom-[56px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t-2 border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
-            {/* Handle bar */}
-            <div className="sticky top-0 bg-[#0c0c0e] pt-3 pb-1 z-10">
-              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto" />
+            <div className="pt-2.5 pb-1">
+              <div className="w-8 h-1 bg-white/10 rounded-full mx-auto" />
             </div>
 
-            <div className="px-4 pb-4">
+            <div className="px-3 pb-3">
               {groups.map((group) => (
-                <div key={group.title} className="mb-4">
-                  {/* Group title */}
-                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2 px-1">
+                <div key={group.title} className="mb-3">
+                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-[0.15em] mb-1.5 px-1">
                     {group.title}
                   </p>
-                  {/* Card grid — 2 columns */}
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Square grid — 4 columns, compact */}
+                  <div className="grid grid-cols-4 gap-1.5">
                     {group.modules.map((mod) => {
                       const Icon = mod.icon;
                       const isActive = activeTab === mod.id;
@@ -271,22 +269,18 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                           key={mod.id}
                           onClick={() => { onTabChange(mod.id); setMoreOpen(false); }}
                           className={cn(
-                            "flex flex-col items-start p-3.5 rounded-xl border transition-all duration-150 active:scale-[0.97]",
+                            "flex flex-col items-center justify-center py-2.5 px-1 rounded-xl transition-all active:scale-[0.93]",
                             isActive
-                              ? cn("border-white/20", activeStyle.bg)
-                              : "border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]"
+                              ? cn("bg-white/[0.08] border border-white/15")
+                              : "bg-white/[0.03] border border-transparent hover:bg-white/[0.06]"
                           )}
                         >
-                          <div className={cn("w-9 h-9 rounded-[10px] flex items-center justify-center mb-2.5", mod.iconBg)}>
-                            <Icon className="w-[18px] h-[18px]" style={{ color: mod.iconColor }} strokeWidth={2} />
+                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-1", mod.iconBg)}>
+                            <Icon className="w-4 h-4" style={{ color: mod.iconColor }} strokeWidth={2} />
                           </div>
-                          <p className={cn("text-[13px] font-bold leading-tight", isActive ? "text-white" : "text-white/80")}>
+                          <span className={cn("text-[9px] font-semibold leading-tight text-center", isActive ? "text-white" : "text-white/50")}>
                             {mod.label}
-                          </p>
-                          <p className="text-[10px] text-white/30 mt-0.5 leading-tight">{mod.sublabel}</p>
-                          {isActive && (
-                            <div className={cn("w-1.5 h-1.5 rounded-full mt-2", BADGE_BG[role])} />
-                          )}
+                          </span>
                         </button>
                       );
                     })}
