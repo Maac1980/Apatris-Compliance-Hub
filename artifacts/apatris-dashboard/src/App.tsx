@@ -8,6 +8,7 @@ import { PageLoader } from "@/components/Skeleton";
 
 import { AppShell } from "@/components/AppShell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TopProgressBar } from "@/components/PageLoader";
 
 // Eager — used on every session
 import Login from "@/pages/Login";
@@ -486,6 +487,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <TopProgressBar />
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>

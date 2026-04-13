@@ -25,20 +25,21 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-recharts": ["recharts"],
-          "vendor-tanstack": ["@tanstack/react-query"],
-          "vendor-radix": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-select",
-            "@radix-ui/react-tooltip",
-          ],
-          "vendor-pdf": ["jspdf", "jspdf-autotable"],
-          "vendor-i18n": ["i18next", "react-i18next"],
-          "vendor-dates": ["date-fns"],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("react-dom") || id.includes("/react/")) return "vendor-react";
+            if (id.includes("recharts") || id.includes("d3-")) return "vendor-recharts";
+            if (id.includes("@tanstack")) return "vendor-tanstack";
+            if (id.includes("@radix-ui")) return "vendor-radix";
+            if (id.includes("jspdf")) return "vendor-pdf";
+            if (id.includes("i18next")) return "vendor-i18n";
+            if (id.includes("date-fns")) return "vendor-dates";
+            if (id.includes("lucide-react")) return "vendor-icons";
+            if (id.includes("wouter")) return "vendor-router";
+            if (id.includes("html2canvas")) return "vendor-html2canvas";
+            if (id.includes("qrcode")) return "vendor-qrcode";
+            if (id.includes("framer-motion")) return "vendor-motion";
+          }
         },
       },
     },

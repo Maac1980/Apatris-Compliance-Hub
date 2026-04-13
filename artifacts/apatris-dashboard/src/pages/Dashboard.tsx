@@ -147,6 +147,8 @@ export default function Dashboard() {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(new Set());
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
   const [urlCopied, setUrlCopied] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [mobileBannerDismissed, setMobileBannerDismissed] = useState(() =>
@@ -539,7 +541,7 @@ export default function Dashboard() {
               type="text" 
               placeholder={t("table.searchPlaceholder")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white focus:outline-none focus:border-primary/60 transition-colors placeholder:text-gray-500"
             />
           </div>
@@ -549,7 +551,7 @@ export default function Dashboard() {
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <select 
                 value={specialization}
-                onChange={(e) => setSpecialization(e.target.value)}
+                onChange={(e) => { setSpecialization(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
               >
                 <option value="">{t("table.allSpecs")}</option>
@@ -566,7 +568,7 @@ export default function Dashboard() {
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <select 
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => { setStatus(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-10 pr-8 py-2.5 bg-slate-900 border border-slate-500 rounded-lg text-sm font-mono text-white appearance-none focus:outline-none focus:border-primary/60 transition-colors"
               >
                 <option value="">{t("table.allStatuses")}</option>
@@ -814,11 +816,16 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 ) : (
-                  (workersData?.workers ?? []).map((worker: any) => {
+                  (() => {
+                    const allFiltered = workersData?.workers ?? [];
+                    const totalPages = Math.ceil(allFiltered.length / PAGE_SIZE);
+                    const paginated = allFiltered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+                    return paginated;
+                  })().map((worker: any) => {
                     const isSelected = selectedWorkers.has(worker.id);
                     return (
-                    <tr 
-                      key={worker.id} 
+                    <tr
+                      key={worker.id}
                       onClick={() => setSelectedWorkerId(worker.id)}
                       className={`hover:bg-white/5 transition-colors cursor-pointer group ${isSelected ? "bg-red-900/10 border-l-2 border-red-500" : ""}`}
                     >
@@ -1011,6 +1018,44 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {(() => {
+            const total = (workersData?.workers ?? []).length;
+            const totalPages = Math.ceil(total / PAGE_SIZE);
+            if (totalPages <= 1) return null;
+            return (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
+                <span className="text-xs text-gray-400 font-mono">
+                  {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total} workers
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${p === currentPage ? "bg-[#C41E18] text-white" : "text-gray-400 hover:bg-slate-700"}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
           </div>{/* end hidden md:block */}
         </div>
         </div>{/* end page content wrapper */}
