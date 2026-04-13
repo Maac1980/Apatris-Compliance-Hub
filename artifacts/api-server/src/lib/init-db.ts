@@ -2372,6 +2372,55 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* columns may already exist */ }
 
+  // ── 8-stage case lifecycle columns (blocker, SLA, stage tracking) ───
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='blocker_type') THEN
+          ALTER TABLE legal_cases ADD COLUMN blocker_type TEXT DEFAULT 'NONE';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='blocker_reason') THEN
+          ALTER TABLE legal_cases ADD COLUMN blocker_reason TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='stage_entered_at') THEN
+          ALTER TABLE legal_cases ADD COLUMN stage_entered_at TIMESTAMPTZ DEFAULT NOW();
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='sla_deadline') THEN
+          ALTER TABLE legal_cases ADD COLUMN sla_deadline TIMESTAMPTZ;
+        END IF;
+      END $$;
+    `);
+    // Expand status CHECK to include all 8 stages (safe — drops old, adds new)
+    await execute(`ALTER TABLE legal_cases DROP CONSTRAINT IF EXISTS legal_cases_status_check`);
+    await execute(`ALTER TABLE legal_cases ADD CONSTRAINT legal_cases_status_check CHECK (status IN ('NEW','DOCS_PENDING','READY_TO_FILE','FILED','UNDER_REVIEW','DEFECT_NOTICE','DECISION_RECEIVED','APPROVED','REJECTED'))`);
+  } catch { /* columns/constraint may already exist */ }
+
+  // ── Knowledge Graph (JSONB nodes/edges for legal pattern memory) ────
+  await execute(`CREATE TABLE IF NOT EXISTS kg_nodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    node_type TEXT NOT NULL CHECK (node_type IN ('WORKER','DOCUMENT','LEGAL_STATUTE','DECISION','URZAD','EMPLOYER','CASE')),
+    label TEXT NOT NULL,
+    properties JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_kg_nodes_tenant_type ON kg_nodes(tenant_id, node_type)`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_kg_nodes_properties ON kg_nodes USING GIN(properties)`);
+
+  await execute(`CREATE TABLE IF NOT EXISTS kg_edges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    source_id UUID NOT NULL REFERENCES kg_nodes(id) ON DELETE CASCADE,
+    target_id UUID NOT NULL REFERENCES kg_nodes(id) ON DELETE CASCADE,
+    edge_type TEXT NOT NULL CHECK (edge_type IN ('HAS','TRIGGERS','BASED_ON','FILED_AT','RESULTED_IN','APPLIES_TO','SIMILAR_TO','EMPLOYS')),
+    weight NUMERIC(5,2) DEFAULT 1.0,
+    properties JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, source_id, target_id, edge_type)
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_kg_edges_source ON kg_edges(tenant_id, source_id)`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_kg_edges_target ON kg_edges(tenant_id, target_id)`);
+
   // Authority response packs — formal evidence-backed response drafts for authorities
   await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -19,6 +19,7 @@ import NotFound from "@/pages/not-found";
 // Lazy — loaded on demand (code splitting)
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const ComplianceAlerts = lazy(() => import("@/pages/ComplianceAlerts"));
+const ExpiryCalendar = lazy(() => import("@/pages/ExpiryCalendar"));
 const PayrollPage = lazy(() => import("@/pages/PayrollPage"));
 const KnowledgeCenterPage = lazy(() => import("@/components/KnowledgeCenter").then(m => ({ default: () => <div className="p-6 min-h-screen overflow-y-auto pb-20 bg-background"><m.KnowledgeCenter /></div> })));
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
@@ -172,6 +173,9 @@ function Router() {
       </Route>
       <Route path="/compliance-alerts">
         {() => <ProtectedRoute component={ComplianceAlerts} />}
+      </Route>
+      <Route path="/expiry-calendar">
+        {() => <ProtectedRoute component={ExpiryCalendar} />}
       </Route>
       <Route path="/payroll">
         {() => <ProtectedRoute component={PayrollPage} />}

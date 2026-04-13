@@ -62,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/command-center",      label: "Command Center",     icon: Shield },
       { path: "/pip-readiness",       label: "PIP Readiness",      icon: Shield },
       { path: "/compliance-alerts",   label: "Alerts",             icon: AlertTriangle },
+      { path: "/expiry-calendar",    label: "Expiry Calendar",    icon: AlertTriangle },
       { path: "/pip-inspection-report", label: "PIP Report",       icon: Shield },
       { path: "/risk-overview",       label: "Risk Overview",      icon: AlertTriangle },
       { path: "/posted-workers",      label: "Posted Workers",     icon: Globe },

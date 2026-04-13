@@ -88,13 +88,13 @@ export default function KnowledgeBase() {
       })
     : articles;
 
-  // Ask AI
+  // Ask AI — uses 3-tier intelligence routing (KB → Perplexity → Claude)
   const handleAsk = async () => {
     if (!question.trim()) return;
     setAiLoading(true);
     setAiAnswer(null);
     try {
-      const r = await fetch(`${BASE}api/legal-kb/query`, {
+      const r = await fetch(`${BASE}api/legal-kb/ask`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ question, language: "en" }),
@@ -342,26 +342,46 @@ export default function KnowledgeBase() {
             </div>
           </div>
 
-          {/* AI Answer */}
+          {/* AI Answer — shows source tier badge */}
           {aiAnswer && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <p className="text-sm font-bold text-white">Answer</p>
-                {aiAnswer.articlesMatched > 0 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    {aiAnswer.articlesMatched} articles matched
+                {/* Source tier badge */}
+                {aiAnswer.sourceTier && (
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-bold border ${
+                    aiAnswer.sourceTier === "kb"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : aiAnswer.sourceTier === "perplexity"
+                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        : aiAnswer.sourceTier === "claude"
+                          ? "bg-violet-500/10 text-violet-400 border-violet-500/20"
+                          : "bg-slate-700 text-slate-400 border-slate-600"
+                  }`}>
+                    {aiAnswer.sourceTier === "kb" ? "VERIFIED KB" : aiAnswer.sourceTier === "perplexity" ? "SEARCH" : aiAnswer.sourceTier === "claude" ? "AI SYNTHESIS" : "FALLBACK"}
                   </span>
+                )}
+                {aiAnswer.confidence > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                    {Math.round(aiAnswer.confidence)}% confidence
+                  </span>
+                )}
+                {aiAnswer.latencyMs > 0 && (
+                  <span className="text-[9px] text-slate-600">{aiAnswer.latencyMs}ms</span>
                 )}
               </div>
               <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{aiAnswer.answer}</div>
-              {aiAnswer.sources?.length > 0 && (
+              {aiAnswer.citations?.length > 0 && (
                 <div className="border-t border-slate-800 pt-2">
                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sources</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {aiAnswer.sources.map((s: any, i: number) => (
+                    {aiAnswer.citations.map((s: any, i: number) => (
                       <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                        {s.title} <span className="text-slate-600">({s.category})</span>
+                        {s.url ? (
+                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{s.title}</a>
+                        ) : s.title}
+                        <span className="text-slate-600 ml-1">({s.source})</span>
                       </span>
                     ))}
                   </div>

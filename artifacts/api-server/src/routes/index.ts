@@ -122,6 +122,7 @@ import reportsRouter from "./reports.js";
 import legalNotificationsRouter from "./legal-notifications.js";
 import intelligenceStreamRouter from "./intelligence-stream.js";
 import firstContactRouter from "./first-contact-verification.js";
+import knowledgeGraphRouter from "./knowledge-graph.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -247,5 +248,6 @@ router.use(reportsRouter);
 router.use(legalNotificationsRouter);
 router.use(intelligenceStreamRouter);
 router.use(firstContactRouter);
+router.use(knowledgeGraphRouter);
 
 export default router;

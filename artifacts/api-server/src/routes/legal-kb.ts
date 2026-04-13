@@ -131,6 +131,26 @@ router.post("/legal-kb/query", requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
 });
 
+// POST /api/legal-kb/ask — 3-tier intelligence routing (KB → Perplexity → Claude)
+router.post("/legal-kb/ask", requireAuth, async (req, res) => {
+  try {
+    const { question, language } = req.body as { question?: string; language?: string };
+    if (!question?.trim()) return res.status(400).json({ error: "question required" });
+
+    const { routeIntelligenceQuery } = await import("../services/intelligence-router.service.js");
+    const result = await routeIntelligenceQuery(question, req.tenantId!, language || "en");
+
+    // Log query with tier info
+    await execute(
+      "INSERT INTO legal_queries (tenant_id, user_id, question, answer, sources_used, language) VALUES ($1,$2,$3,$4,$5,$6)",
+      [req.tenantId!, (req as any).user?.email || "unknown", question, result.answer,
+       JSON.stringify({ tier: result.sourceTier, citations: result.citations }), language || "en"]
+    ).catch(() => {});
+
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
+});
+
 // GET /api/legal-kb/history — query history
 router.get("/legal-kb/history", requireAuth, async (req, res) => {
   try {
