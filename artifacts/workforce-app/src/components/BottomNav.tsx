@@ -241,26 +241,35 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <>
-      {/* ── More sheet — compact square grid ───────────────────────── */}
+      {/* ── More sheet — full-height overlay with square grid ────────── */}
       {moreOpen && (
         <>
-          <div className="absolute inset-0 bg-black/60 z-[60]" onClick={() => setMoreOpen(false)} />
+          <div className="absolute inset-0 z-[60]" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-[56px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t-2 border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            className="absolute inset-x-0 top-0 bottom-[56px] z-[61] bg-[#0c0c0e] overflow-y-auto flex flex-col"
           >
-            <div className="pt-2.5 pb-1">
-              <div className="w-8 h-1 bg-white/10 rounded-full mx-auto" />
+            {/* Header */}
+            <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.06]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-black text-white tracking-wide">All Modules</h2>
+                  <p className="text-[9px] text-white/25 mt-0.5">Platform Features</p>
+                </div>
+                <button onClick={() => setMoreOpen(false)}
+                  className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white active:scale-90">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="px-3 pb-3">
+            {/* Module grid */}
+            <div className="flex-1 overflow-y-auto px-3 py-3">
               {groups.map((group) => (
-                <div key={group.title} className="mb-3">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-[0.15em] mb-1.5 px-1">
+                <div key={group.title} className="mb-4">
+                  <p className="text-[9px] font-bold text-[#C41E18]/60 uppercase tracking-[0.15em] mb-2 px-1">
                     {group.title}
                   </p>
-                  {/* Square grid — 4 columns, compact */}
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-4 gap-2">
                     {group.modules.map((mod) => {
                       const Icon = mod.icon;
                       const isActive = activeTab === mod.id;
@@ -269,16 +278,16 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                           key={mod.id}
                           onClick={() => { onTabChange(mod.id); setMoreOpen(false); }}
                           className={cn(
-                            "flex flex-col items-center justify-center py-2.5 px-1 rounded-xl transition-all active:scale-[0.93]",
+                            "flex flex-col items-center justify-center py-3 px-1 rounded-xl transition-all active:scale-[0.93]",
                             isActive
-                              ? cn("bg-white/[0.08] border border-white/15")
-                              : "bg-white/[0.03] border border-transparent hover:bg-white/[0.06]"
+                              ? "bg-[#C41E18]/10 border border-[#C41E18]/30"
+                              : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]"
                           )}
                         >
-                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-1", mod.iconBg)}>
-                            <Icon className="w-4 h-4" style={{ color: mod.iconColor }} strokeWidth={2} />
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-1.5", mod.iconBg)}>
+                            <Icon className="w-5 h-5" style={{ color: mod.iconColor }} strokeWidth={2} />
                           </div>
-                          <span className={cn("text-[9px] font-semibold leading-tight text-center", isActive ? "text-white" : "text-white/50")}>
+                          <span className={cn("text-[10px] font-bold leading-tight text-center", isActive ? "text-white" : "text-white/60")}>
                             {mod.label}
                           </span>
                         </button>
