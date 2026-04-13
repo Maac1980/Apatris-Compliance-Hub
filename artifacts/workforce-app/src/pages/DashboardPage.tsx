@@ -455,21 +455,21 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {/* Main content — proper scroll containment */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar bg-[#0c0c0e]" style={{ minHeight: 0 }}>
+      {/* Main content — EEJ pattern: wrapper is overflow:hidden, each tab scrolls itself */}
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }} className="bg-[#0c0c0e]">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            className="min-h-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
           >
             {renderContent()}
           </motion.div>
         </AnimatePresence>
-      </main>
+      </div>
 
       <BottomNav activeTab={activeTab} onTabChange={navigateTab} />
     </div>
