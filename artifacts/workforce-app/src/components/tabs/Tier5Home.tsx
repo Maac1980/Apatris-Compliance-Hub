@@ -15,6 +15,7 @@ import {
   type WorkerProfile, type HoursEntry, type WorkerLegalView,
 } from "@/lib/api";
 import { ComplianceCard } from "@/components/ComplianceCard";
+import { LegalSearchBar } from "@/components/LegalSearchBar";
 
 const MY_COORDINATORS = [
   {
@@ -255,6 +256,9 @@ export function Tier5Home() {
       exit={{ opacity: 0, y: -10 }}
       className="px-4 py-5 space-y-5 pb-28 relative"
     >
+      {/* Legal Search — workers can ask about their rights */}
+      <LegalSearchBar />
+
       {/* ── Compliance Card (fullscreen overlay for border/PIP checks) ───── */}
       {showComplianceCard && profile && (
         <div className="fixed inset-0 z-[200] bg-slate-950 overflow-y-auto">
