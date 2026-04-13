@@ -162,12 +162,14 @@
 
 /* ═══ APP SHELL — phone frame on desktop ═══ */
 .app-screen {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   background: #050505;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 0;
+  overflow: hidden;
 }
 @media (min-width: 520px) {
   .app-screen {
@@ -179,6 +181,7 @@
   width: 100%;
   max-width: 430px;
   height: 100vh;
+  height: 100dvh;
   background: #0c0c0e;
   display: flex;
   flex-direction: column;
