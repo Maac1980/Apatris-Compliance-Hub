@@ -15,9 +15,11 @@ const useSSL = dbUrl.includes("sslmode=disable") || dbUrl.includes("sslmode=pref
 export const pool = new Pool({
   connectionString: dbUrl || undefined,
   ssl: useSSL,
-  max: 10,
+  max: 20,                      // Scale for multi-tenant SaaS
+  min: 2,                       // Keep 2 warm connections
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
+  allowExitOnIdle: false,       // Keep pool alive
 });
 
 pool.on("error", (err) => {
