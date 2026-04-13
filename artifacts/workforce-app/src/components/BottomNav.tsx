@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin, DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp, ClipboardCheck, Briefcase, Receipt, SmilePlus, UserMinus, MoreHorizontal, X, Shield, Globe, FileCheck } from "lucide-react";
+import {
+  Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin,
+  DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp,
+  ClipboardCheck, Receipt, MoreHorizontal, X, Shield, Globe, FileCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -13,109 +17,145 @@ interface Tab {
   icon: React.ElementType;
 }
 
+interface ModuleCard {
+  id: string;
+  label: string;
+  sublabel: string;
+  icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
+}
+
 interface BottomNavProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
 
-// Primary tabs shown in bottom bar (max 5) + overflow in "More" menu
-function getTabsForRole(role: Role): { primary: Tab[]; overflow: Tab[] } {
+// ═══ PRIMARY TABS (bottom bar — max 4 + More) ═════════════════════════════
+
+function getPrimaryTabs(role: Role): Tab[] {
   switch (role) {
     case "Executive":
-      return {
-        primary: [
-          { id: "home",       label: "nav.home",       icon: Home },
-          { id: "workers",    label: "nav.directory",  icon: Users },
-          { id: "alerts",     label: "nav.alerts",     icon: Bell },
-          { id: "immigration", label: "nav.permits",   icon: Stamp },
-        ],
-        overflow: [
-          { id: "legalstatus", label: "nav.legalStatus", icon: Shield },
-          { id: "schengen",   label: "nav.schengen",   icon: Globe },
-          { id: "upo",        label: "nav.upo",        icon: FileCheck },
-          { id: "docs",       label: "nav.myDocs",     icon: FileText },
-          { id: "payroll",    label: "nav.payroll",    icon: DollarSign },
-          { id: "contracts",  label: "nav.contracts",  icon: FileSignature },
-          { id: "gps",        label: "nav.gps",        icon: Navigation },
-          { id: "onboarding", label: "nav.onboarding", icon: ClipboardCheck },
-          { id: "invoices",   label: "nav.invoices",   icon: Receipt },
-          { id: "zus",        label: "nav.zus",        icon: Calculator },
-          { id: "fines",      label: "nav.fines",      icon: Bell },
-          { id: "profile",    label: "nav.profile",    icon: User },
-        ],
-      };
     case "LegalHead":
-      return {
-        primary: [
-          { id: "home",          label: "nav.home",      icon: Home },
-          { id: "workers",       label: "nav.directory", icon: Users },
-          { id: "alerts",        label: "nav.alerts",    icon: Bell },
-          { id: "immigration",   label: "nav.permits",   icon: Stamp },
-        ],
-        overflow: [
-          { id: "legalstatus",   label: "nav.legalStatus", icon: Shield },
-          { id: "schengen",      label: "nav.schengen",   icon: Globe },
-          { id: "upo",           label: "nav.upo",        icon: FileCheck },
-          { id: "docs",          label: "nav.myDocs",     icon: FileText },
-          { id: "queue",         label: "nav.docQueue",   icon: ClipboardList },
-          { id: "onboarding",    label: "nav.onboarding", icon: ClipboardCheck },
-          { id: "invoices",      label: "nav.invoices",   icon: Receipt },
-          { id: "zus",           label: "nav.zus",        icon: Calculator },
-          { id: "contractgen",   label: "nav.contracts",  icon: FileSignature },
-          { id: "profile",       label: "nav.profile",    icon: User },
-        ],
-      };
+      return [
+        { id: "home",        label: "nav.home",      icon: Home },
+        { id: "workers",     label: "nav.directory",  icon: Users },
+        { id: "alerts",      label: "nav.alerts",     icon: Bell },
+        { id: "immigration", label: "nav.permits",    icon: Stamp },
+      ];
     case "TechOps":
-      return {
-        primary: [
-          { id: "home",          label: "nav.directory",   icon: Users },
-          { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
-          { id: "sites",         label: "nav.sites",       icon: MapPin },
-          { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        ],
-        overflow: [
-          { id: "docs",          label: "nav.myDocs",      icon: FileText },
-          { id: "zus",           label: "nav.zus",         icon: Calculator },
-          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-          { id: "profile",       label: "nav.profile",     icon: User },
-        ],
-      };
+      return [
+        { id: "home",        label: "nav.directory",  icon: Users },
+        { id: "workers",     label: "nav.workspace",  icon: LayoutGrid },
+        { id: "sites",       label: "nav.sites",      icon: MapPin },
+        { id: "immigration", label: "nav.permits",    icon: Stamp },
+      ];
     case "Coordinator":
-      return {
-        primary: [
-          { id: "home",          label: "nav.directory",   icon: Users },
-          { id: "workers",       label: "nav.workspace",   icon: LayoutGrid },
-          { id: "queue",         label: "nav.docQueue",    icon: ClipboardList },
-          { id: "immigration",   label: "nav.permits",     icon: Stamp },
-        ],
-        overflow: [
-          { id: "legalstatus",   label: "nav.legalStatus", icon: Shield },
-          { id: "schengen",      label: "nav.schengen",    icon: Globe },
-          { id: "upo",           label: "nav.upo",         icon: FileCheck },
-          { id: "docs",          label: "nav.myDocs",      icon: FileText },
-          { id: "zus",           label: "nav.zus",         icon: Calculator },
-          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-          { id: "profile",       label: "nav.profile",     icon: User },
-        ],
-      };
+      return [
+        { id: "home",        label: "nav.directory",  icon: Users },
+        { id: "workers",     label: "nav.workspace",  icon: LayoutGrid },
+        { id: "queue",       label: "nav.docQueue",   icon: ClipboardList },
+        { id: "immigration", label: "nav.permits",    icon: Stamp },
+      ];
     case "Professional":
-      return {
-        primary: [
-          { id: "home",          label: "nav.home",        icon: Home },
-          { id: "docs",          label: "nav.myDocs",      icon: FileText },
-          { id: "timesheet",     label: "nav.timesheet",   icon: Clock },
-          { id: "gps",           label: "nav.gps",         icon: Navigation },
-        ],
-        overflow: [
-          { id: "immigration",   label: "nav.permits",     icon: Stamp },
-          { id: "onboarding",    label: "nav.onboarding",  icon: ClipboardCheck },
-          { id: "advances",      label: "nav.advances",    icon: DollarSign },
-          { id: "leave",         label: "nav.leave",       icon: Clock },
-          { id: "profile",       label: "nav.profile",     icon: User },
-        ],
-      };
+      return [
+        { id: "home",        label: "nav.home",       icon: Home },
+        { id: "docs",        label: "nav.myDocs",     icon: FileText },
+        { id: "timesheet",   label: "nav.timesheet",  icon: Clock },
+        { id: "gps",         label: "nav.gps",        icon: Navigation },
+      ];
   }
 }
+
+// ═══ MODULE CARDS (card grid in More sheet — grouped by category) ══════════
+
+interface ModuleGroup {
+  title: string;
+  modules: ModuleCard[];
+}
+
+function getModuleGroups(role: Role): ModuleGroup[] {
+  const legal: ModuleCard[] = [
+    { id: "legalstatus", label: "Legal Status",  sublabel: "Art. 108 · Risk",     icon: Shield,     iconColor: "#10B981", iconBg: "bg-emerald-500/15" },
+    { id: "schengen",    label: "Schengen",       sublabel: "90/180 Calculator",   icon: Globe,      iconColor: "#6366F1", iconBg: "bg-indigo-500/15" },
+    { id: "upo",         label: "UPO / MOS",      sublabel: "Filing · Receipts",   icon: FileCheck,  iconColor: "#8B5CF6", iconBg: "bg-violet-500/15" },
+    { id: "fines",       label: "Fines Risk",     sublabel: "PIP · Penalties",     icon: Bell,       iconColor: "#EF4444", iconBg: "bg-red-500/15" },
+  ];
+
+  const documents: ModuleCard[] = [
+    { id: "docs",        label: "Documents",      sublabel: "Expiry · Upload",     icon: FileText,   iconColor: "#3B82F6", iconBg: "bg-blue-500/15" },
+    { id: "queue",       label: "Doc Queue",      sublabel: "Review · Approve",    icon: ClipboardList, iconColor: "#F59E0B", iconBg: "bg-amber-500/15" },
+  ];
+
+  const finance: ModuleCard[] = [
+    { id: "payroll",     label: "Payroll",         sublabel: "ZUS · PIT · Netto",   icon: DollarSign,  iconColor: "#10B981", iconBg: "bg-emerald-500/15" },
+    { id: "zus",         label: "ZUS Calculator",  sublabel: "Contributions",       icon: Calculator,  iconColor: "#1B2A4A", iconBg: "bg-slate-500/15" },
+    { id: "invoices",    label: "Invoices",        sublabel: "Client · VAT",        icon: Receipt,     iconColor: "#0EA5E9", iconBg: "bg-cyan-500/15" },
+  ];
+
+  const operations: ModuleCard[] = [
+    { id: "onboarding",  label: "Onboarding",     sublabel: "Checklist · Setup",   icon: ClipboardCheck, iconColor: "#8B5CF6", iconBg: "bg-violet-500/15" },
+    { id: "gps",         label: "GPS Check-in",   sublabel: "Location · Sites",    icon: Navigation,  iconColor: "#3B82F6", iconBg: "bg-blue-500/15" },
+    { id: "contracts",   label: "Contracts",       sublabel: "Zlecenie · O Pracę",  icon: FileSignature, iconColor: "#EC4899", iconBg: "bg-pink-500/15" },
+  ];
+
+  const account: ModuleCard[] = [
+    { id: "profile",     label: "Profile",         sublabel: "Settings · Account",  icon: User,        iconColor: "#6B7280", iconBg: "bg-slate-500/15" },
+  ];
+
+  switch (role) {
+    case "Executive":
+      return [
+        { title: "Legal & Compliance", modules: legal },
+        { title: "Documents", modules: documents },
+        { title: "Finance", modules: finance },
+        { title: "Operations", modules: operations },
+        { title: "Account", modules: account },
+      ];
+    case "LegalHead":
+      return [
+        { title: "Legal & Compliance", modules: legal },
+        { title: "Documents", modules: documents },
+        { title: "Finance", modules: [finance[1], finance[2]] }, // ZUS + Invoices only
+        { title: "Operations", modules: [operations[0], operations[2]] }, // Onboarding + Contracts
+        { title: "Account", modules: account },
+      ];
+    case "TechOps":
+      return [
+        { title: "Documents", modules: [documents[0]] },
+        { title: "Finance", modules: [finance[1]] }, // ZUS only
+        { title: "Operations", modules: [operations[0]] }, // Onboarding
+        { title: "Account", modules: account },
+      ];
+    case "Coordinator":
+      return [
+        { title: "Legal & Compliance", modules: legal },
+        { title: "Documents", modules: [documents[0]] },
+        { title: "Finance", modules: [finance[1]] }, // ZUS only
+        { title: "Operations", modules: [operations[0]] }, // Onboarding
+        { title: "Account", modules: account },
+      ];
+    case "Professional":
+      return [
+        { title: "Permits & Legal", modules: [
+          { id: "immigration", label: "Permits",     sublabel: "Work · TRC · Visa",  icon: Stamp,      iconColor: "#6366F1", iconBg: "bg-indigo-500/15" },
+        ]},
+        { title: "Work", modules: [
+          { id: "onboarding", label: "Onboarding",   sublabel: "Checklist · Setup",  icon: ClipboardCheck, iconColor: "#8B5CF6", iconBg: "bg-violet-500/15" },
+          { id: "advances",   label: "Advances",     sublabel: "Salary · Request",   icon: DollarSign,  iconColor: "#10B981", iconBg: "bg-emerald-500/15" },
+          { id: "leave",      label: "Leave",         sublabel: "Days · Requests",    icon: Clock,       iconColor: "#F59E0B", iconBg: "bg-amber-500/15" },
+        ]},
+        { title: "Account", modules: account },
+      ];
+  }
+}
+
+// All overflow tab IDs for highlighting the More button
+function getAllOverflowIds(role: Role): string[] {
+  return getModuleGroups(role).flatMap(g => g.modules.map(m => m.id));
+}
+
+// ═══ STYLING ═══════════════════════════════════════════════════════════════
 
 const ACTIVE_COLORS: Record<Role, { text: string; bg: string; glow: string }> = {
   Executive:    { text: "text-indigo-400",  bg: "bg-indigo-500/15",  glow: "shadow-[0_0_12px_-2px_rgba(99,102,241,0.4)]" },
@@ -133,6 +173,8 @@ const BADGE_BG: Record<Role, string> = {
   Professional: "bg-amber-600",
 };
 
+// ═══ COMPONENT ═════════════════════════════════════════════════════════════
+
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { role } = useAuth();
   const { workers } = useWorkers();
@@ -140,9 +182,11 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   if (!role) return null;
 
-  const { primary, overflow } = getTabsForRole(role);
+  const primary = getPrimaryTabs(role);
+  const groups = getModuleGroups(role);
+  const overflowIds = getAllOverflowIds(role);
   const activeStyle = ACTIVE_COLORS[role];
-  const isOverflowActive = overflow.some(tab => tab.id === activeTab);
+  const isOverflowActive = overflowIds.includes(activeTab);
 
   const alertCount = workers.filter(
     w => w.status === "Non-Compliant" || w.status === "Missing Docs"
@@ -189,34 +233,64 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <>
-      {/* More menu — bottom sheet within app container */}
+      {/* ── More sheet — card grid overlay ──────────────────────────── */}
       {moreOpen && (
         <>
-          <div className="absolute inset-0 bg-black/50 z-[60]" onClick={() => setMoreOpen(false)} />
-          <div className="absolute bottom-[68px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-            <div className="px-4 pt-3 pb-2">
-              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-3" />
-              {overflow.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { onTabChange(tab.id); setMoreOpen(false); }}
-                    className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-0.5", isActive ? cn(activeStyle.bg, activeStyle.text, "font-bold") : "text-white/60 active:bg-white/5")}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="text-sm">{t(tab.label)}</span>
-                    {isActive && <div className={cn("ml-auto w-2 h-2 rounded-full", BADGE_BG[role])} />}
-                  </button>
-                );
-              })}
+          <div className="absolute inset-0 bg-black/60 z-[60] backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+          <div
+            className="absolute bottom-[68px] left-0 right-0 z-[61] bg-[#0c0c0e] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
+            {/* Handle bar */}
+            <div className="sticky top-0 bg-[#0c0c0e] pt-3 pb-1 z-10">
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto" />
+            </div>
+
+            <div className="px-4 pb-4">
+              {groups.map((group) => (
+                <div key={group.title} className="mb-4">
+                  {/* Group title */}
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2 px-1">
+                    {group.title}
+                  </p>
+                  {/* Card grid — 2 columns */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.modules.map((mod) => {
+                      const Icon = mod.icon;
+                      const isActive = activeTab === mod.id;
+                      return (
+                        <button
+                          key={mod.id}
+                          onClick={() => { onTabChange(mod.id); setMoreOpen(false); }}
+                          className={cn(
+                            "flex flex-col items-start p-3.5 rounded-xl border transition-all duration-150 active:scale-[0.97]",
+                            isActive
+                              ? cn("border-white/20", activeStyle.bg)
+                              : "border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]"
+                          )}
+                        >
+                          <div className={cn("w-9 h-9 rounded-[10px] flex items-center justify-center mb-2.5", mod.iconBg)}>
+                            <Icon className="w-[18px] h-[18px]" style={{ color: mod.iconColor }} strokeWidth={2} />
+                          </div>
+                          <p className={cn("text-[13px] font-bold leading-tight", isActive ? "text-white" : "text-white/80")}>
+                            {mod.label}
+                          </p>
+                          <p className="text-[10px] text-white/30 mt-0.5 leading-tight">{mod.sublabel}</p>
+                          {isActive && (
+                            <div className={cn("w-1.5 h-1.5 rounded-full mt-2", BADGE_BG[role])} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
       )}
 
-      {/* Bottom nav bar */}
+      {/* ── Bottom nav bar ─────────────────────────────────────────── */}
       <div className="shrink-0 premium-nav relative z-50">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
         <div className="flex items-center justify-around h-[68px] px-2">
@@ -229,9 +303,21 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               isOverflowActive || moreOpen ? activeStyle.text : "text-white/30 hover:text-white/50"
             )}
           >
+            {(isOverflowActive || moreOpen) && (
+              <motion.div
+                layoutId="navPillMore"
+                className={cn("absolute inset-x-2 top-[8px] bottom-[8px] rounded-2xl", activeStyle.bg, activeStyle.glow)}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
             <div className="relative z-10 flex flex-col items-center gap-0.5">
-              <MoreHorizontal className={cn("w-[22px] h-[22px] transition-all duration-200", moreOpen ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
-              <span className={cn("text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase", moreOpen ? "font-black" : "font-semibold")}>More</span>
+              {moreOpen
+                ? <X className="w-[22px] h-[22px] stroke-[2.5px]" />
+                : <MoreHorizontal className={cn("w-[22px] h-[22px] transition-all duration-200", moreOpen || isOverflowActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
+              }
+              <span className={cn("text-[9px] tracking-wider transition-all duration-200 leading-tight text-center uppercase", moreOpen || isOverflowActive ? "font-black" : "font-semibold")}>
+                {moreOpen ? "Close" : "More"}
+              </span>
             </div>
           </button>
         </div>
