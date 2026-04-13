@@ -6,6 +6,7 @@ import {
   ChevronRight, Loader2,
 } from "lucide-react";
 import { LegalSearchBar } from "@/components/LegalSearchBar";
+import { RecruitmentShare } from "@/components/RecruitmentShare";
 import { motion } from "framer-motion";
 import { useWorkers } from "@/hooks/useWorkers";
 import { AddProfessionalSheet } from "@/components/AddProfessionalSheet";
@@ -85,6 +86,8 @@ export function Tier3Home() {
     >
       {/* Legal Search */}
       <LegalSearchBar />
+
+      <RecruitmentShare />
 
       {/* Shared workspace badge */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3.5 flex items-center gap-3">

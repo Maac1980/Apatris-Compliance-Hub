@@ -6,6 +6,7 @@ import {
   AlertCircle, ChevronRight, Loader2, RefreshCw,
 } from "lucide-react";
 import { LegalSearchBar } from "@/components/LegalSearchBar";
+import { RecruitmentShare } from "@/components/RecruitmentShare";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -98,6 +99,8 @@ export function Tier4Home() {
     >
       {/* Legal Search */}
       <LegalSearchBar />
+
+      <RecruitmentShare />
 
       {/* Shared workspace badge */}
       <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 flex items-center gap-3">

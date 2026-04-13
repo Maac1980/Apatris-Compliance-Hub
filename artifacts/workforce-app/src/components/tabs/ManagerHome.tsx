@@ -6,6 +6,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { LegalSearchBar } from "@/components/LegalSearchBar";
+import { RecruitmentShare } from "@/components/RecruitmentShare";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -138,6 +139,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     >
       {/* Legal Search */}
       <LegalSearchBar />
+
+      <RecruitmentShare />
 
       {/* Financial firewall notice */}
       <div className="bg-violet-500/10 border border-violet-500/25 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm shadow-violet-500/5">
