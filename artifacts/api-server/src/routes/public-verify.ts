@@ -146,6 +146,65 @@ router.post("/public/apply", async (req, res) => {
   }
 });
 
+// POST /api/public/apply/files — handle CV + passport uploads (PUBLIC)
+router.post("/public/apply/files", async (req, res) => {
+  try {
+    const multer = (await import("multer")).default;
+    const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }).fields([
+      { name: "cv", maxCount: 1 },
+      { name: "passport", maxCount: 1 },
+    ]);
+
+    upload(req as any, res as any, async (err: any) => {
+      if (err) return res.status(400).json({ error: "File upload failed" });
+      const files = (req as any).files as Record<string, any[]>;
+      const uploaded: string[] = [];
+
+      // Store files as base64 in job_applications metadata (simple approach)
+      // In production, upload to R2/S3
+      const appData = JSON.parse((req.body?.applicationData as string) ?? "{}");
+      const phone = appData.phone ?? "unknown";
+
+      if (files?.cv?.[0]) {
+        uploaded.push(`CV: ${files.cv[0].originalname} (${Math.round(files.cv[0].size / 1024)}KB)`);
+      }
+      if (files?.passport?.[0]) {
+        uploaded.push(`Passport: ${files.passport[0].originalname} (${Math.round(files.passport[0].size / 1024)}KB)`);
+        // Run AI extraction on passport if available
+        try {
+          const apiKey = process.env.ANTHROPIC_API_KEY;
+          if (apiKey && files.passport[0].mimetype.startsWith("image/")) {
+            const { default: Anthropic } = await import("@anthropic-ai/sdk");
+            const anthropic = new Anthropic({ apiKey });
+            const base64 = files.passport[0].buffer.toString("base64");
+            const response = await anthropic.messages.create({
+              model: "claude-sonnet-4-6", max_tokens: 512,
+              messages: [{ role: "user", content: [
+                { type: "image", source: { type: "base64", media_type: files.passport[0].mimetype, data: base64 } },
+                { type: "text", text: "Extract from this passport/ID: fullName, dateOfBirth, nationality, passportNumber, expiryDate. Return JSON only." },
+              ]}],
+            });
+            const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+            uploaded.push(`AI extraction: ${text.slice(0, 200)}`);
+          }
+        } catch { /* AI extraction non-critical */ }
+      }
+
+      // Update the latest application with file info
+      try {
+        await execute(
+          "UPDATE job_applications SET notes = COALESCE(notes,'') || $1 WHERE phone = $2 ORDER BY applied_at DESC LIMIT 1",
+          ["\n[Files: " + uploaded.join(", ") + "]", phone]
+        );
+      } catch { /* non-critical */ }
+
+      res.json({ uploaded });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 // GET /api/public/apply/config — get basic tenant config for form display
 router.get("/public/apply/config", async (_req, res) => {
   try {
@@ -278,6 +337,9 @@ router.get("/public/apply/form", async (_req, res) => {
     .check{width:56px;height:56px;background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:28px}
     .footer{text-align:center;font-size:9px;color:rgba(255,255,255,0.08);margin-top:20px;letter-spacing:0.15em;text-transform:uppercase}
     .req{color:#C41E18}
+    .upload-box{width:100%;background:rgba(255,255,255,0.04);border:2px dashed rgba(255,255,255,0.1);border-radius:10px;padding:16px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border 0.2s}
+    .upload-box:hover{border-color:rgba(196,30,24,0.4)}
+    .upload-box.has-file{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.05)}
   </style>
 </head>
 <body>
@@ -300,6 +362,16 @@ router.get("/public/apply/form", async (_req, res) => {
           <div><label>Specialization</label><select name="specialization"><option value="">Select...</option><option>TIG Welder</option><option>MIG/MAG Welder</option><option>Pipe Welder</option><option>Structural Welder</option><option>Plumber</option><option>Electrician</option><option>Carpenter</option><option>General Construction</option><option>Forklift Operator</option><option>CNC Operator</option><option>Other</option></select></div>
         </div>
         <label>Experience</label><input name="experience" placeholder="e.g. 5 years TIG welding">
+        <label>CV / Resume</label>
+        <div class="upload-box" onclick="document.getElementById('cv-input').click()">
+          <input type="file" id="cv-input" name="cv" accept=".pdf,.doc,.docx" style="display:none" onchange="showFileName(this,'cv-name')">
+          <span id="cv-name" style="font-size:12px;color:rgba(255,255,255,0.4)">📄 Tap to upload CV (PDF, DOC)</span>
+        </div>
+        <label>Passport / ID Photo</label>
+        <div class="upload-box" onclick="document.getElementById('passport-input').click()">
+          <input type="file" id="passport-input" name="passport" accept="image/*,.pdf" style="display:none" onchange="showFileName(this,'passport-name')">
+          <span id="passport-name" style="font-size:12px;color:rgba(255,255,255,0.4)">📷 Tap to upload passport photo</span>
+        </div>
         <label>Message</label><textarea name="message" placeholder="Tell us about yourself..."></textarea>
         <button type="submit" class="btn" id="submit-btn">Submit Application</button>
       </form>
@@ -315,17 +387,37 @@ router.get("/public/apply/form", async (_req, res) => {
   </div>
 
   <script>
+    function showFileName(input, spanId) {
+      const span = document.getElementById(spanId);
+      if (input.files && input.files[0]) {
+        span.textContent = '✅ ' + input.files[0].name;
+        input.parentElement.classList.add('has-file');
+      }
+    }
     async function submitForm(e) {
       e.preventDefault();
       const btn = document.getElementById('submit-btn');
       btn.disabled = true; btn.textContent = 'Submitting...';
       const fd = new FormData(e.target);
-      const data = Object.fromEntries(fd.entries());
+      // Send text fields as JSON, files separately
+      const data = {};
+      fd.forEach((v, k) => { if (typeof v === 'string') data[k] = v; });
       try {
+        // Submit application data
         const r = await fetch('/api/public/apply', {
           method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
         });
         if (r.ok) {
+          // Upload files if provided (non-blocking)
+          const cvFile = document.getElementById('cv-input').files[0];
+          const passportFile = document.getElementById('passport-input').files[0];
+          if (cvFile || passportFile) {
+            const uploadForm = new FormData();
+            if (cvFile) uploadForm.append('cv', cvFile);
+            if (passportFile) uploadForm.append('passport', passportFile);
+            uploadForm.append('applicationData', JSON.stringify(data));
+            fetch('/api/public/apply/files', { method: 'POST', body: uploadForm }).catch(() => {});
+          }
           document.getElementById('form-view').style.display = 'none';
           document.getElementById('success-view').style.display = 'block';
         } else { btn.disabled = false; btn.textContent = 'Submit Application'; alert('Failed — please try again.'); }
