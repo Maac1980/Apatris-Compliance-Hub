@@ -245,4 +245,136 @@ router.get("/public/client/:token", async (req, res) => {
   }
 });
 
+// GET /api/public/apply/form — serve the public recruitment form as HTML
+router.get("/public/apply/form", async (_req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Apply — Apatris Workforce</title>
+  <meta property="og:title" content="Join Apatris — We're Hiring!">
+  <meta property="og:description" content="Apply for welding and construction jobs in Poland. Quick application — takes 2 minutes.">
+  <meta property="og:type" content="website">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0b;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{max-width:440px;width:100%;background:#141416;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,0.5)}
+    .logo{width:48px;height:48px;background:linear-gradient(135deg,#1a1a1a,#0a0a0a);border:1px solid rgba(255,255,255,0.1);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;font-weight:900;color:#C41E18;font-family:Impact,sans-serif}
+    h1{text-align:center;font-size:22px;font-weight:900;letter-spacing:0.12em;margin-bottom:4px}
+    .sub{text-align:center;font-size:11px;color:rgba(255,255,255,0.25);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:24px}
+    .accent{height:2px;background:linear-gradient(90deg,transparent,#C41E18,transparent);margin:-24px -32px 24px;border-radius:0}
+    label{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px}
+    input,select,textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:11px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;transition:border 0.2s}
+    input:focus,select:focus,textarea:focus{border-color:rgba(196,30,24,0.5)}
+    select{appearance:none;cursor:pointer}
+    textarea{resize:none;height:70px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btn{width:100%;padding:14px;background:#C41E18;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.05em;margin-top:4px;transition:background 0.2s}
+    .btn:hover{background:#a81914}
+    .btn:disabled{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.2);cursor:not-allowed}
+    .success{text-align:center;padding:40px 0}
+    .success h2{font-size:20px;margin:16px 0 8px;font-weight:800}
+    .success p{font-size:13px;color:rgba(255,255,255,0.5)}
+    .check{width:56px;height:56px;background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:28px}
+    .footer{text-align:center;font-size:9px;color:rgba(255,255,255,0.08);margin-top:20px;letter-spacing:0.15em;text-transform:uppercase}
+    .req{color:#C41E18}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">A</div>
+    <h1>APATRIS</h1>
+    <p class="sub">Job Application</p>
+    <div class="accent"></div>
+
+    <div id="form-view">
+      <form id="apply-form" onsubmit="submitForm(event)">
+        <div class="row">
+          <div><label>First Name <span class="req">*</span></label><input name="firstName" required placeholder="Jan"></div>
+          <div><label>Last Name <span class="req">*</span></label><input name="lastName" required placeholder="Kowalski"></div>
+        </div>
+        <label>Phone <span class="req">*</span></label><input name="phone" type="tel" required placeholder="+48 xxx xxx xxx">
+        <label>Email</label><input name="email" type="email" placeholder="your@email.com">
+        <div class="row">
+          <div><label>Nationality</label><select name="nationality"><option value="">Select...</option><option>Ukrainian</option><option>Belarusian</option><option>Georgian</option><option>Moldovan</option><option>Armenian</option><option>Indian</option><option>Nepali</option><option>Filipino</option><option>Vietnamese</option><option>Polish</option><option>Other</option></select></div>
+          <div><label>Specialization</label><select name="specialization"><option value="">Select...</option><option>TIG Welder</option><option>MIG/MAG Welder</option><option>Pipe Welder</option><option>Structural Welder</option><option>Plumber</option><option>Electrician</option><option>Carpenter</option><option>General Construction</option><option>Forklift Operator</option><option>CNC Operator</option><option>Other</option></select></div>
+        </div>
+        <label>Experience</label><input name="experience" placeholder="e.g. 5 years TIG welding">
+        <label>Message</label><textarea name="message" placeholder="Tell us about yourself..."></textarea>
+        <button type="submit" class="btn" id="submit-btn">Submit Application</button>
+      </form>
+    </div>
+
+    <div id="success-view" style="display:none" class="success">
+      <div class="check">✓</div>
+      <h2>Application Submitted!</h2>
+      <p>Thank you for applying. Our team will review your application and contact you soon.</p>
+    </div>
+
+    <p class="footer">Powered by Apatris Compliance Hub</p>
+  </div>
+
+  <script>
+    async function submitForm(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      const fd = new FormData(e.target);
+      const data = Object.fromEntries(fd.entries());
+      try {
+        const r = await fetch('/api/public/apply', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+        });
+        if (r.ok) {
+          document.getElementById('form-view').style.display = 'none';
+          document.getElementById('success-view').style.display = 'block';
+        } else { btn.disabled = false; btn.textContent = 'Submit Application'; alert('Failed — please try again.'); }
+      } catch { btn.disabled = false; btn.textContent = 'Submit Application'; alert('Network error.'); }
+    }
+  </script>
+</body>
+</html>`;
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
+});
+
+// GET /api/public/verify/:token/page — serve verification result as HTML
+router.get("/public/verify/:token/page", async (req, res) => {
+  try {
+    // Fetch data using the JSON endpoint
+    const baseUrl = `\${req.protocol}://\${req.get("host")}`;
+    const r = await fetch(`\${baseUrl}/api/public/verify/\${req.params.token}`);
+    if (!r.ok) {
+      res.setHeader("Content-Type", "text/html");
+      return res.send('<html><body style="background:#0a0a0b;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh"><div style="text-align:center"><h1 style="color:#C41E18;font-size:48px">Invalid Link</h1><p style="color:rgba(255,255,255,0.4)">This verification link is expired or invalid.</p></div></body></html>');
+    }
+    const data = await r.json();
+    const statusColor = data.legalStatus?.status === "VALID" || data.legalStatus?.status === "PROTECTED_PENDING" ? "#10B981" : data.legalStatus?.riskLevel === "CRITICAL" ? "#EF4444" : "#F59E0B";
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Worker Verification — Apatris</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;background:#0a0a0b;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{max-width:440px;width:100%;background:#141416;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:28px;box-shadow:0 25px 60px rgba(0,0,0,0.5)}.logo{text-align:center;margin-bottom:20px}.logo span{color:#C41E18;font-size:32px;font-weight:900;font-family:Impact,sans-serif}.badge{display:inline-block;padding:8px 16px;border-radius:10px;font-weight:800;font-size:13px;letter-spacing:0.08em;margin:12px 0}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}.row .label{color:rgba(255,255,255,0.4)}.row .val{font-weight:700;text-align:right}.section{font-size:10px;font-weight:800;color:rgba(255,255,255,0.2);letter-spacing:0.12em;text-transform:uppercase;margin:16px 0 8px}.ts{text-align:center;font-size:10px;color:rgba(255,255,255,0.15);margin-top:16px}</style></head>
+    <body><div class="card">
+      <div class="logo"><span>A</span><div style="font-size:18px;font-weight:900;letter-spacing:0.12em;margin-top:4px">APATRIS</div><div style="font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:0.15em;text-transform:uppercase;margin-top:2px">Worker Verification</div></div>
+      <div style="text-align:center"><div class="badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40">${data.legalStatus?.status ?? "UNKNOWN"}</div></div>
+      <div class="section">Worker</div>
+      <div class="row"><span class="label">Name</span><span class="val">${data.worker?.name ?? "—"}</span></div>
+      <div class="row"><span class="label">Nationality</span><span class="val">${data.worker?.nationality ?? "—"}</span></div>
+      <div class="row"><span class="label">Specialization</span><span class="val">${data.worker?.specialization ?? "—"}</span></div>
+      <div class="row"><span class="label">Employer</span><span class="val">${data.employer ?? "—"}</span></div>
+      <div class="section">Legal Status</div>
+      <div class="row"><span class="label">Status</span><span class="val" style="color:${statusColor}">${data.legalStatus?.status ?? "—"}</span></div>
+      <div class="row"><span class="label">Risk Level</span><span class="val">${data.legalStatus?.riskLevel ?? "—"}</span></div>
+      <div class="row"><span class="label">Legal Basis</span><span class="val">${data.legalStatus?.basis ?? "—"}</span></div>
+      <div class="section">Documents</div>
+      ${Object.entries(data.documents ?? {}).map(([k, v]: any) => `<div class="row"><span class="label">${k}</span><span class="val" style="color:${(v?.daysLeft ?? -1) < 0 ? '#EF4444' : (v?.daysLeft ?? 0) < 30 ? '#F59E0B' : '#10B981'}">${v?.daysLeft !== null ? (v.daysLeft < 0 ? 'EXPIRED' : v.daysLeft + 'd left') : '—'}</span></div>`).join("")}
+      <div class="ts">Verified: ${data.timestamp ?? new Date().toISOString()} · Valid until: ${data.expiresAt ? new Date(data.expiresAt).toLocaleDateString("en-GB") : "—"}</div>
+    </div></body></html>`;
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch {
+    res.setHeader("Content-Type", "text/html");
+    res.send('<html><body style="background:#0a0a0b;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh"><h1 style="color:#C41E18">Verification Error</h1></body></html>');
+  }
+});
+
 export default router;

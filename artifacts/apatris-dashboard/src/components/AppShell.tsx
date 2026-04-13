@@ -127,6 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: "/job-board",     label: "Job Board",     icon: Briefcase },
       { path: "/applications",  label: "Applications",  icon: UserPlus },
       { path: "/screening",     label: "Screening",     icon: Users },
+      { path: "/recruitment-link", label: "Recruitment Link", icon: Users },
     ],
   },
   {
