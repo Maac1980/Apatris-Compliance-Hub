@@ -392,9 +392,17 @@ export default function ComplianceAlerts() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="font-mono text-sm">Loading compliance data...</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-xl border border-slate-700/40 bg-slate-800/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="relative overflow-hidden rounded bg-slate-700 h-4 w-40"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+                  <div className="relative overflow-hidden rounded-full bg-slate-700 h-5 w-16"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+                </div>
+                <div className="relative overflow-hidden rounded bg-slate-700 h-3 w-full"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+                <div className="relative overflow-hidden rounded bg-slate-700 h-3 w-3/4"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+              </div>
+            ))}
           </div>
         )}
 

@@ -65,6 +65,38 @@ export function SiteCardSkeleton() {
   );
 }
 
+// ─── Alert card skeleton (compliance alerts, notifications) ─────────────────
+export function AlertCardSkeleton() {
+  return (
+    <div className="p-4 rounded-xl border border-slate-700/40 bg-slate-800/30 space-y-3">
+      <div className="flex items-center justify-between">
+        <Shimmer className="h-4 w-40" />
+        <Shimmer className="h-5 w-16 rounded-full" />
+      </div>
+      <Shimmer className="h-3 w-full" />
+      <Shimmer className="h-3 w-3/4" />
+      <div className="flex gap-2 pt-1">
+        <Shimmer className="h-7 w-20 rounded-lg" />
+        <Shimmer className="h-7 w-20 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Chart skeleton ─────────────────────────────────────────────────────────
+export function ChartSkeleton({ height = "h-48" }: { height?: string }) {
+  return (
+    <div className={`rounded-xl border border-slate-700/40 bg-slate-800/30 p-4 space-y-3 ${height}`}>
+      <Shimmer className="h-3 w-32" />
+      <div className="flex items-end gap-2 h-full pb-8">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Shimmer key={i} className="flex-1 rounded-t" style={{ height: `${30 + Math.random() * 60}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Full-page branded loading screen ────────────────────────────────────────
 export function PageLoader() {
   return (

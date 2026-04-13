@@ -91,7 +91,23 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
+        <div className="space-y-4 py-4">
+          {/* Skeleton cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-slate-700/40 bg-slate-800/30 p-5 space-y-3">
+                <div className="relative overflow-hidden rounded bg-slate-700 h-3 w-24"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+                <div className="relative overflow-hidden rounded bg-slate-700 h-8 w-16"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+              </div>
+            ))}
+          </div>
+          {/* Skeleton chart */}
+          <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 p-4 h-48 flex items-end gap-2">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="flex-1 relative overflow-hidden rounded-t bg-slate-700" style={{ height: `${30 + Math.random() * 60}%` }}><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+            ))}
+          </div>
+        </div>
       ) : tab === "heatmap" ? (
         <div className="space-y-3">
           {heatmap.map(site => (
