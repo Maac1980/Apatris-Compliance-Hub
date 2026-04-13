@@ -37,9 +37,32 @@ jobs:
       - name: Build workforce app
         run: cd artifacts/workforce-app && PORT=8080 BASE_PATH=/workforce/ npx vite build
 
-  deploy:
-    name: Deploy to Fly.io
+  deploy-staging:
+    name: Deploy to Staging
     needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Staging
+        run: flyctl deploy --remote-only --config fly.staging.toml -a apatris-api-staging
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check (staging)
+        run: |
+          sleep 10
+          curl -sf https://apatris-api-staging.fly.dev/api/healthz || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    needs: deploy-staging
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
@@ -50,12 +73,12 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly.io
+      - name: Deploy to Production
         run: flyctl deploy --remote-only -a apatris-api
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Health check
+      - name: Health check (production)
         run: |
           sleep 10
           curl -sf https://apatris-api.fly.dev/api/healthz || exit 1
