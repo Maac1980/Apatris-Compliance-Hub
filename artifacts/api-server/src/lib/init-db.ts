@@ -2421,6 +2421,23 @@ export async function initializeDatabase(): Promise<void> {
   await execute(`CREATE INDEX IF NOT EXISTS idx_kg_edges_source ON kg_edges(tenant_id, source_id)`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_kg_edges_target ON kg_edges(tenant_id, target_id)`);
 
+  // ── Case Notebook — running narrative per legal case ─────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS case_notebook_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES legal_cases(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    entry_type TEXT NOT NULL CHECK (entry_type IN ('auto','manual','document','status_change','alert','ai_insight')),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    linked_node_ids UUID[] DEFAULT '{}',
+    linked_document_id UUID,
+    metadata JSONB DEFAULT '{}',
+    author TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_case ON case_notebook_entries(case_id, tenant_id)`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_search ON case_notebook_entries USING GIN(to_tsvector('english', title || ' ' || content))`);
+
   // Authority response packs — formal evidence-backed response drafts for authorities
   await execute(`CREATE TABLE IF NOT EXISTS authority_response_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

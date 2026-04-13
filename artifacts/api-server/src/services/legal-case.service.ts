@@ -256,6 +256,12 @@ export async function updateCaseStatus(
 
   try { await refreshWorkerLegalSnapshot(existing.worker_id, tenantId); } catch { /* non-blocking */ }
 
+  // Log in case notebook (non-blocking)
+  try {
+    const { logStatusChange } = await import("./case-notebook.service.js");
+    await logStatusChange(caseId, tenantId, existing.status, newStatus);
+  } catch { /* non-blocking */ }
+
   if (newStatus === "REJECTED" || newStatus === "APPROVED") {
     try {
       const { syncLegalCaseToTrcCase } = await import("./case-sync.service.js");

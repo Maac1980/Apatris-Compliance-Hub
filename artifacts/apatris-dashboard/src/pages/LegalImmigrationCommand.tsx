@@ -14,6 +14,7 @@ import {
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
   Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock, Gauge, Flame,
   PanelLeftOpen, PanelLeftClose, ExternalLink, Globe, BookOpen, ScanSearch, Download,
+  Archive, Network, Plus, MessageSquare,
 } from "lucide-react";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ const TABS = [
   { key: "queue", label: "Legal Queue", icon: Scale },
   { key: "research", label: "Research", icon: Brain },
   { key: "client-view", label: "Client View", icon: Building2 },
+  { key: "vault", label: "Legal Vault", icon: Archive },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -427,6 +429,7 @@ export default function LegalImmigrationCommand() {
           {tab === "queue" && <QueueTab data={queueData} loading={queueLoading} search={q} />}
           {tab === "research" && <ResearchTab briefs={briefsData ?? []} articles={articlesData?.articles ?? []} loading={briefsLoading || articlesLoading} />}
           {tab === "client-view" && <ClientViewTab />}
+          {tab === "vault" && <VaultTab />}
         </div>
       </div>
     </div>
@@ -1909,6 +1912,258 @@ function ClientViewTab() {
           <span className="text-xs text-slate-200">{toast}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VAULT TAB — Legal Vault with unified search, notebook timeline, graph stats
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function VaultTab() {
+  const [searchQ, setSearchQ] = React.useState("");
+  const [searchResults, setSearchResults] = React.useState<any>(null);
+  const [searchLoading, setSearchLoading] = React.useState(false);
+  const [selectedCaseId, setSelectedCaseId] = React.useState<string | null>(null);
+  const [noteTitle, setNoteTitle] = React.useState("");
+  const [noteContent, setNoteContent] = React.useState("");
+
+  // Graph stats
+  const { data: graphStats } = useQuery({
+    queryKey: ["vault-graph-stats"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/v1/kg/stats`, { headers: authHeaders() });
+      if (!r.ok) return { totalNodes: 0, totalEdges: 0, byNodeType: {}, byEdgeType: {} };
+      return r.json();
+    },
+  });
+
+  // Recent notebook entries
+  const { data: notebookData, refetch: refetchNotebook } = useQuery({
+    queryKey: ["vault-notebook-recent"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/v1/vault/notebook?limit=30`, { headers: authHeaders() });
+      if (!r.ok) return { entries: [] };
+      return r.json();
+    },
+  });
+
+  // Case notebook for selected case
+  const { data: caseEntries } = useQuery({
+    queryKey: ["vault-case-notebook", selectedCaseId],
+    queryFn: async () => {
+      if (!selectedCaseId) return { entries: [] };
+      const r = await fetch(`${BASE}api/v1/vault/notebook/${selectedCaseId}`, { headers: authHeaders() });
+      if (!r.ok) return { entries: [] };
+      return r.json();
+    },
+    enabled: !!selectedCaseId,
+  });
+
+  // Active cases for case selector
+  const { data: activeCases } = useQuery({
+    queryKey: ["vault-active-cases"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}api/v1/legal/cases`, { headers: authHeaders() });
+      if (!r.ok) return { cases: [] };
+      return r.json();
+    },
+  });
+
+  const handleSearch = async () => {
+    if (!searchQ.trim()) return;
+    setSearchLoading(true);
+    try {
+      const r = await fetch(`${BASE}api/v1/vault/search`, {
+        method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ query: searchQ }),
+      });
+      if (r.ok) setSearchResults(await r.json());
+    } catch { /* ignore */ }
+    setSearchLoading(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedCaseId || !noteTitle.trim() || !noteContent.trim()) return;
+    try {
+      await fetch(`${BASE}api/v1/vault/notebook/${selectedCaseId}`, {
+        method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ title: noteTitle, content: noteContent }),
+      });
+      setNoteTitle(""); setNoteContent("");
+      refetchNotebook();
+    } catch { /* ignore */ }
+  };
+
+  const stats = graphStats ?? { totalNodes: 0, totalEdges: 0, byNodeType: {}, byEdgeType: {} };
+  const entries = notebookData?.entries ?? [];
+  const caseNotes = caseEntries?.entries ?? [];
+  const cases = activeCases?.cases ?? [];
+
+  const CATEGORY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+    worker: { label: "Worker", color: "text-blue-400", bg: "bg-blue-500/10" },
+    case: { label: "Case", color: "text-orange-400", bg: "bg-orange-500/10" },
+    notebook: { label: "Notebook", color: "text-violet-400", bg: "bg-violet-500/10" },
+    kb_article: { label: "KB Article", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    graph_node: { label: "Graph", color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    document: { label: "Document", color: "text-amber-400", bg: "bg-amber-500/10" },
+  };
+
+  const ENTRY_STYLE: Record<string, { color: string; icon: React.ElementType }> = {
+    status_change: { color: "text-blue-400", icon: ArrowRight },
+    document: { color: "text-emerald-400", icon: FileText },
+    manual: { color: "text-slate-300", icon: MessageSquare },
+    ai_insight: { color: "text-violet-400", icon: Brain },
+    alert: { color: "text-red-400", icon: Bell },
+    auto: { color: "text-slate-400", icon: Clock },
+  };
+
+  const NODE_COLORS: Record<string, string> = {
+    WORKER: "text-blue-400", DOCUMENT: "text-emerald-400", CASE: "text-orange-400",
+    LEGAL_STATUTE: "text-violet-400", DECISION: "text-red-400", URZAD: "text-amber-400", EMPLOYER: "text-cyan-400",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* ── Unified Search ──────────────────────────────────────────── */}
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="w-5 h-5 text-[#C41E18]" />
+          <h3 className="text-sm font-bold text-white">Legal Vault Search</h3>
+          <span className="text-[9px] text-slate-500">Workers · Cases · Documents · KB · Graph</span>
+        </div>
+        <div className="flex gap-2">
+          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSearch()}
+            placeholder="Search across all legal content..."
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-[#C41E18] focus:outline-none" />
+          <button onClick={handleSearch} disabled={searchLoading}
+            className="px-4 py-2 bg-[#C41E18] text-white rounded-lg text-sm font-bold hover:bg-[#a81914] disabled:opacity-50">
+            {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
+          </button>
+        </div>
+
+        {searchResults && (
+          <div className="mt-4 space-y-2 max-h-[400px] overflow-y-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] text-slate-500">{searchResults.total} results in {searchResults.queryMs}ms</span>
+              {Object.entries(searchResults.byCategory ?? {}).map(([cat, count]: any) => (
+                <span key={cat} className={`text-[9px] px-1.5 py-0.5 rounded ${CATEGORY_STYLE[cat]?.bg ?? "bg-slate-700"} ${CATEGORY_STYLE[cat]?.color ?? "text-slate-400"}`}>
+                  {CATEGORY_STYLE[cat]?.label ?? cat}: {count}
+                </span>
+              ))}
+            </div>
+            {(searchResults.results ?? []).map((r: any) => {
+              const cat = CATEGORY_STYLE[r.category] ?? { label: r.category, color: "text-slate-400", bg: "bg-slate-700" };
+              return (
+                <div key={r.id} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${cat.bg} ${cat.color} flex-shrink-0 mt-0.5`}>{cat.label}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{r.title}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{r.snippet}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── Knowledge Graph Stats ─────────────────────────────────── */}
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Network className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Knowledge Graph</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="bg-slate-800/50 rounded-lg p-2.5 text-center">
+              <p className="text-lg font-bold text-white">{stats.totalNodes}</p>
+              <p className="text-[9px] text-slate-500">Nodes</p>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-2.5 text-center">
+              <p className="text-lg font-bold text-white">{stats.totalEdges}</p>
+              <p className="text-[9px] text-slate-500">Edges</p>
+            </div>
+          </div>
+          <div className="space-y-1">
+            {Object.entries(stats.byNodeType ?? {}).map(([type, count]: any) => (
+              <div key={type} className="flex items-center justify-between text-[10px]">
+                <span className={NODE_COLORS[type] ?? "text-slate-400"}>{type}</span>
+                <span className="text-white font-bold">{count}</span>
+              </div>
+            ))}
+          </div>
+          <a href="/legal-graph" className="flex items-center gap-1 mt-3 text-[10px] text-cyan-400 hover:underline">
+            <ExternalLink className="w-3 h-3" /> Open Visual Graph
+          </a>
+        </div>
+
+        {/* ── Case Notebook Timeline ────────────────────────────────── */}
+        <div className="lg:col-span-2 bg-slate-900 border border-slate-700 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Archive className="w-4 h-4 text-[#C41E18]" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Case Notebook</h3>
+            </div>
+            <select value={selectedCaseId ?? ""} onChange={e => setSelectedCaseId(e.target.value || null)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white">
+              <option value="">All Cases (Recent)</option>
+              {cases.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.case_type} — {c.status} ({c.id.slice(0, 8)})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Add manual note (when case selected) */}
+          {selectedCaseId && (
+            <div className="bg-slate-800/50 rounded-lg p-3 mb-3 space-y-2">
+              <input value={noteTitle} onChange={e => setNoteTitle(e.target.value)}
+                placeholder="Note title..." className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500" />
+              <textarea value={noteContent} onChange={e => setNoteContent(e.target.value)}
+                placeholder="Add a note to this case..." rows={2}
+                className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white placeholder-slate-500 resize-none" />
+              <button onClick={handleAddNote} disabled={!noteTitle.trim() || !noteContent.trim()}
+                className="flex items-center gap-1 px-3 py-1 bg-[#C41E18] text-white rounded text-[10px] font-bold hover:bg-[#a81914] disabled:opacity-30">
+                <Plus className="w-3 h-3" /> Add Note
+              </button>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="space-y-1 max-h-[500px] overflow-y-auto">
+            {(selectedCaseId ? caseNotes : entries).length === 0 ? (
+              <p className="text-center text-slate-500 text-xs py-8">No entries yet — case status changes and documents will appear here automatically</p>
+            ) : (
+              (selectedCaseId ? caseNotes : entries).map((e: any) => {
+                const style = ENTRY_STYLE[e.entry_type] ?? ENTRY_STYLE.auto;
+                const Icon = style.icon;
+                return (
+                  <div key={e.id} className="flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-slate-800/50 transition-colors group">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-slate-800 border border-slate-700`}>
+                      <Icon className={`w-3 h-3 ${style.color}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[11px] font-bold text-white truncate">{e.title}</p>
+                        {!selectedCaseId && e.worker_name && (
+                          <span className="text-[9px] text-slate-500">{e.worker_name}</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{e.content}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] text-slate-600">{new Date(e.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        {e.author && <span className="text-[9px] text-slate-600">by {e.author}</span>}
+                        <span className={`text-[8px] px-1 rounded ${ENTRY_STYLE[e.entry_type]?.color ?? "text-slate-500"} bg-slate-800`}>{e.entry_type}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

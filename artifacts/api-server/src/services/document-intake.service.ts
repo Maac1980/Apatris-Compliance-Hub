@@ -710,6 +710,68 @@ export async function confirmIntake(
     [confirmedBy, confirmedWorkerId, JSON.stringify(confirmedFields), JSON.stringify(applied), intakeId]
   );
 
+  // ── Auto-link into knowledge graph (non-blocking) ──────────────────
+  try {
+    const { createNode, createEdge, findNodeByRef } = await import("./knowledge-graph.service.js");
+    const docType = intake.classification_json?.documentType || intake.document_type || "DOCUMENT";
+    const docLabel = `${docType} — ${new Date().toISOString().slice(0, 10)}`;
+
+    // Create DOCUMENT node
+    const docNode = await createNode(tenantId, "DOCUMENT", docLabel, {
+      intake_id: intakeId,
+      document_type: docType,
+      ai_confidence: intake.ai_confidence,
+      confirmed_by: confirmedBy,
+      confirmed_at: new Date().toISOString(),
+    });
+
+    // Link DOCUMENT → WORKER (if matched)
+    if (confirmedWorkerId) {
+      let workerNode = await findNodeByRef(tenantId, "WORKER", "worker_id", confirmedWorkerId);
+      if (!workerNode) {
+        workerNode = await createNode(tenantId, "WORKER", `Worker ${confirmedWorkerId.slice(0, 8)}`, {
+          worker_id: confirmedWorkerId,
+        });
+      }
+      await createEdge(tenantId, workerNode.id, docNode.id, "HAS", 1.0, { relationship: "has_document" });
+    }
+
+    // Link DOCUMENT → LEGAL_STATUTE (if referenced)
+    const legalImpact = intake.legal_impact_json?.impactType;
+    if (legalImpact === "LEGAL_STAY_PROTECTION" || legalImpact === "FILING_CONTINUITY") {
+      let statuteNode = await findNodeByRef(tenantId, "LEGAL_STATUTE", "article", "108");
+      if (!statuteNode) {
+        statuteNode = await createNode(tenantId, "LEGAL_STATUTE", "Art. 108 — Continuity of Stay", {
+          article: "108", law: "Ustawa o cudzoziemcach",
+        });
+      }
+      await createEdge(tenantId, docNode.id, statuteNode.id, "BASED_ON", 1.0, { reason: legalImpact });
+    }
+
+    // Link DOCUMENT → CASE (if worker has active case)
+    if (confirmedWorkerId) {
+      const activeCase = await queryOne<any>(
+        "SELECT id, case_type FROM legal_cases WHERE worker_id = $1 AND tenant_id = $2 AND status NOT IN ('APPROVED') ORDER BY created_at DESC LIMIT 1",
+        [confirmedWorkerId, tenantId]
+      );
+      if (activeCase) {
+        let caseNode = await findNodeByRef(tenantId, "CASE", "case_id", activeCase.id);
+        if (caseNode) {
+          await createEdge(tenantId, caseNode.id, docNode.id, "HAS", 1.0, { relationship: "case_document" });
+        }
+        // Also log in case notebook
+        try {
+          const { logDocumentAttached } = await import("./case-notebook.service.js");
+          await logDocumentAttached(activeCase.id, tenantId, docType, docLabel, intakeId, docNode.id);
+        } catch { /* non-blocking */ }
+      }
+    }
+
+    applied.push(`AUTO_LINK: Document linked to knowledge graph (node ${docNode.id.slice(0, 8)})`);
+  } catch (err) {
+    applied.push(`AUTO_LINK: FAILED — ${err instanceof Error ? err.message : "Unknown"}`);
+  }
+
   return { success: true, appliedActions: applied };
 }
 
