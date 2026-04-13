@@ -80,6 +80,7 @@ function getModuleGroups(role: Role): ModuleGroup[] {
     { id: "legalstatus", label: "Legal Status",  sublabel: "Art. 108 · Risk",     icon: Shield,     iconColor: "#10B981", iconBg: "bg-emerald-500/15" },
     { id: "schengen",    label: "Schengen",       sublabel: "90/180 Calculator",   icon: Globe,      iconColor: "#6366F1", iconBg: "bg-indigo-500/15" },
     { id: "upo",         label: "UPO / MOS",      sublabel: "Filing · Receipts",   icon: FileCheck,  iconColor: "#8B5CF6", iconBg: "bg-violet-500/15" },
+    { id: "notebook",    label: "Case Notebook",  sublabel: "Timeline · Events",   icon: ClipboardList, iconColor: "#3B82F6", iconBg: "bg-blue-500/15" },
     { id: "fines",       label: "Fines Risk",     sublabel: "PIP · Penalties",     icon: Bell,       iconColor: "#EF4444", iconBg: "bg-red-500/15" },
   ];
 
@@ -125,8 +126,8 @@ function getModuleGroups(role: Role): ModuleGroup[] {
       ];
     case "TechOps":
       return [
-        { title: "Documents", modules: [documents[0]] },
-        { title: "Finance", modules: [finance[1]] }, // ZUS only
+        { title: "Documents", modules: [documents[0], documents[1]] }, // Documents + AI Upload
+        { title: "Finance", modules: [finance[1]] }, // ZUS Calculator
         { title: "Operations", modules: [operations[0]] }, // Onboarding
         { title: "Account", modules: account },
       ];
@@ -142,6 +143,9 @@ function getModuleGroups(role: Role): ModuleGroup[] {
       return [
         { title: "Permits & Legal", modules: [
           { id: "immigration", label: "Permits",     sublabel: "Work · TRC · Visa",  icon: Stamp,      iconColor: "#6366F1", iconBg: "bg-indigo-500/15" },
+        ]},
+        { title: "Documents", modules: [
+          { id: "docupload",  label: "AI Upload",    sublabel: "Scan · Extract",     icon: Upload,     iconColor: "#C41E18", iconBg: "bg-red-500/15" },
         ]},
         { title: "Work", modules: [
           { id: "onboarding", label: "Onboarding",   sublabel: "Checklist · Setup",  icon: ClipboardCheck, iconColor: "#8B5CF6", iconBg: "bg-violet-500/15" },

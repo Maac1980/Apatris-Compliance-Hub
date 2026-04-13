@@ -35,7 +35,7 @@ export function LegalSearchBar() {
       const res = await fetch(`${BASE}legal-kb/ask`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ question: query, language: "en" }),
+        body: JSON.stringify({ question: query, language: "pl" }),
       });
       if (res.ok) setResult(await res.json());
     } catch { /* ignore */ }
@@ -53,7 +53,7 @@ export function LegalSearchBar() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSearch()}
-          placeholder="Ask about Polish immigration law..."
+          placeholder="Zapytaj o prawo imigracyjne / Ask immigration law..."
           className="w-full pl-9 pr-16 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-white/25 focus:border-white/20 focus:outline-none"
         />
         <button

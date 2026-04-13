@@ -20,6 +20,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { TimesheetTab } from "@/components/tabs/TimesheetTab";
 import { DocsTab } from "@/components/tabs/DocsTab";
 import { DocUploadTab } from "@/components/tabs/DocUploadTab";
+import { CaseNotebookTab } from "@/components/tabs/CaseNotebookTab";
 import { GpsCheckinTab } from "@/components/tabs/GpsCheckinTab";
 import { ContractTab } from "@/components/tabs/ContractTab";
 import { ImmigrationTab } from "@/components/tabs/ImmigrationTab";
@@ -201,6 +202,9 @@ export function DashboardPage() {
 
       case "docupload":
         return <DocUploadTab />;
+
+      case "notebook":
+        return <CaseNotebookTab />;
 
       // ── TIMESHEET — T5 view, also accessible by T1 + T2 ──────────────────
       case "timesheet":
