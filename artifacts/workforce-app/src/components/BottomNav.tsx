@@ -126,6 +126,7 @@ function getModuleGroups(role: Role): ModuleGroup[] {
       ];
     case "TechOps":
       return [
+        { title: "Legal & Compliance", modules: legal }, // Full legal: Status, Schengen, UPO, Notebook, Fines
         { title: "Documents", modules: [documents[0], documents[1]] }, // Documents + AI Upload
         { title: "Finance", modules: [finance[1]] }, // ZUS Calculator
         { title: "Operations", modules: [operations[0]] }, // Onboarding
