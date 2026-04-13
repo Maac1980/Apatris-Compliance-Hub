@@ -178,7 +178,7 @@ export default function TRCWorkspace() {
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Case Details</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div><span className="text-slate-500">Status:</span> <span className="text-white font-medium">{selectedCase.status}</span></div>
-                  <div><span className="text-slate-500">Nationality:</span> <span className="text-white">{selectedCase.nationality ?? "—"}</span></div>
+                  <div><span className="text-slate-500" title="Worker's citizenship / country of origin">Nationality:</span> <span className="text-white">{(selectedCase.nationality && selectedCase.nationality !== "None") ? selectedCase.nationality : "—"}</span></div>
                   <div><span className="text-slate-500">Passport:</span> <span className="text-white font-mono">{selectedCase.passport_number ?? "—"}</span></div>
                   <div><span className="text-slate-500">Employer NIP:</span> <span className="text-white font-mono">{selectedCase.employer_nip ?? "5252828706"}</span></div>
                   <div><span className="text-slate-500">Start Date:</span> <span className="text-white">{selectedCase.start_date ? new Date(selectedCase.start_date).toLocaleDateString("en-GB") : "—"}</span></div>

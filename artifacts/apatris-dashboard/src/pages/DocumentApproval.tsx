@@ -155,7 +155,7 @@ export default function DocumentApproval() {
         body: [
           ["Full Name / Imie i Nazwisko", norm(worker.name ?? worker.full_name ?? "")],
           ["PESEL", worker.pesel ?? "—"],
-          ["Nationality / Obywatelstwo", worker.nationality ?? "—"],
+          ["Nationality / Obywatelstwo", (worker.nationality && worker.nationality !== "None") ? worker.nationality : "—"],
           ["Passport / Paszport", worker.passportNumber ?? worker.passport_number ?? "—"],
           ["Position / Stanowisko", worker.specialization ?? "—"],
           ["Site / Miejsce pracy", norm(worker.assignedSite ?? worker.assigned_site ?? "—")],

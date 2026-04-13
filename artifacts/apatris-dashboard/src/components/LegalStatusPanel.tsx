@@ -138,15 +138,22 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
 
   return (
     <div className={`rounded-xl border ${statusCfg.borderColor} ${statusCfg.bgColor} overflow-hidden`}>
+      {/* ── Plain-English Summary (for coordinators / quick glance) ──── */}
+      <div className="px-4 pt-3 pb-1">
+        <p className="text-xs text-slate-200 leading-relaxed bg-slate-900/50 rounded-lg px-3 py-2 border-l-2 border-current" style={{ borderColor: statusCfg.color.includes("emerald") ? "#34d399" : statusCfg.color.includes("red") ? "#f87171" : statusCfg.color.includes("amber") ? "#fbbf24" : "#94a3b8" }}>
+          {explanation.headline}
+        </p>
+      </div>
+
       {/* ── Header: Status + Risk ──────────────────────────────────────── */}
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-2 pb-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <StatusIcon className={`w-4 h-4 ${statusCfg.color}`} />
             <span className={`text-sm font-bold ${statusCfg.color}`}>{statusCfg.label}</span>
             <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dotColor}`} />
           </div>
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${riskCfg.bgColor} ${riskCfg.color}`}>
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${riskCfg.bgColor} ${riskCfg.color}`} title={`Risk assessment: ${snapshot.riskLevel}`}>
             {snapshot.riskLevel} RISK
           </span>
         </div>
@@ -154,16 +161,16 @@ export function LegalStatusPanel({ snapshot, defaultAudience = "internal" }: Leg
         {/* ── Key fields grid ──────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-2 text-[11px] mb-2">
           <div className="rounded bg-slate-900/60 px-2 py-1.5">
-            <div className="text-slate-500 mb-0.5">{L("Legal Basis")}</div>
+            <div className="text-slate-500 mb-0.5" title="The legal article or regulation that determines this worker's status">{L("Legal Basis")}</div>
             <div className="text-slate-200 font-medium">{basisLabel}</div>
           </div>
           <div className="rounded bg-slate-900/60 px-2 py-1.5">
-            <div className="text-slate-500 mb-0.5">{L("Risk Level")}</div>
+            <div className="text-slate-500 mb-0.5" title="How urgently this worker's legal situation needs attention">{L("Risk Level")}</div>
             <div className={`font-semibold ${riskCfg.color}`}>{riskCfg.label}</div>
           </div>
           {snapshot.deployability && (
             <div className="rounded bg-slate-900/60 px-2 py-1.5">
-              <div className="text-slate-500 mb-0.5">{L("Deployability")}</div>
+              <div className="text-slate-500 mb-0.5" title="Whether this worker can legally be assigned to a work site right now">{L("Deployability")}</div>
               <div className={`font-semibold ${deployColor}`}>{snapshot.deployability}</div>
             </div>
           )}

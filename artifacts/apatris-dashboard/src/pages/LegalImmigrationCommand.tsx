@@ -13,7 +13,7 @@ import {
   Shield, Users, FileText, Gavel, Scale, Brain, Building2, Search,
   AlertTriangle, CheckCircle2, XOctagon, Clock, Loader2, ChevronRight,
   Zap, Stamp, FileCheck, X, Briefcase, ArrowRight, Bell, Send, CalendarClock, Gauge, Flame,
-  PanelLeftOpen, PanelLeftClose, ExternalLink, Globe, BookOpen, ScanSearch,
+  PanelLeftOpen, PanelLeftClose, ExternalLink, Globe, BookOpen, ScanSearch, Download,
 } from "lucide-react";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
@@ -111,10 +111,10 @@ function Badge({ label, style }: { label: string; style?: string }) {
   return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${style ?? "bg-slate-700 text-slate-400 border-slate-600"}`}>{label}</span>;
 }
 
-function MetricCard({ label, value, color, onClick }: { label: string; value: number; color: string; onClick?: () => void }) {
+function MetricCard({ label, value, color, onClick, tooltip }: { label: string; value: number; color: string; onClick?: () => void; tooltip?: string }) {
   const Tag = onClick ? "button" : "div";
   return (
-    <Tag onClick={onClick} className={`bg-slate-900 border border-slate-800 rounded-xl p-3 text-center ${onClick ? "hover:bg-slate-800 cursor-pointer transition-colors" : ""}`}>
+    <Tag onClick={onClick} title={tooltip} className={`bg-slate-900 border border-slate-800 rounded-xl p-3 text-center ${onClick ? "hover:bg-slate-800 cursor-pointer transition-colors" : ""}`}>
       <p className={`text-2xl font-black ${color}`}>{value}</p>
       <p className="text-[9px] text-slate-500 uppercase font-bold tracking-wider mt-0.5">{label}</p>
     </Tag>
@@ -130,8 +130,14 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
-  return <div className="text-center py-12 text-slate-600 text-sm">{message}</div>;
+function EmptyState({ message, hint }: { message: string; hint?: string }) {
+  return (
+    <div className="text-center py-12">
+      <CheckCircle2 className="w-6 h-6 text-slate-700 mx-auto mb-2" />
+      <p className="text-slate-500 text-sm">{message}</p>
+      {hint && <p className="text-slate-600 text-[11px] mt-1">{hint}</p>}
+    </div>
+  );
 }
 
 function Spinner() {
@@ -147,7 +153,7 @@ export default function LegalImmigrationCommand() {
     const t = p.get("tab");
     return TABS.some(tb => tb.key === t) ? (t as TabKey) : "overview";
   });
-  const [navOpen, setNavOpen] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
 
   // Update URL when tab changes
   React.useEffect(() => {
@@ -434,7 +440,18 @@ export default function LegalImmigrationCommand() {
 function OverviewTab({ overview, loading, explanation, onTabSwitch }: {
   overview: any; loading: boolean; explanation?: any; onTabSwitch: (t: TabKey) => void;
 }) {
-  if (loading || !overview) return <Spinner />;
+  if (loading || !overview) return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-slate-700/40 bg-slate-800/30 p-4 space-y-2">
+            <div className="relative overflow-hidden rounded bg-slate-700 h-3 w-20"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+            <div className="relative overflow-hidden rounded bg-slate-700 h-7 w-12"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" /></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
   const m = overview.metrics;
 
   return (
@@ -448,14 +465,14 @@ function OverviewTab({ overview, loading, explanation, onTabSwitch }: {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         <MetricCard label="Total Workers" value={m.totalWorkers} color="text-white" />
         <MetricCard label="Blocked" value={m.blockedWorkers} color={m.blockedWorkers > 0 ? "text-red-400" : "text-emerald-400"} onClick={() => onTabSwitch("workers-legal")} />
-        <MetricCard label="Expiring TRC" value={m.expiringTRC} color={m.expiringTRC > 0 ? "text-amber-400" : "text-emerald-400"} onClick={() => onTabSwitch("trc")} />
+        <MetricCard label="Expiring TRC" value={m.expiringTRC} color={m.expiringTRC > 0 ? "text-amber-400" : "text-emerald-400"} onClick={() => onTabSwitch("trc")} tooltip="TRC = Temporary Residence Card (Karta Pobytu) — expiring within 60 days" />
         <MetricCard label="Active Cases" value={m.activeCases} color="text-blue-400" onClick={() => onTabSwitch("appeals")} />
         <MetricCard label="Pending Appeals" value={m.pendingAppeals} color={m.pendingAppeals > 0 ? "text-purple-400" : "text-slate-400"} onClick={() => onTabSwitch("appeals")} />
         <MetricCard label="Overdue Deadlines" value={m.overdueDeadlines} color={m.overdueDeadlines > 0 ? "text-red-400" : "text-emerald-400"} onClick={() => onTabSwitch("appeals")} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MetricCard label="Expired TRC" value={m.expiredTRC} color={m.expiredTRC > 0 ? "text-red-400" : "text-slate-400"} />
+        <MetricCard label="Expired TRC" value={m.expiredTRC} color={m.expiredTRC > 0 ? "text-red-400" : "text-slate-400"} tooltip="TRC = Temporary Residence Card (Karta Pobytu) — already expired" />
         <MetricCard label="Expiring Passports" value={m.expiringPassports} color={m.expiringPassports > 0 ? "text-orange-400" : "text-slate-400"} />
         <MetricCard label="Rejected Cases" value={m.rejectedCases} color={m.rejectedCases > 0 ? "text-red-400" : "text-slate-400"} onClick={() => onTabSwitch("appeals")} />
         <MetricCard label="Pending Reviews" value={m.pendingReviews} color={m.pendingReviews > 0 ? "text-blue-400" : "text-slate-400"} onClick={() => onTabSwitch("queue")} />
@@ -530,7 +547,7 @@ function TRCTab({ cases, loading, filter }: { cases: any[]; loading: boolean; fi
   return (
     <div className="space-y-3">
       <SectionHeader title="TRC Cases" count={filtered.length} />
-      {filtered.length === 0 ? <EmptyState message="No TRC cases found" /> : (
+      {filtered.length === 0 ? <EmptyState message="No TRC cases found" hint="TRC cases appear when workers have temporary residence card applications." /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
@@ -609,7 +626,7 @@ function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading
       body: [
         ["Employer", `${pkg.annex.employer.name} (NIP: ${pkg.annex.employer.nip})`],
         ["Worker", norm(pkg.annex.worker.fullName)],
-        ["Nationality", pkg.annex.worker.nationality ?? "—"],
+        ["Nationality", (pkg.annex.worker.nationality && pkg.annex.worker.nationality !== "None") ? pkg.annex.worker.nationality : "—"],
         ["Passport", pkg.annex.worker.passportNumber ?? "—"],
         ["Passport Expiry", pkg.annex.worker.passportExpiry ?? "—"],
         ["PESEL", pkg.annex.worker.pesel ?? "—"],
@@ -683,7 +700,7 @@ function WorkersLegalTab({ workers, loading, search }: { workers: any[]; loading
           {batchLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Generating {batchDone}/{filtered.length}...</> : <><Stamp className="w-3 h-3" /> Generate All MOS</>}
         </button>
       </div>
-      {filtered.length === 0 ? <EmptyState message="No workers found" /> : (
+      {filtered.length === 0 ? <EmptyState message="No workers found" hint="Workers with legal status data will appear here." /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
@@ -789,7 +806,7 @@ function AppealsTab({ cases, loading, filter }: { cases: any[]; loading: boolean
           <CaseTable rows={other} />
         </div>
       )}
-      {filtered.length === 0 && <EmptyState message="No legal cases found" />}
+      {filtered.length === 0 && <EmptyState message="No legal cases found" hint="Cases are created when workers have appeals, rejections, or pending applications." />}
     </div>
   );
 }
@@ -978,7 +995,7 @@ function DocumentsTab({ documents, loading, search, workers }: { documents: any[
         </div>
       )}
 
-      {loading ? <Spinner /> : filtered.length === 0 ? <EmptyState message="No documents found" /> : (
+      {loading ? <Spinner /> : filtered.length === 0 ? <EmptyState message="No documents found" hint="Upload documents via the Document Intake tab." /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
@@ -1052,7 +1069,7 @@ function QueueTab({ data, loading, search }: { data: any; loading: boolean; sear
   return (
     <div className="space-y-3">
       <SectionHeader title="Legal Review Queue" count={filtered.length} />
-      {filtered.length === 0 ? <EmptyState message="No items in the legal queue" /> : (
+      {filtered.length === 0 ? <EmptyState message="No items in the legal queue" hint="All compliance tasks are up to date." /> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-slate-700 bg-slate-800/50">
@@ -1295,7 +1312,8 @@ function ClientViewTab() {
     }
 
     doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
-    doc.text("This report is for informational purposes only and does not constitute legal advice.", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+    doc.text("This report is for informational purposes only and does not constitute legal advice.", W / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
+    doc.text("Note: Names with Polish diacritics (ł, ę, ą, ć) may be simplified for PDF compatibility.", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
     return doc;
   }, [grouped, total, counts]);
 
@@ -1512,7 +1530,7 @@ function ClientViewTab() {
         <div className="grid grid-cols-2 gap-3 mt-3">
           <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
-              <p className="text-[9px] text-blue-400/70 uppercase font-bold">MOS Ready</p>
+              <p className="text-[9px] text-blue-400/70 uppercase font-bold" title="Moduł Obsługi Spraw — Polish case management portal for foreigners' affairs">MOS Ready</p>
               <Stamp className="w-3 h-3 text-blue-400/40" />
             </div>
             <p className="text-xl font-black text-blue-400 mt-0.5">
@@ -1524,7 +1542,7 @@ function ClientViewTab() {
           </div>
           <div className="bg-purple-500/5 border border-purple-500/10 rounded-lg px-3 py-2">
             <div className="flex items-center justify-between">
-              <p className="text-[9px] text-purple-400/70 uppercase font-bold">Art. 108 Protected</p>
+              <p className="text-[9px] text-purple-400/70 uppercase font-bold" title="Article 108 of the Polish Foreigners Act — provides legal protection to stay and work while TRC renewal is pending">Art. 108 Protected</p>
               <Shield className="w-3 h-3 text-purple-400/40" />
             </div>
             <p className="text-xl font-black text-purple-400 mt-0.5">
@@ -1544,7 +1562,7 @@ function ClientViewTab() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <Gauge className="w-3.5 h-3.5 text-[#C41E18]" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Site Deployability</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider" title="Percentage of workers with valid documents who can be legally deployed to work sites">Site Deployability</span>
                 </div>
                 <span className={`text-2xl font-black ${gaugeData.clearPercentage >= 80 ? "text-emerald-400" : gaugeData.clearPercentage >= 50 ? "text-amber-400" : "text-red-400"}`}>
                   {gaugeData.clearPercentage}%
@@ -1732,6 +1750,12 @@ function ClientViewTab() {
       )}
 
       {/* ── Alerts ────────────────────────────────────────────────────────── */}
+      {alerts.length === 0 && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs text-emerald-400 font-medium">No alerts — all workers are compliant.</span>
+        </div>
+      )}
       {alerts.length > 0 && (
         <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -1771,12 +1795,32 @@ function ClientViewTab() {
         </div>
       )}
 
-      {total === 0 ? <EmptyState message="No workers found" /> : (
+      {total === 0 ? <EmptyState message="No workers found" hint="Workers will appear here once added to the system." /> : (
         <div className="space-y-5">
+          {/* Jump Navigation */}
+          <div className="flex items-center gap-2 sticky top-0 z-10 bg-slate-950/90 backdrop-blur-sm py-2 -mx-1 px-1 rounded-lg">
+            {grouped.filter(g => g.workers.length > 0).map(g => (
+              <button
+                key={g.key}
+                onClick={() => {
+                  const el = document.getElementById(`group-${g.key}`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                  g.key === "critical" ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20" :
+                  g.key === "attention" ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" :
+                  "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} />
+                {g.label} ({g.workers.length})
+              </button>
+            ))}
+          </div>
           {grouped.map(({ key, label, color, border, bg, icon: GIcon, dot, workers: gWorkers }) => {
             if (gWorkers.length === 0) return null;
             return (
-              <div key={key}>
+              <div key={key} id={`group-${key}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`w-2 h-2 rounded-full ${dot}`} />
                   <h3 className={`text-xs font-bold uppercase tracking-wider ${color}`}>{label}</h3>
@@ -1840,13 +1884,14 @@ function ClientViewTab() {
                               doc.setDrawColor(200); doc.line(14, 28, W - 14, 28);
                               autoTable(doc, { startY: 32, margin: { left: 14, right: 14 }, head: [["#", "Area", "Assessment", "Status"]], body: pkg.strategyBrief?.map((p: any) => [String(p.id), p.title, norm(p.value), p.status.toUpperCase()]) ?? [], styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [196, 30, 24], textColor: 255, fontStyle: "bold" }, columnStyles: { 0: { cellWidth: 8 }, 3: { cellWidth: 18 } }, didParseCell: (data: any) => { if (data.section === "body" && data.column.index === 3) { const v = data.cell.raw; data.cell.styles.textColor = v === "OK" ? [34, 197, 94] : v === "WARNING" ? [245, 158, 11] : v === "CRITICAL" ? [239, 68, 68] : [148, 163, 184]; data.cell.styles.fontStyle = "bold"; } } });
                               doc.setFontSize(7); doc.setTextColor(160); doc.setFont("helvetica", "italic");
-                              doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+                              doc.text("Apatris Sp. z o.o. — MOS 2026 Digital Mandate", W / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
+                              doc.text("Note: Names with Polish diacritics may be simplified for PDF compatibility.", W / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
                               doc.save(`strategy-${norm(pkg.workerName).replace(/\s+/g, "-").toLowerCase()}.pdf`);
                             } catch { /* silent */ }
-                            btn.textContent = "Strategy PDF"; btn.disabled = false;
+                            btn.innerHTML = '<svg class="w-3 h-3 inline mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Legal Brief'; btn.disabled = false;
                           }}
-                          className="text-[9px] text-blue-400 hover:text-blue-300 underline flex-shrink-0"
-                        >Strategy PDF</button>
+                          className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors flex-shrink-0"
+                        ><Download className="w-3 h-3" /> Legal Brief</button>
                       </div>
                     </div>
                   ))}
