@@ -169,6 +169,7 @@ const NAV_GROUPS: NavGroup[] = [
     activeBg: "bg-slate-500/15 text-slate-300",
     items: [
       { path: "/testing",          label: "Test Scenarios", icon: Settings },
+      { path: "/strategy",         label: "Strategy", icon: Settings },
       { path: "/system-test",     label: "System Test", icon: Settings },
       { path: "/intake-sandbox",  label: "Intake Sandbox", icon: Settings },
       { path: "/history",         label: "History",    icon: History },

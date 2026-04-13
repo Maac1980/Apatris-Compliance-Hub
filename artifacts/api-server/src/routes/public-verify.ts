@@ -469,4 +469,215 @@ router.get("/public/verify/:token/page", async (req, res) => {
   }
 });
 
+// GET /api/public/agency — landing page for staffing agencies
+router.get("/public/agency", async (_req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Apatris — Compliance Platform for Staffing Agencies</title>
+  <meta property="og:title" content="Apatris — Stop losing money on compliance failures">
+  <meta property="og:description" content="AI-powered workforce compliance platform for staffing agencies managing foreign workers in Poland. 14-day free trial.">
+  <meta property="og:type" content="website">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0b;color:#fff;overflow-x:hidden}
+    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;position:relative}
+    .hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(196,30,24,0.15),transparent 70%);pointer-events:none}
+    .logo{width:64px;height:64px;background:linear-gradient(135deg,#1a1a1a,#0a0a0a);border:1px solid rgba(255,255,255,0.1);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px;font-weight:900;color:#C41E18;font-family:Impact,sans-serif}
+    h1{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:0.06em;line-height:1.1;margin-bottom:12px}
+    h1 span{color:#C41E18}
+    .subtitle{font-size:clamp(14px,2vw,18px);color:rgba(255,255,255,0.5);max-width:600px;margin:0 auto 32px;line-height:1.6}
+    .cta{display:inline-block;padding:16px 40px;background:#C41E18;color:#fff;border-radius:14px;font-size:16px;font-weight:800;text-decoration:none;letter-spacing:0.04em;transition:all 0.2s;box-shadow:0 8px 30px rgba(196,30,24,0.3)}
+    .cta:hover{background:#a81914;transform:translateY(-2px);box-shadow:0 12px 40px rgba(196,30,24,0.4)}
+    .trust{margin-top:24px;font-size:12px;color:rgba(255,255,255,0.2)}
+    .features{padding:80px 20px;max-width:900px;margin:0 auto}
+    .features h2{text-align:center;font-size:28px;font-weight:900;margin-bottom:40px;letter-spacing:0.04em}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+    .card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px}
+    .card .icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:20px}
+    .card h3{font-size:15px;font-weight:800;margin-bottom:6px}
+    .card p{font-size:13px;color:rgba(255,255,255,0.4);line-height:1.5}
+    .pricing{padding:80px 20px;max-width:900px;margin:0 auto}
+    .pricing h2{text-align:center;font-size:28px;font-weight:900;margin-bottom:40px}
+    .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+    .plan{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;text-align:center}
+    .plan.featured{border-color:rgba(196,30,24,0.4);background:rgba(196,30,24,0.05)}
+    .plan h3{font-size:18px;font-weight:800;margin-bottom:4px}
+    .plan .price{font-size:36px;font-weight:900;margin:12px 0 4px}
+    .plan .price span{font-size:14px;color:rgba(255,255,255,0.3);font-weight:400}
+    .plan .period{font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:16px}
+    .plan ul{list-style:none;text-align:left;margin-bottom:20px}
+    .plan li{font-size:12px;color:rgba(255,255,255,0.5);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .plan li::before{content:'✓ ';color:#10B981;font-weight:800}
+    .plan .btn{display:block;padding:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;transition:all 0.2s}
+    .plan.featured .btn{background:#C41E18;border-color:#C41E18}
+    .plan .btn:hover{transform:translateY(-1px)}
+    .form-section{padding:80px 20px;max-width:500px;margin:0 auto}
+    .form-section h2{text-align:center;font-size:24px;font-weight:900;margin-bottom:8px}
+    .form-section .sub{text-align:center;font-size:13px;color:rgba(255,255,255,0.3);margin-bottom:28px}
+    .form-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px}
+    .form-card label{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
+    .form-card input,.form-card select{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:11px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:14px}
+    .form-card input:focus{border-color:rgba(196,30,24,0.5)}
+    .form-card .submit{width:100%;padding:14px;background:#C41E18;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+    .form-card .submit:hover{background:#a81914}
+    .footer{text-align:center;padding:40px 20px;font-size:10px;color:rgba(255,255,255,0.1);letter-spacing:0.12em;text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.04)}
+    .success{text-align:center;padding:40px 0;display:none}
+    .success h3{font-size:20px;font-weight:800;margin:12px 0 8px}
+    .success p{font-size:13px;color:rgba(255,255,255,0.4)}
+    .check{width:56px;height:56px;background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:28px}
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="logo">A</div>
+    <h1>Stop losing money on<br><span>compliance failures</span></h1>
+    <p class="subtitle">AI-powered workforce compliance platform for staffing agencies managing foreign workers in Poland. From document tracking to legal case management — automated.</p>
+    <a href="#trial" class="cta">Start 14-Day Free Trial</a>
+    <p class="trust">No credit card required · Set up in 10 minutes · Cancel anytime</p>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features">
+    <h2>What Apatris does for your agency</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="icon" style="background:rgba(16,185,129,0.1);color:#10B981">⚖️</div>
+        <h3>Legal Case Management</h3>
+        <p>8-stage case lifecycle with SLA tracking. AI generates legal documents at every stage — your lawyer reviews, doesn't write from scratch.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:rgba(59,130,246,0.1);color:#3B82F6">📄</div>
+        <h3>AI Document Intelligence</h3>
+        <p>Upload a passport, TRC, or work permit — AI extracts all data in seconds. 21 document types recognized. Auto-links to worker profile.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:rgba(196,30,24,0.1);color:#C41E18">🔍</div>
+        <h3>QR Compliance Verification</h3>
+        <p>Border police scans QR code on worker's phone — sees legal status instantly. No app needed. Proves compliance on the spot.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:rgba(139,92,246,0.1);color:#8B5CF6">🧠</div>
+        <h3>Immigration Law Search</h3>
+        <p>Ask any question about Polish immigration law — get answers from verified legal knowledge base, sourced search, and AI analysis.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:rgba(245,158,11,0.1);color:#F59E0B">⚡</div>
+        <h3>Auto-Escalation</h3>
+        <p>Cases don't sit unattended. SLA breach → automatic WhatsApp to coordinator → email to lawyer → alert to management.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:rgba(6,182,212,0.1);color:#06B6D4">📊</div>
+        <h3>Client Portal</h3>
+        <p>Generate a read-only link for your clients. They see their workers' compliance status in real time. Trust that sells.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing">
+    <h2>Simple pricing. No surprises.</h2>
+    <div class="plans">
+      <div class="plan">
+        <h3>Starter</h3>
+        <div class="price">€199<span>/mo</span></div>
+        <div class="period">Up to 50 workers</div>
+        <ul>
+          <li>Compliance tracking</li>
+          <li>Document management</li>
+          <li>Worker app (5-tier RBAC)</li>
+          <li>Email alerts</li>
+          <li>Basic reports</li>
+        </ul>
+        <a href="#trial" class="btn">Start Free Trial</a>
+      </div>
+      <div class="plan featured">
+        <h3>Professional</h3>
+        <div class="price">€499<span>/mo</span></div>
+        <div class="period">Up to 200 workers</div>
+        <ul>
+          <li>Everything in Starter</li>
+          <li>AI document extraction</li>
+          <li>Legal case management</li>
+          <li>AI document generation</li>
+          <li>Knowledge graph</li>
+          <li>Client portal links</li>
+          <li>WhatsApp + push alerts</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#trial" class="btn">Start Free Trial</a>
+      </div>
+      <div class="plan">
+        <h3>Enterprise</h3>
+        <div class="price">€999<span>/mo</span></div>
+        <div class="period">Unlimited workers</div>
+        <ul>
+          <li>Everything in Professional</li>
+          <li>White-label branding</li>
+          <li>Multi-country support</li>
+          <li>API access</li>
+          <li>Custom integrations</li>
+          <li>Dedicated account manager</li>
+        </ul>
+        <a href="#trial" class="btn">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRIAL FORM -->
+  <section class="form-section" id="trial">
+    <h2>Start your free trial</h2>
+    <p class="sub">14 days free. No credit card. Full access.</p>
+    <div class="form-card">
+      <div id="trial-form-view">
+        <form id="trial-form" onsubmit="submitTrial(event)">
+          <label>Agency Name *</label><input name="agencyName" required placeholder="Your company name">
+          <label>Your Name *</label><input name="contactName" required placeholder="Full name">
+          <label>Email *</label><input name="email" type="email" required placeholder="your@agency.com">
+          <label>Phone</label><input name="phone" type="tel" placeholder="+48 xxx xxx xxx">
+          <label>Number of Workers</label>
+          <select name="workerCount"><option value="1-25">1-25</option><option value="25-50">25-50</option><option value="50-100">50-100</option><option value="100-200" selected>100-200</option><option value="200+">200+</option></select>
+          <label>Country</label>
+          <select name="country"><option value="Poland" selected>Poland</option><option value="Ireland">Ireland</option><option value="Germany">Germany</option><option value="Czech Republic">Czech Republic</option><option value="Other">Other</option></select>
+          <button type="submit" class="submit" id="trial-btn">Start Free Trial</button>
+        </form>
+      </div>
+      <div id="trial-success" class="success">
+        <div class="check">✓</div>
+        <h3>Welcome to Apatris!</h3>
+        <p>We'll set up your account and send login details within 24 hours.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Apatris Sp. z o.o. · NIP 5252828706 · Powered by AI</footer>
+
+  <script>
+    async function submitTrial(e) {
+      e.preventDefault();
+      const btn = document.getElementById('trial-btn');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      const fd = new FormData(e.target);
+      const data = Object.fromEntries(fd.entries());
+      try {
+        const r = await fetch('/api/public/apply', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ firstName: data.contactName, lastName: data.agencyName, phone: data.phone || 'N/A', email: data.email, specialization: 'Agency Trial', experience: data.workerCount + ' workers in ' + data.country, message: 'AGENCY TRIAL REQUEST: ' + data.agencyName })
+        });
+        if (r.ok) {
+          document.getElementById('trial-form-view').style.display = 'none';
+          document.getElementById('trial-success').style.display = 'block';
+        } else { btn.disabled = false; btn.textContent = 'Start Free Trial'; }
+      } catch { btn.disabled = false; btn.textContent = 'Start Free Trial'; }
+    }
+  </script>
+</body>
+</html>`;
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
+});
+
 export default router;

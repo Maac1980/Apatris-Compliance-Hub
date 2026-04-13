@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsx *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git log *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(fly deploy *)",
+      "Bash(curl *)",
+      "Bash(wc *)",
+      "Bash(ls *)",
+      "Bash(chmod *)",
+      "Bash(cd *)",
+      "Bash(cat *)",
+      "Bash(mkdir *)",
+      "Read(**)",
+      "Edit(**)",
+      "Write(**)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git reset --hard *)",
+      "Edit(**/.env*)"
+    ]
+  },
+  "autoMemoryEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'APATRIS RULES: Use pnpm not npm. Always test→build→push→deploy. ZUS benchmark: 160h×31.40=3929.05. Never DROP TABLE. Push to main. Deploy: fly deploy.'"
+          }
+        ]
+      }
+    ]
+  }
+}
