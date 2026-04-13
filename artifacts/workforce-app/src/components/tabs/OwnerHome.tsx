@@ -242,6 +242,9 @@ export function OwnerHome({ onNavigate }: OwnerHomeProps) {
       {/* ── Review Queue (AI-generated docs awaiting approval) ──────── */}
       <ReviewQueueWidget onNavigate={onNavigate} />
 
+      {/* ── Recruitment Link Share ────────────────────────────────── */}
+      <RecruitmentShareWidget />
+
       {/* Tier 1 Platform Modules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
@@ -500,5 +503,47 @@ function ReviewQueueWidget({ onNavigate }: { onNavigate: (tab: string) => void }
         )}
       </div>
     </button>
+  );
+}
+
+// ═══ RECRUITMENT SHARE WIDGET ═══════════════════════════════════════════
+
+function RecruitmentShareWidget() {
+  const [copied, setCopied] = useState(false);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const formUrl = `${origin}/api/public/apply/form`;
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="premium-card rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#C41E18]" />
+          <span className="text-sm font-bold text-white">Recruitment Link</span>
+          <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">PUBLIC</span>
+        </div>
+      </div>
+      <p className="text-[10px] text-white/30 mb-3">Share on Facebook, LinkedIn, or WhatsApp to receive job applications</p>
+      <div className="flex items-center gap-1.5 bg-white/[0.04] rounded-lg p-2 mb-3">
+        <code className="text-[9px] text-white/50 flex-1 truncate">{formUrl}</code>
+        <button onClick={() => copy(formUrl)}
+          className={cn("px-2.5 py-1 rounded-lg text-[9px] font-bold shrink-0 active:scale-95", copied ? "bg-emerald-500/20 text-emerald-400" : "bg-[#C41E18] text-white")}>
+          {copied ? "✓ Copied" : "Copy"}
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <button onClick={() => copy(`🔧 We're hiring! Apply here: ${formUrl}`)}
+          className="py-2 rounded-lg bg-blue-600/15 text-blue-400 text-[9px] font-bold active:scale-95">Facebook</button>
+        <button onClick={() => copy(`Hiring welders! Apply: ${formUrl}`)}
+          className="py-2 rounded-lg bg-emerald-600/15 text-emerald-400 text-[9px] font-bold active:scale-95">WhatsApp</button>
+        <button onClick={() => { window.open(formUrl, "_blank"); }}
+          className="py-2 rounded-lg bg-white/[0.06] text-white/50 text-[9px] font-bold active:scale-95">Preview</button>
+      </div>
+    </div>
   );
 }
