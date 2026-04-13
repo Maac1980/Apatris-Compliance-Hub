@@ -424,8 +424,8 @@ export function DashboardPage() {
   return (
     <div className="app-screen">
     <div className="app-container">
-      {/* Premium Header */}
-      <header className="premium-header shrink-0 sticky top-0 z-40 relative overflow-hidden">
+      {/* Header — fixed height, never scrolls */}
+      <header className="premium-header shrink-0 z-40 relative overflow-hidden">
         {/* Subtle role-colored accent glow at top */}
         <div className={cn("absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r", accentGradient, "to-transparent")} />
         <div className="relative h-14 px-4 flex items-center justify-between">
