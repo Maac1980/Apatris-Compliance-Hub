@@ -102,4 +102,75 @@ router.get("/v1/intake/:id", requireAuth, requireRole(...INTAKE_ROLES), async (r
   }
 });
 
+// POST /api/v1/intake/sandbox — AI extraction with ZERO database writes
+// Admin-only in production, open in development. For demos + lawyer training + QA.
+router.post("/v1/intake/sandbox", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+  try {
+    if (!req.file && !req.body?.file) {
+      // Handle multipart via multer-like buffer extraction
+    }
+
+    const multer = (await import("multer")).default;
+    const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }).single("file");
+
+    upload(req as any, res as any, async (err: any) => {
+      if (err) return res.status(400).json({ error: "File upload failed" });
+      const file = (req as any).file;
+      if (!file) return res.status(400).json({ error: "No file provided" });
+
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return res.json({ sandbox: true, error: "No AI key configured", extraction: null });
+
+      try {
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
+        const anthropic = new Anthropic({ apiKey });
+
+        const base64 = file.buffer.toString("base64");
+        const mediaType = file.mimetype as "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+
+        let content: any[];
+        if (mediaType === "application/pdf") {
+          content = [
+            { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: base64 } },
+            { type: "text" as const, text: "Extract ALL data from this document. Return JSON with: documentType, fullName, dateOfBirth, nationality, passportNumber, pesel, issuedDate, expiryDate, issuingAuthority, caseNumber, any other fields found. Also assess: legalImpact (IDENTITY_ONLY|PERMIT_VALIDITY|FILING_CONTINUITY|LEGAL_STAY_PROTECTION|REJECTION_APPEAL_RISK|APPROVAL_DECISION|EXPIRY_UPDATE|NO_LEGAL_IMPACT), riskLevel (LOW|MEDIUM|HIGH|CRITICAL), and list suggestedActions." },
+          ];
+        } else {
+          content = [
+            { type: "image" as const, source: { type: "base64" as const, media_type: mediaType, data: base64 } },
+            { type: "text" as const, text: "Extract ALL data from this document image. Return JSON with: documentType, fullName, dateOfBirth, nationality, passportNumber, pesel, issuedDate, expiryDate, issuingAuthority, caseNumber, any other fields found. Also assess: legalImpact, riskLevel, and suggestedActions." },
+          ];
+        }
+
+        const response = await anthropic.messages.create({
+          model: "claude-sonnet-4-6", max_tokens: 2048,
+          system: "You are a Polish immigration document specialist. Extract structured data from uploaded documents. Return valid JSON only. Be precise with dates (YYYY-MM-DD format) and names.",
+          messages: [{ role: "user", content }],
+        });
+
+        const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+        let extraction: any = {};
+        try {
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) extraction = JSON.parse(jsonMatch[0]);
+        } catch { extraction = { raw: text }; }
+
+        res.json({
+          sandbox: true,
+          dbWritten: false,
+          fileName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          extraction,
+          aiModel: "claude-sonnet-4-6",
+          timestamp: new Date().toISOString(),
+        });
+      } catch (aiErr) {
+        res.json({ sandbox: true, dbWritten: false, error: aiErr instanceof Error ? aiErr.message : "AI failed", extraction: null });
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Sandbox failed" });
+  }
+});
+
 export default router;

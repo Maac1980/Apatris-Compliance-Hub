@@ -2438,6 +2438,19 @@ export async function initializeDatabase(): Promise<void> {
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_case ON case_notebook_entries(case_id, tenant_id)`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_case_notebook_search ON case_notebook_entries USING GIN(to_tsvector('english', title || ' ' || content))`);
 
+  // ── Error Reports — tenant-aware user error reporting ────────────────
+  await execute(`CREATE TABLE IF NOT EXISTS error_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    user_email TEXT,
+    error_type TEXT NOT NULL DEFAULT '500',
+    route TEXT,
+    message TEXT,
+    user_agent TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   // ── AI-Generated Case Documents — lawyer review queue ────────────────
   await execute(`CREATE TABLE IF NOT EXISTS case_generated_docs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

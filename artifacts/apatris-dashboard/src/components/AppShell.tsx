@@ -169,6 +169,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: "/testing",          label: "Test Scenarios", icon: Settings },
       { path: "/system-test",     label: "System Test", icon: Settings },
+      { path: "/intake-sandbox",  label: "Intake Sandbox", icon: Settings },
       { path: "/history",         label: "History",    icon: History },
       { path: "/system-logs",     label: "Logs",       icon: FileText },
       { path: "/google",           label: "Google",     icon: Settings },
