@@ -2493,6 +2493,44 @@ export async function initializeDatabase(): Promise<void> {
   )`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_client_portal_token ON client_portal_links(token)`);
 
+  // ── Deadline Countdowns — action deadline tracking with auto-escalation
+  await execute(`CREATE TABLE IF NOT EXISTS deadline_countdowns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+    case_id UUID REFERENCES legal_cases(id) ON DELETE CASCADE,
+    deadline_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    deadline_date DATE NOT NULL,
+    days_total INTEGER NOT NULL,
+    escalated_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','escalated','completed','expired')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_deadlines_tenant ON deadline_countdowns(tenant_id, status)`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_deadlines_date ON deadline_countdowns(deadline_date) WHERE status = 'active'`);
+
+  // ── ZUS Audit Trail — read-only log of payroll calculations (does NOT modify calculator)
+  await execute(`CREATE TABLE IF NOT EXISTS zus_audit_trail (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    month_year TEXT NOT NULL,
+    gross NUMERIC(10,2) NOT NULL,
+    employee_zus NUMERIC(10,2),
+    health NUMERIC(10,2),
+    pit NUMERIC(10,2),
+    net NUMERIC(10,2),
+    employer_zus NUMERIC(10,2),
+    total_cost NUMERIC(10,2),
+    contract_type TEXT,
+    rates_used JSONB DEFAULT '{}',
+    legal_basis TEXT DEFAULT 'Act on Social Insurance System Art. 6-12, 2026 rates',
+    calculated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_zus_audit_worker ON zus_audit_trail(worker_id, tenant_id)`);
+
   // ── Error Reports — tenant-aware user error reporting ────────────────
   await execute(`CREATE TABLE IF NOT EXISTS error_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

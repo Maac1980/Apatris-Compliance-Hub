@@ -115,5 +115,13 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
     }
   }
 
+  // ── 3. Deadline countdown check ─────────────────────────────────
+  try {
+    const { runDeadlineCheck } = await import("./deadline-engine.service.js");
+    const deadlineResult = await runDeadlineCheck(tenantId);
+    escalations += deadlineResult.escalated;
+    docAlerts += deadlineResult.expired;
+  } catch { errors++; }
+
   return { casesChecked: breachedCases.length, escalations, docAlerts, errors };
 }

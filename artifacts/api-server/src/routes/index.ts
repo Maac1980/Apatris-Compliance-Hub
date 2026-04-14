@@ -125,6 +125,7 @@ import firstContactRouter from "./first-contact-verification.js";
 import knowledgeGraphRouter from "./knowledge-graph.js";
 import caseNotebookRouter from "./case-notebook.js";
 import caseDocGeneratorRouter from "./case-doc-generator.js";
+import complianceEnforcementRouter from "./compliance-enforcement.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -253,5 +254,6 @@ router.use(firstContactRouter);
 router.use(knowledgeGraphRouter);
 router.use(caseNotebookRouter);
 router.use(caseDocGeneratorRouter);
+router.use(complianceEnforcementRouter);
 
 export default router;
