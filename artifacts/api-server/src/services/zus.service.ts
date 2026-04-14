@@ -29,8 +29,8 @@ export const ZUS_RATES = {
   pit2Allowance: 300,       // Monthly PIT-2 relief (PLN)
 
   // Minimum wage
-  minimumWageMonthly: 4666,  // PLN
-  minimumWageHourly:  30.50, // PLN
+  minimumWageMonthly: 4806,  // PLN — confirmed 2026 (Council of Ministers Regulation, Sept 11, 2025)
+  minimumWageHourly:  31.40, // PLN — confirmed 2026
 } as const;
 
 // ═══ CALCULATION TYPES ══════════════════════════════════════════════════════

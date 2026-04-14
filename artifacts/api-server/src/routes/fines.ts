@@ -8,15 +8,22 @@ import { getDefaultTenantId } from "../lib/tenant.js";
 
 const router = Router();
 
-// PIP fine scales (EUR)
-const FINE_SCALES: Record<string, { min: number; max: number }> = {
-  expired_permit:       { min: 3000, max: 30000 },
-  missing_document:     { min: 1000, max: 5000 },
-  zus_not_filed:        { min: 5000, max: 10000 },
-  contract_missing:     { min: 1000, max: 30000 },
-  oswiadczenie_expired: { min: 3000, max: 10000 },
-  medical_expired:      { min: 1000, max: 5000 },
-  bhp_expired:          { min: 2000, max: 10000 },
+// PIP fine scales (PLN) — updated April 2026 (PIP Amendment doubled maximums)
+// Legal basis: Act on National Labour Inspectorate (amended effective Jan 1, 2026)
+const FINE_SCALES: Record<string, { min: number; max: number; legal: string }> = {
+  expired_permit:         { min: 3000,  max: 60000, legal: "Art. 120 Ustawa o promocji zatrudnienia" },
+  missing_document:       { min: 1000,  max: 60000, legal: "Art. 281 Kodeks pracy" },
+  zus_not_filed:          { min: 5000,  max: 60000, legal: "Art. 98 Ustawa o systemie ubezpieczeń społecznych" },
+  contract_missing:       { min: 1000,  max: 60000, legal: "Art. 281 §1 pkt 2 Kodeks pracy" },
+  oswiadczenie_expired:   { min: 3000,  max: 30000, legal: "Art. 120 Ustawa o promocji zatrudnienia" },
+  medical_expired:        { min: 1000,  max: 60000, legal: "Art. 283 §1 Kodeks pracy" },
+  bhp_expired:            { min: 2000,  max: 60000, legal: "Art. 283 §1 Kodeks pracy — doubled 2026" },
+  pup_notification:       { min: 1000,  max: 3000,  legal: "Art. 120 ust. 11 — 7-day PUP notification failure" },
+  b2b_reclassification:   { min: 5000,  max: 60000, legal: "PIP administrative reclassification power (2026)" },
+  posted_worker_breach:   { min: 5000,  max: 30000, legal: "Art. 12 Ustawa o delegowaniu pracowników" },
+  obstruction_false_info: { min: 1000,  max: 50000, legal: "Art. 283 §2 Kodeks pracy" },
+  pay_transparency:       { min: 1000,  max: 30000, legal: "EU Pay Transparency Directive implementation" },
+  repeated_violation:     { min: 10000, max: 90000, legal: "Art. 283 §1 — repeat offender (doubled 2026)" },
 };
 
 interface RiskItem {
@@ -44,7 +51,7 @@ function assessRisks(worker: any): RiskItem[] {
 
     if (days > 60) continue; // No risk
 
-    const scale = FINE_SCALES[check.type] || { min: 500, max: 5000 };
+    const scale = FINE_SCALES[check.type] || { min: 500, max: 5000, legal: "" };
     let probability: number;
     let priority: string;
 

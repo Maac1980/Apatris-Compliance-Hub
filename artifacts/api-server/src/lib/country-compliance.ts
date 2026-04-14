@@ -38,8 +38,8 @@ const PL: CountryConfig = {
   code: "PL",
   name: "Poland",
   currency: "PLN",
-  minimumWageMonthly: 4666,     // 2026 projected
-  minimumWageHourly: 30.50,     // 2026 projected
+  minimumWageMonthly: 4806,     // 2026 confirmed (Council of Ministers Sept 11, 2025)
+  minimumWageHourly: 31.40,     // 2026 confirmed
   requiredDocuments: [
     "TRC Certificate",
     "Passport",

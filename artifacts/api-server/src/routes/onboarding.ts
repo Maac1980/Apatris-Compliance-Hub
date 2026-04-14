@@ -4,17 +4,21 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
+// Updated April 2026 — includes new legal requirements
 const DEFAULT_STEPS = [
-  { step_order: 1,  step_name: "Personal details verified",         required_document: null },
-  { step_order: 2,  step_name: "Passport copy collected",           required_document: "Passport" },
-  { step_order: 3,  step_name: "Work permit / visa copy collected", required_document: "Work Permit" },
-  { step_order: 4,  step_name: "ZUS registration triggered",        required_document: null },
-  { step_order: 5,  step_name: "Contract signed",                   required_document: "Contract" },
-  { step_order: 6,  step_name: "Bank details collected",            required_document: null },
-  { step_order: 7,  step_name: "Site safety induction completed",   required_document: "BHP Certificate" },
-  { step_order: 8,  step_name: "WhatsApp number verified",          required_document: null },
-  { step_order: 9,  step_name: "Face ID enrolled",                  required_document: null },
-  { step_order: 10, step_name: "First shift assigned",              required_document: null },
+  { step_order: 1,  step_name: "Personal details verified",                    required_document: null },
+  { step_order: 2,  step_name: "Passport copy collected",                      required_document: "Passport" },
+  { step_order: 3,  step_name: "Work permit / visa copy collected",            required_document: "Work Permit" },
+  { step_order: 4,  step_name: "PESEL registration confirmed",                 required_document: null },
+  { step_order: 5,  step_name: "ZUS registration triggered (7-day deadline)",  required_document: null },
+  { step_order: 6,  step_name: "PUP notification sent (7-day deadline)",       required_document: null },
+  { step_order: 7,  step_name: "Contract signed",                              required_document: "Contract" },
+  { step_order: 8,  step_name: "Bank details collected (IBAN)",                 required_document: null },
+  { step_order: 9,  step_name: "BHP training completed (in worker's language)", required_document: "BHP Certificate" },
+  { step_order: 10, step_name: "Medical examination (badania lekarskie)",       required_document: "Medical Certificate" },
+  { step_order: 11, step_name: "WhatsApp number verified",                      required_document: null },
+  { step_order: 12, step_name: "Face ID enrolled",                              required_document: null },
+  { step_order: 13, step_name: "First shift assigned",                          required_document: null },
 ];
 
 // GET /api/onboarding — all workers with progress summary
