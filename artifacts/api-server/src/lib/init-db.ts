@@ -2493,6 +2493,66 @@ export async function initializeDatabase(): Promise<void> {
   )`);
   await execute(`CREATE INDEX IF NOT EXISTS idx_client_portal_token ON client_portal_links(token)`);
 
+  // ── Worker Emails — auto-generated email per worker for communication + login
+  await execute(`CREATE TABLE IF NOT EXISTS worker_emails (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    email TEXT NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_worker_emails_email ON worker_emails(email)`);
+
+  // ── Inbound Emails — captured emails attached to worker profiles
+  await execute(`CREATE TABLE IF NOT EXISTS inbound_emails (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+    from_address TEXT NOT NULL,
+    to_address TEXT NOT NULL,
+    subject TEXT,
+    body_text TEXT,
+    ai_extraction JSONB DEFAULT '{}',
+    processed BOOLEAN DEFAULT false,
+    received_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await execute(`CREATE INDEX IF NOT EXISTS idx_inbound_emails_worker ON inbound_emails(worker_id, tenant_id)`);
+
+  // ── GDPR Consent Records — multi-language with retention tracking
+  await execute(`CREATE TABLE IF NOT EXISTS gdpr_consent_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    consent_type TEXT NOT NULL,
+    consent_language TEXT NOT NULL DEFAULT 'pl',
+    consent_text TEXT NOT NULL,
+    signed_at TIMESTAMPTZ,
+    ip_address TEXT,
+    retention_until DATE,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active','withdrawn','expired')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
+  // ── POA Registry — power of attorney validation
+  await execute(`CREATE TABLE IF NOT EXISTS poa_registry (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    representative_name TEXT NOT NULL,
+    representative_role TEXT,
+    worker_passport_number TEXT,
+    scope TEXT NOT NULL,
+    voivodeship TEXT,
+    stamp_duty_paid BOOLEAN DEFAULT false,
+    stamp_duty_amount NUMERIC(8,2) DEFAULT 17.00,
+    worker_signature BOOLEAN DEFAULT false,
+    valid_from DATE,
+    valid_until DATE,
+    status TEXT DEFAULT 'draft' CHECK (status IN ('draft','active','expired','revoked')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+
   // ── Deadline Countdowns — action deadline tracking with auto-escalation
   await execute(`CREATE TABLE IF NOT EXISTS deadline_countdowns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

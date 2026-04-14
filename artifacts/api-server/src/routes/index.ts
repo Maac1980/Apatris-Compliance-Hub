@@ -127,6 +127,7 @@ import caseNotebookRouter from "./case-notebook.js";
 import caseDocGeneratorRouter from "./case-doc-generator.js";
 import complianceEnforcementRouter from "./compliance-enforcement.js";
 import dataCopilotRouter from "./data-copilot.js";
+import workerEmailRouter from "./worker-email.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -257,5 +258,6 @@ router.use(caseNotebookRouter);
 router.use(caseDocGeneratorRouter);
 router.use(complianceEnforcementRouter);
 router.use(dataCopilotRouter);
+router.use(workerEmailRouter);
 
 export default router;
