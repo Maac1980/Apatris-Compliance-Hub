@@ -215,16 +215,33 @@ router.get("/billing/subscription", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/billing/webhook — Stripe webhook handler
+// POST /api/billing/webhook — Stripe webhook handler (signature-verified)
 router.post("/billing/webhook", async (req, res) => {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!stripeKey) return res.status(200).json({ received: true });
 
   try {
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-03-31.basil" as any });
 
-    const event = req.body;
+    let event: any;
+    // Verify signature if webhook secret is configured
+    if (webhookSecret && req.headers["stripe-signature"]) {
+      try {
+        event = stripe.webhooks.constructEvent(
+          JSON.stringify(req.body),
+          req.headers["stripe-signature"] as string,
+          webhookSecret
+        );
+      } catch (err) {
+        console.error("[Stripe] Webhook signature verification failed:", err instanceof Error ? err.message : err);
+        return res.status(400).json({ error: "Invalid signature" });
+      }
+    } else {
+      event = req.body;
+    }
+
     const type = event?.type;
 
     switch (type) {

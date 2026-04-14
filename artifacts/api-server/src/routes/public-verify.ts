@@ -310,7 +310,7 @@ router.get("/public/apply/form", async (_req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Apply — Apatris Workforce</title>
+  <title>Apply — Apatris Workforce / Aplikuj — Apatris</title>
   <meta property="og:title" content="Join Apatris — We're Hiring!">
   <meta property="og:description" content="Apply for welding and construction jobs in Poland. Quick application — takes 2 minutes.">
   <meta property="og:type" content="website">
@@ -346,7 +346,8 @@ router.get("/public/apply/form", async (_req, res) => {
   <div class="card">
     <div class="logo">A</div>
     <h1>APATRIS</h1>
-    <p class="sub">Job Application</p>
+    <p class="sub" data-en="Job Application" data-pl="Aplikacja o pracę">Job Application</p>
+    <div style="text-align:center;margin:-16px 0 16px"><button onclick="toggleLang()" id="lang-btn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;padding:4px 12px;cursor:pointer;letter-spacing:0.5px">🇵🇱 Polski</button></div>
     <div class="accent"></div>
 
     <div id="form-view">
@@ -387,6 +388,31 @@ router.get("/public/apply/form", async (_req, res) => {
   </div>
 
   <script>
+    let currentLang = 'en';
+    const translations = {
+      'Job Application': 'Aplikacja o pracę',
+      'First Name': 'Imię', 'Last Name': 'Nazwisko', 'Phone': 'Telefon', 'Email': 'E-mail',
+      'Nationality': 'Narodowość', 'Specialization': 'Specjalizacja', 'Experience': 'Doświadczenie',
+      'CV / Resume': 'CV / Życiorys', 'Passport / ID Photo': 'Zdjęcie paszportu / dowodu',
+      'Message': 'Wiadomość', 'Submit Application': 'Wyślij aplikację',
+      'Select...': 'Wybierz...', 'Application Submitted!': 'Aplikacja wysłana!',
+      'Thank you for applying. Our team will review your application and contact you soon.': 'Dziękujemy za aplikację. Nasz zespół sprawdzi Twoje zgłoszenie i wkrótce się skontaktuje.',
+      'Powered by Apatris Compliance Hub': 'Napędzane przez Apatris Compliance Hub',
+      'Tell us about yourself...': 'Opowiedz nam o sobie...',
+      'e.g. 5 years TIG welding': 'np. 5 lat spawania TIG',
+    };
+    function toggleLang() {
+      currentLang = currentLang === 'en' ? 'pl' : 'en';
+      document.getElementById('lang-btn').textContent = currentLang === 'en' ? '🇵🇱 Polski' : '🇬🇧 English';
+      document.querySelectorAll('label, .sub, .success h2, .success p, .footer, .btn, #submit-btn').forEach(el => {
+        const text = el.childNodes[0]?.textContent?.trim();
+        if (currentLang === 'pl' && translations[text]) el.childNodes[0].textContent = translations[text] + ' ';
+        else {
+          const enKey = Object.entries(translations).find(([,v]) => v === text);
+          if (enKey) el.childNodes[0].textContent = enKey[0] + ' ';
+        }
+      });
+    }
     function showFileName(input, spanId) {
       const span = document.getElementById(spanId);
       if (input.files && input.files[0]) {

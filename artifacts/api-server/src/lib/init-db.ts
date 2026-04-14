@@ -2406,11 +2406,20 @@ export async function initializeDatabase(): Promise<void> {
       END $$;
     `);
     // Expand status CHECK to include all 8 stages (safe — drops old, adds new)
-    // Voivodeship tracking
+    // Voivodeship tracking + MOS 2026 fee tracking
     await execute(`
       DO $$ BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='voivodeship') THEN
           ALTER TABLE legal_cases ADD COLUMN voivodeship TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_fee_pln') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_fee_pln NUMERIC(8,2);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_employer_sig_status') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_employer_sig_status TEXT DEFAULT 'pending';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='legal_cases' AND column_name='mos_employer_sig_deadline') THEN
+          ALTER TABLE legal_cases ADD COLUMN mos_employer_sig_deadline DATE;
         END IF;
       END $$;
     `);
