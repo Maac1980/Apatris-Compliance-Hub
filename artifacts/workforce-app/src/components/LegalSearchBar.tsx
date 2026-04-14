@@ -16,6 +16,7 @@ function authHeaders(): Record<string, string> {
 }
 
 const TIER_STYLE: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+  data:       { label: "Your Data",     color: "text-cyan-400",    bg: "bg-cyan-500/10",    icon: Search },
   kb:         { label: "Verified Law",  color: "text-emerald-400", bg: "bg-emerald-500/10", icon: BookOpen },
   perplexity: { label: "Legal Search",  color: "text-blue-400",    bg: "bg-blue-500/10",    icon: Globe },
   claude:     { label: "AI Analysis",   color: "text-violet-400",  bg: "bg-violet-500/10",  icon: Brain },
@@ -32,12 +33,31 @@ export function LegalSearchBar() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${BASE}legal-kb/ask`, {
+      // Try data copilot first (queries real endpoints), fall back to legal KB
+      let res = await fetch(`${BASE}v1/copilot/ask`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ question: query, language: "pl" }),
+        body: JSON.stringify({ question: query }),
       });
-      if (res.ok) setResult(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        // If copilot returned real data, use it. If it fell through to legal, show with tier.
+        setResult({
+          answer: data.answer,
+          sourceTier: data.dataSource?.includes("Legal Intelligence") ? (data.data?.sourceTier ?? "claude") : "data",
+          confidence: data.recordCount !== undefined ? 95 : (data.data?.confidence ?? 70),
+          citations: data.data?.citations ?? [{ title: data.dataSource, source: "Apatris Data" }],
+          latencyMs: 0,
+        });
+      } else {
+        // Fallback to legal KB
+        res = await fetch(`${BASE}legal-kb/ask`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ question: query, language: "pl" }),
+        });
+        if (res.ok) setResult(await res.json());
+      }
     } catch { /* ignore */ }
     setLoading(false);
   };

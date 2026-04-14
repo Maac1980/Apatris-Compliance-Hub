@@ -126,6 +126,7 @@ import knowledgeGraphRouter from "./knowledge-graph.js";
 import caseNotebookRouter from "./case-notebook.js";
 import caseDocGeneratorRouter from "./case-doc-generator.js";
 import complianceEnforcementRouter from "./compliance-enforcement.js";
+import dataCopilotRouter from "./data-copilot.js";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -255,5 +256,6 @@ router.use(knowledgeGraphRouter);
 router.use(caseNotebookRouter);
 router.use(caseDocGeneratorRouter);
 router.use(complianceEnforcementRouter);
+router.use(dataCopilotRouter);
 
 export default router;
