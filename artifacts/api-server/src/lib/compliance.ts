@@ -58,6 +58,14 @@ function formatDate(val: string | Date | null | undefined): string | null {
   return null;
 }
 
+/** Mask a sensitive value, showing only the last 4 characters. */
+function maskSensitive(value: string | null | undefined): string | null {
+  if (!value || value.trim() === "") return null;
+  const v = value.trim();
+  if (v.length <= 4) return "***" + v;
+  return "*".repeat(v.length - 4) + v.slice(-4);
+}
+
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
   const expiry = new Date(dateStr);
@@ -124,9 +132,9 @@ export function mapRowToWorker(row: WorkerRow): Worker {
     monthlyHours: Number(row.monthly_hours) || 0,
     advance: Number(row.advance) || 0,
     penalties: Number(row.penalties) || 0,
-    iban: row.iban ?? null,
-    pesel: row.pesel ?? null,
-    nip: row.nip ?? null,
+    iban: maskSensitive(row.iban),
+    pesel: maskSensitive(row.pesel),
+    nip: maskSensitive(row.nip),
     pit2: !!row.pit2,
     complianceStatus,
     daysUntilNextExpiry,

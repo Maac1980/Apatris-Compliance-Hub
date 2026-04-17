@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { validateBody, SelfServiceUpdateSchema } from "../lib/validate.js";
 
 const router = Router();
 
@@ -25,16 +26,21 @@ router.get("/self-service/profile", requireAuth, async (req, res) => {
   try {
     const worker = await resolveWorker(req);
     if (!worker) return res.status(404).json({ error: "Worker profile not found" });
-    // Return safe fields only
+    // Return safe fields only — mask PESEL and IBAN (show last 4 chars)
     const { id, full_name, email, phone, specialization, assigned_site, pesel, iban, hourly_rate, monthly_hours, trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date, medical_exam_expiry } = worker;
-    res.json({ profile: { id, full_name, email, phone, specialization, assigned_site, pesel, iban, hourly_rate, monthly_hours, trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date, medical_exam_expiry } });
+    const maskValue = (v: string | null): string | null => {
+      if (!v || v.trim() === "") return null;
+      const s = v.trim();
+      return s.length <= 4 ? "***" + s : "*".repeat(s.length - 4) + s.slice(-4);
+    };
+    res.json({ profile: { id, full_name, email, phone, specialization, assigned_site, pesel: maskValue(pesel), iban: maskValue(iban), hourly_rate, monthly_hours, trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date, medical_exam_expiry } });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
   }
 });
 
 // PATCH /api/self-service/profile — update own phone, address, bank
-router.patch("/self-service/profile", requireAuth, async (req, res) => {
+router.patch("/self-service/profile", requireAuth, validateBody(SelfServiceUpdateSchema), async (req, res) => {
   try {
     const worker = await resolveWorker(req);
     if (!worker) return res.status(404).json({ error: "Worker not found" });
@@ -49,8 +55,15 @@ router.patch("/self-service/profile", requireAuth, async (req, res) => {
     if (sets.length === 0) return res.status(400).json({ error: "No fields to update (allowed: phone, email, iban)" });
     sets.push("updated_at = NOW()");
     vals.push(worker.id);
-    const row = await queryOne(`UPDATE workers SET ${sets.join(", ")} WHERE id = $${idx} RETURNING id, full_name, email, phone, iban`, vals);
-    res.json({ profile: row });
+    const row = await queryOne<{ id: string; full_name: string; email: string | null; phone: string | null; iban: string | null }>(
+      `UPDATE workers SET ${sets.join(", ")} WHERE id = $${idx} RETURNING id, full_name, email, phone, iban`, vals
+    );
+    // Mask IBAN in response
+    const maskedRow = row ? {
+      ...row,
+      iban: row.iban && row.iban.trim() !== "" ? "*".repeat(Math.max(0, row.iban.trim().length - 4)) + row.iban.trim().slice(-4) : null,
+    } : null;
+    res.json({ profile: maskedRow });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
   }

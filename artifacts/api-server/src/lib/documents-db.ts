@@ -49,6 +49,17 @@ export async function fetchDocuments(tenantId: string): Promise<DocumentRecord[]
   return rows.map(mapRow);
 }
 
+/** Validate that expiry date is not before issue date */
+function validateDateOrder(issueDate?: string | null, expiryDate?: string | null): void {
+  if (issueDate && expiryDate) {
+    const issue = new Date(issueDate);
+    const expiry = new Date(expiryDate);
+    if (!isNaN(issue.getTime()) && !isNaN(expiry.getTime()) && expiry < issue) {
+      throw new Error(`Expiry date (${expiryDate}) cannot be before issue date (${issueDate}).`);
+    }
+  }
+}
+
 export async function createDocument(fields: {
   workerName: string;
   workerId?: string;
@@ -56,6 +67,7 @@ export async function createDocument(fields: {
   issueDate?: string;
   expiryDate: string;
 }, tenantId: string): Promise<DocumentRecord> {
+  validateDateOrder(fields.issueDate, fields.expiryDate);
   const row = await queryOne(
     `INSERT INTO documents (tenant_id, worker_name, worker_id, document_type, issue_date, expiry_date)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -77,6 +89,17 @@ export async function updateDocument(
   fields: Partial<{ workerName: string; workerId: string; documentType: string; issueDate: string; expiryDate: string }>,
   tenantId: string
 ): Promise<DocumentRecord> {
+  // If updating dates, validate the pair (fetch existing if only one date is changing)
+  if (fields.issueDate !== undefined || fields.expiryDate !== undefined) {
+    const existing = await queryOne<{ issue_date: string | null; expiry_date: string | null }>(
+      "SELECT issue_date, expiry_date FROM documents WHERE id = $1 AND tenant_id = $2",
+      [id, tenantId]
+    );
+    const finalIssue = fields.issueDate !== undefined ? fields.issueDate : (existing?.issue_date ?? null);
+    const finalExpiry = fields.expiryDate !== undefined ? fields.expiryDate : (existing?.expiry_date ?? null);
+    validateDateOrder(finalIssue, finalExpiry);
+  }
+
   const setClauses: string[] = [];
   const params: unknown[] = [];
   let idx = 1;

@@ -36,7 +36,7 @@ export default function AuthorityPacks() {
     queryKey: ["authority-packs-all"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/v1/legal/authority-pack/all`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return json.packs ?? [];
     },
@@ -47,7 +47,7 @@ export default function AuthorityPacks() {
     queryKey: ["legal-cases-for-packs"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/v1/legal/cases`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return json.cases ?? [];
     },

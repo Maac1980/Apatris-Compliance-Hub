@@ -40,7 +40,7 @@ export default function DigitalSafe() {
     queryKey: ["digital-safe-intakes"],
     queryFn: async () => {
       const r = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!r.ok) return [];
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const j = await r.json();
       return (j.workers ?? j ?? []).map((w: any) => ({
         id: w.id,

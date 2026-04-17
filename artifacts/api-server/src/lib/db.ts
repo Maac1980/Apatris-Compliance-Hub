@@ -50,3 +50,50 @@ export async function queryOne<T = Record<string, unknown>>(
 export async function execute(sql: string, params?: unknown[]): Promise<void> {
   await query(sql, params);
 }
+
+/**
+ * Run a callback inside a database transaction.
+ * If the callback throws, the transaction is rolled back.
+ * If it succeeds, the transaction is committed.
+ *
+ * The callback receives transaction-scoped query helpers that
+ * use the SAME client (connection) — this is what makes the
+ * transaction work. Using the top-level query/execute functions
+ * inside the callback would use a DIFFERENT connection and
+ * would NOT be part of the transaction.
+ */
+export async function withTransaction<T>(
+  fn: (tx: {
+    query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<R[]>;
+    queryOne: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<R | null>;
+    execute: (sql: string, params?: unknown[]) => Promise<void>;
+  }) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const txQuery = async <R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<R[]> => {
+      const result = await client.query(sql, params);
+      return result.rows as R[];
+    };
+
+    const txQueryOne = async <R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<R | null> => {
+      const rows = await txQuery<R>(sql, params);
+      return rows[0] ?? null;
+    };
+
+    const txExecute = async (sql: string, params?: unknown[]): Promise<void> => {
+      await client.query(sql, params);
+    };
+
+    const result = await fn({ query: txQuery, queryOne: txQueryOne, execute: txExecute });
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}

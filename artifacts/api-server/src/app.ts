@@ -10,12 +10,44 @@ import router from "./routes";
 
 const app: Express = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],       // Vite injects inline scripts; SW registration is inline
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],                          // API calls to own origin only
+      frameSrc: ["'none'"],                            // No iframes allowed
+      frameAncestors: ["'none'"],                      // Prevent clickjacking — app cannot be iframed
+      objectSrc: ["'none'"],                           // No Flash/plugins
+      baseUri: ["'self'"],                             // Prevent <base> tag hijacking
+      formAction: ["'self'"],                          // Forms submit to own origin only
+      workerSrc: ["'self'", "blob:"],                  // Service workers + blob workers
+    },
+  },
+}));
+
+// CORS: strict in production, permissive in development
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : null;
+
+if (!allowedOrigins && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[SECURITY] ALLOWED_ORIGINS not set in production. CORS will reject all cross-origin requests. " +
+    "Set ALLOWED_ORIGINS=https://your-domain.com to allow specific origins."
+  );
+}
+
 app.use(cors({
   credentials: true,
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",")
-    : true,
+  origin: allowedOrigins
+    ? allowedOrigins                       // Explicit whitelist from env var
+    : process.env.NODE_ENV === "production"
+      ? false                              // Production without whitelist = deny all cross-origin
+      : true,                              // Development = allow all (Vite dev server, etc.)
 }));
 app.use(cookieParser());
 app.use(express.json());

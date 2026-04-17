@@ -4,10 +4,11 @@ import multer from "multer";
 import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
-import { sensitiveLimiter } from "../lib/rate-limit.js";
+import { sensitiveLimiter, publicLimiter } from "../lib/rate-limit.js";
 import { execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { cached, cacheInvalidate } from "../lib/cache.js";
+import { validateBody, CreateWorkerSchema, UpdateWorkerSchema } from "../lib/validate.js";
 
 let anthropic: any = null;
 import("@anthropic-ai/sdk").then(m => {
@@ -422,7 +423,7 @@ router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive
 });
 
 // POST /workers — create a single worker from JSON body
-router.post("/workers", requireAuth, requireRole("Admin", "Executive", "TechOps", "Coordinator"), async (req, res) => {
+router.post("/workers", requireAuth, requireRole("Admin", "Executive", "TechOps", "Coordinator"), validateBody(CreateWorkerSchema), async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     if (!body.name && !body.fullName && !body.full_name) {
@@ -456,7 +457,7 @@ router.get("/workers/:id", requireAuth, async (req, res) => {
 });
 
 // PATCH /workers/:id
-router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), async (req, res) => {
+router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead", "TechOps", "Coordinator"), validateBody(UpdateWorkerSchema), async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     const updated = await updateWorker(req.params.id, body, req.tenantId!);
@@ -537,7 +538,7 @@ router.post("/workers/:id/upload", requireAuth, requireRole("Admin", "Executive"
 
 // POST /workers/apply — public candidate application form
 const applyUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
-router.post("/workers/apply", applyUpload.fields([
+router.post("/workers/apply", publicLimiter, applyUpload.fields([
   { name: "passport", maxCount: 1 },
   { name: "trc", maxCount: 1 },
   { name: "cv", maxCount: 1 },
@@ -545,6 +546,12 @@ router.post("/workers/apply", applyUpload.fields([
   try {
     const { name, email, phone } = req.body as { name?: string; email?: string; phone?: string };
     if (!name?.trim()) { res.status(400).json({ error: "Name is required" }); return; }
+    if (email && email.trim() !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      res.status(400).json({ error: "Invalid email format" }); return;
+    }
+    if (phone && phone.trim() !== "" && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) {
+      res.status(400).json({ error: "Invalid phone format — must be 7-20 digits" }); return;
+    }
 
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
@@ -596,7 +603,7 @@ router.post("/workers/apply", applyUpload.fields([
 });
 
 // POST /workers/:id/notify — send compliance alert via email (or WhatsApp if configured)
-router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
+router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive", "LegalHead"), sensitiveLimiter, async (req, res) => {
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }

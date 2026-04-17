@@ -77,9 +77,26 @@ export async function fetchList<T = Record<string, unknown>>(
   ...keys: string[]
 ): Promise<T[]> {
   const res = await fetch(`${BASE}${url}`, { headers: authHeaders() });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    // Auth expired — don't show error, the auth layer will redirect
+    if (res.status === 401) return [];
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).error || `API request failed (${res.status})`);
+  }
   const json = await res.json();
   return extractList<T>(json, ...keys);
+}
+
+// ── Fetch JSON with error handling ──────────────────────────────────────────
+/** Fetch a JSON endpoint — throws on error so TanStack Query shows error state. */
+export async function fetchJson<T = Record<string, unknown>>(url: string): Promise<T> {
+  const res = await fetch(`${BASE}${url}`, { headers: authHeaders() });
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Session expired — please log in again");
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).error || `Request failed (${res.status})`);
+  }
+  return res.json();
 }
 
 // ── Safe JSON field parsing ─────────────────────────────────────────────────

@@ -166,6 +166,30 @@ export async function createWorker(
   fields: Partial<WorkerRow>,
   tenantId: string
 ): Promise<WorkerRow> {
+  // Check for duplicate PESEL/NIP before insert
+  const pesel = fields.pesel ?? (fields as Record<string, unknown>)["PESEL"];
+  const nip = fields.nip ?? (fields as Record<string, unknown>)["NIP"];
+
+  if (pesel && typeof pesel === "string" && pesel.trim() !== "") {
+    const dup = await queryOne(
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel = $2",
+      [tenantId, pesel.trim()]
+    );
+    if (dup) {
+      throw new Error(`PESEL ${pesel} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
+    }
+  }
+
+  if (nip && typeof nip === "string" && nip.trim() !== "") {
+    const dup = await queryOne(
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND nip = $2",
+      [tenantId, nip.trim()]
+    );
+    if (dup) {
+      throw new Error(`NIP ${nip} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
+    }
+  }
+
   const columns: string[] = ["tenant_id"];
   const placeholders: string[] = ["$1"];
   const values: unknown[] = [tenantId];
@@ -200,6 +224,29 @@ export async function updateWorker(
   fields: Record<string, unknown>,
   tenantId: string
 ): Promise<WorkerRow> {
+  // Check for duplicate PESEL/NIP if these fields are being updated
+  const peselVal = fields.pesel ?? fields.PESEL;
+  if (peselVal && typeof peselVal === "string" && peselVal.trim() !== "") {
+    const dup = await queryOne(
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel = $2 AND id != $3",
+      [tenantId, peselVal.trim(), id]
+    );
+    if (dup) {
+      throw new Error(`PESEL ${peselVal} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
+    }
+  }
+
+  const nipVal = fields.nip ?? fields.NIP;
+  if (nipVal && typeof nipVal === "string" && nipVal.trim() !== "") {
+    const dup = await queryOne(
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND nip = $2 AND id != $3",
+      [tenantId, nipVal.trim(), id]
+    );
+    if (dup) {
+      throw new Error(`NIP ${nipVal} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
+    }
+  }
+
   const setClauses: string[] = [];
   const values: unknown[] = [];
   let idx = 1;

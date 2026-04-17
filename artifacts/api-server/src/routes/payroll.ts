@@ -4,10 +4,10 @@ import { fetchAllWorkers, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
-import { query, queryOne, execute } from "../lib/db.js";
+import { query, queryOne, execute, withTransaction } from "../lib/db.js";
 import { calculateNet } from "../lib/payroll.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
-import { sensitiveLimiter } from "../lib/rate-limit.js";
+import { sensitiveLimiter, exportLimiter } from "../lib/rate-limit.js";
 
 
 
@@ -91,7 +91,10 @@ router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), s
       advancesDeducted: number; penaltiesDeducted: number; finalNettoPayout: number;
     }
     const snapshots: PayrollSnap[] = [];
-    const resetPromises: Promise<unknown>[] = [];
+
+    const workerEmailMap = new Map(workers.map((w) => [w.id, w.email ?? null]));
+    const workerSiteMap  = new Map(workers.map((w) => [w.id, w.assignedSite ?? ""]));
+    const workerRateMap  = new Map(workers.map((w) => [w.id, w.hourlyRate ?? 0]));
 
     for (const w of workers) {
       const hourlyRate = w.hourlyRate ?? 0;
@@ -108,30 +111,59 @@ router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), s
           advancesDeducted, penaltiesDeducted, finalNettoPayout,
         });
       }
-
-      resetPromises.push(
-        updateWorker(w.id, {
-          "MONTHLY_HOURS": 0,
-          "Advance": 0,
-          "Penalties": 0,
-        }, req.tenantId!).catch((e) =>
-          console.warn(`[payroll/commit] Reset failed for ${w.name}:`, e instanceof Error ? e.message : e)
-        )
-      );
     }
-
-    await Promise.all(resetPromises);
 
     // ── Calculate totals ──────────────────────────────────────────────────────
     const totalGross = snapshots.reduce((s, r) => s + r.grossPayout, 0);
     const totalNetto = snapshots.reduce((s, r) => s + r.finalNettoPayout, 0);
 
-    // ── Send payslip emails to workers who have email + hours ─────────────────
-    let payslipsSent = 0;
-    const workerEmailMap = new Map(workers.map((w) => [w.id, w.email ?? null]));
-    const workerSiteMap  = new Map(workers.map((w) => [w.id, w.assignedSite ?? ""]));
-    const workerRateMap  = new Map(workers.map((w) => [w.id, w.hourlyRate ?? 0]));
+    // ── TRANSACTION: persist commit + snapshots + reset workers atomically ───
+    // If ANY step fails, ALL changes are rolled back — no partial state.
+    const commitId = await withTransaction(async (tx) => {
+      // 1. Create commit record
+      const commitRow = await tx.queryOne<{ id: number }>(
+        `INSERT INTO payroll_commits (committed_at, committed_by, month, worker_count, total_gross, total_netto, payslips_sent)
+         VALUES (NOW(),$1,$2,$3,$4,$5,$6) RETURNING id`,
+        [committedBy, monthYear, snapshots.length, totalGross, totalNetto, 0]
+      );
+      const cId = commitRow?.id;
+      if (!cId) throw new Error("Failed to create payroll commit record");
 
+      // 2. Insert all payroll snapshots
+      for (const snap of snapshots) {
+        const zus       = snap.grossPayout * 0.1126;
+        const hlthBase  = snap.grossPayout - zus;
+        const hlth      = hlthBase * 0.09;
+        const txBase    = Math.max(0, Math.round(hlthBase * 0.80));
+        const pit       = Math.max(0, Math.round(txBase * 0.12 - 300));
+        await tx.execute(
+          `INSERT INTO payroll_snapshots
+           (commit_id,month,worker_id,worker_name,site,hours,hourly_rate,gross,employee_zus,health_ins,est_pit,advance,penalties,netto)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+          [
+            cId, monthYear, snap.workerId, snap.workerName,
+            workerSiteMap.get(snap.workerId) ?? "",
+            snap.totalHours, snap.hourlyRate, snap.grossPayout,
+            zus, hlth, pit, snap.advancesDeducted, snap.penaltiesDeducted, snap.finalNettoPayout
+          ]
+        );
+      }
+
+      // 3. Reset worker hours/advance/penalties ONLY after snapshots are saved
+      for (const w of workers) {
+        await tx.execute(
+          `UPDATE workers SET monthly_hours = 0, advance = 0, penalties = 0, updated_at = NOW()
+           WHERE id = $1 AND tenant_id = $2`,
+          [w.id, req.tenantId!]
+        );
+      }
+
+      return cId;
+    });
+
+    // ── Send payslip emails AFTER transaction committed successfully ─────────
+    // Emails are non-reversible — only send when data is safely persisted.
+    let payslipsSent = 0;
     if (isMailConfigured() && snapshots.length > 0) {
       const emailPromises = snapshots.map(async (snap) => {
         const email = workerEmailMap.get(snap.workerId);
@@ -150,7 +182,6 @@ router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), s
             finalNettoPayout: snap.finalNettoPayout,
           });
           payslipsSent++;
-          // Log payslip send to notification_log
           execute(
             `INSERT INTO notification_log (channel, worker_id, worker_name, sent_by, recipient, message_preview, status)
              VALUES ('payslip',$1,$2,$3,$4,$5,'sent')`,
@@ -162,42 +193,14 @@ router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), s
         }
       });
       await Promise.allSettled(emailPromises);
-    }
 
-    // ── Persist commit to PostgreSQL ──────────────────────────────────────────
-    try {
-      const commitRow = await queryOne<{ id: number }>(
-        `INSERT INTO payroll_commits (committed_at, committed_by, month, worker_count, total_gross, total_netto, payslips_sent)
-         VALUES (NOW(),$1,$2,$3,$4,$5,$6) RETURNING id`,
-        [committedBy, monthYear, snapshots.length, totalGross, totalNetto, payslipsSent]
-      );
-      const commitId = commitRow?.id;
-
-      if (commitId) {
-        const snapshotValues = snapshots.map((snap) => {
-          const zus       = snap.grossPayout * 0.1126; // 9.76 + 1.5 — no chorobowe (2026 standard)
-          const hlthBase  = snap.grossPayout - zus;
-          const hlth      = hlthBase * 0.09;
-          const txBase    = Math.max(0, Math.round(hlthBase * 0.80)); // KUP 20% of health base, rounded
-          const pit       = Math.max(0, Math.round(txBase * 0.12 - 300)); // PIT-2 applied, rounded
-          return [
-            commitId, monthYear, snap.workerId, snap.workerName,
-            workerSiteMap.get(snap.workerId) ?? "",
-            snap.totalHours, snap.hourlyRate, snap.grossPayout,
-            zus, hlth, pit, snap.advancesDeducted, snap.penaltiesDeducted, snap.finalNettoPayout
-          ];
-        });
-        for (const sv of snapshotValues) {
-          await execute(
-            `INSERT INTO payroll_snapshots
-             (commit_id,month,worker_id,worker_name,site,hours,hourly_rate,gross,employee_zus,health_ins,est_pit,advance,penalties,netto)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-            sv
-          );
-        }
+      // Update commit record with actual payslips sent count
+      if (payslipsSent > 0) {
+        execute(
+          `UPDATE payroll_commits SET payslips_sent = $1 WHERE id = $2`,
+          [payslipsSent, commitId]
+        ).catch(() => {});
       }
-    } catch (dbErr) {
-      console.error("[payroll/commit] DB persist failed:", (dbErr as Error).message);
     }
 
     appendAuditLog({
@@ -252,7 +255,7 @@ router.get("/payroll/history", requireAuth, requireRole("Admin", "Executive"), a
 });
 
 // ─── GET /payroll/export/bank-csv ────────────────────────────────────────────
-router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Executive"), exportLimiter, async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const [year, mon] = month.split("-");
@@ -263,18 +266,18 @@ router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Execut
     };
     const periodPL = `${monthNames[mon] ?? mon} ${year}`;
 
+    // Use raw WorkerRow (not masked Worker) — bank CSV needs full IBAN
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows.map(mapRowToWorker);
 
     const headers = ["Imie i Nazwisko", "Miejscowosc / Budowa", "Kwota Netto (PLN)", "Tytul Przelewu", "IBAN"];
-    const csvRows = workers
-      .filter((w) => (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0) - (w.advance ?? 0) - (w.penalties ?? 0) > 0)
+    const csvRows = dbRows
+      .filter((w) => (Number(w.hourly_rate) || 0) * (Number(w.monthly_hours) || 0) - (Number(w.advance) || 0) - (Number(w.penalties) || 0) > 0)
       .map((w) => {
-        const gross = (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0);
-        const netto = gross - (w.advance ?? 0) - (w.penalties ?? 0);
+        const gross = (Number(w.hourly_rate) || 0) * (Number(w.monthly_hours) || 0);
+        const netto = gross - (Number(w.advance) || 0) - (Number(w.penalties) || 0);
         return [
-          w.name,
-          w.assignedSite || "—",
+          w.full_name,
+          w.assigned_site || "—",
           netto.toFixed(2).replace(".", ","),
           `Wynagrodzenie za ${periodPL}`,
           w.iban ?? "",
@@ -289,6 +292,17 @@ router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Execut
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `Bank CSV export: ${filename} — ${csvRows.length} workers, contains IBAN data`,
+    });
+
     res.send("\uFEFF" + csvContent);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -297,7 +311,7 @@ router.get("/payroll/export/bank-csv", requireAuth, requireRole("Admin", "Execut
 });
 
 // ─── GET /payroll/export/accounting-csv ──────────────────────────────────────
-router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "Executive"), exportLimiter, async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
 
@@ -310,8 +324,8 @@ router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "
     // Employer ZUS
     const EMPL_ZUS_RATE  = 0.2048; // 9.76+6.5+1.67+2.45+0.10
 
+    // Use raw WorkerRow (not masked Worker) — accounting CSV needs full PESEL/NIP
     const dbRows2 = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows2.map(mapRowToWorker);
 
     const headers = [
       "Worker Name", "PESEL", "NIP", "Site",
@@ -322,11 +336,11 @@ router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "
       "Employer ZUS (PLN)", "Total Employer Cost (PLN)"
     ];
 
-    const acctRows = workers.map((w) => {
-      const rate     = w.hourlyRate ?? 0;
-      const hours    = w.monthlyHours ?? 0;
-      const advance  = w.advance ?? 0;
-      const penalties = w.penalties ?? 0;
+    const acctRows = dbRows2.map((w) => {
+      const rate     = Number(w.hourly_rate) || 0;
+      const hours    = Number(w.monthly_hours) || 0;
+      const advance  = Number(w.advance) || 0;
+      const penalties = Number(w.penalties) || 0;
       const gross    = rate * hours;
 
       const empZUS     = gross * EMP_ZUS_RATE;
@@ -345,10 +359,10 @@ router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "
 
       const n2 = (v: number) => v.toFixed(2).replace(".", ",");
       return [
-        w.name,
+        w.full_name,
         w.pesel ?? "",
         w.nip ?? "",
-        w.assignedSite ?? "",
+        w.assigned_site ?? "",
         hours.toString(),
         n2(rate),
         n2(gross),
@@ -375,6 +389,17 @@ router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `Accounting CSV export: ${filename} — ${acctRows.length} workers, contains PESEL/NIP data`,
+    });
+
     res.send("\uFEFF" + csvContent);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -383,7 +408,7 @@ router.get("/payroll/export/accounting-csv", requireAuth, requireRole("Admin", "
 });
 
 // ─── GET /payroll/export/pdf ──────────────────────────────────────────────────
-router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive"), exportLimiter, async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const now = new Date();
@@ -450,6 +475,16 @@ router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive")
     const totCells = ["TOTALS", "", "", "", String(totalHours), fmtPLN(totalGross), fmtPLN(totalAdv), fmtPLN(totalPen), fmtPLN(totalNetto)];
     totCells.forEach((c, i) => { doc.text(c, x + 3, y + 5, { width: cols[i] - 3, align: i >= 3 ? "right" : "left" }); x += cols[i]; });
 
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `Payroll PDF export: ${filename} — ${pdfRows.length} workers, gross ${fmtPLN(totalGross)} PLN`,
+    });
+
     doc.end();
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -459,7 +494,7 @@ router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive")
 
 // ─── POST /payroll/send-payslip ──────────────────────────────────────────────
 // Send a single payslip email for a specific worker + month
-router.post("/payroll/send-payslip", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+router.post("/payroll/send-payslip", requireAuth, requireRole("Admin", "Executive"), sensitiveLimiter, async (req, res) => {
   try {
     const { workerName, workerEmail, monthYear, site, totalHours, hourlyRate, grossPayout, advancesDeducted, penaltiesDeducted, finalNettoPayout } = req.body as Record<string, any>;
     if (!workerName || !workerEmail || !monthYear) {

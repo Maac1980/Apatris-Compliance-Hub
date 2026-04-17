@@ -79,7 +79,7 @@ export default function ExpiryCalendar() {
     queryKey: ["workers-expiry-calendar"],
     queryFn: async () => {
       const r = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!r.ok) return [];
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const data = await r.json();
       return (data.workers ?? data ?? []) as Worker[];
     },

@@ -138,9 +138,10 @@ export async function eraseWorkerData(workerId: string, tenantId: string, perfor
   if (consents.length > 0) { tablesAffected.push("consent_records"); recordsDeleted += consents.length; }
 
   // 3. Anonymize hours_log (keep hours data but remove name)
+  // Use both worker_id and worker_name to catch all records (legacy + new)
   await execute(
-    "UPDATE hours_log SET worker_name = 'REDACTED' WHERE worker_name = $1",
-    [workerName]
+    "UPDATE hours_log SET worker_name = 'REDACTED', worker_id = NULL WHERE worker_id = $1 OR (worker_name = $2 AND tenant_id = $3)",
+    [workerId, workerName, tenantId]
   );
   tablesAffected.push("hours_log");
 
@@ -158,7 +159,71 @@ export async function eraseWorkerData(workerId: string, tenantId: string, perfor
   );
   tablesAffected.push("notification_log");
 
-  // 6. Delete the worker record itself (cascade will handle remaining FKs)
+  // 6. Delete biometric data (face_encodings) — no reason to retain
+  const faces = await query("DELETE FROM face_encodings WHERE worker_id = $1 RETURNING id", [workerId]);
+  if (faces.length > 0) { tablesAffected.push("face_encodings"); recordsDeleted += faces.length; }
+
+  // 7. Delete GPS location history — no reason to retain after erasure
+  const gps = await query("DELETE FROM gps_checkins WHERE worker_id = $1 RETURNING id", [workerId]);
+  if (gps.length > 0) { tablesAffected.push("gps_checkins"); recordsDeleted += gps.length; }
+
+  // 8. Anonymize audit_logs — keep action trail but strip PII
+  await execute(
+    "UPDATE audit_logs SET worker_name = 'REDACTED', worker_id = NULL WHERE worker_id = $1 OR worker_name = $2",
+    [workerId, workerName]
+  );
+  tablesAffected.push("audit_logs");
+
+  // 9. Anonymize signatures — keep signature records but strip worker identity
+  await execute(
+    "UPDATE signatures SET signer_name = 'REDACTED' WHERE worker_id = $1",
+    [workerId]
+  );
+  tablesAffected.push("signatures");
+
+  // 10. Anonymize voice_checkins — keep time data but strip identity
+  await execute(
+    "UPDATE voice_checkins SET worker_name = 'REDACTED', worker_id = NULL WHERE worker_id = $1 OR worker_name = $2",
+    [workerId, workerName]
+  );
+  tablesAffected.push("voice_checkins");
+
+  // 11. Anonymize generated_contracts — keep record but strip PII
+  await execute(
+    "UPDATE generated_contracts SET worker_name = 'REDACTED', contract_html = NULL WHERE worker_id = $1 OR worker_name = $2",
+    [workerId, workerName]
+  );
+  tablesAffected.push("generated_contracts");
+
+  // 12. Anonymize immigration_permits — keep permit record but strip PII
+  await execute(
+    "UPDATE immigration_permits SET worker_name = 'REDACTED' WHERE worker_id = $1",
+    [workerId]
+  );
+  tablesAffected.push("immigration_permits");
+
+  // 13. Anonymize onboarding_checklists
+  await execute(
+    "UPDATE onboarding_checklists SET worker_name = 'REDACTED' WHERE worker_id = $1",
+    [workerId]
+  );
+  tablesAffected.push("onboarding_checklists");
+
+  // 14. Anonymize inbound_emails — strip worker association
+  await execute(
+    "UPDATE inbound_emails SET worker_id = NULL WHERE worker_id = $1",
+    [workerId]
+  );
+  tablesAffected.push("inbound_emails");
+
+  // 15. Anonymize legal_documents — strip worker association
+  await execute(
+    "UPDATE legal_documents SET worker_id = NULL WHERE worker_id = $1",
+    [workerId]
+  );
+  tablesAffected.push("legal_documents");
+
+  // 16. Delete the worker record itself (CASCADE handles remaining FK tables)
   const deleted = await query("DELETE FROM workers WHERE id = $1 AND tenant_id = $2 RETURNING id", [workerId, tenantId]);
   if (deleted.length > 0) { tablesAffected.push("workers"); recordsDeleted += 1; }
 
@@ -187,8 +252,17 @@ export async function exportWorkerData(workerId: string, tenantId: string, perfo
 
   const documents = await query("SELECT * FROM documents WHERE worker_id = $1 AND tenant_id = $2", [workerId, tenantId]);
   const consents = await query("SELECT * FROM consent_records WHERE worker_id = $1 AND tenant_id = $2 ORDER BY created_at", [workerId, tenantId]);
-  const hours = await query("SELECT * FROM hours_log WHERE worker_name = $1 ORDER BY month DESC", [workerName]);
+  const hours = await query(
+    "SELECT * FROM hours_log WHERE (worker_id = $1 OR worker_name = $2) AND tenant_id = $3 ORDER BY month DESC",
+    [workerId, workerName, tenantId]
+  );
   const payroll = await query("SELECT * FROM payroll_snapshots WHERE worker_id = $1 ORDER BY month DESC", [workerId]);
+  const contracts = await query("SELECT * FROM contracts WHERE worker_id = $1 AND tenant_id = $2", [workerId, tenantId]);
+  const signatures = await query("SELECT * FROM signatures WHERE worker_id = $1 AND tenant_id = $2", [workerId, tenantId]);
+  const gpsCheckins = await query("SELECT * FROM gps_checkins WHERE worker_id = $1 AND tenant_id = $2 ORDER BY checked_in_at DESC", [workerId, tenantId]);
+  const faceEncodings = await query("SELECT id, worker_id, created_at FROM face_encodings WHERE worker_id = $1 AND tenant_id = $2", [workerId, tenantId]);
+  const voiceCheckins = await query("SELECT * FROM voice_checkins WHERE worker_id = $1 ORDER BY checked_in_at DESC", [workerId]);
+  const immigrationPermits = await query("SELECT * FROM immigration_permits WHERE worker_id = $1 AND tenant_id = $2", [workerId, tenantId]);
 
   // Log this data export
   await logGdprAction({
@@ -208,6 +282,12 @@ export async function exportWorkerData(workerId: string, tenantId: string, perfo
     consentHistory: consents,
     hoursLog: hours,
     payrollHistory: payroll,
+    contracts,
+    signatures,
+    gpsCheckins,
+    faceEncodings: faceEncodings.map((r: any) => ({ id: r.id, workerId: r.worker_id, createdAt: r.created_at })),
+    voiceCheckins,
+    immigrationPermits,
   };
 }
 

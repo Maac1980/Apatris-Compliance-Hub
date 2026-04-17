@@ -37,7 +37,7 @@ export default function LegalBrief() {
     queryKey: ["workers-list-brief"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       return extractList<any>(await res.json(), "workers").slice(0, 200).map((w: any) => ({ id: w.id, name: w.full_name ?? w.name ?? w.id }));
     },
   });

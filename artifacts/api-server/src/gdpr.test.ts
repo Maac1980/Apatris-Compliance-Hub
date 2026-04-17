@@ -36,18 +36,28 @@ describe("GDPR — Consent types", () => {
 // Data Erasure Logic (Article 17)
 // ═══════════════════════════════════════════════════════════════════════════
 describe("GDPR — Erasure logic", () => {
-  // Simulate the tables that should be affected by erasure
+  // Tables explicitly handled in eraseWorkerData() — order matters
   const ERASURE_TABLES = [
-    "documents",          // deleted
-    "consent_records",    // deleted
-    "hours_log",          // anonymized (worker_name → REDACTED)
-    "payroll_snapshots",  // anonymized (worker_name → REDACTED, worker_id → NULL)
-    "notification_log",   // anonymized
-    "workers",            // deleted (last)
+    "documents",              // 1.  deleted
+    "consent_records",        // 2.  deleted
+    "hours_log",              // 3.  anonymized (worker_name → REDACTED, worker_id → NULL)
+    "payroll_snapshots",      // 4.  anonymized (worker_name → REDACTED, worker_id → NULL)
+    "notification_log",       // 5.  anonymized
+    "face_encodings",         // 6.  deleted (biometric data — no retention)
+    "gps_checkins",           // 7.  deleted (location history — no retention)
+    "audit_logs",             // 8.  anonymized (worker_name → REDACTED, worker_id → NULL)
+    "signatures",             // 9.  anonymized (signer_name → REDACTED)
+    "voice_checkins",         // 10. anonymized
+    "generated_contracts",    // 11. anonymized + contract_html cleared
+    "immigration_permits",    // 12. anonymized
+    "onboarding_checklists",  // 13. anonymized
+    "inbound_emails",         // 14. worker_id set to NULL
+    "legal_documents",        // 15. worker_id set to NULL
+    "workers",                // 16. deleted LAST (CASCADE handles remaining FK tables)
   ];
 
-  it("erasure affects 6 tables", () => {
-    expect(ERASURE_TABLES).toHaveLength(6);
+  it("erasure affects 16 tables", () => {
+    expect(ERASURE_TABLES).toHaveLength(16);
   });
 
   it("workers table is deleted last (after dependencies)", () => {
@@ -55,14 +65,43 @@ describe("GDPR — Erasure logic", () => {
   });
 
   it("financial data is anonymized, not deleted (legal requirement)", () => {
-    // Payroll records must be kept for tax purposes but PII removed
     expect(ERASURE_TABLES).toContain("payroll_snapshots");
-    // The operation for payroll is UPDATE (anonymize), not DELETE
-    // This is correct for GDPR — financial records have separate retention
   });
 
   it("consent records are fully deleted (no retention needed)", () => {
     expect(ERASURE_TABLES).toContain("consent_records");
+  });
+
+  it("biometric data (face_encodings) is fully deleted", () => {
+    expect(ERASURE_TABLES).toContain("face_encodings");
+  });
+
+  it("GPS location history is fully deleted", () => {
+    expect(ERASURE_TABLES).toContain("gps_checkins");
+  });
+
+  it("audit logs are anonymized, not deleted (keep action trail)", () => {
+    expect(ERASURE_TABLES).toContain("audit_logs");
+    // Audit log keeps the action record but strips worker PII
+    // This is correct — GDPR doesn't require deleting audit trails,
+    // only removing personally identifiable information
+  });
+
+  it("biometric deletion happens BEFORE worker deletion", () => {
+    const faceIdx = ERASURE_TABLES.indexOf("face_encodings");
+    const workerIdx = ERASURE_TABLES.indexOf("workers");
+    expect(faceIdx).toBeLessThan(workerIdx);
+  });
+
+  it("all PII tables are covered — no orphaned worker data", () => {
+    const piiTables = [
+      "face_encodings", "gps_checkins", "audit_logs", "signatures",
+      "voice_checkins", "generated_contracts", "immigration_permits",
+      "onboarding_checklists", "inbound_emails", "legal_documents",
+    ];
+    for (const t of piiTables) {
+      expect(ERASURE_TABLES).toContain(t);
+    }
   });
 });
 

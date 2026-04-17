@@ -9,6 +9,7 @@ import { triggerScanNow, alertLog, fireAlertForDocument } from "../lib/scheduler
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { validateBody, CreateDocumentSchema } from "../lib/validate.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { sensitiveLimiter } from "../lib/rate-limit.js";
 
 const router = Router();
 
@@ -126,7 +127,7 @@ router.patch("/documents/:id", requireAuth, requireRole("Admin", "Executive", "L
 });
 
 // DELETE /api/documents/:id
-router.delete("/documents/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
+router.delete("/documents/:id", requireAuth, requireRole("Admin", "Executive", "LegalHead"), sensitiveLimiter, async (req, res) => {
   try {
     await deleteDocument(req.params.id, req.tenantId!);
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "DOCUMENT_DELETE", workerId: req.params.id, workerName: "—", note: "Document deleted" });

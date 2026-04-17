@@ -178,6 +178,54 @@ export async function initializeDatabase(): Promise<void> {
     END $$;
   `);
 
+  // hours_log — add worker_id FK to workers table
+  await execute(`
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='hours_log') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='hours_log' AND column_name='worker_id') THEN
+          ALTER TABLE hours_log ADD COLUMN worker_id UUID REFERENCES workers(id) ON DELETE CASCADE;
+        END IF;
+      END IF;
+    END $$;
+  `);
+  // Prevent duplicate month submissions per worker at DB level
+  await execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_hours_log_worker_month ON hours_log(tenant_id, worker_id, month) WHERE worker_id IS NOT NULL`);
+
+  // ── Date CHECK constraints — prevent expiry < issue and end < start ───────
+  // Uses DO blocks: skip if constraint already exists (idempotent)
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_documents_dates') THEN
+        ALTER TABLE documents ADD CONSTRAINT chk_documents_dates
+          CHECK (issue_date IS NULL OR expiry_date >= issue_date);
+      END IF;
+    END $$;
+  `);
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_contracts_dates') THEN
+        ALTER TABLE contracts ADD CONSTRAINT chk_contracts_dates
+          CHECK (end_date IS NULL OR end_date >= start_date);
+      END IF;
+    END $$;
+  `);
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_posting_assignments_dates') THEN
+        ALTER TABLE posting_assignments ADD CONSTRAINT chk_posting_assignments_dates
+          CHECK (end_date IS NULL OR end_date >= start_date);
+      END IF;
+    END $$;
+  `);
+  await execute(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_immigration_permits_dates') THEN
+        ALTER TABLE immigration_permits ADD CONSTRAINT chk_immigration_permits_dates
+          CHECK (issue_date IS NULL OR expiry_date IS NULL OR expiry_date >= issue_date);
+      END IF;
+    END $$;
+  `);
+
   // mobile_pins — create if not exists, then add tenant_id if missing
   await execute(`
     CREATE TABLE IF NOT EXISTS mobile_pins (
@@ -3424,6 +3472,8 @@ export async function initializeDatabase(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_workers_tenant ON workers(tenant_id)`,
     `CREATE INDEX IF NOT EXISTS idx_workers_tenant_status ON workers(tenant_id, status)`,
     `CREATE INDEX IF NOT EXISTS idx_workers_tenant_name ON workers(tenant_id, full_name)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_tenant_pesel ON workers(tenant_id, pesel) WHERE pesel IS NOT NULL AND pesel != ''`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_tenant_nip ON workers(tenant_id, nip) WHERE nip IS NOT NULL AND nip != ''`,
     `CREATE INDEX IF NOT EXISTS idx_workers_tenant_site ON workers(tenant_id, site)`,
     `CREATE INDEX IF NOT EXISTS idx_workers_tenant_specialization ON workers(tenant_id, specialization)`,
 

@@ -47,7 +47,7 @@ export default function WorkerTimeline() {
     queryKey: ["timeline-workers"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return (json.workers ?? []).map((w: any) => ({
         id: w.id,

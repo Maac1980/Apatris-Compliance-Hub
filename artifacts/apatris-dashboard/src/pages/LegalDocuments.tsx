@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authHeaders, BASE, extractList } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize";
 import {
   FileSignature, Plus, Loader2, CheckCircle2, AlertTriangle, Eye, Printer,
   ThumbsUp, ChevronRight, X, Sparkles, FileText, Shield,
@@ -37,11 +38,11 @@ export default function LegalDocuments() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
 
   // Workers list
-  const { data: workersData } = useQuery({
+  const { data: workersData, isError: workersError, refetch: refetchWorkers } = useQuery({
     queryKey: ["workers-for-docs"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load workers"); }
       const list = extractList<any>(await res.json(), "workers").slice(0, 300);
       return list.map((w: any) => ({ id: w.id, full_name: w.full_name ?? w.name ?? w.id }));
     },
@@ -52,7 +53,7 @@ export default function LegalDocuments() {
     queryKey: ["doc-suggestions", selectedWorker],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/v1/legal/documents/suggest/${selectedWorker}`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load suggestions"); }
       const json = await res.json();
       return json.suggestions ?? [];
     },
@@ -60,11 +61,11 @@ export default function LegalDocuments() {
   });
 
   // Documents for selected worker
-  const { data: docsData, isLoading: docsLoading } = useQuery({
+  const { data: docsData, isLoading: docsLoading, isError: docsError, refetch: refetchDocs } = useQuery({
     queryKey: ["worker-legal-docs", selectedWorker],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/v1/legal/documents/worker/${selectedWorker}`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load documents"); }
       const json = await res.json();
       return json.documents ?? [];
     },
@@ -248,7 +249,7 @@ export default function LegalDocuments() {
             </div>
             <div className="p-6">
               {selectedDoc.rendered_html ? (
-                <div className="bg-white rounded-lg p-8 shadow-lg" dangerouslySetInnerHTML={{ __html: selectedDoc.rendered_html }} />
+                <div className="bg-white rounded-lg p-8 shadow-lg" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedDoc.rendered_html) }} />
               ) : (
                 <pre className="text-xs text-slate-300 whitespace-pre-wrap">{JSON.stringify(selectedDoc.content_json, null, 2)}</pre>
               )}

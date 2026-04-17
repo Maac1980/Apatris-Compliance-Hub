@@ -77,13 +77,45 @@ export const ChangePinSchema = z.object({
   confirmPin: z.string().min(4, "Confirm PIN is required"),
 });
 
+// Reusable field validators
+const emailField = z.string().email("Valid email required").or(z.literal("")).optional();
+const phoneField = z.string().regex(/^\+?[\d\s()-]{7,20}$/, "Phone must be 7-20 digits, may include +, spaces, dashes").or(z.literal("")).optional();
+const peselField = z.string().regex(/^\d{11}$/, "PESEL must be exactly 11 digits").or(z.literal("")).optional();
+const nipField = z.string().regex(/^\d{10}$/, "NIP must be exactly 10 digits").or(z.literal("")).optional();
+const ibanField = z.string().regex(/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/, "IBAN must start with 2 letters + 2 digits followed by 10-30 alphanumeric characters").or(z.literal("")).optional();
+const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional().nullable();
+
 export const CreateWorkerSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  fullName: z.string().min(2, "Name must be at least 2 characters").optional(),
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
   specialization: z.string().optional(),
   assigned_site: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().optional(),
+  email: emailField,
+  phone: phoneField,
+  pesel: peselField,
+  nip: nipField,
+  iban: ibanField,
+  trcExpiry: dateField,
+  passportExpiry: dateField,
+  bhpExpiry: dateField,
+  workPermitExpiry: dateField,
+  contractEndDate: dateField,
 }).passthrough(); // Allow additional fields from legacy API callers
+
+export const UpdateWorkerSchema = z.object({
+  email: emailField,
+  phone: phoneField,
+  pesel: peselField,
+  nip: nipField,
+  iban: ibanField,
+}).passthrough();
+
+export const SelfServiceUpdateSchema = z.object({
+  email: emailField,
+  phone: phoneField,
+  iban: ibanField,
+});
 
 export const CreateContractSchema = z.object({
   workerId: z.string().uuid("Valid worker ID required"),

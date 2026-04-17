@@ -32,7 +32,7 @@ export const apiLimiter = rateLimit({
 });
 
 /**
- * Strict limit for sensitive operations (password change, bulk create).
+ * Strict limit for sensitive operations (password change, bulk create, delete).
  * 5 requests per 15 minutes per IP.
  */
 export const sensitiveLimiter = rateLimit({
@@ -41,6 +41,36 @@ export const sensitiveLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests for this operation. Please try again later." },
+  keyGenerator: (req) => {
+    return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  },
+});
+
+/**
+ * Rate limit for data exports and file downloads containing PII.
+ * 10 requests per 15 minutes per IP.
+ */
+export const exportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many export requests. Please try again later." },
+  keyGenerator: (req) => {
+    return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  },
+});
+
+/**
+ * Rate limit for public-facing endpoints (no auth required).
+ * 3 requests per 15 minutes per IP — prevents spam.
+ */
+export const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many submissions. Please try again later." },
   keyGenerator: (req) => {
     return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
   },

@@ -177,6 +177,15 @@ router.post(
         return res.status(400).json({ error: `contractType must be one of: ${validTypes.join(", ")}` });
       }
 
+      // Validate date order: end_date must not be before start_date
+      if (body.endDate && body.startDate) {
+        const start = new Date(body.startDate);
+        const end = new Date(body.endDate);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
+          return res.status(400).json({ error: `End date (${body.endDate}) cannot be before start date (${body.startDate}).` });
+        }
+      }
+
       // Get worker
       const worker = await fetchWorkerById(body.workerId, req.tenantId!);
       if (!worker) return res.status(404).json({ error: "Worker not found" });

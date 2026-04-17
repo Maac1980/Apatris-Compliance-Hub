@@ -163,7 +163,7 @@ function AutomationActivity({ workerId }: { workerId: string }) {
     queryKey: ["automation-worker", workerId],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/v1/automation/worker/${workerId}`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return json.logs ?? [];
     },

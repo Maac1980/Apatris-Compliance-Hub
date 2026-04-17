@@ -75,7 +75,7 @@ export default function RejectionIntelligence() {
     queryKey: ["workers-list-mini"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return extractList<any>(json, "workers").slice(0, 200).map((w: any) => ({ id: w.id, full_name: w.full_name ?? w.name ?? w.id }));
     },

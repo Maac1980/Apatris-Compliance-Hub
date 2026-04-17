@@ -3,6 +3,8 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { fetchAllWorkers } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
+import { appendAuditLog } from "../lib/audit-log.js";
+import { exportLimiter } from "../lib/rate-limit.js";
 
 const router = Router();
 
@@ -202,7 +204,7 @@ router.patch("/zus/filings/:id/submit", requireAuth, requireRole("Admin", "Execu
 });
 
 // GET /api/zus/filings/:id/download — download XML
-router.get("/zus/filings/:id/download", requireAuth, async (req, res) => {
+router.get("/zus/filings/:id/download", requireAuth, exportLimiter, async (req, res) => {
   try {
     const row = await queryOne<Record<string, any>>(
       "SELECT * FROM zus_filings WHERE id = $1 AND tenant_id = $2",
@@ -214,6 +216,17 @@ router.get("/zus/filings/:id/download", requireAuth, async (req, res) => {
     const filename = `ZUS_DRA_${row.year}_${String(row.month).padStart(2, "0")}.xml`;
     res.setHeader("Content-Type", "application/xml");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `ZUS DRA XML export: ${filename} — contains PESEL and ZUS contribution data`,
+    });
+
     res.send(row.xml_data);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Download failed" });

@@ -36,21 +36,21 @@ export default function PostedWorkers() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ workerName: "", hostCountry: "DE", startDate: "", endDate: "" });
 
-  const { data: postings = [], isLoading: loadingPostings } = useQuery<Posting[]>({
+  const { data: postings = [], isLoading: loadingPostings, isError: postingsError } = useQuery<Posting[]>({
     queryKey: ["postings"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/postings`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load postings"); }
       const json = await res.json();
       return Array.isArray(json) ? json : (json.postings ?? []);
     },
   });
 
-  const { data: certificates = [], isLoading: loadingCerts } = useQuery<A1Certificate[]>({
+  const { data: certificates = [], isLoading: loadingCerts, isError: certsError } = useQuery<A1Certificate[]>({
     queryKey: ["a1-certificates"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/a1-certificates`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load certificates"); }
       const json = await res.json();
       return Array.isArray(json) ? json : (json.certificates ?? []);
     },

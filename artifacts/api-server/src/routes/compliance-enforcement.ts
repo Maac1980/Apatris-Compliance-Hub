@@ -15,6 +15,7 @@ import { Router } from "express";
 import PDFDocument from "pdfkit";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { appendAuditLog } from "../lib/audit-log.js";
 import { getActiveDeadlines, getOverdueDeadlines, completeDeadline, createDeadline, runDeadlineCheck } from "../services/deadline-engine.service.js";
 
 const router = Router();
@@ -124,6 +125,16 @@ router.get("/v1/enforcement/pip-pack/pdf", requireAuth, requireRole(...LEGAL_ROL
       }
       pdf.moveDown(0.5);
     }
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `PIP Inspection Pack PDF: site=${site} — ${pack.totalWorkers ?? 0} workers, contains PESEL data`,
+    });
 
     pdf.end();
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }
@@ -280,6 +291,16 @@ router.get("/v1/enforcement/certificate/pdf", requireAuth, requireRole(...LEGAL_
     pdf.fontSize(8).fillColor("#999").text("This certificate is generated automatically by the Apatris Compliance Hub based on real-time worker document data. It is valid at the time of generation. For the most current status, scan a worker's QR compliance card or request a live portal link.", { align: "center", width: 450 });
     pdf.moveDown(1);
     pdf.fontSize(8).fillColor("#C41E18").text("Apatris Sp. z o.o. — Compliance Enforcement Platform", { align: "center" });
+
+    appendAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: req.user?.name ?? "unknown",
+      actorEmail: req.user?.email ?? "",
+      action: "DATA_EXPORT",
+      workerId: "—",
+      workerName: "ALL",
+      note: `Compliance Certificate PDF: ${workers.length} workers, ${complianceRate}% compliant`,
+    });
 
     pdf.end();
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "Failed" }); }

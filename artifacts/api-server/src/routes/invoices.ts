@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { isMailConfigured } from "../lib/mailer.js";
 import { getDefaultTenantId } from "../lib/tenant.js";
+import { sensitiveLimiter } from "../lib/rate-limit.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 
 const router = Router();
@@ -117,7 +118,7 @@ router.patch("/invoices/:id", requireAuth, requireRole("Admin", "Executive", "Le
 });
 
 // POST /invoices/:id/send — generate HTML invoice and email to client
-router.post("/invoices/:id/send", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
+router.post("/invoices/:id/send", requireAuth, requireRole("Admin", "Executive", "LegalHead"), sensitiveLimiter, async (req, res) => {
   try {
     const inv = await queryOne<Record<string, any>>("SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2", [req.params.id, req.tenantId!]);
     if (!inv) return res.status(404).json({ error: "Not found" });
@@ -214,7 +215,7 @@ router.post("/invoices/:id/send", requireAuth, requireRole("Admin", "Executive",
 });
 
 // POST /invoices/auto-send — cron endpoint: generate invoices for all active CRM companies
-router.post("/invoices/auto-send", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
+router.post("/invoices/auto-send", requireAuth, requireRole("Admin", "Executive"), sensitiveLimiter, async (req, res) => {
   try {
     const tenantId = req.tenantId!;
     const activeCompanies = await query<Record<string, any>>(

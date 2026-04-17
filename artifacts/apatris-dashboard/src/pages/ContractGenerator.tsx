@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { FileSignature, Plus, Download, Send, Eye, CheckCircle2, Clock } from "lucide-react";
 import { authHeaders, BASE } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 
 interface GenContract { id: string; worker_name: string; company_name: string; contract_type: string; status: string; generated_at: string; contract_html: string; }
@@ -186,7 +187,7 @@ export default function ContractGenerator() {
               <p className="text-sm font-bold text-white">Contract Preview</p>
               <button onClick={() => setPreview(null)} className="text-slate-400 hover:text-white text-sm">Close</button>
             </div>
-            <div dangerouslySetInnerHTML={{ __html: preview }} />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(preview) }} />
           </div>
         </div>
       )}

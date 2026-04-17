@@ -66,7 +66,7 @@ export default function ScreeningPage() {
     queryKey: ["screening-pipeline"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/applications`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const json = await res.json();
       return extractList(json, "applications").map(normalize);
     },

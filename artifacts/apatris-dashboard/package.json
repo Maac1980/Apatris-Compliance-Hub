@@ -46,6 +46,7 @@
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dompurify": "^3.4.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "catalog:",
     "i18next": "^25.8.18",

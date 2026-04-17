@@ -26,7 +26,7 @@ export default function RecruitmentLink() {
     queryKey: ["workers-for-links"],
     queryFn: async () => {
       const r = await fetch(`${BASE}api/workers`, { headers: authHeaders() });
-      if (!r.ok) return [];
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load data"); }
       const d = await r.json();
       return (d.workers ?? d ?? []) as any[];
     },

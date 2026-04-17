@@ -23,6 +23,7 @@ router.post(
   "/face/enroll",
   requireAuth,
   requireRole("Admin", "Executive", "TechOps", "Coordinator"),
+  sensitiveLimiter,
   async (req, res) => {
     try {
       const { workerId, descriptor, qualityScore } = req.body as {

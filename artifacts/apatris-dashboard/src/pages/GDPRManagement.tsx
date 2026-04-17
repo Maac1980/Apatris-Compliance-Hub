@@ -35,21 +35,21 @@ export default function GDPRManagement() {
   const [formPurpose, setFormPurpose] = useState("data_processing");
   const [exportWorkerId, setExportWorkerId] = useState("");
 
-  const { data: consents = [], isLoading: loadingConsents } = useQuery<ConsentRecord[]>({
+  const { data: consents = [], isLoading: loadingConsents, isError: consentsError } = useQuery<ConsentRecord[]>({
     queryKey: ["gdpr-consents"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/gdpr/consents`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load consents"); }
       const json = await res.json();
       return Array.isArray(json) ? json : (json.consents ?? []);
     },
   });
 
-  const { data: requests = [], isLoading: loadingRequests } = useQuery<DataRequest[]>({
+  const { data: requests = [], isLoading: loadingRequests, isError: requestsError } = useQuery<DataRequest[]>({
     queryKey: ["gdpr-requests"],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/gdpr/requests`, { headers: authHeaders() });
-      if (!res.ok) return [];
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error || "Failed to load GDPR log"); }
       const json = await res.json();
       return Array.isArray(json) ? json : (json.requests ?? json.log ?? []);
     },

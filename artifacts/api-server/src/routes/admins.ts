@@ -6,6 +6,7 @@ import {
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { queryOne, execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { sensitiveLimiter } from "../lib/rate-limit.js";
 
 const router = Router();
 
@@ -63,7 +64,7 @@ router.post("/admins", requireAuth, requireRole("Admin"), async (req, res) => {
 });
 
 // DELETE /api/admins/:id — remove an admin user
-router.delete("/admins/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+router.delete("/admins/:id", requireAuth, requireRole("Admin"), sensitiveLimiter, async (req, res) => {
   try {
     await execute(
       "DELETE FROM admins WHERE id = $1 AND tenant_id = $2",
