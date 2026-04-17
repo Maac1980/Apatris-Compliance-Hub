@@ -187,7 +187,7 @@ router.post("/auth/login", authLimiter, validateBody(LoginSchema), async (req, r
     }
 
     // Check site coordinator accounts (no 2FA for coordinators)
-    const coordinator = findCoordinatorByEmail(normalizedEmail, req.tenantId!);
+    const coordinator = await findCoordinatorByEmail(normalizedEmail, req.tenantId!);
     if (coordinator) {
       if (!verifyCoordinatorPassword(coordinator, password)) {
         return res.status(401).json({ error: "Invalid credentials" });

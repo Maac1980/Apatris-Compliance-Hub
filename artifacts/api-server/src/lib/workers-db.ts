@@ -16,6 +16,8 @@ export interface WorkerRow {
   contract_end_date: string | null;
   medical_exam_expiry: string | null;
   udt_cert_expiry: string | null;
+  oswiadczenie_expiry: string | null;
+  gross_total: number | null;
   hourly_rate: number;
   monthly_hours: number;
   advance: number;

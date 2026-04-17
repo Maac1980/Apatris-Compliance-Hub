@@ -274,7 +274,7 @@ const bulkUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize:
 async function scanBulkDocument(
   fileBuffer: Buffer,
   mimeType: string,
-  category: "passport" | "bhp" | "certificate" | "contract"
+  category: "passport" | "bhp" | "certificate" | "contract" | "cv"
 ): Promise<Record<string, string | null>> {
   const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (!imageTypes.includes(mimeType)) return {};
@@ -328,19 +328,21 @@ router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
     // Scan all uploaded files in parallel
-    const scans = await Promise.all([
+    type ScanResult = Record<string, string | null | undefined>;
+    const empty: ScanResult = {};
+    const scans = await Promise.all<ScanResult>([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
       files?.bhp?.[0]
         ? scanBulkDocument(files.bhp[0].buffer, files.bhp[0].mimetype, "bhp")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
       files?.certificate?.[0]
         ? scanBulkDocument(files.certificate[0].buffer, files.certificate[0].mimetype, "certificate")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
       files?.contract?.[0]
         ? scanBulkDocument(files.contract[0].buffer, files.contract[0].mimetype, "contract")
-        : Promise.resolve({}),
+        : Promise.resolve(empty),
     ]);
 
     const [passportData, bhpData, certData, contractData] = scans;
@@ -555,16 +557,18 @@ router.post("/workers/apply", publicLimiter, applyUpload.fields([
 
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
-    const [passportData, trcData, cvData] = await Promise.all([
+    type ScanResult = Record<string, string | null | undefined>;
+    const emptyScan: ScanResult = {};
+    const [passportData, trcData, cvData] = await Promise.all<ScanResult>([
       files?.passport?.[0]
         ? scanBulkDocument(files.passport[0].buffer, files.passport[0].mimetype, "passport")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyScan),
       files?.trc?.[0]
         ? scanBulkDocument(files.trc[0].buffer, files.trc[0].mimetype, "certificate")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyScan),
       files?.cv?.[0]
         ? scanBulkDocument(files.cv[0].buffer, files.cv[0].mimetype, "cv")
-        : Promise.resolve({}),
+        : Promise.resolve(emptyScan),
     ]);
 
     const workerFields: Record<string, unknown> = {
@@ -622,7 +626,7 @@ router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive"
             workerName: worker.name,
             documentType: type ?? "Document",
             expiryDate: expiryDate ?? "Unknown",
-            daysUntilExpiry: worker.daysUntilExpiry ?? 0,
+            daysUntilExpiry: worker.daysUntilNextExpiry ?? 0,
             status: "RED",
             recipients: [{ name: worker.name, email: worker.email }],
           });

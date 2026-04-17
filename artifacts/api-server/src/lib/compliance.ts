@@ -19,6 +19,9 @@ export interface Worker {
   passportExpiry: string | null;
   bhpExpiry: string | null;
   workPermitExpiry: string | null;
+  medicalExamExpiry: string | null;
+  oswiadczenieExpiry: string | null;
+  udtCertExpiry: string | null;
   bhpStatus: string | null;
   contractEndDate: string | null;
   email: string | null;
@@ -124,6 +127,9 @@ export function mapRowToWorker(row: WorkerRow): Worker {
     bhpExpiry,
     bhpStatus: bhpExpiry,
     workPermitExpiry,
+    medicalExamExpiry: formatDate(row.medical_exam_expiry),
+    oswiadczenieExpiry: formatDate(row.oswiadczenie_expiry),
+    udtCertExpiry: formatDate(row.udt_cert_expiry),
     contractEndDate,
     email: row.email ?? null,
     phone: row.phone ?? null,

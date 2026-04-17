@@ -1,4 +1,4 @@
-import { execute, query } from "./db.js";
+import { execute, query, queryOne } from "./db.js";
 import { setDefaultTenantId } from "./tenant.js";
 
 export async function initializeDatabase(): Promise<void> {

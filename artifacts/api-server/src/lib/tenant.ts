@@ -55,7 +55,7 @@ export function tenantMiddleware(req: Request, _res: Response, next: NextFunctio
   }
 
   // Fall back to default tenant (set during DB init)
-  req.tenantId = getDefaultTenantId();
+  req.tenantId = getDefaultTenantId() ?? undefined;
   next();
 }
 
@@ -67,5 +67,14 @@ export function setDefaultTenantId(id: string): void {
 }
 
 export function getDefaultTenantId(): string | null {
+  return _defaultTenantId;
+}
+
+// Use when caller requires tenant ID to exist (post-init code paths).
+// Throws if called before setDefaultTenantId() (DB init bootstraps this).
+export function requireDefaultTenantId(): string {
+  if (!_defaultTenantId) {
+    throw new Error("Default tenant ID not initialized — DB init must run first");
+  }
   return _defaultTenantId;
 }

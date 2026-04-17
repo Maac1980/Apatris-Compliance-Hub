@@ -1,4 +1,4 @@
-import { getDefaultTenantId } from "./tenant.js";
+import { getDefaultTenantId, requireDefaultTenantId } from "./tenant.js";
 import { fetchDocuments, type DocumentRecord } from "./documents-db.js";
 import { fetchAdmins } from "./admins-db.js";
 import { sendAlertEmail, isMailConfigured } from "./mailer.js";
@@ -39,7 +39,7 @@ interface AdminContact {
 
 async function getAdminContacts(): Promise<AdminContact[]> {
   try {
-    const admins = await fetchAdmins(getDefaultTenantId());
+    const admins = await fetchAdmins(requireDefaultTenantId());
     return admins
       .filter((a) => a.email || a.phone)
       .map((a) => ({ name: a.fullName, email: a.email, phone: a.phone }));
@@ -84,7 +84,7 @@ export async function fireAlertForDocument(doc: DocumentRecord, workerSite?: str
   const coordRecipients: Array<{ name: string; email: string }> = [];
   if (workerSite) {
     try {
-      const coord = await getCoordinatorForSite(workerSite, getDefaultTenantId());
+      const coord = await getCoordinatorForSite(workerSite, requireDefaultTenantId());
       if (coord?.alertEmail) coordRecipients.push({ name: coord.name, email: coord.alertEmail });
     } catch { /* non-blocking */ }
   }
@@ -133,11 +133,11 @@ async function runDailyScan(): Promise<void> {
   console.log(`[Scheduler] Daily compliance scan started at ${now}`);
 
   try {
-    const documents = await fetchDocuments(getDefaultTenantId());
+    const documents = await fetchDocuments(requireDefaultTenantId());
 
     // ── Worker document expiry checks from WELDERS table ──────────────────
     try {
-      const workerRows = await fetchAllWorkers(getDefaultTenantId());
+      const workerRows = await fetchAllWorkers(requireDefaultTenantId());
       const workers = workerRows.map(mapRowToWorker);
       const today = Date.now();
 
@@ -187,7 +187,7 @@ async function runDailyScan(): Promise<void> {
 
     // ── Save daily compliance snapshot ────────────────────────────────────
     try {
-      const allWorkerRows = await fetchAllWorkers(getDefaultTenantId());
+      const allWorkerRows = await fetchAllWorkers(requireDefaultTenantId());
       const allWorkers = allWorkerRows.map(mapRowToWorker);
       const total = allWorkers.length;
       const critical = allWorkers.filter((w) => w.complianceStatus === "critical").length;
@@ -201,7 +201,7 @@ async function runDailyScan(): Promise<void> {
         warning,
         critical,
         expired,
-      }, getDefaultTenantId());
+      }, requireDefaultTenantId());
       console.log(`[Scheduler] Snapshot saved: ${total} workers (${compliant} OK, ${warning} warn, ${critical} critical, ${expired} expired).`);
     } catch (e) {
       console.warn("[Scheduler] Snapshot save failed:", e);
@@ -224,7 +224,7 @@ async function runDailyScan(): Promise<void> {
     // Build workerId → assignedSite map for coordinator lookup
     const workerSiteMap = new Map<string, string>();
     try {
-      const allRecs = await fetchAllWorkers(getDefaultTenantId());
+      const allRecs = await fetchAllWorkers(requireDefaultTenantId());
       for (const r of allRecs) {
         const w = mapRowToWorker(r);
         if (w.assignedSite) workerSiteMap.set(w.id, w.assignedSite);
@@ -237,7 +237,7 @@ async function runDailyScan(): Promise<void> {
       const coordRecips: Array<{ name: string; email: string }> = [];
       if (workerSite) {
         try {
-          const coord = await getCoordinatorForSite(workerSite, getDefaultTenantId());
+          const coord = await getCoordinatorForSite(workerSite, requireDefaultTenantId());
           if (coord?.alertEmail) coordRecips.push({ name: coord.name, email: coord.alertEmail });
         } catch { /* non-blocking */ }
       }
@@ -364,7 +364,7 @@ async function runAutomationCycle(): Promise<void> {
 async function runFraudScanJob(): Promise<void> {
   try {
     const { runFraudScan } = await import("../routes/fraud.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await runFraudScan(tenantId);
   } catch (err) {
@@ -376,7 +376,7 @@ async function runFraudScanJob(): Promise<void> {
 async function runLegalScanJob(): Promise<void> {
   try {
     const { runLegalScan } = await import("../routes/legal.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await runLegalScan(tenantId);
   } catch (err) {
@@ -388,7 +388,7 @@ async function runLegalScanJob(): Promise<void> {
 async function runChurnScan(): Promise<void> {
   try {
     const { runChurnScan: scan } = await import("../routes/churn.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await scan(tenantId);
   } catch (err) {
@@ -400,7 +400,7 @@ async function runChurnScan(): Promise<void> {
 async function runTrustScores(): Promise<void> {
   try {
     const { runTrustScoreCalculation } = await import("../routes/trust.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await runTrustScoreCalculation(tenantId);
   } catch (err) {
@@ -412,7 +412,7 @@ async function runTrustScores(): Promise<void> {
 async function runFinesScan(): Promise<void> {
   try {
     const { runFineScan } = await import("../routes/fines.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await runFineScan(tenantId);
   } catch (err) {
@@ -434,7 +434,7 @@ async function runBenchAlerts(): Promise<void> {
 async function runImmigrationAlerts(): Promise<void> {
   try {
     const { runImmigrationAlertScan } = await import("./whatsapp.js");
-    const tenantId = getDefaultTenantId();
+    const tenantId = requireDefaultTenantId();
     if (!tenantId) return;
     await runImmigrationAlertScan(tenantId);
   } catch (err) {
@@ -453,7 +453,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function sendWeeklyReport(): Promise<void> {
   if (!isMailConfigured()) return;
-  const tenantId = getDefaultTenantId();
+  const tenantId = requireDefaultTenantId();
 
   try {
     const rows = await fetchAllWorkers(tenantId);
@@ -577,7 +577,7 @@ export function startWeeklySignalScan(): void {
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   console.log(`[Scheduler] Weekly signal scan scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Tuesday 11:00).`);
   setTimeout(function sigWeekly() {
-    import("../routes/signals.js").then(m => m.runSignalScan(getDefaultTenantId()!)).catch(err =>
+    import("../routes/signals.js").then(m => m.runSignalScan(requireDefaultTenantId()!)).catch(err =>
       console.error("[Scheduler] Signal scan error:", err)
     ).finally(() => setTimeout(sigWeekly, WEEK_MS));
   }, ms);
@@ -597,7 +597,7 @@ export function startWeeklyCompetitorScan(): void {
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   console.log(`[Scheduler] Weekly competitor scan scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 10:00).`);
   setTimeout(function compWeekly() {
-    import("../routes/competitors.js").then(m => m.runCompetitorScan(getDefaultTenantId()!)).catch(err =>
+    import("../routes/competitors.js").then(m => m.runCompetitorScan(requireDefaultTenantId()!)).catch(err =>
       console.error("[Scheduler] Competitor scan error:", err)
     ).finally(() => setTimeout(compWeekly, WEEK_MS));
   }, ms);
@@ -633,7 +633,7 @@ export function startEscalationEngine(): void {
     try {
       const { getDefaultTenantId } = await import("./tenant.js");
       const { runEscalationScan } = await import("../services/escalation-engine.service.js");
-      const result = await runEscalationScan(getDefaultTenantId());
+      const result = await runEscalationScan(requireDefaultTenantId());
       if (result.escalations > 0 || result.docAlerts > 0) {
         console.log(`[Escalation] ${result.escalations} escalations, ${result.docAlerts} doc alerts, ${result.errors} errors`);
       }
@@ -644,7 +644,7 @@ export function startEscalationEngine(): void {
     try {
       const { getDefaultTenantId } = await import("./tenant.js");
       const { runEscalationScan } = await import("../services/escalation-engine.service.js");
-      await runEscalationScan(getDefaultTenantId());
+      await runEscalationScan(requireDefaultTenantId());
     } catch { /* non-critical */ }
   }, 120_000);
 }
@@ -665,7 +665,7 @@ export function startWeeklyDigest(): void {
   console.log(`[Scheduler] Weekly digest scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (Monday 08:00).`);
   setTimeout(function digestSend() {
     import("./tenant.js").then(({ getDefaultTenantId }) =>
-      import("../services/weekly-digest.service.js").then(m => m.sendWeeklyDigestEmail(getDefaultTenantId()))
+      import("../services/weekly-digest.service.js").then(m => m.sendWeeklyDigestEmail(requireDefaultTenantId()))
     )
     .then(() => console.log("[Scheduler] Weekly digest sent."))
     .catch(err => console.error("[Scheduler] Weekly digest error:", err))

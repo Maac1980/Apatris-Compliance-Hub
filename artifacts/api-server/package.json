@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@sentry/node": "^10.45.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
@@ -28,7 +29,6 @@
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.3",
-    "@anthropic-ai/sdk": "^0.39.0",
     "pdfkit": "^0.18.0",
     "pg": "^8.20.0",
     "pino": "^10.3.1",
@@ -42,10 +42,13 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1030.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
+    "@types/pdfkit": "^0.17.5",
+    "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.0",
     "esbuild": "^0.27.3",
     "tsx": "catalog:",
