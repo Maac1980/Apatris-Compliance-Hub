@@ -56,3 +56,5 @@
 ```
 claude --resume 37ce6fb4-16b1-46da-aeb7-0af28672d85b
 ```
+
+<!-- ship test: 2026-04-17 -->
