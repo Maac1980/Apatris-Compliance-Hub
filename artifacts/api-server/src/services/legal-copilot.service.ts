@@ -281,14 +281,17 @@ function buildFallback(question: string, ctx: WorkerLegalContext): Omit<CopilotR
 
   // Deploy question
   if (q.includes("deploy") || q.includes("assign") || q.includes("work")) {
+    const answer = s.deployability === "ALLOWED"
+      ? `${ctx.worker.name} can be deployed. Legal status: ${s.legalStatus}, deployability: ALLOWED.`
+      : s.deployability === "CONDITIONAL"
+        ? `${ctx.worker.name} may be deployed conditionally. Status: ${s.legalStatus} (${s.legalBasis}). Verify continuity conditions before assignment.`
+        : `${ctx.worker.name} cannot be deployed. Status: ${s.legalStatus}, deployability: ${s.deployability}. ${s.requiredActions[0] ?? "Review required."}`;
+    const reasoning = `Based on legal snapshot: ${s.legalStatus}, basis: ${s.legalBasis}, risk: ${s.riskLevel}.`;
+    const steps = s.requiredActions.slice(0, 3);
     return {
-      answer: s.deployability === "ALLOWED"
-        ? `${ctx.worker.name} can be deployed. Legal status: ${s.legalStatus}, deployability: ALLOWED.`
-        : s.deployability === "CONDITIONAL"
-          ? `${ctx.worker.name} may be deployed conditionally. Status: ${s.legalStatus} (${s.legalBasis}). Verify continuity conditions before assignment.`
-          : `${ctx.worker.name} cannot be deployed. Status: ${s.legalStatus}, deployability: ${s.deployability}. ${s.requiredActions[0] ?? "Review required."}`,
-      reasoning: `Based on legal snapshot: ${s.legalStatus}, basis: ${s.legalBasis}, risk: ${s.riskLevel}.`,
-      nextSteps: s.requiredActions.slice(0, 3),
+      answer, answerEN: answer,
+      reasoning, reasoningEN: reasoning,
+      nextSteps: steps, nextStepsEN: steps,
       riskLevel: s.riskLevel,
       confidence: 0,
     };
@@ -296,10 +299,13 @@ function buildFallback(question: string, ctx: WorkerLegalContext): Omit<CopilotR
 
   // Risk question
   if (q.includes("risk")) {
+    const answer = `Current risk level: ${s.riskLevel}. Status: ${s.legalStatus}. ${s.warnings[0] ?? ""}`;
+    const reasoning = `Risk derived from legal status ${s.legalStatus} and basis ${s.legalBasis}.`;
+    const steps = s.requiredActions.slice(0, 3);
     return {
-      answer: `Current risk level: ${s.riskLevel}. Status: ${s.legalStatus}. ${s.warnings[0] ?? ""}`,
-      reasoning: `Risk derived from legal status ${s.legalStatus} and basis ${s.legalBasis}.`,
-      nextSteps: s.requiredActions.slice(0, 3),
+      answer, answerEN: answer,
+      reasoning, reasoningEN: reasoning,
+      nextSteps: steps, nextStepsEN: steps,
       riskLevel: s.riskLevel,
       confidence: 0,
     };
@@ -308,10 +314,13 @@ function buildFallback(question: string, ctx: WorkerLegalContext): Omit<CopilotR
   // Missing docs
   if (q.includes("missing") || q.includes("document") || q.includes("evidence")) {
     const missing = ctx.evidence.count === 0 ? "No filing evidence uploaded." : `${ctx.evidence.count} evidence record(s) on file.`;
+    const answer = `${missing} ${s.requiredActions.filter(a => a.toLowerCase().includes("document") || a.toLowerCase().includes("upload") || a.toLowerCase().includes("verify")).join(" ") || "Check required documents."}`;
+    const reasoning = `Evidence count: ${ctx.evidence.count}, verified: ${ctx.evidence.hasVerified}.`;
+    const steps = s.requiredActions.slice(0, 3);
     return {
-      answer: `${missing} ${s.requiredActions.filter(a => a.toLowerCase().includes("document") || a.toLowerCase().includes("upload") || a.toLowerCase().includes("verify")).join(" ") || "Check required documents."}`,
-      reasoning: `Evidence count: ${ctx.evidence.count}, verified: ${ctx.evidence.hasVerified}.`,
-      nextSteps: s.requiredActions.slice(0, 3),
+      answer, answerEN: answer,
+      reasoning, reasoningEN: reasoning,
+      nextSteps: steps, nextStepsEN: steps,
       riskLevel: s.riskLevel,
       confidence: 0,
     };
@@ -319,22 +328,27 @@ function buildFallback(question: string, ctx: WorkerLegalContext): Omit<CopilotR
 
   // Next steps
   if (q.includes("next") || q.includes("what should") || q.includes("action")) {
+    const answer = s.requiredActions.length > 0
+      ? `Recommended next steps: ${s.requiredActions.join(". ")}`
+      : `No immediate actions required. Status: ${s.legalStatus}.`;
+    const reasoning = s.summary;
     return {
-      answer: s.requiredActions.length > 0
-        ? `Recommended next steps: ${s.requiredActions.join(". ")}`
-        : `No immediate actions required. Status: ${s.legalStatus}.`,
-      reasoning: s.summary,
-      nextSteps: s.requiredActions,
+      answer, answerEN: answer,
+      reasoning, reasoningEN: reasoning,
+      nextSteps: s.requiredActions, nextStepsEN: s.requiredActions,
       riskLevel: s.riskLevel,
       confidence: 0,
     };
   }
 
   // Generic
+  const answer = `${ctx.worker.name}: Legal status is ${s.legalStatus} (${s.legalBasis}), risk: ${s.riskLevel}, deployability: ${s.deployability}. ${s.summary}`;
+  const reasoning = "General status summary from legal snapshot.";
+  const steps = s.requiredActions.slice(0, 3);
   return {
-    answer: `${ctx.worker.name}: Legal status is ${s.legalStatus} (${s.legalBasis}), risk: ${s.riskLevel}, deployability: ${s.deployability}. ${s.summary}`,
-    reasoning: "General status summary from legal snapshot.",
-    nextSteps: s.requiredActions.slice(0, 3),
+    answer, answerEN: answer,
+    reasoning, reasoningEN: reasoning,
+    nextSteps: steps, nextStepsEN: steps,
     riskLevel: s.riskLevel,
     confidence: 0,
   };
