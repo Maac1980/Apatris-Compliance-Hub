@@ -20,7 +20,7 @@ Apatris Compliance Hub is an industrial compliance and workforce management plat
 - **Database:** PostgreSQL 16 (Drizzle ORM, 25+ tables)
 - **Auth:** JWT (15min + 30-day refresh), Email OTP 2FA, Mobile PIN (speakeasy TOTP)
 - **Security:** Helmet, CORS, express-rate-limit, cookie-parser
-- **AI:** OpenAI gpt-4o-mini (document OCR, compliance analysis, regulatory scan, immigration search)
+- **AI:** Anthropic Claude Sonnet 4.6 (50+ call sites — document OCR via vision, compliance analysis, contract generation, legal Q&A, immigration search, case lifecycle); Perplexity Sonar Pro / Sonar (regulatory intelligence, legal research routing). Keys: `ANTHROPIC_API_KEY`, `PPLX_API_KEY`. Provider abstraction in `src/services/ai/provider.ts` scaffolded for OpenAI/Gemini but not active.
 - **Email:** Brevo SMTP / Resend / Nodemailer
 - **SMS:** Twilio (SMS + WhatsApp)
 - **PDF:** PDFKit (contracts, payslips, compliance reports)
@@ -121,8 +121,8 @@ APATRIS_PASS_AKSHAY=<admin-password>
 
 ### AI Services
 ```
-AI_INTEGRATIONS_OPENAI_API_KEY=sk-...
-AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
+ANTHROPIC_API_KEY=sk-ant-...           # Claude Sonnet 4.6 — primary AI
+PPLX_API_KEY=pplx-...                  # Perplexity Sonar — regulatory/legal research
 ```
 
 ### Email (Brevo SMTP)
@@ -169,6 +169,12 @@ S3_SECRET_ACCESS_KEY=<secret>
 - Vitest unit tests in `artifacts/api-server/src/*.test.ts`
 - Run: `cd artifacts/api-server && npx vitest run`
 - Test coverage: auth, payroll, GDPR, country compliance, ZUS calculations
+- Current count: **304 tests passing** (11 test files)
+
+## Type check state
+- `npm run typecheck` (api-server): ~179 strict errors remaining (down from 527 on 2026-04-17)
+- Build + runtime not affected — errors are route/service layer type drift
+- tsconfig overrides in `artifacts/api-server/tsconfig.json`: `noImplicitReturns: false`, `useUnknownInCatchVariables: false`
 
 ---
 
