@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
+import * as Sentry from "@sentry/node";
 import { tenantMiddleware } from "./lib/tenant.js";
 import { apiLimiter } from "./lib/rate-limit.js";
 import router from "./routes";
@@ -103,6 +104,18 @@ if (dashDist) {
   });
 } else {
   console.warn("[static] No dashboard dist found:", dashboardPaths);
+}
+
+// Sentry Express error handler — must be registered AFTER all routes/middleware
+// but before any custom 500 handler. Only activates if SENTRY_DSN was set at
+// startup (Sentry.init() runs in index.ts before app.ts loads).
+if (process.env.SENTRY_DSN) {
+  try {
+    Sentry.setupExpressErrorHandler(app);
+    console.log("[Sentry] Express error handler attached.");
+  } catch (err) {
+    console.warn("[Sentry] Failed to attach Express error handler:", err instanceof Error ? err.message : err);
+  }
 }
 
 export default app;

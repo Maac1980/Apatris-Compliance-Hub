@@ -1,8 +1,22 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
+
+// Returns true if response was already sent (caller must `return` immediately).
+// Structured 503 when required Stripe keys are missing.
+function billingDisabled(res: Response, needs: { secret?: boolean; webhook?: boolean }): boolean {
+  const missing: string[] = [];
+  if (needs.secret && !process.env.STRIPE_SECRET_KEY) missing.push("STRIPE_SECRET_KEY");
+  if (needs.webhook && !process.env.STRIPE_WEBHOOK_SECRET) missing.push("STRIPE_WEBHOOK_SECRET");
+  if (missing.length === 0) return false;
+  res.status(503).json({
+    error: "billing_disabled",
+    reason: `Stripe not configured — missing: ${missing.join(", ")}`,
+  });
+  return true;
+}
 
 // ═══ PLANS ═══════════════════════════════════════════════════════════════════
 
@@ -71,8 +85,8 @@ router.post("/billing/checkout", async (req, res) => {
     const plan = PLANS.find(p => p.id === planId);
     if (!plan) return res.status(400).json({ error: "Invalid planId" });
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) return res.status(500).json({ error: "Stripe not configured" });
+    if (billingDisabled(res, { secret: true })) return;
+    const stripeKey = process.env.STRIPE_SECRET_KEY!;
 
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(stripeKey);
@@ -108,9 +122,9 @@ router.post("/billing/checkout", async (req, res) => {
 // POST /api/billing/webhook — Stripe webhook handler (no auth)
 router.post("/billing/webhook", async (req, res) => {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!stripeKey) return res.status(500).json({ error: "Stripe not configured" });
+    if (billingDisabled(res, { secret: true, webhook: true })) return;
+    const stripeKey = process.env.STRIPE_SECRET_KEY!;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(stripeKey);
@@ -167,13 +181,8 @@ router.post("/billing/webhook", async (req, res) => {
 // GET /api/billing/subscription — get current subscription status
 router.get("/billing/subscription", requireAuth, async (req, res) => {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
-      return res.json({
-        subscription: null,
-        message: "Stripe not configured — using free tier",
-      });
-    }
+    if (billingDisabled(res, { secret: true })) return;
+    const stripeKey = process.env.STRIPE_SECRET_KEY!;
 
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(stripeKey);
@@ -217,9 +226,9 @@ router.get("/billing/subscription", requireAuth, async (req, res) => {
 
 // POST /api/billing/webhook — Stripe webhook handler (signature-verified)
 router.post("/billing/webhook", async (req, res) => {
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripeKey) return res.status(200).json({ received: true });
+  if (billingDisabled(res, { secret: true, webhook: true })) return;
+  const stripeKey = process.env.STRIPE_SECRET_KEY!;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
   try {
     const Stripe = (await import("stripe")).default;
@@ -284,8 +293,8 @@ router.post("/billing/webhook", async (req, res) => {
 
 // POST /api/billing/cancel — cancel subscription
 router.post("/billing/cancel", requireAuth, requireRole("Admin"), async (req, res) => {
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) return res.status(503).json({ error: "Stripe not configured" });
+  if (billingDisabled(res, { secret: true })) return;
+  const stripeKey = process.env.STRIPE_SECRET_KEY!;
 
   try {
     const Stripe = (await import("stripe")).default;

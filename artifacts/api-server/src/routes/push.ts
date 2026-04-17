@@ -4,6 +4,16 @@ import { query, queryOne, execute } from "../lib/db.js";
 
 const router = Router();
 
+// GET /api/push/vapid-key — returns VAPID public key for browser subscription.
+// Public (no auth) because the key itself is public; subscribing still requires auth.
+router.get("/push/vapid-key", (_req, res) => {
+  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  if (!publicKey) {
+    return res.status(503).json({ error: "push_disabled", reason: "VAPID_PUBLIC_KEY not configured" });
+  }
+  res.json({ publicKey });
+});
+
 // POST /api/push/subscribe — save push subscription
 router.post("/push/subscribe", requireAuth, async (req, res) => {
   try {

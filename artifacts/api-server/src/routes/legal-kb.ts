@@ -44,19 +44,20 @@ router.post("/legal-kb/query", requireAuth, async (req, res) => {
     if (!question?.trim()) return res.status(400).json({ error: "question required" });
 
     // Search knowledge base for relevant articles
+    type KbRow = { title?: string; category?: string; content?: string; source_name?: string; tags?: unknown };
     const searchTerms = question.toLowerCase().split(" ").filter(w => w.length > 3);
-    let relevantArticles = await query<Record<string, any>>("SELECT * FROM legal_knowledge WHERE tenant_id = $1 ORDER BY category", [req.tenantId!]);
+    let relevantArticles = await query<KbRow>("SELECT * FROM legal_knowledge WHERE tenant_id = $1 ORDER BY category", [req.tenantId!]);
 
     // Simple relevance scoring
     const scored = relevantArticles.map(a => {
       let score = 0;
-      const text = `${a.title} ${a.content} ${JSON.stringify(a.tags)}`.toLowerCase();
+      const text = `${a.title ?? ""} ${a.content ?? ""} ${JSON.stringify(a.tags ?? [])}`.toLowerCase();
       for (const term of searchTerms) { if (text.includes(term)) score += 1; }
-      return { ...a, relevance: score };
+      return { ...a, relevance: score } as KbRow & { relevance: number };
     }).filter(a => a.relevance > 0).sort((a, b) => b.relevance - a.relevance).slice(0, 5);
 
     let answer = "";
-    const sourcesUsed = scored.map(a => ({ title: a.title, category: a.category, source: a.source_name }));
+    const sourcesUsed = scored.map(a => ({ title: a.title ?? "", category: a.category ?? "", source: a.source_name ?? "" }));
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -65,7 +66,7 @@ router.post("/legal-kb/query", requireAuth, async (req, res) => {
       try {
         const { default: Anthropic } = await import("@anthropic-ai/sdk");
         const anthropic = new Anthropic({ apiKey });
-        const articlesContext = scored.map(a => `[${a.category}] ${a.title}: ${a.content}`).join("\n\n");
+        const articlesContext = scored.map(a => `[${a.category ?? "UNCATEGORIZED"}] ${a.title ?? "Untitled"}: ${a.content ?? ""}`).join("\n\n");
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-6", max_tokens: 1024,
           system: `You are a Polish immigration and labour law assistant. Answer the question using ONLY the verified articles provided below. Do not make up information. Cite which article you used. If the answer is not in the articles, say so.${language === "pl" ? " Odpowiedz po polsku." : ""}\n\nVERIFIED ARTICLES:\n${articlesContext}`,

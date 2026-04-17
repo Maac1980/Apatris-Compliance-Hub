@@ -51,6 +51,7 @@ export interface ExtractedCredentials {
   issueDate: string | null;
   expiryDate: string | null;
   filingDate: string | null;
+  decisionDate: string | null;
   authority: string | null;
   caseReference: string | null;
   employer: string | null;
@@ -276,7 +277,7 @@ async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIEx
   const fallback: AIExtraction = {
     classification: "UNKNOWN",
     identity: { fullName: null, passportNumber: null, pesel: null, dateOfBirth: null, nationality: null, issuingCountry: null },
-    credentials: { documentNumber: null, issueDate: null, expiryDate: null, filingDate: null, authority: null, caseReference: null, employer: null, role: null },
+    credentials: { documentNumber: null, issueDate: null, expiryDate: null, filingDate: null, decisionDate: null, authority: null, caseReference: null, employer: null, role: null },
     keyContent: "AI not available",
     rejectionReasons: null,
     confidence: "LOW",
@@ -320,6 +321,7 @@ async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIEx
         issueDate: parsed.credentials?.issueDate ?? null,
         expiryDate: parsed.credentials?.expiryDate ?? null,
         filingDate: parsed.credentials?.filingDate ?? null,
+        decisionDate: parsed.credentials?.decisionDate ?? null,
         authority: parsed.credentials?.authority ?? null,
         caseReference: parsed.credentials?.caseReference ?? null,
         employer: parsed.credentials?.employer ?? null,

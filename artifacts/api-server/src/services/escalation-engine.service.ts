@@ -49,9 +49,12 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
         try {
           const { sendWhatsAppAlert } = await import("../lib/whatsapp.js");
           await sendWhatsAppAlert({
+            to: "",
             workerName,
+            workerI: c.worker_id,
             permitType: `${c.case_type} Case`,
-            daysUntilExpiry: -daysOver,
+            daysRemaining: -daysOver,
+            tenantId,
           });
         } catch { /* WhatsApp may not be configured */ }
       }
@@ -61,11 +64,12 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
         try {
           const { sendAlertEmail } = await import("../lib/mailer.js");
           await sendAlertEmail({
-            to: "manish@apatris.pl",
             workerName,
-            subject: `[ESCALATION] ${c.case_type} case stuck ${Math.round(c.days_in_stage)} days — ${workerName}`,
-            status: "critical",
-            details: `Case ${c.id.slice(0, 8)} stuck in ${c.status} for ${Math.round(c.days_in_stage)} days (SLA breached by ${daysOver} days). Worker: ${workerName}. Blocker: ${c.blocker_reason ?? "none"}.`,
+            documentType: `${c.case_type} Case — SLA breach (${Math.round(c.days_in_stage)}d in ${c.status}; blocker: ${c.blocker_reason ?? "none"})`,
+            expiryDate: c.sla_deadline ?? new Date().toISOString(),
+            daysUntilExpiry: -daysOver,
+            status: "RED",
+            recipients: [{ name: "Executive", email: "manish@apatris.pl" }],
           });
         } catch { /* email may not be configured */ }
       }
