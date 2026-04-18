@@ -76,15 +76,21 @@ export function decrypt(stored: string | null | undefined): string | null {
   }
 }
 
-export function encryptIfPresent(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
+export function encryptIfPresent(value: unknown): string | null {
+  if (value == null || typeof value !== "string") return null;
   const trimmed = value.trim();
-  if (!trimmed) return undefined;
+  if (!trimmed) return null;
   return encrypt(trimmed);
 }
 
-export function lookupHash(plain: string): string {
-  return createHmac("sha256", getLookupKey()).update(plain.trim()).digest("hex");
+export function lookupHash(plain: string | null | undefined): string | null {
+  if (plain == null || typeof plain !== "string") return null;
+  const trimmed = plain.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.startsWith(PREFIX)) {
+    throw new Error("[encryption] lookupHash called with already-encrypted value — caller must pass plaintext, not ciphertext");
+  }
+  return createHmac("sha256", getLookupKey()).update(trimmed).digest("hex");
 }
 
 export function maskForRole(value: string | null, role: Tier | string): string | null {

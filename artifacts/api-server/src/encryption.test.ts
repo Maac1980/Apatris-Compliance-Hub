@@ -13,6 +13,7 @@ import {
   encryptIfPresent,
   lookupHash,
   maskForRole,
+  __resetKeyCacheForTests,
 } from "./lib/encryption.js";
 
 describe("encryption — encrypt / decrypt", () => {
@@ -64,19 +65,31 @@ describe("encryption — encrypt / decrypt", () => {
     spy.mockRestore();
   });
 
-  it("encryptIfPresent returns undefined for non-strings and empty values", () => {
-    expect(encryptIfPresent(undefined)).toBe(undefined);
-    expect(encryptIfPresent(null)).toBe(undefined);
-    expect(encryptIfPresent(123)).toBe(undefined);
-    expect(encryptIfPresent("")).toBe(undefined);
-    expect(encryptIfPresent("   ")).toBe(undefined);
+  it("encryptIfPresent returns null for non-strings and empty values", () => {
+    expect(encryptIfPresent(undefined)).toBe(null);
+    expect(encryptIfPresent(null)).toBe(null);
+    expect(encryptIfPresent(123)).toBe(null);
+    expect(encryptIfPresent("")).toBe(null);
+    expect(encryptIfPresent("   ")).toBe(null);
   });
 
   it("encryptIfPresent encrypts a trimmed present value", () => {
     const ct = encryptIfPresent("  hello  ");
-    expect(ct).toBeDefined();
+    expect(ct).not.toBeNull();
     expect(isEncrypted(ct!)).toBe(true);
     expect(decrypt(ct!)).toBe("hello");
+  });
+
+  it("encryptIfPresent passes through already-encrypted values unchanged (no double-encrypt)", () => {
+    const once = encrypt("payload");
+    const twice = encryptIfPresent(once);
+    expect(twice).toBe(once);
+  });
+
+  it("encryptIfPresent → decrypt roundtrip returns original plaintext", () => {
+    const ct = encryptIfPresent("PL6110900014000007121981287");
+    expect(ct).not.toBeNull();
+    expect(decrypt(ct!)).toBe("PL6110900014000007121981287");
   });
 });
 
@@ -100,6 +113,60 @@ describe("encryption — lookupHash", () => {
   it("output is exactly 64 lowercase hex chars (SHA-256)", () => {
     const h = lookupHash("any-value");
     expect(h).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("returns null for null input", () => {
+    expect(lookupHash(null)).toBe(null);
+  });
+
+  it("returns null for undefined input", () => {
+    expect(lookupHash(undefined)).toBe(null);
+  });
+
+  it("returns null for empty string", () => {
+    expect(lookupHash("")).toBe(null);
+  });
+
+  it("returns null for whitespace-only string", () => {
+    expect(lookupHash("   ")).toBe(null);
+    expect(lookupHash("\t\n")).toBe(null);
+  });
+
+  it("returns null for non-string input at runtime (number, object, boolean)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(lookupHash(123 as any)).toBe(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(lookupHash({} as any)).toBe(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(lookupHash(true as any)).toBe(null);
+  });
+
+  it("throws when called with an already-encrypted value (ciphertext)", () => {
+    const ct = encrypt("sensitive-value");
+    expect(() => lookupHash(ct)).toThrow(/already-encrypted|plaintext.*ciphertext/);
+  });
+
+  it("is key-dependent — changing APATRIS_LOOKUP_KEY produces a different hash for same plaintext", () => {
+    const originalKey = process.env.APATRIS_LOOKUP_KEY;
+    try {
+      __resetKeyCacheForTests();
+      const hashA = lookupHash("same-plaintext-value");
+      expect(hashA).toMatch(/^[0-9a-f]{64}$/);
+
+      process.env.APATRIS_LOOKUP_KEY = "22".repeat(32);
+      __resetKeyCacheForTests();
+      const hashB = lookupHash("same-plaintext-value");
+      expect(hashB).toMatch(/^[0-9a-f]{64}$/);
+
+      expect(hashA).not.toBe(hashB);
+    } finally {
+      if (originalKey === undefined) {
+        delete process.env.APATRIS_LOOKUP_KEY;
+      } else {
+        process.env.APATRIS_LOOKUP_KEY = originalKey;
+      }
+      __resetKeyCacheForTests();
+    }
   });
 });
 
