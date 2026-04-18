@@ -1,12 +1,32 @@
 # PII Encryption Migration Plan
 
 **Project:** Apatris Compliance Hub
-**Target:** AES-256-GCM encryption at rest for PESEL, IBAN, passport_number, worker NIP
+**Target:** AES-256-GCM encryption at rest for PESEL, IBAN, passport_number (`workers.nip` deferred per Apr 18, 2026 decision — see Decisions Log below)
 **Reference implementation:** EEJ `lib/encryption.ts` (format `enc:v1:<iv>:<tag>:<ciphertext>`)
 **Author:** Planning doc, 2026-04-17
 **Status:** NOT YET IMPLEMENTED — read-only plan
 
 > ⚠️ **One architectural issue beyond the original outline, flagged in §11:** AES-GCM with a random IV breaks `WHERE pesel = X` lookups and `GROUP BY pesel` duplicate detection. Apatris uses both today (fraud.ts, workers-db.ts duplicate checks, document-intake worker matching). EEJ's reference does not solve this — it only supports lookup-by-id. We need a companion `pesel_hash` / `iban_hash` / `passport_hash` deterministic HMAC column. This is the single biggest decision in the plan.
+
+---
+
+## Decisions Log — confirmed Apr 18, 2026
+
+> These override any conflicting text below. Answered during Prompt 1 of `TOMORROW-PLAYBOOK.md`.
+
+1. **Two encryption-related env vars:** `APATRIS_ENCRYPTION_KEY` + `APATRIS_LOOKUP_KEY`, both required. Loud failure on boot if either is missing — no JWT-derived fallback.
+2. **Scope is 3 fields, not 4.** `workers.nip` is **removed** from this migration. No NIP encryption, no `nip_hash` column, no NIP in backfill. Rationale: all Apatris workers are on Umowa o Pracę / Zlecenie (employees, not sole traders), so `workers.nip` is mostly empty and carries no PII. Follow-up migration if B2B worker contracts are added.
+3. **Neon PITR raised 6h → 14 days.** Named snapshot `pre-pii-encryption-2026-04-18` exists as rollback anchor.
+4. **Fail-loud on missing key.** No JWT-derived fallback (rejected EEJ's pattern for solo-operator context — silent split-brain data corruption would be invisible for weeks).
+
+**Sections below that need mental override:**
+- §1 Scope table row for `nip` — treat as **deferred** (do not encrypt this migration).
+- §1 Schema affected — `workers.nip` stays TEXT plaintext; no `nip_hash` column.
+- §4 Write sites — skip any NIP duplicate-check migration in `workers-db.ts:185-191, 241-248`.
+- §5 Read sites — no NIP decrypt wrapping anywhere.
+- §6 Backfill SQL — drop `nip` from the SELECT and verification count.
+- §11.2 NIP-on-workers vs NIP-on-clients — now moot; all NIP stays plaintext.
+- §13 Definition of Done — 3 fields in verification query, not 4.
 
 ---
 
@@ -290,6 +310,31 @@ From §1, these bypass the service layer and need per-site decryption:
 Apply `maskForRole()` at the boundary where the worker record leaves the server:
 - `workers-db.fetchAllWorkers()` and `fetchWorkerById()` gain an optional `role` parameter; when supplied, they mask per §3.
 - All public verification endpoints (`routes/public-verify.ts`) always mask to `***-****-<last4>` regardless of caller identity.
+
+### T5 hybrid masking — Compliance Card exception (decided Apr 18, 2026)
+
+**Default for all T5 views:** PESEL / IBAN / passport_number are **masked** to `***-****-<last4>`. Applies to `SelfService.tsx` (dashboard), any `WorkerDetail` / profile screen a T5 user can reach, and any future T5-facing screen.
+
+**Single exception — Compliance Card** (`workforce-app/src/components/ComplianceCard.tsx`). This is a digital site pass shown to PIP inspectors and border police; masking defeats the card's legal purpose. Plaintext is returned only when **all** of these are true:
+
+1. Request includes query param `?purpose=compliance_card`. Hardcoded enum. Any other value (including empty, `pdf_export`, attacker-supplied string) → ignore the flag, return masked.
+2. Authenticated user's `user_id` equals the requested `worker_id`. No tier-escalation path: T3/T4/T5 cannot use the flag to see anyone else's plaintext.
+3. Request is authenticated with a valid JWT (standard requireAuth gate).
+
+**Audit trail for every plaintext-by-flag response** — immutable entry in `audit_logs`:
+- `event`: `plaintext_pii_viewed`
+- `fields`: `worker_id`, `user_id` (must equal `worker_id`), `purpose=compliance_card`, `timestamp`, `ip_address`
+- `immutability`: no update/delete path from app code. The audit_logs table stays append-only per existing convention in `lib/audit-log.ts`.
+
+**RBAC for higher tiers** (unchanged from §3 role table):
+- T1 Executive, T2 Legal Head: plaintext everywhere by default (no flag needed)
+- T3 Tech Ops, T4 Coordinator: masked by default. Can ONLY see plaintext of their OWN record via the `purpose=compliance_card` flag (the own-record check in rule 2 means they never see a subordinate's plaintext via this path).
+- T5 Professional: masked by default. Plaintext only on own Compliance Card via the flag.
+
+**Known side-issue — flagged for Prompt 8 verification:** the Compliance Card currently fetches `/workers/me`, an endpoint that appears not to exist in `artifacts/api-server/src/routes/` today (per Explore agent search on Apr 18). ComplianceCard may be running on mock/broken data. During Prompt 8:
+1. Verify endpoint existence (grep for route definition).
+2. If missing: creating `/workers/me` is the right place to implement the purpose-flag + own-record + audit-log logic above. Stop and ask before implementing — this expands Prompt 8's scope.
+3. If the endpoint exists under a different name: route ComplianceCard through that existing endpoint with the purpose flag added.
 
 ### Audit log sanitization
 

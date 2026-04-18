@@ -42,6 +42,9 @@
 - Frontend push only subscribes logged-in users (anonymous PWA visitors skipped, intentional)
 - Decision trace has structured JSON but no UI yet
 
+## Known bugs (follow-up — not today's work)
+- **ComplianceCard fetches `/workers/me` which may not exist** (found 2026-04-18 during PII migration planning). Per Explore-agent search, no route by this name exists in `artifacts/api-server/src/routes/`. ComplianceCard (workforce-app digital site pass) is likely rendering on mock/broken data. Worth verifying during PII migration Prompt 8 — if confirmed missing, creating `/workers/me` is the right place to implement the `?purpose=compliance_card` plaintext-exception logic per PII-ENCRYPTION-PLAN.md §5. Stop and confirm before expanding Prompt 8's scope.
+
 ## Next priorities (in order)
 1. Dummy seed data for staging — so team testing isn't on empty screens
 2. Decision trace UI — operators can debug legal calls

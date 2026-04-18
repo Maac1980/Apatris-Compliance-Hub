@@ -14,6 +14,28 @@
 
 ---
 
+## Decisions Log — confirmed Apr 18, 2026 (answers to Prompt 1)
+
+> These override any conflicting text below.
+
+1. **Two encryption-related env vars:** `APATRIS_ENCRYPTION_KEY` (AES-256-GCM) + `APATRIS_LOOKUP_KEY` (HMAC-SHA256 for hash columns). Deliberately separate so rotating one doesn't force rebuilding the other.
+2. **Scope reduced — encrypt 3 fields, NOT 4:**
+   - ✅ `workers.pesel`
+   - ✅ `workers.iban`
+   - ✅ `workers.passport_number`
+   - ❌ `workers.nip` — **skipped this migration.** Rationale: all workers are on Umowa o Pracę / Zlecenie, no sole-trader / B2B contractors. NIP column is mostly empty and carries no PII in this workforce composition. Revisit in follow-up migration if B2B workers are added.
+3. **Rollback safety confirmed.** Neon PITR retention upgraded 6h → 14 days. Named snapshot `pre-pii-encryption-2026-04-18` exists.
+4. **Fail-loud on missing key.** If either `APATRIS_ENCRYPTION_KEY` or `APATRIS_LOOKUP_KEY` is missing at boot, the app refuses to start. No JWT-derived fallback (rejected EEJ's pattern for solo-operator context — silent split-brain data corruption would be invisible).
+
+**Implications for downstream prompts:**
+- Hash columns (Prompt 6): `pesel_hash`, `iban_hash`, `passport_hash` — 3 columns, unchanged from plan (`nip_hash` was never planned).
+- Write-path wrap (Prompt 7): skip `workers.nip` — don't wrap it with `encrypt()`, don't touch NIP duplicate check logic, leave `nip` column plaintext.
+- Read-path wrap (Prompt 8): `nip` is NOT decrypted because it's NOT encrypted — skip any `decrypt(row.nip)` wrapping.
+- Backfill (Prompts 11 + 16): drop `nip` from the SELECT and the verification-count SQL. Migrate 3 fields only.
+- Encryption library (Prompt 5): fail-loud resolver for both keys; NO JWT fallback branch.
+
+---
+
 ## Prompt 0 — Wake-up check (5 min)
 
 **Paste this:**
