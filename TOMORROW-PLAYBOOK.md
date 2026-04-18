@@ -689,32 +689,214 @@ git commit -m "feat: encryption library (AES-256-GCM + HMAC-SHA256) + unit tests
 
 ---
 
-## Prompt 8 — Wrap read paths + role masking (1.5-2 hours)
+## Prompt 8 — Wrap all read paths + role masking + Compliance Card exception + audit sanitizer (2-3 hours)
+
+> ⚠️ **Reads + masking + audit only.** No write-path changes (Prompt 7 territory). No backfill (Prompt 10). No deploy (Prompt 9).
+>
+> **Scope (Blocker 2 enforced):** decrypt + mask `pesel`, `iban`, `passport_number` only. `workers.nip` stays plaintext at rest — no decrypt() calls needed.
+>
+> **Locked decisions (Apr 18 PM):**
+> - **PC-1:** Create `/workers/me` endpoint in this prompt with Compliance Card exception baked in
+> - **PC-3:** Conservative audit sanitizer — PESEL + IBAN patterns only, skip passport (false-positive risk)
+> - **AI prompt PII:** Deferred per §11.4 — do NOT touch `services/legal-intelligence.service.ts`
+>
+> **Two-phase execution:** Phase 1 (enumeration + supplementary checks) MUST be approved before Phase 2 (apply).
 
 **Paste this:**
 
-> Same pattern as Prompt 7 but for read sites. Follow PII-ENCRYPTION-PLAN.md §5.
+> ### Phase 1 — Exhaustive read-site enumeration (30-45 min)
 >
-> Before editing: list every file + line number you'll change. Wait for my "yes, proceed."
+> Run from repo root:
 >
-> Apply changes:
-> - Central: `workers-db.ts` `fetchAllWorkers()` and `fetchWorkerById()` — decrypt pesel/iban/passport/nip before returning. Accept an optional `role` parameter for masking.
-> - Routes that query directly (fraud.ts GROUP BY → use hash column, zus.ts/compliance-enforcement.ts/payroll.ts CSV+PDF → decrypt at render time, document-intake.service.ts worker-matching → WHERE pesel_hash).
-> - Audit log sanitizer: add the regex check in `lib/audit-log.ts` per plan §5.
+> ```bash
+> # Direct PII column reads in SELECT queries
+> grep -rn "SELECT.*\(pesel\|iban\|passport_number\)" artifacts/api-server/src/ --include=*.ts
 >
-> Then run full test suite: `cd artifacts/api-server && npx vitest run`. All pass.
+> # Field-level reads after fetch
+> grep -rn "\.pesel\b\|\.iban\b\|\.passport_number\b\|passportNumber" artifacts/api-server/src/ --include=*.ts | grep -v "test\.ts" | grep -v "lib/encryption"
 >
-> Commit locally: `git commit -m "feat: decrypt + role-mask PII on all read paths + audit sanitizer"`.
+> # GROUP BY / DISTINCT on PII (must migrate to hash column)
+> grep -rn "GROUP BY.*\(pesel\|iban\|passport_number\)\|DISTINCT.*\(pesel\|iban\|passport_number\)" artifacts/api-server/src/ --include=*.ts
 >
-> Do NOT push. Do NOT deploy.
+> # WHERE PII = $ on read paths (already migrated in workers-db; check for stragglers)
+> grep -rn "WHERE.*\(pesel\|iban\|passport_number\)\s*=" artifacts/api-server/src/ --include=*.ts | grep -v "workers-db.ts\|_hash"
+>
+> # JOIN queries projecting PII
+> grep -rn "JOIN.*workers\|FROM workers.*JOIN" artifacts/api-server/src/ --include=*.ts | head -30
+>
+> # Render paths (CSV / PDF / XML / email)
+> grep -rln "PDFKit\|jsPDF\|new PDFDocument\|<PESEL>\|sendMail\|nodemailer" artifacts/api-server/src/ --include=*.ts
+>
+> # Audit log call sites (sanitizer applied centrally)
+> grep -rn "appendAuditLog\b" artifacts/api-server/src/ --include=*.ts | head -30
+>
+> # ── Addition 1: Routes returning worker data via res.json (explicit role-middleware audit) ──
+> grep -rn "res\.json.*worker\|res\.json.*\.pesel\|res\.json.*\.iban\|res\.json.*\.passport" artifacts/api-server/src/routes/ --include=*.ts
+> grep -rn "fetchWorkerById\|fetchAllWorkers" artifacts/api-server/src/routes/ --include=*.ts
+> ```
+>
+> Compile enumeration table:
+>
+> | Category | File | Line | What it reads | Render type | Role middleware (Y/N + which) | Wrap action |
+> |---|---|---|---|---|---|---|
+>
+> Categories:
+> - `Service (workers-db.ts)` — central decrypt choke point
+> - `Route (HTTP JSON)` — needs `maskForRole(value, req.user.role)`
+> - `Route (export render: CSV/PDF/XML/email)` — admin-only paths, decrypt at render
+> - `Service (worker matching)` — hash-column lookup or decrypt-and-compare
+> - `Service (AI prompt builder)` — DEFERRED per §11.4 (document, do NOT change)
+> - `Audit log` — central sanitizer in `lib/audit-log.ts`, no per-site changes
+>
+> **Addition 1 — Per-route JSON projection enumeration:**
+> For every "Route (HTTP JSON)" row, document explicitly: file:line of `res.json(...)`, which PII fields appear in projection, currently has role middleware (Y/N + which: `requireRole("Admin", "Executive")` / `requireAuth` only / etc.), what role gates the route today.
+>
+> **Addition 2 — Step D export-route role-gating audit:**
+> For each export render site (zus.ts, compliance-enforcement.ts, payroll.ts, contracts.ts, contract-gen.ts, public-verify.ts, mos-package.service.ts, legal-status.service.ts, case-doc-generator.service.ts, authority-response.service.ts, rejection-intelligence.service.ts, data-copilot.service.ts), verify the route has explicit role middleware BEFORE assuming export = admin-only. Any route missing role gating → flag as separate concern (NOT a Prompt 8 fix; surface as follow-up).
+>
+> #### Phase 1 supplementary checks
+>
+> **PC-1 — `/workers/me` endpoint resolution:**
+> ```bash
+> grep -rn "router\.\(get\|post\).*[\"']/workers/me\|router\.\(get\|post\).*[\"']/me" artifacts/api-server/src/routes/ --include=*.ts
+> ```
+> **Locked: option (a)** — create `/workers/me` in this prompt with Compliance Card exception. Verify endpoint truly doesn't exist.
+>
+> **PC-2 — Hash-migration sites flagged from Prompt 7:**
+> - `services/document-intake.service.ts:359-368` — in-memory `worker.pesel === extracted.pesel` (post-Prompt 7, `worker.pesel` is ciphertext — needs `decrypt(worker.pesel) === extracted.pesel`)
+> - `services/document-intake.service.ts:509-515` — same pattern for contradictions
+> - `services/smart-document.service.ts:163-166` — verify SQL `WHERE` pattern; if so, swap to `WHERE pesel_hash = $1` with `lookupHash(plaintext)`
+>
+> Verify each, document in enumeration table.
+>
+> **PC-3 — Audit log sanitizer regex (LOCKED: conservative):**
+> - PESEL: `\b\d{11}\b`
+> - IBAN PL: `\bPL\s?\d{2,4}(\s?\d{4}){5,6}\b`
+> - **NO passport pattern** (skipped per locked decision PC-3 — false-positive risk)
+>
+> Accepted trade-off: conservative regex over-redacts some legitimate 11-digit numbers (invoice numbers, case numbers). Acceptable in audit-log notes context. Test #15c documents this explicitly.
+>
+> #### Present enumeration table + Addition 1 audit + Addition 2 audit + PC-1/PC-2/PC-3 findings, then STOP
+>
+> Wait for user approval before Phase 2.
+>
+> ### Phase 2 — Apply changes (ONLY after approval)
+>
+> **Step A — Central decrypt in `workers-db.ts`:**
+> Modify `fetchAllWorkers()` and `fetchWorkerById()`. Decrypt `pesel`, `iban`, `passport_number` before returning. Do NOT decrypt `nip` (Blocker 2). Legacy plaintext passes through via `decrypt()`'s passthrough (verified Prompt 5).
+>
+> **Step B — Role masking at HTTP boundary:**
+> For every route enumerated in Addition 1, apply `maskForRole(value, req.user.role)` to pesel/iban/passport_number before `res.json(...)`. Pattern:
+> ```ts
+> import { maskForRole, type Tier } from "../lib/encryption.js";
+> // ...
+> res.json({
+>   ...worker,
+>   pesel: maskForRole(worker.pesel, req.user.role as Tier),
+>   iban: maskForRole(worker.iban, req.user.role as Tier),
+>   passport_number: maskForRole(worker.passport_number, req.user.role as Tier),
+> });
+> ```
+>
+> **Step C — Compliance Card plaintext exception (`/workers/me`):**
+> Create `GET /workers/me` endpoint. Behavior:
+> 1. `requireAuth` middleware
+> 2. Resolve worker by `req.user.email` from JWT
+> 3. Check `req.query.purpose === "compliance_card"` (hardcoded enum match)
+> 4. Verify resolved `worker_id` matches authenticated `user_id` (own-record check)
+> 5. If all 3 pass → return PII as plaintext (use `decrypt()`, NOT `maskForRole()`)
+> 6. Append immutable audit entry via `appendAuditLog`:
+>    - `event: "plaintext_pii_viewed"`
+>    - `actor: req.user.email`
+>    - `worker_id: <resolved>`
+>    - `note: "purpose=compliance_card"`
+>    - timestamp + IP captured by audit-log helper
+> 7. **(Addition 5):** If `req.query.purpose` is non-null but NOT exactly `"compliance_card"`, emit `console.warn("[workers/me] unexpected purpose value:", purposeValue, "request:", req.method, req.path)`. Then fall back to masked response. Do NOT throw.
+> 8. If `req.query.purpose` missing/falsy: silent fall back to masked response (no warning, no audit — default code path)
+>
+> **Step D — Export render paths (admin-only, decrypt at render):**
+> Per Addition 2 audit. For each export site, call `decrypt(value)` before stringifying into CSV/PDF/XML/email body:
+> - `routes/zus.ts:79, 172` — ZUS XML
+> - `routes/compliance-enforcement.ts:55, 70, 120, 196-220` — PIP inspection PDF
+> - `routes/payroll.ts:283, 363` — payroll CSV
+> - `routes/contracts.ts:264, 335`, `routes/contract-gen.ts:37, 61` — contract PDF
+> - `routes/public-verify.ts:53, 83` — already masks last-4; just decrypt before mask
+> - `services/mos-package.service.ts:75-76, 119-120, 147` — MOS package
+> - `services/legal-status.service.ts:633, 648, 669` — legal status snapshot
+> - `services/case-doc-generator.service.ts:136, 189, 190, 248, 249` — case docs
+> - `services/authority-response.service.ts:153, 154, 283, 284` — authority response
+> - `services/rejection-intelligence.service.ts:541` — rejection analysis
+> - `services/data-copilot.service.ts:129` — data copilot
+> - **NOT** `services/legal-intelligence.service.ts` — DEFERRED per §11.4
+>
+> **Step E — Hash-column migrations + decrypt-and-compare:**
+> - `services/document-intake.service.ts:359-368` → `decrypt(w.pesel) === identity.pesel`
+> - `services/document-intake.service.ts:509-515` → same pattern
+> - `services/smart-document.service.ts:163-166` → SQL hash swap or decrypt-and-compare per Phase 1 finding
+> - `routes/fraud.ts:33` → `GROUP BY pesel_hash`
+> - `routes/fraud.ts:47` → `GROUP BY iban_hash`
+>
+> **Step F — Audit sanitizer in `lib/audit-log.ts`:**
+> Wrap `appendAuditLog()` to scrub `note` field BEFORE persisting. Apply PC-3 patterns (PESEL + IBAN only, NO passport).
+>
+> **Step G — Tests** (new file `artifacts/api-server/src/read-paths-encryption.test.ts`):
+> Minimum 18 tests:
+> 1. `fetchWorkerById` decrypts pesel before returning
+> 2. `fetchWorkerById` passes legacy plaintext through unchanged
+> 3. `fetchAllWorkers` decrypts all rows
+> 4. `fetchWorkerById` does NOT decrypt nip (Blocker 2)
+> 5. T1 user → maskForRole returns plaintext pesel
+> 6. T2 user → plaintext
+> 7. T3 user → `***-****-<last4>`
+> 8. T4 user → masked
+> 9. T5 user → masked DEFAULT (no flag)
+> 10. T5 user with `?purpose=compliance_card` on own record → plaintext
+> 11. T5 user with `?purpose=compliance_card` on someone else's record → masked (own-record check)
+> 12. T5 user with `?purpose=invalid_value` → masked + `console.warn` called (Addition 5)
+> 13. Compliance Card plaintext access writes audit entry: event=`plaintext_pii_viewed`, actor, worker_id, purpose
+> 14. fraud.ts duplicate detection uses `GROUP BY pesel_hash`, returns same cluster count as before
+> 15. Audit sanitizer (4 sub-tests per Addition 3):
+>    - 15a: PESEL pattern in note → redacted to `[encrypted]`
+>    - 15b: IBAN pattern in note → redacted to `[encrypted]`
+>    - 15c: Random 11-digit invoice number `12345678901` → ALSO redacted (over-redaction acceptable)
+>    - 15d: Plain text without PII patterns → unchanged
+> 16. **Integration:** T5 user fetches `/workers/:id` → response has masked pesel
+> 17. **Integration:** T5 user fetches `/workers/me?purpose=compliance_card` with own JWT → plaintext pesel + audit log entry created
+> 18. **Integration:** T5 user fetches `/workers/me?purpose=compliance_card` with someone else's worker_id (attempted) → masked pesel (own-record check enforced) + NO audit log entry
+>
+> **Step H — Build + test gates:**
+> 1. `npx tsx ./build.ts` — clean
+> 2. `npx tsc --noEmit` — 159 baseline (zero new errors)
+> 3. `npx vitest run` — **358 prior + 18 new = 376 passing minimum**, zero regressions
+>
+> #### Hard boundaries
+> - Decrypt + mask ONLY pesel, iban, passport_number. NOT nip.
+> - No write-path changes (Prompt 7 territory).
+> - No backfill (Prompt 10).
+> - No deploy (Prompt 9).
+> - Masking at HTTP boundary only — DB returns ciphertext, service decrypts, route layer masks per role
+> - Compliance Card plaintext gated by ALL 3 conditions: flag + own-record + audit
+> - AI prompt PII deferred per §11.4 — do NOT modify `legal-intelligence.service.ts`
+> - Sanitizer is conservative (PESEL + IBAN only); over-redaction acceptable (Test 15c documents this)
+>
+> Commit locally: `git commit -m "feat: wrap all read paths with decrypt + role masking + Compliance Card exception + /workers/me + audit sanitizer + 18 tests"`
 
-**Time:** 1.5-2 hours
-**Success looks like:** ~15-20 files changed. All tests pass. 4 local commits total now.
+**Time:** Phase 1 ~30-45 min; Phase 2 ~2-2.5 hours
+
+**Success looks like:**
+- Phase 1 enumeration approved + Add1/Add2/PC-1/PC-2/PC-3 audits done
+- ~20 files modified + 1 new test file (+ 1 new endpoint or modified route)
+- 358 prior + 18 new = 376 tests pass, zero regressions
+- 1 local commit, not pushed
+
 **If it fails:**
-- Test fails because `GROUP BY pesel_hash` returns different clusters than `GROUP BY pesel` on legacy plaintext data: that's actually expected during the transition. Confirm with Claude that the test uses only encrypted seed data, not a mixed-state fixture.
-- Role masking test fails: re-check Prompt 1's answer on T5-sees-own-record behavior. Claude might have implemented the opposite.
+- Enumeration bigger than PII-ENCRYPTION-PLAN §5: accept, update plan
+- Role masking test fails: T5 default vs Compliance Card exception confusion — re-read plan §5
+- `/workers/me` endpoint creation expands beyond plan: reduce scope; defer parts to follow-up
+- Audit sanitizer over-redacts unexpected text: that's expected; Test 15c documents the trade-off
+- AI prompt builders read PII for Claude — DEFERRED per §11.4. Do not change.
 
-⛔ **STOP. All 4 local commits staged. Do not paste Prompt 9 yet.**
+⛔ **STOP. Do not push. Do not paste Prompt 9.**
 
 ---
 
