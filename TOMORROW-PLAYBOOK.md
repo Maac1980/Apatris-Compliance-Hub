@@ -216,29 +216,97 @@
 
 ---
 
-## Prompt 4 — Set staging secrets (5 min)
+## Prompt 4 — Set staging secrets (10 min)
+
+> ⚠️ **Option 1 workflow continues from Prompt 3.** You run the commands yourself in a fresh Mac Terminal. Claude never sees the hex values. No hex ever appears in chat, in shell history, or on the command line. You report status only.
 
 **Paste this:**
 
-> Set ONLY the staging keys (not prod) on Fly. Use the keys labeled `APATRIS_ENCRYPTION_KEY — STAGING` and `APATRIS_LOOKUP_KEY — STAGING` from my password manager. I will paste them inline below.
+> Walk me through setting the two staging secrets on Fly, without any hex value touching Claude's transcript, my shell history, or any persistent file beyond Fly's own secret store. Report back with status only — I will not paste keys anywhere.
 >
-> Command to run:
+> ### Your steps (run in a fresh Mac Terminal — not the one Claude is running in)
 >
-> ```
-> fly secrets set --app apatris-api-staging \
->   APATRIS_ENCRYPTION_KEY=<staging-encryption-key> \
->   APATRIS_LOOKUP_KEY=<staging-lookup-key>
-> ```
+> 1. Open a fresh Terminal window. Confirm you're on local Mac, not SSH or cloud IDE.
 >
-> After setting, run `fly secrets list --app apatris-api-staging` and confirm both names appear (values will be hidden). Do NOT touch prod — `apatris-api` must not be modified.
+> 2. Retrieve both staging values from iPhone Apple Passwords:
+>    - `apatris-encryption-key-staging-20260418` (Notes: "Encryption key (AES-256-GCM)")
+>    - `apatris-lookup-key-staging-20260418` (Notes: "Lookup key (HMAC-SHA256)")
+>
+> 3. Create the temp file with an editor (keeps hex OUT of shell history — the editor itself never writes contents to `~/.zsh_history`):
+>    ```bash
+>    umask 077  # ensures file created with 0600 perms (only you can read)
+>    nano /tmp/apatris-staging-secrets
+>    ```
+>    In nano, type these two lines (replace each `<64-char-hex-from-iPhone>` with the actual hex value):
+>    ```
+>    APATRIS_ENCRYPTION_KEY=<64-char-hex-from-iPhone>
+>    APATRIS_LOOKUP_KEY=<64-char-hex-from-iPhone>
+>    ```
+>    Save with `Ctrl+O` then `Enter`. Exit with `Ctrl+X`.
+>
+>    Verify file permissions:
+>    ```bash
+>    ls -l /tmp/apatris-staging-secrets
+>    ```
+>    Should show `-rw-------` (owner read/write only). If it shows anything else, something went wrong with `umask` — re-create the file.
+>
+> 4. Import to Fly — staging only, with `--stage` to defer machine restart until Prompt 9's code deploy:
+>    ```bash
+>    fly secrets import --app apatris-api-staging --stage < /tmp/apatris-staging-secrets
+>    ```
+>    Expected output: confirmation that secrets were imported and staged. Machines do NOT restart yet (good — v4 staging code doesn't know about these vars yet; fail-loud logic arrives in Prompt 9).
+>
+> 5. Securely overwrite-and-delete the temp file:
+>    ```bash
+>    rm -P /tmp/apatris-staging-secrets  # macOS: overwrites 3 passes before unlink
+>    ```
+>    On Linux use `shred -u /tmp/apatris-staging-secrets` instead.
+>
+> 6. Verify **staging** has both secrets staged:
+>    ```bash
+>    fly secrets list --app apatris-api-staging
+>    ```
+>    Both `APATRIS_ENCRYPTION_KEY` and `APATRIS_LOOKUP_KEY` should appear with recent/staged status. Values are always shown hidden (normal).
+>
+> 7. Verify **prod is clean** (critical typo defense — single character off in app name and you'd have hit prod):
+>    ```bash
+>    fly secrets list --app apatris-api | grep -i APATRIS_
+>    ```
+>    Expected: **empty output** (grep exits code 1 / no matches). If either `APATRIS_ENCRYPTION_KEY` or `APATRIS_LOOKUP_KEY` appears on prod, **STOP IMMEDIATELY**. A typo hit prod. Unset right away:
+>    ```bash
+>    fly secrets unset APATRIS_ENCRYPTION_KEY APATRIS_LOOKUP_KEY --app apatris-api
+>    ```
+>    Then report the incident to me before continuing.
+>
+> 8. Clear in-memory shell history (belt and braces):
+>    ```bash
+>    history -c
+>    ```
+>
+> 9. Close the Terminal window completely with `Cmd+Q`.
+>
+> ### Report back with exactly:
+>
+> > "Staging secrets staged. Prod verified clean. Temp file shredded. Shell history cleared. Terminal closed."
+>
+> Do NOT paste any hex value anywhere. Do NOT deploy anything — Prompt 9 handles the deploy.
 
-**Time:** 5 min
-**Success looks like:** `fly secrets list --app apatris-api-staging` shows both `APATRIS_ENCRYPTION_KEY` and `APATRIS_LOOKUP_KEY` with recent timestamps. Two staging machines roll without errors.
+**Time:** 10 min
+**Success looks like:**
+- `fly secrets list --app apatris-api-staging` shows both `APATRIS_ENCRYPTION_KEY` and `APATRIS_LOOKUP_KEY` (hidden values, staged status)
+- `fly secrets list --app apatris-api | grep -i APATRIS_` returns empty (prod untouched)
+- `/tmp/apatris-staging-secrets` securely deleted
+- Shell history cleared
+- Terminal window closed with Cmd+Q
+
 **If it fails:**
-- Machine fails to start after rolling: the key value may be malformed. Check that the env var contains exactly 64 hex characters. `fly secrets list` + `fly logs --app apatris-api-staging`.
-- Claude tried to set prod by mistake: immediately `fly secrets unset APATRIS_ENCRYPTION_KEY APATRIS_LOOKUP_KEY --app apatris-api` and re-confirm prod is clean. Then retry with the correct app name.
+- `fly secrets import` rejects the file: formatting issue. Each line must be exactly `KEY=value`, no leading spaces, no trailing whitespace, value is 64 hex chars. Open the file again (`nano /tmp/apatris-staging-secrets`), fix, re-import, re-shred.
+- `rm -P` not found: you're on Linux — use `shred -u`. Or on an older macOS without `-P`: use `srm -sz` (Homebrew `secure-delete`), or worst case `rm` + `diskutil secureErase freespace 1 /` (overkill unless high-threat model).
+- Prod NOT clean in step 7: typo hit the wrong app. Immediately `fly secrets unset ... --app apatris-api`, re-verify with grep, retry from step 3 targeting staging explicitly.
+- `fly secrets list` shows permissions error or wrong account: `fly auth whoami` to confirm. You should see `manishshetty79@gmail.com`.
+- You accidentally typed the hex directly on command line (step 3 nano doesn't do this — but if you used a different method): run `history -c && > ~/.zsh_history` to clear the history file too, not just in-memory.
 
-⛔ **STOP. Confirm staging is still reachable: `curl -s https://apatris-api-staging.fly.dev/api/healthz`. Do not paste Prompt 5 yet.**
+⛔ **STOP. Confirm staging still reachable: `curl -s https://apatris-api-staging.fly.dev/api/healthz` → 200. Do not paste Prompt 5 yet.**
 
 ---
 
