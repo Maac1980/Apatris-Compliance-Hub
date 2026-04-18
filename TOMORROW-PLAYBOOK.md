@@ -120,33 +120,99 @@
 
 ---
 
-## Prompt 3 — Generate encryption keys (5 min)
+## Prompt 3 — Generate encryption keys (15-20 min)
+
+> ⚠️ **This is the most sensitive step of today's work.** Fail-loud behavior is locked in — losing any of these keys means data written with that key becomes permanently unreadable. Three separate copies are required before Prompt 4. Take the time; do not skip the round-trip verification.
 
 **Paste this:**
 
-> Generate 4 keys. Run each command separately and label the output CLEARLY so I don't mix them up:
+> Walk me through generating 4 encryption keys with full verification at each step. This is the most sensitive step of today's work — losing any of these keys means permanent data loss on the environment where the key was used.
+>
+> ### Pre-flight environment check
+>
+> Before running any command, confirm explicitly with me:
+>
+> 1. I am on my **local laptop**, not SSHed into a remote server, not in Replit / Codespaces / GitHub.dev / any cloud IDE.
+> 2. My terminal is a plain local shell (Terminal.app or iTerm on macOS; no tmux pane shared elsewhere).
+> 3. No screen-sharing / screen-recording / remote-viewing software is active (Zoom screen share off, QuickTime not recording, Meet / Teams closed).
+> 4. No shoulder-surfer is visible. The screen is not reflected in a window or mirror.
+>
+> If any of these is false, STOP and tell me exactly what to fix. Do not proceed until I re-confirm all four.
+>
+> ### Generate each key, in this order
+>
+> Use whichever command works on my machine — both produce equivalent 64-character hex strings:
 >
 > ```bash
 > node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> # or if node is not installed:
+> openssl rand -hex 32
 > ```
 >
-> Run it 4 times. Label the outputs exactly like this:
+> The 4 keys to generate, in exactly this order:
 >
-> - `APATRIS_ENCRYPTION_KEY — STAGING:` <hex>
-> - `APATRIS_LOOKUP_KEY — STAGING:` <hex>
-> - `APATRIS_ENCRYPTION_KEY — PROD:` <hex>
-> - `APATRIS_LOOKUP_KEY — PROD:` <hex>
+> 1. `APATRIS_ENCRYPTION_KEY — STAGING`
+> 2. `APATRIS_LOOKUP_KEY — STAGING`
+> 3. `APATRIS_ENCRYPTION_KEY — PROD`
+> 4. `APATRIS_LOOKUP_KEY — PROD`
 >
-> Then output these 4 lines for me to copy/paste into my password manager. Tell me to save each one to a separate password-manager entry labeled clearly (staging vs prod, encryption-key vs lookup-key). Warn me: **do not** email, Slack, or screenshot these. Do NOT set them on Fly yet — that happens in Prompt 4.
+> For each key (do all three steps A–C before moving to the next key):
+>
+> **Step A — Save to primary password manager (Copy 1):**
+> - Open 1Password / iCloud Keychain / Bitwarden / whichever I use
+> - Create a NEW entry with label format: `apatris-{encryption|lookup}-key-{staging|prod}-20260418`
+>   - Key 1 label: `apatris-encryption-key-staging-20260418`
+>   - Key 2 label: `apatris-lookup-key-staging-20260418`
+>   - Key 3 label: `apatris-encryption-key-prod-20260418`
+>   - Key 4 label: `apatris-lookup-key-prod-20260418`
+> - Paste the 64-char hex value into the password field
+> - Save
+>
+> **Step B — Round-trip verify (CRITICAL):**
+> - From the password manager, retrieve the entry I just saved
+> - Paste the retrieved value into a plain text editor — TextEdit, Notes, VS Code — **NOT a terminal** (terminals log to history)
+> - Visually confirm three things:
+>   - Character-for-character match with the original terminal output
+>   - Length is exactly 64 characters (if unsure, paste into a character-counter — an accidental trailing space makes it 65)
+>   - All characters are `0-9` or `a-f` (no uppercase, no `g-z`, no punctuation, no whitespace anywhere)
+> - If any of those three fails, re-save and re-verify. Do NOT move on until the verify is clean.
+>
+> **Step C — Save to Copies 2 and 3:**
+> - **Copy 2:** Save to a SECOND location — a different password manager on a different device (e.g., primary on Mac's 1Password, secondary on iPhone's iCloud Keychain). Must not be the same physical machine as Copy 1.
+> - **Copy 3:** Print the key on paper. Fold the paper. Put it in a sealed envelope labeled e.g. `apatris-encryption-key-staging-20260418 — open ONLY for disaster recovery`. Store in a physical safe at home or office.
+>
+> ### After all 4 keys are saved in 3 locations each
+>
+> Ask me this verbatim:
+>
+> > *"Confirm explicitly: I have generated 4 keys. Each key exists in 3 separate locations (primary password manager + secondary device/PM + printed paper in a physical safe). All 4 keys have been round-trip-verified character-for-character. Do you confirm? (Reply exactly 'yes' to proceed.)"*
+>
+> If my reply is anything other than exactly `yes`, STOP and ask what is missing. Do not advance.
+>
+> ### Terminal hygiene (after I confirm yes)
+>
+> 1. Run `history -c` in the terminal to clear my shell history (optional but recommended — catches any `node -e` or `openssl` invocations that would otherwise persist in `~/.zsh_history` or `~/.bash_history`)
+> 2. **Close the terminal window completely** — `Cmd+Q` the app, not just close-tab or minimize. Scrollback persists inside a minimized window.
+> 3. Double-check that I have NOT saved any of these keys to: email, Slack, Discord, SMS, GitHub issues, `.env` files, `secrets.json`, Dropbox, iCloud Drive, Google Drive, OneDrive, any auto-synced folder, or any file tracked by git.
+>
+> Do NOT set any key on Fly yet — that is Prompt 4's job. Right now the keys exist only in my 3 personal storage locations. No server has touched them. Regenerating any key is still free at this stage; it becomes costly the moment Prompt 4 runs.
 
-**Time:** 5 min
-**Success looks like:** 4 distinct 64-character hex strings, each labeled. All 4 saved to your password manager in 4 separate entries (with tags: "apatris-encryption-key-staging", "apatris-lookup-key-staging", etc.).
+**Time:** 15-20 min (longer than it looks — the round-trip verify per key is the part people skip, and the part that later bites them).
+**Success looks like:**
+- 4 distinct 64-character hex strings (all lowercase, all `[0-9a-f]`)
+- Each key saved in 3 separate locations (primary PM + secondary device/PM + sealed printed paper)
+- Each key round-trip-verified character-for-character from the primary PM entry
+- Terminal history cleared, terminal window closed completely
+- Your verbal `yes` recorded
+
 **If it fails:**
-- Fewer than 4 keys generated: re-run. Critical that each key is fresh and random.
-- You accidentally saw a prod key in the terminal and are worried about shoulder-surfing: regenerate prod keys (rotate via `node -e ...` again, save new ones, discard old).
-- Password manager not syncing: save a second copy to a sealed paper envelope in a physical safe. Two copies minimum before Prompt 4.
+- Fewer than 4 keys generated: re-run the command for the missing one. Each key must be fresh and independently random — never reuse one as another.
+- Round-trip mismatch (saved ≠ original): re-save and re-verify. Common causes: truncated paste (63 chars not 64), trailing whitespace added by the PM, wrong entry label so you retrieved a different key, or autocorrect mangling the hex. Fix before moving on.
+- You accidentally saw a key in a screen share or caught a shoulder-surfer mid-generation: regenerate that specific key, save the new one, discard the old. At this stage regenerating is free — the old value never touched Fly.
+- Password manager won't sync between devices: Copy 2 must live on a device that is physically NOT the same machine as Copy 1. Two 1Password vaults on the same Mac do not count. If no second device, Copy 2 can be a USB-encrypted file on a USB stick stored separately (weaker than a second device but acceptable).
+- No printer or safe available: at minimum, Copy 3 can be a third password manager on a third device. Printed paper + physical safe is the gold standard because it survives digital-only disasters (ransomware, cloud account lockout, device theft). Accept a lesser Copy 3 only if the gold-standard option is truly unavailable today.
 
-⛔ **STOP. Confirm all 4 keys saved in password manager. Do not paste Prompt 4 yet.**
+⛔ **STOP. Confirm all 4 keys exist in 3 locations each, all round-trip-verified, and your `yes` is on record. Do not paste Prompt 4 yet.**
 
 ---
 
