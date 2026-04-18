@@ -545,33 +545,147 @@ git commit -m "feat: encryption library (AES-256-GCM + HMAC-SHA256) + unit tests
 
 ---
 
-## Prompt 7 — Wrap write paths (1.5-2 hours)
+## Prompt 7 — Wrap all write paths (1.5-2 hours)
+
+> ⚠️ **Writes only.** No read-path changes, no role masking, no audit-log sanitizer. Those come in Prompt 8.
+>
+> **Scope (Blocker 2 locked 2026-04-18):** wrap writes of `workers.pesel`, `workers.iban`, `workers.passport_number`, plus denormalized copies (`power_of_attorney.pesel`, `trc_cases.passport_number`, `poa_registry.worker_passport_number`). Populate companion `_hash` columns on workers.
+>
+> **NOT in scope:** `workers.nip`, `clients.nip`, `crm_companies.nip`, hardcoded Apatris company NIPs. All stay plaintext.
+>
+> **Two-phase execution:** Step 1 (enumeration) must complete and be APPROVED before Step 2 (apply wraps) begins.
 
 **Paste this:**
 
-> Now wrap every write site with `encrypt()` and `lookupHash()`. Follow PII-ENCRYPTION-PLAN.md §4 target list exactly.
+> ### Step 1 — Exhaustive write-site enumeration (BEFORE editing)
 >
-> Before editing anything: list all the files + line numbers you're about to change in a table. Wait for my "yes, proceed" before touching code.
+> Run these greps from repo root. Capture all results:
 >
-> Then apply the changes. Focus especially on:
-> - `artifacts/api-server/src/lib/workers-db.ts` — the CRUD choke point. `createWorker()` and `updateWorker()`. Also the duplicate-check queries (change `WHERE pesel = $1` to `WHERE pesel_hash = $1`).
-> - The ~5 direct-SQL sites that bypass workers-db (`routes/contracts.ts`, `routes/trc-service.ts`, `routes/worker-email.ts`, `routes/self-service.ts`, `services/document-intake.service.ts`).
-> - Seed files: `lib/seed-test-scenarios.ts`, `lib/seed-comprehensive.ts`, and the hardcoded seed block in `lib/init-db.ts:610-674`.
+> ```bash
+> # Raw SQL writes to relevant tables
+> grep -rn "INSERT INTO workers\|UPDATE workers SET\|UPDATE workers " artifacts/api-server/src/ --include=*.ts
+> grep -rn "INSERT INTO power_of_attorney\|UPDATE power_of_attorney" artifacts/api-server/src/ --include=*.ts
+> grep -rn "INSERT INTO trc_cases\|UPDATE trc_cases" artifacts/api-server/src/ --include=*.ts
+> grep -rn "INSERT INTO poa_registry\|UPDATE poa_registry" artifacts/api-server/src/ --include=*.ts
 >
-> After edits, run `cd artifacts/api-server && npx vitest run` — all 304+ unit tests must still pass.
+> # Field-level assignments (object-literal writes + individual field sets)
+> grep -rn "\.pesel\b\|\.iban\b\|\.passport_number\b\|passportNumber" artifacts/api-server/src/ --include=*.ts | grep -v test
 >
-> Commit locally: `git commit -m "feat: encrypt PII on all write paths + migrate duplicate-check to hash columns"`.
+> # Drizzle ORM — narrow
+> grep -rn "\.insert(workers\|\.update(workers" artifacts/api-server/src/ --include=*.ts
 >
-> Do NOT push. Do NOT deploy.
+> # Drizzle ORM — broad (EXTENSION 1: catches syntax variations)
+> grep -rn "\.insert\|\.update" artifacts/api-server/src/ --include=*.ts | grep -iE "workers|power_of_attorney|trc_cases|poa_registry"
+>
+> # CSV / bulk imports
+> grep -rln "csv\|bulk.*import\|workers.*import" artifacts/api-server/src/routes/ --include=*.ts
+>
+> # Document intake / OCR flows (EXTENSION 2)
+> grep -rn "document.intake\|documentIntake\|extractedPesel\|extractedPassport" artifacts/api-server/src/ --include=*.ts
+> ```
+>
+> Compile the enumeration table:
+>
+> | Category | File | Line | Field | Op (INSERT/UPDATE/Drizzle) | Via workers-db? | Wrap action |
+> |---|---|---|---|---|---|---|
+>
+> Categories:
+> - `Service (workers-db.ts)` — main choke point
+> - `Route (direct SQL)` — routes bypassing workers-db
+> - `Route (document intake)` — OCR/AI extraction flows
+> - `Service (document intake)` — services processing extracted PII
+> - `Seed/bootstrap` — seed files + init-db hardcoded inserts
+> - `Other` — anything that doesn't fit above
+>
+> ### Additional Step 1 checks
+>
+> **EXTENSION 3 — Self-service PII editing:** Read `artifacts/api-server/src/routes/self-service.ts` explicitly. Answer each:
+> - Does it allow PATCH/PUT on `pesel`? (yes/no — cite line)
+> - Does it allow edit on `iban`? (already known from inventory — re-verify)
+> - Does it allow edit on `passport_number`? (yes/no — cite line)
+>
+> Document each answer in the enumeration table. For fields NOT allowed in self-service, add an explicit "N/A — not editable via self-service" row with reason.
+>
+> **EXTENSION 4 — TRC auto-update cascade:** Read `artifacts/api-server/src/routes/trc-service.ts`. Determine:
+> - When a new TRC is issued, does the endpoint ALSO update `workers.passport_number` (not just INSERT INTO trc_cases)?
+> - If yes, that cascade path needs wrapping too.
+>
+> Document the finding as a distinct row in the enumeration table.
+>
+> ### Present the enumeration table and STOP
+>
+> Do NOT start Step 2 until user explicitly approves the enumeration. If table surfaces rows not anticipated in PII-ENCRYPTION-PLAN.md §4, user may want to investigate before proceeding.
+>
+> ### Step 2 — Apply wraps (ONLY after user approval of Step 1 table)
+>
+> For each write site:
+> - Replace plaintext writes of `pesel`/`iban`/`passport_number` with **`encryptIfPresent(value)`** (NOT bare `encrypt()`). Handles null, empty, and already-encrypted input safely.
+> - In the SAME write, populate the companion `_hash` column via `lookupHash(value)` — only when value is non-null/non-empty.
+> - For duplicate-check queries currently using `WHERE pesel = $1` (or iban/passport): migrate to `WHERE pesel_hash = lookupHash($candidate)`.
+> - **Preserve validation order:** if workers-db has a format check (11-digit PESEL, checksum), run on plaintext BEFORE encrypting.
+> - **Skip `nip` entirely.** Do not wrap, hash, or touch duplicate-NIP check logic.
+>
+> ### Step 3 — Unit + integration tests (new file `artifacts/api-server/src/write-paths-encryption.test.ts`)
+>
+> Minimum 11 tests:
+> 1. `createWorker` writes encrypted pesel + populated pesel_hash
+> 2. `createWorker` writes encrypted iban + populated iban_hash
+> 3. `createWorker` writes encrypted passport_number + populated passport_hash
+> 4. `createWorker` leaves `nip` plaintext (scope enforcement)
+> 5. `updateWorker` re-encrypts on update, re-computes hash
+> 6. `createWorker` with null pesel → writes null (both pesel and pesel_hash null)
+> 7. `createWorker` with already-encrypted pesel → passes through (no double-encrypt)
+> 8. Duplicate-PESEL check on create → second call fails via hash lookup
+> 9. Duplicate-PESEL check on update → conflict detected via hash lookup
+> 10. **Integration:** write → read roundtrip — `decrypt(stored.pesel) === original`, `pesel_hash` is 64 hex chars
+> 11. **EXTENSION 5:** `updateWorker({someOtherField: "x"})` with NO pesel/iban/passport keys in input → existing encrypted values AND their `_hash` columns remain UNCHANGED. Prevents accidental null-out from undefined-vs-null confusion in partial updates.
+>
+> ### Step 4 — Build + test gates
+>
+> 1. `cd artifacts/api-server && npx tsx ./build.ts` — clean
+> 2. `npx vitest run` — all 330 prior tests pass + 11 new = **≥341** total
+> 3. `git status` — shows modified write-site files + new test file; no read-path or masking code touched
+>
+> ### Step 5 — Report
+>
+> - Enumeration table from Step 1 (repeat here as final record)
+> - Files changed with line counts
+> - Each write site + wrapping applied
+> - New tests (11 numbered titles)
+> - Build status
+> - Test counts before → after
+> - `git status` output
+>
+> ### Hard boundaries
+>
+> - Wrap ONLY pesel, iban, passport_number. NOT nip.
+> - No read-path wrapping — Prompt 8.
+> - No role masking — Prompt 8.
+> - No audit-log sanitizer — Prompt 8.
+> - No per-write audit entries (existing CREATE/UPDATE events are sufficient — confirmed 2026-04-18).
+> - No legacy-data touch — backfill is Prompt 10.
+> - No deploy. No push.
+>
+> Commit locally: `git commit -m "feat: wrap all write paths for pesel/iban/passport_number with encryptIfPresent + lookupHash"`
 
-**Time:** 1.5-2 hours
-**Success looks like:** Pre-change file list matches §4 (~7-8 files). After edits, all 304 tests still pass. One local commit. No deploy.
+**Time:** 1.5-2 hours (~30m enum + approval wait + ~45m edits + ~30m tests + ~15m commit/verify)
+
+**Success looks like:**
+- Enumeration table approved before edits begin
+- 10-15 files modified
+- 330 prior tests still pass + 11 new = ≥341
+- 1 local commit, not pushed
+
 **If it fails:**
-- Pre-change list is way bigger or smaller than §4: ask *"why does this diverge from the plan? reconcile."*
-- Tests fail after edits: paste the failure. Common cause: the duplicate-check query wasn't migrated to use `pesel_hash`. Claude should fix, not you.
-- Any test broke that was passing before: ask *"what test is failing and why? fix without skipping the test."* Do NOT accept test skips.
+- Enumeration bigger than PII-ENCRYPTION-PLAN §4: accept, update the plan — don't skip sites.
+- Enumeration smaller: expand grep, likely missed a site.
+- Prior test fails after edits: paste full trace. Common cause: duplicate-check WHERE clause still uses plaintext.
+- `nip` accidentally wrapped: revert that change only. NIP is out of scope.
+- CSV/bulk import path found outside §4: flag and wait for user decision before wrapping.
+- Test #11 fails (partial update nulls encrypted field): check the update helper — undefined should skip the column, not set it to null. Fix by explicitly excluding undefined-valued fields from the UPDATE SET clause.
+- Validation order wrong (format check on encrypted value): fix by validating plaintext BEFORE encrypting.
 
-⛔ **STOP. Run `git log --oneline -5` — should see 3 local commits (encryption lib, hash columns, write paths). Do not paste Prompt 8 yet.**
+⛔ **STOP. Do not push. Do not paste Prompt 8.**
 
 ---
 
