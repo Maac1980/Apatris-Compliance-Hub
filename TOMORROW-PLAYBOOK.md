@@ -900,30 +900,182 @@ git commit -m "feat: encryption library (AES-256-GCM + HMAC-SHA256) + unit tests
 
 ---
 
-## Prompt 9 — Deploy to staging (15 min)
+## Prompt 9 — Deploy to staging + verify (Phase 1: pre-flight, Phase 2: deploy + verify) (45-60 min)
+
+> ⚠️ **Staging only.** DO NOT touch `apatris-api` (prod). DO NOT modify source. DO NOT run backfill (Prompt 11).
+> **Deploys current `origin/main` (commit `1220603`).**
+> **Two-phase execution.** Phase 1 (pre-flight) MUST be approved before Phase 2 (deploy + verify).
+>
+> **Locked decisions (Apr 18 PM):**
+> - **Decision 1:** Skip live T5 Compliance Card login test in Step 8 — rely on Test 17 (structural). Document skip with rationale.
+> - **Decision 2:** Test PII values determined by PF-7 validation strictness check.
+> - **Decision 3:** PF-3 (prod-clean) is the source of truth — neither operator nor Claude remembers if prod was touched.
 
 **Paste this:**
 
-> Push the 4 local commits to GitHub main and deploy to staging.
+> ### Phase 1 — Pre-flight checks (15-20 min)
 >
-> 1. `git push origin main` — from repo root
-> 2. `fly deploy --remote-only --config fly.staging.toml -a apatris-api-staging`
-> 3. Wait for deploy to finish (both machines rolling to healthy)
-> 4. Verify: `curl -s https://apatris-api-staging.fly.dev/api/healthz` → 200
-> 5. Confirm new schema: via Neon console or a test SELECT, confirm `workers.pesel_hash`, `workers.iban_hash`, `workers.passport_hash` columns exist
-> 6. Confirm new writes encrypt: create a test worker via the staging dashboard with a known PESEL (e.g., `12345678901`). Then query `SELECT pesel, pesel_hash FROM workers WHERE id = <new>` via Neon console. Expected: `pesel` starts with `enc:v1:`, `pesel_hash` is a 64-char hex string.
+> **PF-1: Staging Fly secrets — encryption keys present**
+> ```bash
+> fly secrets list --app apatris-api-staging | grep -E 'APATRIS_(ENCRYPTION|LOOKUP)_KEY'
+> ```
+> Expected: 2 lines, both `Staged` (will be applied during Phase 2 Step 1 deploy). If both are already `Deployed`, that means a deploy happened since yesterday — investigate before proceeding.
+> Missing → Prompt 4 didn't run. STOP.
 >
-> Report: deploy version (should be v5 or higher), health check response, test-worker encryption status (confirmed yes/no).
+> **PF-2: Staging `NEON_DATABASE_URL` digest matches staging branch (NOT prod)**
+> ```bash
+> fly secrets list --app apatris-api-staging | grep NEON_DATABASE_URL
+> ```
+> Expected digest: **`30e15609a4d46e09`** (staging branch `br-dry-dust-ag6a0c2s`).
+> If digest is `59e5061e76027e27` → that's PROD! STOP.
+>
+> **PF-3: Prod Fly app has NO encryption secrets (defense-in-depth, source of truth per Decision 3)**
+> ```bash
+> fly secrets list --app apatris-api | grep -E 'APATRIS_(ENCRYPTION|LOOKUP)_KEY'
+> ```
+> Expected: **empty output**. If keys appear on prod → leak. STOP and report.
+>
+> **PF-4: Dockerfile builds from source**
+> ```bash
+> grep -E "tsx build|esbuild|RUN.*build" Dockerfile
+> ```
+> Expected: a `RUN` step that builds the bundle from source. Stale committed `dist/index.cjs` is intentionally ignored.
+>
+> **PF-5: init-db.ts hash columns are race-safe**
+> ```bash
+> grep -B 1 -A 6 "column_name='pesel_hash'" artifacts/api-server/src/lib/init-db.ts
+> ```
+> Expected: each ALTER TABLE ADD COLUMN wrapped in `DO $$ BEGIN IF NOT EXISTS (...) THEN ... END IF; END $$`.
+>
+> **PF-6: Local main matches origin/main (deploying what was reviewed)**
+> ```bash
+> git rev-parse HEAD origin/main
+> ```
+> Expected: both = `1220603f9bb47a8c8674d3c09aa22bb2490673ae`.
+>
+> **PF-7: PESEL/IBAN validation strictness (per Decision 2 — determines test PII values for Step 6)**
+> ```bash
+> grep -nE "pesel.*length|pesel.*\\\\d|pesel.*regex|validatePesel|peselChecksum|peselValid" artifacts/api-server/src/lib/workers-db.ts artifacts/api-server/src/lib/validate.ts artifacts/api-server/src/lib/*.ts
+> grep -nE "iban.*length|iban.*regex|validateIban|ibanChecksum|ibanValid|^.*PL\\\\d" artifacts/api-server/src/lib/workers-db.ts artifacts/api-server/src/lib/validate.ts
+> ```
+> Report findings:
+> - **Loose (length-only or no validation):** use Claude defaults — PESEL `99999999991`, IBAN `PL00000000000000000000000001`, Passport `ENC9991`
+> - **Strict (checksum logic present):** use checksum-valid alternatives — PESEL `44051401359`, IBAN `PL61109010140000071219812874`, Passport `EZ1234567`
+>
+> Propose final test values to user for approval before Phase 2.
+>
+> **PF-8: fly.staging.toml + Dockerfile compatible with `--remote-only` (per Adjustment 2)**
+> ```bash
+> cat fly.staging.toml
+> grep -E "WORKDIR|COPY|RUN|FROM" Dockerfile | head -20
+> ```
+> Expected: Dockerfile is self-contained (no host-mounted volumes, no relative paths outside the build context). `fly.staging.toml` has no `[build] dockerfile = "..."` overrides that assume local context.
+> Verify previous deploys used `--remote-only` consistently:
+> ```bash
+> fly releases --app apatris-api-staging | head -10
+> ```
+> Look at recent build patterns. If past deploys were local-only, switching to `--remote-only` may surface differences. Report.
+>
+> #### Present Phase 1 results table + PF-7 test values proposal, then STOP
+>
+> Wait for user approval before Phase 2 deploy.
+>
+> ### Phase 2 — Deploy + verify (25-40 min)
+>
+> **Step 1: Deploy**
+> ```bash
+> fly deploy --remote-only --config fly.staging.toml -a apatris-api-staging
+> ```
+> Watch for: build succeeded, machines updating, "in a good state", DNS verified.
+>
+> **Step 2: Machine status**
+> ```bash
+> fly status --app apatris-api-staging
+> ```
+> Expected: 2 machines `started`. Crashed/unhealthy → `fly logs --no-tail` to investigate.
+>
+> **Step 3: Health check**
+> ```bash
+> curl -s -w "\nHTTP: %{http_code}\n" https://apatris-api-staging.fly.dev/api/healthz
+> ```
+> Expected: `{"status":"ok",...}` + HTTP 200. 500 → fail-loud key error → check logs → rollback.
+>
+> **Step 4: Boot logs sanity**
+> ```bash
+> fly logs --app apatris-api-staging --no-tail | tail -60
+> ```
+> Look for: ✅ no `APATRIS_ENCRYPTION_KEY is required`, ✅ no `DO $$` errors, ✅ "listening on port 8080". Some `decrypt failed` warnings on legacy plaintext are tolerable (passthrough).
+>
+> **Step 5: Schema migration verified on staging Neon**
+> Via Neon console (staging branch `br-dry-dust-ag6a0c2s`):
+> ```sql
+> SELECT column_name FROM information_schema.columns
+>  WHERE table_name='workers' AND column_name LIKE '%_hash'
+>  ORDER BY column_name;
+> ```
+> Expected: 3 rows — `iban_hash`, `passport_hash`, `pesel_hash`.
+>
+> **Step 6: Controlled write test — encryption active**
+> Use the test PII values determined in PF-7. Create test worker via dashboard:
+> - Name: `Test Encrypt 20260418`
+> - PESEL: `<from PF-7>`
+> - IBAN: `<from PF-7>`
+> - Passport: `<from PF-7>`
+>
+> Verify in Neon staging:
+> ```sql
+> SELECT id, full_name, pesel, pesel_hash, iban, iban_hash, passport_number, passport_hash
+>  FROM workers WHERE full_name = 'Test Encrypt 20260418';
+> ```
+> Expected: pesel/iban/passport_number ALL start with `enc:v1:`; all 3 hash columns are 64-char hex.
+>
+> **Step 7: Controlled read test — decryption + masking active**
+> Re-fetch via dashboard as admin (T1/T2): PESEL displayed in plaintext.
+> As T3+ user (or via API with non-admin session): PESEL displayed as `***-****-<last4>`.
+>
+> **Step 8: Compliance Card endpoint — SKIP per Decision 1**
+> Document in final report: *"T5 test account password lost; structural test from Prompt 8 (Test 17, Test 18 / #11b) covers code path; live re-verification deferred to post-deploy follow-up."*
+>
+> Optional alternative if curl + manually-crafted JWT is feasible (Adjustment 4): test the endpoint with a generated JWT and inspect response + audit log entry. If non-trivial, accept skip.
+>
+> **Step 9: Sanity — legacy plaintext rows still readable**
+> Pick an existing worker (one of the 31 cloned from prod) via dashboard. Detail view should render without errors (decrypt passthrough).
+>
+> **Step 10: Cleanup test worker**
+> Delete the worker from Step 6 via dashboard. Confirm gone.
+>
+> **Step 11: Prod is UNCHANGED (defense-in-depth)**
+> ```bash
+> fly releases --app apatris-api | head -3
+> ```
+> Expected: prod release version unchanged (still v288). If advanced → operator error → investigate.
+>
+> ### Rollback plan
+> ```bash
+> fly releases rollback --app apatris-api-staging
+> ```
+> Reverts staging to previous release. Safe — no data touched.
+>
+> ### Hard boundaries
+> - Staging only. NEVER `--app apatris-api`.
+> - No source modifications during this prompt.
+> - No backfill (Prompt 11).
+> - Test worker MUST be deleted after Step 6.
+> - Rollback rather than retry on unexplained failures.
+>
+> ### Final report
+> - Deploy version (expected v5+ on staging)
+> - All 11 verification steps with pass/fail
+> - Prod version (must be unchanged)
+> - Step 8 documented skip with rationale
 
-**Time:** 15 min
-**Success looks like:** Staging v5+, health 200, new writes encrypt, hash column populated, legacy plaintext rows untouched.
-**If it fails:**
-- Deploy errors: paste. Most common: env var issue (Prompt 4 didn't set secrets correctly). Re-run `fly secrets list --app apatris-api-staging`.
-- Machines unhealthy: `fly logs --app apatris-api-staging` — look for startup errors. If `APATRIS_ENCRYPTION_KEY required` appears, Prompt 4 failed silently. Re-do it.
-- Test worker creates but pesel stored plaintext: one of Prompt 7's write sites was missed. Ask Claude *"which write site is still unwrapped? find it."*
-- **Rollback:** if deploy is broken, `fly releases rollback --app apatris-api-staging` and fix the code before re-deploying. No data lost yet.
+**Time:** Phase 1 ~15-20 min; Phase 2 ~25-40 min
 
-⛔ **STOP. Staging is now running new code. Do not paste Prompt 10 yet.**
+**Success:** Phase 1 all 8 pass + deploy completes + all 10 active verifications green (Step 8 documented skip) + prod unchanged + test worker deleted.
+
+**If it fails:** rollback first, diagnose second. Specific failure modes documented per step.
+
+⛔ **STOP. Do not push. Do not paste Prompt 10.**
 
 ---
 
