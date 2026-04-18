@@ -3001,6 +3001,41 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* workers table may not exist yet */ }
 
+  // ── PII encryption hash columns (Apr 18, 2026 migration) ──
+  // Separate DO $$ blocks per column so each can be reverted independently if needed.
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='pesel_hash') THEN
+          ALTER TABLE workers ADD COLUMN pesel_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_workers_pesel_hash ON workers(pesel_hash);
+        END IF;
+      END $$;
+    `);
+  } catch { /* workers table may not exist yet */ }
+
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='iban_hash') THEN
+          ALTER TABLE workers ADD COLUMN iban_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_workers_iban_hash ON workers(iban_hash);
+        END IF;
+      END $$;
+    `);
+  } catch { /* workers table may not exist yet */ }
+
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers' AND column_name='passport_hash') THEN
+          ALTER TABLE workers ADD COLUMN passport_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_workers_passport_hash ON workers(passport_hash);
+        END IF;
+      END $$;
+    `);
+  } catch { /* workers table may not exist yet */ }
+
   // ── Document Intake Intelligence ──────────────────────────────────────────
   await execute(`CREATE TABLE IF NOT EXISTS document_intake (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
