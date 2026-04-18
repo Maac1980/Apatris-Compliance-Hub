@@ -70,7 +70,7 @@ export async function calculatePIPReadiness(tenantId: string): Promise<PIPReadin
 
   // 1. Fetch all workers with compliance status
   const rows = await fetchAllWorkers(tenantId);
-  const workers = rows.map(mapRowToWorker);
+  const workers = rows.map((r) => mapRowToWorker(r));
   const totalWorkers = workers.length;
 
   if (totalWorkers === 0) {

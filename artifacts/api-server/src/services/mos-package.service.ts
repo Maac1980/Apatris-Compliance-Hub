@@ -11,6 +11,7 @@
 
 import { queryOne, execute } from "../lib/db.js";
 import { getWorkerLegalSnapshot, evaluateDeployability } from "./legal-status.service.js";
+import { decrypt } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -116,9 +117,10 @@ export async function generateMOSPackage(workerId: string, tenantId: string): Pr
       fullName: worker.full_name,
       dateOfBirth: toDate(docFields.date_of_birth ?? worker.date_of_birth),
       nationality: docFields.nationality ?? worker.nationality ?? null,
-      passportNumber: docFields.passport_number ?? worker.passport_number ?? null,
+      // Decrypt PII for MOS legal package (legal-required plaintext output)
+      passportNumber: docFields.passport_number ?? decrypt(worker.passport_number) ?? null,
       passportExpiry: toDate(worker.passport_expiry ?? docFields.expiry_date),
-      pesel: worker.pesel ?? null,
+      pesel: decrypt(worker.pesel) ?? null,
       assignedSite: worker.assigned_site ?? null,
       specialization: worker.specialization ?? null,
       hourlyRate: Number(worker.hourly_rate) || 0,

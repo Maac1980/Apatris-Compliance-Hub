@@ -138,7 +138,7 @@ async function runDailyScan(): Promise<void> {
     // ── Worker document expiry checks from WELDERS table ──────────────────
     try {
       const workerRows = await fetchAllWorkers(requireDefaultTenantId());
-      const workers = workerRows.map(mapRowToWorker);
+      const workers = workerRows.map((r) => mapRowToWorker(r));
       const today = Date.now();
 
       const workerDocFields: Array<{ key: keyof Worker; label: string }> = [
@@ -188,7 +188,7 @@ async function runDailyScan(): Promise<void> {
     // ── Save daily compliance snapshot ────────────────────────────────────
     try {
       const allWorkerRows = await fetchAllWorkers(requireDefaultTenantId());
-      const allWorkers = allWorkerRows.map(mapRowToWorker);
+      const allWorkers = allWorkerRows.map((r) => mapRowToWorker(r));
       const total = allWorkers.length;
       const critical = allWorkers.filter((w) => w.complianceStatus === "critical").length;
       const warning = allWorkers.filter((w) => w.complianceStatus === "warning").length;
@@ -457,7 +457,7 @@ async function sendWeeklyReport(): Promise<void> {
 
   try {
     const rows = await fetchAllWorkers(tenantId);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
     const admins = await fetchAdmins(tenantId);
 
     const total = workers.length;

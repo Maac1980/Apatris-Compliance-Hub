@@ -5,6 +5,7 @@ import { fetchAllWorkers } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { exportLimiter } from "../lib/rate-limit.js";
+import type { Tier } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -156,9 +157,9 @@ router.post("/zus/filings/generate", requireAuth, requireRole("Admin", "Executiv
     );
     if (existing) return res.status(409).json({ error: "Filing already exists for this period" });
 
-    // Get active workers
+    // Get active workers — admin route, role-aware mapping returns plaintext PESEL for ZUS XML
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const allWorkers = dbRows.map(mapRowToWorker);
+    const allWorkers = dbRows.map((r) => mapRowToWorker(r, (req as any).user?.role as Tier));
     const activeWorkers = allWorkers.filter(w => {
       const rate = w.hourlyRate ?? 0;
       const hours = w.monthlyHours ?? 0;

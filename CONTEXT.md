@@ -43,7 +43,25 @@
 - Decision trace has structured JSON but no UI yet
 
 ## Known bugs (follow-up — not today's work)
-- **ComplianceCard fetches `/workers/me` which may not exist** (found 2026-04-18 during PII migration planning). Per Explore-agent search, no route by this name exists in `artifacts/api-server/src/routes/`. ComplianceCard (workforce-app digital site pass) is likely rendering on mock/broken data. Worth verifying during PII migration Prompt 8 — if confirmed missing, creating `/workers/me` is the right place to implement the `?purpose=compliance_card` plaintext-exception logic per PII-ENCRYPTION-PLAN.md §5. Stop and confirm before expanding Prompt 8's scope.
+- **ComplianceCard fetches `/workers/me` which may not exist** (found 2026-04-18 during PII migration planning). ✅ **RESOLVED Apr 18 PM** — `/workers/me` endpoint created in Prompt 8 with Compliance Card exception (`?purpose=compliance_card` + own-record check + audit log).
+
+### Prompt 8 deferred — AI-context services (per §11.4 spirit)
+These services read PESEL/passport from raw SQL but use the values primarily as AI prompt context. Post-encryption they pass ciphertext to the LLM, which is benign (Claude can't use PESEL meaningfully anyway) but produces ugly ciphertext if the AI echoes the value back. Address alongside §11.4 PII-to-LLM tokenization in a follow-up.
+- `services/legal-intelligence.service.ts` (locked deferral per §11.4)
+- `services/data-copilot.service.ts` (AI-generated answers)
+- `services/rejection-intelligence.service.ts` (AI prompt context)
+- `services/legal-document.service.ts` (AI doc generation)
+- `services/case-intelligence.service.ts` (AI intel synthesis)
+- `services/legal-brief-pipeline.service.ts` (AI brief generation)
+
+### Prompt 8 deferred — Vault search by PII (functional limitation)
+- `services/vault-search.service.ts:54` — ILIKE search clause includes `pesel` and `passport_number` columns. After encryption, these columns store ciphertext (random IV per row) so user search-by-PESEL/passport will never match. PESEL display in results is fixed (decrypt applied). Search-by-PII would require hash-column lookup migration. Search by name/nationality/specialization still works. Defer hash-search migration to a follow-up.
+
+### Pre-existing security gaps surfaced during Prompt 8 enumeration (Decision 3 — DO NOT fix in Prompt 8)
+These are NOT caused by the encryption migration; they were pre-existing role-gating gaps surfaced by Addition 2's audit. Track separately:
+- `routes/zus.ts` GET `/zus/filings` — only `requireAuth`, no role gate. Read-list endpoint accessible to all authenticated users (worker name + filing metadata visible). PESEL inside the rendered XML is admin-gated.
+- `routes/contracts.ts` GET `/contracts` and `GET /contracts/:id` — only `requireAuth`, no role gate.
+- `routes/contract-gen.ts` GET `/contracts/generated`, GET `/contracts/generated/:id`, GET `/contracts/generated/:id/download` — only `requireAuth`, no role gate. Read endpoints accessible to all authenticated users.
 
 ## Next priorities (in order)
 1. Dummy seed data for staging — so team testing isn't on empty screens

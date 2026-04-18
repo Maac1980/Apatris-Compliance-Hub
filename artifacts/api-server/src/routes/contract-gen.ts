@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { decrypt } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -13,11 +14,15 @@ router.post("/contracts/generate", requireAuth, requireRole("Admin", "Executive"
     if (!workerId || !contractType) return res.status(400).json({ error: "workerId and contractType required" });
     if (!CONTRACT_TYPES.includes(contractType)) return res.status(400).json({ error: `contractType must be: ${CONTRACT_TYPES.join(", ")}` });
 
-    // Fetch worker data
+    // Fetch worker data — decrypt PII for contract generation (legal-role gated)
     const worker = await queryOne<Record<string, any>>(
       "SELECT * FROM workers WHERE id = $1", [workerId]
     );
     if (!worker) return res.status(404).json({ error: "Worker not found" });
+    // Decrypt PII for contract template (admin/legal route — plaintext required for contract validity)
+    worker.pesel = decrypt(worker.pesel);
+    worker.iban = decrypt(worker.iban);
+    worker.passport_number = decrypt(worker.passport_number);
 
     // Fetch company data
     let company: Record<string, any> | null = null;

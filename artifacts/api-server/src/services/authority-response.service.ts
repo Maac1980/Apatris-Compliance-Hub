@@ -19,6 +19,7 @@
 
 import { query, queryOne, execute } from "../lib/db.js";
 import { getWorkerLegalSnapshot, type LegalSnapshot } from "./legal-status.service.js";
+import { decrypt } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -150,8 +151,9 @@ export async function generateAuthorityPack(
     workerId: worker.id,
     fullName: worker.full_name ?? "Unknown",
     nationality: worker.nationality ?? permit?.country ?? null,
-    pesel: worker.pesel ?? null,
-    passportNumber: worker.passport_number ?? null,
+    // Decrypt PII for authority response letter (legal-required plaintext)
+    pesel: decrypt(worker.pesel) ?? null,
+    passportNumber: decrypt(worker.passport_number) ?? null,
     employerName: trcCase?.employer_name ?? null,
     assignedSite: worker.assigned_site ?? null,
     sameEmployer: snapshot.sameEmployerFlag,

@@ -19,7 +19,7 @@ const AGENTS: Record<string, { name: string; keywords: string[]; queryFn: (tenan
     name: "Payroll Agent", keywords: ["salary", "payroll", "zus", "tax", "pay", "rate", "cost", "advance"],
     queryFn: async (tenantId, q) => {
       const workers = await fetchAllWorkers(tenantId);
-      const mapped = workers.map(mapRowToWorker);
+      const mapped = workers.map((r) => mapRowToWorker(r));
       const totalGross = mapped.reduce((s, w) => s + (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0), 0);
       return `${mapped.length} workers on payroll. Total monthly gross: ${totalGross.toFixed(0)} PLN. Average rate: ${mapped.length > 0 ? (mapped.reduce((s, w) => s + (w.hourlyRate ?? 0), 0) / mapped.length).toFixed(2) : 0} PLN/h.`;
     },
@@ -35,7 +35,7 @@ const AGENTS: Record<string, { name: string; keywords: string[]; queryFn: (tenan
     name: "Workforce Agent", keywords: ["worker", "available", "bench", "match", "skill", "site", "assign", "who"],
     queryFn: async (tenantId, q) => {
       const workers = await fetchAllWorkers(tenantId);
-      const mapped = workers.map(mapRowToWorker);
+      const mapped = workers.map((r) => mapRowToWorker(r));
       const bench = await query<Record<string, any>>("SELECT COUNT(*) AS c FROM bench_entries WHERE tenant_id = $1 AND status = 'available'", [tenantId]);
       const sites: Record<string, number> = {};
       mapped.forEach(w => { const s = w.assignedSite || "Unassigned"; sites[s] = (sites[s] || 0) + 1; });
@@ -133,7 +133,7 @@ router.post("/ai/index", requireAuth, async (req, res) => {
     let indexed = 0;
     // Index workers
     const workers = await fetchAllWorkers(tenantId);
-    for (const w of workers.map(mapRowToWorker)) {
+    for (const w of workers.map((r) => mapRowToWorker(r))) {
       await execute("INSERT INTO knowledge_nodes (tenant_id, entity_type, entity_id, entity_name, content, metadata) VALUES ($1,'worker',$2,$3,$4,$5)",
         [tenantId, w.id, w.name, `Worker ${w.name}, ${w.specialization || "General"}, site: ${w.assignedSite || "unassigned"}, rate: ${w.hourlyRate || 0}/h`,
          JSON.stringify({ specialization: w.specialization, site: w.assignedSite, rate: w.hourlyRate })]);

@@ -28,30 +28,30 @@ async function runFraudScan(tenantId: string) {
     found++; highCount++;
   }
 
-  // 2. Duplicate PESEL
+  // 2. Duplicate PESEL — group by hash column (pesel ciphertext varies per row even for same plaintext)
   const dupPesel = await query<Record<string, any>>(
-    `SELECT pesel, COUNT(*) AS cnt, array_agg(full_name) AS names FROM workers WHERE tenant_id = $1 AND pesel IS NOT NULL AND pesel != '' GROUP BY pesel HAVING COUNT(*) > 1`,
+    `SELECT pesel_hash, COUNT(*) AS cnt, array_agg(full_name) AS names FROM workers WHERE tenant_id = $1 AND pesel_hash IS NOT NULL GROUP BY pesel_hash HAVING COUNT(*) > 1`,
     [tenantId]
   );
   for (const d of dupPesel) {
     await execute(
       `INSERT INTO fraud_alerts (tenant_id, alert_type, severity, description, evidence)
        VALUES ($1,'duplicate_document','critical',$2,$3)`,
-      [tenantId, `Duplicate PESEL ${d.pesel} found on ${d.cnt} workers: ${d.names.join(", ")}`, JSON.stringify({ pesel: d.pesel, workers: d.names, count: Number(d.cnt) })]
+      [tenantId, `Duplicate PESEL detected on ${d.cnt} workers: ${d.names.join(", ")}`, JSON.stringify({ pesel_hash: d.pesel_hash, workers: d.names, count: Number(d.cnt) })]
     );
     found++; highCount++;
   }
 
-  // 3. Duplicate IBAN
+  // 3. Duplicate IBAN — group by hash column
   const dupIban = await query<Record<string, any>>(
-    `SELECT iban, COUNT(*) AS cnt, array_agg(full_name) AS names FROM workers WHERE tenant_id = $1 AND iban IS NOT NULL AND iban != '' GROUP BY iban HAVING COUNT(*) > 1`,
+    `SELECT iban_hash, COUNT(*) AS cnt, array_agg(full_name) AS names FROM workers WHERE tenant_id = $1 AND iban_hash IS NOT NULL GROUP BY iban_hash HAVING COUNT(*) > 1`,
     [tenantId]
   );
   for (const d of dupIban) {
     await execute(
       `INSERT INTO fraud_alerts (tenant_id, alert_type, severity, description, evidence)
        VALUES ($1,'duplicate_bank','critical',$2,$3)`,
-      [tenantId, `Duplicate IBAN ${d.iban.slice(0, 10)}... found on ${d.cnt} workers: ${d.names.join(", ")}`, JSON.stringify({ iban: d.iban, workers: d.names, count: Number(d.cnt) })]
+      [tenantId, `Duplicate IBAN detected on ${d.cnt} workers: ${d.names.join(", ")}`, JSON.stringify({ iban_hash: d.iban_hash, workers: d.names, count: Number(d.cnt) })]
     );
     found++; highCount++;
   }

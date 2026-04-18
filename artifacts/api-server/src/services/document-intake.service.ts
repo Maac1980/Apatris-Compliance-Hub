@@ -18,7 +18,7 @@
 
 import { query, queryOne, execute } from "../lib/db.js";
 import { hardenIntake, computeFileHash, type HardeningResult } from "./document-intake-hardening.service.js";
-import { encryptIfPresent, lookupHash } from "../lib/encryption.js";
+import { encryptIfPresent, lookupHash, decrypt } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -356,16 +356,18 @@ export async function matchWorkerMultiSignal(identity: ExtractedIdentity, tenant
     let score = 0;
     const workerSignals: MatchSignal[] = [];
 
-    // PESEL match (weight: 1.0)
+    // PESEL match (weight: 1.0) — decrypt-and-compare since w.pesel is ciphertext post-Apr 18 migration
     if (identity.pesel && identity.pesel.length >= 10 && w.pesel) {
-      const matched = w.pesel === identity.pesel;
+      const wPeselPlain = decrypt(w.pesel);
+      const matched = wPeselPlain === identity.pesel;
       workerSignals.push({ type: "PESEL", value: identity.pesel, confidence: 1.0, matched });
       if (matched) score += 1.0;
     }
 
-    // Passport match (weight: 0.95)
+    // Passport match (weight: 0.95) — decrypt-and-compare
     if (identity.passportNumber && identity.passportNumber.length >= 5 && w.passport_number) {
-      const matched = w.passport_number.toUpperCase() === identity.passportNumber.toUpperCase();
+      const wPassportPlain = decrypt(w.passport_number);
+      const matched = wPassportPlain != null && wPassportPlain.toUpperCase() === identity.passportNumber.toUpperCase();
       workerSignals.push({ type: "PASSPORT", value: identity.passportNumber, confidence: 0.95, matched });
       if (matched) score += 0.95;
     }
@@ -506,14 +508,20 @@ async function detectContradictions(
     }
   }
 
-  // PESEL mismatch (HIGH severity — possible wrong worker)
-  if (identity.pesel && worker.pesel && identity.pesel !== worker.pesel) {
-    flags.push({ field: "pesel", extractedValue: identity.pesel, existingValue: worker.pesel, severity: "HIGH", message: `PESEL mismatch: document has ${identity.pesel} but worker has ${worker.pesel}. This may be the wrong worker.` });
+  // PESEL mismatch (HIGH severity — possible wrong worker) — decrypt-and-compare
+  if (identity.pesel && worker.pesel) {
+    const workerPeselPlain = decrypt(worker.pesel);
+    if (workerPeselPlain && identity.pesel !== workerPeselPlain) {
+      flags.push({ field: "pesel", extractedValue: identity.pesel, existingValue: workerPeselPlain, severity: "HIGH", message: `PESEL mismatch: document has ${identity.pesel} but worker has ${workerPeselPlain}. This may be the wrong worker.` });
+    }
   }
 
-  // Passport number mismatch
-  if (identity.passportNumber && worker.passport_number && identity.passportNumber.toUpperCase() !== worker.passport_number.toUpperCase()) {
-    flags.push({ field: "passportNumber", extractedValue: identity.passportNumber, existingValue: worker.passport_number, severity: "LOW", message: `Passport number differs — may be a renewed passport.` });
+  // Passport number mismatch — decrypt-and-compare
+  if (identity.passportNumber && worker.passport_number) {
+    const workerPassportPlain = decrypt(worker.passport_number);
+    if (workerPassportPlain && identity.passportNumber.toUpperCase() !== workerPassportPlain.toUpperCase()) {
+      flags.push({ field: "passportNumber", extractedValue: identity.passportNumber, existingValue: workerPassportPlain, severity: "LOW", message: `Passport number differs — may be a renewed passport.` });
+    }
   }
 
   // Nationality mismatch

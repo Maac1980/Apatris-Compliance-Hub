@@ -106,7 +106,7 @@ async function calculateTrustScore(worker: any, tenantId: string) {
 router.post("/trust/calculate/:workerId", requireAuth, async (req, res) => {
   try {
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     const worker = workers.find(w => w.id === req.params.workerId);
     if (!worker) return res.status(404).json({ error: "Worker not found" });
 
@@ -142,7 +142,7 @@ router.post("/trust/calculate-all", requireAuth, async (req, res) => {
 
 async function runTrustScoreCalculation(tenantId: string) {
   const dbRows = await fetchAllWorkers(tenantId);
-  const workers = dbRows.map(mapRowToWorker);
+  const workers = dbRows.map((r) => mapRowToWorker(r));
   let calculated = 0;
 
   for (const w of workers) {

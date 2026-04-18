@@ -28,7 +28,7 @@ router.post("/skills/analyse", requireAuth, async (req, res) => {
     await execute("DELETE FROM skill_demands WHERE tenant_id = $1", [tenantId]);
 
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     // Count workers per specialization
     const pool: Record<string, number> = {};

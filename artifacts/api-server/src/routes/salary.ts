@@ -122,7 +122,7 @@ router.get("/salary/compare/:workerId", requireAuth, async (req, res) => {
 router.get("/salary/compare-all", requireAuth, async (req, res) => {
   try {
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     const comparisons = workers.filter(w => (w.hourlyRate ?? 0) > 0).map(w => {
       const role = w.specialization || "Welder";

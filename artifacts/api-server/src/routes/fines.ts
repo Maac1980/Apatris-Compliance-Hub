@@ -99,7 +99,7 @@ async function runFineScan(tenantId: string) {
   await execute("DELETE FROM fine_predictions WHERE tenant_id = $1 AND status = 'active'", [tenantId]);
 
   const dbRows = await fetchAllWorkers(tenantId);
-  const workers = dbRows.map(mapRowToWorker);
+  const workers = dbRows.map((r) => mapRowToWorker(r));
   let totalRisks = 0;
   let criticalCount = 0;
 

@@ -18,7 +18,7 @@ router.post("/intelligence/generate", requireAuth, requireRole("Admin", "Executi
 
     const tenantId = req.tenantId!;
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     // Aggregate anonymised data
     const roleDistribution: Record<string, number> = {};

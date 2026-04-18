@@ -32,7 +32,7 @@ router.post("/deployments/start", requireAuth, requireRole("Admin", "Executive",
 
     // Step 2: AI Match workers
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     const eligible = workers.filter(w => {
       const spec = (w.specialization || "").toLowerCase();
       return spec.includes(roleType.toLowerCase().split(" ")[0]) && (w.hourlyRate ?? 0) > 0;

@@ -31,7 +31,7 @@ router.get("/geo/workers", requireAuth, async (req, res) => {
   try {
     const tenantId = req.tenantId!;
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     const workerLocations = workers.map(w => {
       const siteCoord = SITE_COORDS[w.assignedSite || ""] || null;
@@ -59,7 +59,7 @@ router.get("/geo/workers", requireAuth, async (req, res) => {
 router.get("/geo/sites", requireAuth, async (req, res) => {
   try {
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     const siteCounts: Record<string, number> = {};
     for (const w of workers) {
@@ -98,7 +98,7 @@ router.post("/geo/optimise", requireAuth, async (req, res) => {
   try {
     const tenantId = req.tenantId!;
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     // Get bench workers
     const bench = await query<Record<string, any>>(

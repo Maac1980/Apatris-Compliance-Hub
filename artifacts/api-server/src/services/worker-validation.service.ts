@@ -17,6 +17,7 @@
  */
 
 import { query, queryOne } from "../lib/db.js";
+import { decrypt } from "../lib/encryption.js";
 import { getWorkerLegalSnapshot, type LegalSnapshot } from "./legal-status.service.js";
 import { getWorkerActions, type WorkerActionsResult } from "./action-engine.service.js";
 import { getAnalysesByWorker, type RejectionAnalysis } from "./rejection-intelligence.service.js";
@@ -81,6 +82,8 @@ export async function validateWorker(workerId: string, tenantId: string): Promis
     [workerId, tenantId]
   );
   if (!worker) throw new Error("Worker not found");
+  // Decrypt PESEL for downstream validation logic / comparisons (raw query, not via fetchWorkerById)
+  worker.pesel = decrypt(worker.pesel);
   subsystems.push({ name: "Worker Record", available: true, error: null, keyData: { name: worker.full_name, trc_expiry: worker.trc_expiry, work_permit_expiry: worker.work_permit_expiry } });
 
   // 2. Legal snapshot

@@ -14,6 +14,7 @@
  */
 
 import { query, queryOne, execute } from "../lib/db.js";
+import { decrypt } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -141,6 +142,9 @@ export async function generateDocumentForStage(
     [caseId, tenantId]
   );
   if (!caseData) return null;
+  // Decrypt PII for legal case document generation (legal-role gated, plaintext required)
+  caseData.pesel = decrypt(caseData.pesel);
+  caseData.passport_number = decrypt(caseData.passport_number);
 
   // Fetch relevant KB articles
   let kbContext = "";

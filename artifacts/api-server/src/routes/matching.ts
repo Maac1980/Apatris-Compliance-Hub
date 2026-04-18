@@ -53,7 +53,7 @@ router.post("/matching/requests/:id/match", requireAuth, async (req, res) => {
 
     // Get all workers
     const dbRows = await fetchAllWorkers(req.tenantId!);
-    const allWorkers = dbRows.map(mapRowToWorker);
+    const allWorkers = dbRows.map((r) => mapRowToWorker(r));
 
     // Filter: exclude expired permits, only GREEN/compliant workers
     const eligible = allWorkers.filter(w => {

@@ -39,7 +39,7 @@ router.get("/compliance/trend", requireAuth, requireRole("Admin", "Executive"), 
 router.post("/compliance/snapshot", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
     const total = workers.length;
     const critical = workers.filter((w) => w.complianceStatus === "critical").length;
     const warning = workers.filter((w) => w.complianceStatus === "warning").length;

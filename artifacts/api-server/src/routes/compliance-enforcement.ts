@@ -16,6 +16,7 @@ import PDFDocument from "pdfkit";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
+import { decrypt } from "../lib/encryption.js";
 import { getActiveDeadlines, getOverdueDeadlines, completeDeadline, createDeadline, runDeadlineCheck } from "../services/deadline-engine.service.js";
 
 const router = Router();
@@ -67,7 +68,8 @@ router.get("/v1/enforcement/pip-pack", requireAuth, requireRole(...LEGAL_ROLES),
     const pack = workers.map((w: any) => ({
       name: `${w.first_name} ${w.last_name}`,
       nationality: w.nationality,
-      pesel: w.pesel,
+      // Decrypt PESEL for PIP inspection pack (legal-role-gated, plaintext required for PIP submission)
+      pesel: decrypt(w.pesel),
       site: w.assigned_site,
       contractType: w.contract_type,
       documents: {
@@ -206,7 +208,8 @@ router.get("/v1/enforcement/ukrainian-status", requireAuth, async (req, res) => 
     const tracked = workers.map((w: any) => ({
       id: w.id,
       name: `${w.first_name} ${w.last_name}`,
-      pesel: w.pesel,
+      // Decrypt PESEL for Ukrainian status tracker (admin/legal view)
+      pesel: decrypt(w.pesel),
       permitExpiry: w.work_permit_expiry,
       trcExpiry: w.trc_expiry,
       peselPhotoDeadline: { date: "2026-08-31", daysLeft: Math.ceil((PESEL_UKR_DEADLINE.getTime() - now.getTime()) / 86_400_000) },

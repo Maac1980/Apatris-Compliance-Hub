@@ -100,7 +100,7 @@ async function runChurnScan(tenantId: string) {
   await execute("DELETE FROM churn_predictions WHERE tenant_id = $1 AND status = 'active'", [tenantId]);
 
   const dbRows = await fetchAllWorkers(tenantId);
-  const workers = dbRows.map(mapRowToWorker);
+  const workers = dbRows.map((r) => mapRowToWorker(r));
   let total = 0, criticalCount = 0;
 
   for (const w of workers) {

@@ -20,7 +20,7 @@ router.post("/margins/calculate", requireAuth, requireRole("Admin", "Executive")
     await execute("DELETE FROM margin_analysis WHERE tenant_id = $1 AND month = $2 AND year = $3", [tenantId, m, y]);
 
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     let calculated = 0;
 
     // Get active deals with company info

@@ -1,4 +1,5 @@
 import type { WorkerRow } from "./workers-db.js";
+import { maskForRole, type Tier } from "./encryption.js";
 
 export interface Attachment {
   id: string;
@@ -105,7 +106,16 @@ function computeStatus(worker: Partial<Worker>): {
 // Map a PostgreSQL WorkerRow to the Worker interface
 // ---------------------------------------------------------------------------
 
-export function mapRowToWorker(row: WorkerRow): Worker {
+/**
+ * Project a DB row into a Worker for API response.
+ *
+ * @param row - The DB row (PII fields should be plaintext post Step A decrypt)
+ * @param role - Optional tier. If provided, uses role-aware masking via maskForRole
+ *               (T1/T2 plaintext, T3-T5 masked). If omitted, uses legacy maskSensitive
+ *               (always masked) for backward compatibility with existing callers.
+ *               nip is always masked via maskSensitive (Blocker 2 — not encrypted).
+ */
+export function mapRowToWorker(row: WorkerRow, role?: Tier): Worker {
   const trcExpiry = formatDate(row.trc_expiry);
   const passportExpiry = formatDate(row.passport_expiry);
   const bhpExpiry = formatDate(row.bhp_expiry);
@@ -114,6 +124,12 @@ export function mapRowToWorker(row: WorkerRow): Worker {
 
   const partial: Partial<Worker> = { trcExpiry, passportExpiry, bhpExpiry, workPermitExpiry, contractEndDate };
   const { status: complianceStatus, daysUntilNextExpiry } = computeStatus(partial);
+
+  // Role-aware mask for encrypted PII fields. nip is NOT encrypted (Blocker 2)
+  // so it always uses maskSensitive regardless of role.
+  const maskPii = role
+    ? (v: string | null): string | null => maskForRole(v, role)
+    : maskSensitive;
 
   return {
     id: row.id,
@@ -138,8 +154,8 @@ export function mapRowToWorker(row: WorkerRow): Worker {
     monthlyHours: Number(row.monthly_hours) || 0,
     advance: Number(row.advance) || 0,
     penalties: Number(row.penalties) || 0,
-    iban: maskSensitive(row.iban),
-    pesel: maskSensitive(row.pesel),
+    iban: maskPii(row.iban),
+    pesel: maskPii(row.pesel),
     nip: maskSensitive(row.nip),
     pit2: !!row.pit2,
     complianceStatus,

@@ -10,6 +10,7 @@
  */
 
 import { query, queryOne } from "../lib/db.js";
+import { lookupHash } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -159,13 +160,17 @@ async function matchWorker(
   tenantId: string,
 ): Promise<{ match: { id: string; name: string; confidence: number } | null; suggestions: Array<{ id: string; name: string; score: number }> }> {
 
-  // Try exact PESEL match first (highest confidence)
+  // Try exact PESEL match first (highest confidence) — PESEL is encrypted at rest,
+  // so we look up via the hash column (Apr 18 PII encryption migration).
   if (pesel && pesel.length >= 10) {
-    const row = await queryOne<any>(
-      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel = $2",
-      [tenantId, pesel]
-    );
-    if (row) return { match: { id: row.id, name: row.full_name, confidence: 1.0 }, suggestions: [] };
+    const peselHash = lookupHash(pesel);
+    if (peselHash) {
+      const row = await queryOne<any>(
+        "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel_hash = $2",
+        [tenantId, peselHash]
+      );
+      if (row) return { match: { id: row.id, name: row.full_name, confidence: 1.0 }, suggestions: [] };
+    }
   }
 
   // Note: workers table does not have passport_number column.

@@ -143,7 +143,7 @@ export async function sendWeeklyMoodPrompts(): Promise<void> {
     if (!tenantId || !isWhatsAppConfigured()) return;
 
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     let sent = 0;
 
     for (const w of workers) {

@@ -13,7 +13,7 @@ router.get("/revenue/forecast", requireAuth, async (req, res) => {
   try {
     const tenantId = req.tenantId!;
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
 
     // Active workers with rates
     const activeWorkers = workers.filter(w => (w.hourlyRate ?? 0) > 0 && (w.monthlyHours ?? 0) > 0);
@@ -108,7 +108,7 @@ router.get("/revenue/summary", requireAuth, async (req, res) => {
   try {
     const tenantId = req.tenantId!;
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     const active = workers.filter(w => (w.hourlyRate ?? 0) > 0 && (w.monthlyHours ?? 0) > 0);
 
     const currentMonthRevenue = active.reduce((s, w) => s + (w.hourlyRate ?? 0) * (w.monthlyHours ?? HOURS_PER_MONTH), 0);

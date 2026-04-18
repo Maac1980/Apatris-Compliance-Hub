@@ -70,7 +70,7 @@ router.get("/portal/view", async (req, res) => {
 
     // Fetch workers for this site
     const rows = await fetchAllWorkers(access.tenant_id);
-    const workers = rows.map(mapRowToWorker)
+    const workers = rows.map((r) => mapRowToWorker(r))
       .filter(w => w.assignedSite?.toLowerCase() === access.site_name.toLowerCase())
       .map(w => ({
         name: w.name,
@@ -292,7 +292,7 @@ router.post("/payroll/multi-currency", requireAuth, requireRole("Admin", "Execut
     const target = targetCurrency.toUpperCase();
 
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = await Promise.all(rows.map(mapRowToWorker).map(async w => {
+    const workers = await Promise.all(rows.map((r) => mapRowToWorker(r)).map(async w => {
       const grossPLN = (w.hourlyRate ?? 0) * (w.monthlyHours ?? 0);
       const nettoPLN = grossPLN - (w.advance ?? 0) - (w.penalties ?? 0);
       return {

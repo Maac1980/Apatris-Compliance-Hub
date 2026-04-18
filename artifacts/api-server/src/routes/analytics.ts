@@ -16,7 +16,7 @@ const router = Router();
 router.get("/analytics/heatmap", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
 
     // Group by site
     const siteMap = new Map<string, { total: number; compliant: number; warning: number; critical: number; nonCompliant: number }>();
@@ -53,7 +53,7 @@ router.get("/analytics/heatmap", requireAuth, async (req, res) => {
 router.get("/analytics/predictive", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
     const now = new Date();
 
     interface PredictiveAlert {
@@ -119,7 +119,7 @@ router.get(
   async (req, res) => {
     try {
       const rows = await fetchAllWorkers(req.tenantId!);
-      const workers = rows.map(mapRowToWorker);
+      const workers = rows.map((r) => mapRowToWorker(r));
       const now = new Date();
       const dateStr = now.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
@@ -210,7 +210,7 @@ router.post(
 
       // Gather context data
       const rows = await fetchAllWorkers(req.tenantId!);
-      const workers = rows.map(mapRowToWorker);
+      const workers = rows.map((r) => mapRowToWorker(r));
       const now = new Date();
 
       const total = workers.length;

@@ -8,6 +8,7 @@
  */
 
 import { query } from "../lib/db.js";
+import { decrypt } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -56,6 +57,11 @@ export async function vaultSearch(
       [tenantId, ilike]
     );
     for (const w of workers) {
+      // Decrypt PESEL on returned row (admin/legal-role search results — plaintext for display).
+      // NOTE: ILIKE search on encrypted PESEL/passport_number columns above won't match user queries —
+      //       PESEL/passport-by-search is a known limitation post-encryption (use hash-column lookup
+      //       in a follow-up if needed). Search by name/nationality/specialization still works.
+      w.pesel = decrypt(w.pesel);
       allResults.push({
         id: w.id, category: "worker",
         title: `${w.first_name} ${w.last_name}`,

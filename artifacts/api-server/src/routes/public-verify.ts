@@ -8,6 +8,7 @@
 
 import { Router } from "express";
 import { query, queryOne, execute } from "../lib/db.js";
+import { decrypt } from "../lib/encryption.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -80,7 +81,11 @@ router.get("/public/verify/:token", async (req, res) => {
         name: `${worker.first_name} ${worker.last_name}`,
         nationality: worker.nationality,
         specialization: worker.specialization,
-        passportNumber: worker.passport_number ? `***${worker.passport_number.slice(-4)}` : null,
+        // Decrypt passport_number, then apply existing last-4 mask (public token endpoint — must stay masked)
+        passportNumber: (() => {
+          const plain = decrypt(worker.passport_number);
+          return plain ? `***${plain.slice(-4)}` : null;
+        })(),
       },
       legalStatus: {
         status: legalStatus?.legal_status ?? "UNKNOWN",

@@ -2,6 +2,7 @@ import { Router } from "express";
 import PDFDocument from "pdfkit";
 import { fetchAllWorkers, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker } from "../lib/compliance.js";
+import { decrypt, type Tier } from "../lib/encryption.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { sendPayslipEmail, isMailConfigured } from "../lib/mailer.js";
 import { query, queryOne, execute, withTransaction } from "../lib/db.js";
@@ -19,7 +20,8 @@ const router = Router();
 router.get("/payroll/current", requireAuth, requireRole("Admin", "Executive"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker).map((w) => ({
+    // Role-aware projection: admin payroll editor needs full IBAN to verify bank transfers
+    const workers = rows.map((r) => mapRowToWorker(r, (req as any).user?.role as Tier)).map((w) => ({
       id: w.id,
       name: w.name,
       email: w.email ?? null,
@@ -83,7 +85,7 @@ router.post("/payroll/commit", requireAuth, requireRole("Admin", "Executive"), s
     const committedBy = body.committedBy || "Unknown";
 
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
 
     interface PayrollSnap {
       workerId: string; workerName: string; monthYear: string;
@@ -414,7 +416,7 @@ router.get("/payroll/export/pdf", requireAuth, requireRole("Admin", "Executive")
     const now = new Date();
 
     const dbRows3 = await fetchAllWorkers(req.tenantId!);
-    const workers = dbRows3.map(mapRowToWorker);
+    const workers = dbRows3.map((r) => mapRowToWorker(r));
 
     const fmtPLN = (n: number) =>
       n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

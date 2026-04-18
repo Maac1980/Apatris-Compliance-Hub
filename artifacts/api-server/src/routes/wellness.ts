@@ -51,7 +51,7 @@ router.post("/wellness/calculate", requireAuth, async (req, res) => {
     await execute("DELETE FROM financial_wellness WHERE tenant_id = $1 AND month = $2 AND year = $3", [tenantId, m, y]);
 
     const dbRows = await fetchAllWorkers(tenantId);
-    const workers = dbRows.map(mapRowToWorker);
+    const workers = dbRows.map((r) => mapRowToWorker(r));
     let calculated = 0;
 
     for (const w of workers) {

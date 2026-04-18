@@ -50,9 +50,21 @@ export interface WorkerRow {
   iban: string | null;
   pesel: string | null;
   nip: string | null;
+  passport_number: string | null;
   pit2: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Decrypts PII fields (pesel, iban, passport_number) on a row before returning.
+// nip stays plaintext (Blocker 2). Legacy plaintext passes through via decrypt() passthrough.
+function decryptWorkerPii<T extends Partial<WorkerRow>>(row: T): T {
+  return {
+    ...row,
+    pesel: decrypt(row.pesel ?? null) as T["pesel"],
+    iban: decrypt(row.iban ?? null) as T["iban"],
+    passport_number: decrypt(row.passport_number ?? null) as T["passport_number"],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -182,11 +194,13 @@ const MUTABLE_COLUMNS = new Set([
 // ---------------------------------------------------------------------------
 
 export async function fetchAllWorkers(tenantId: string): Promise<WorkerRow[]> {
-  return query<WorkerRow>("SELECT * FROM workers WHERE tenant_id = $1 ORDER BY full_name", [tenantId]);
+  const rows = await query<WorkerRow>("SELECT * FROM workers WHERE tenant_id = $1 ORDER BY full_name", [tenantId]);
+  return rows.map(decryptWorkerPii);
 }
 
 export async function fetchWorkerById(id: string, tenantId: string): Promise<WorkerRow | null> {
-  return queryOne<WorkerRow>("SELECT * FROM workers WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
+  const row = await queryOne<WorkerRow>("SELECT * FROM workers WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
+  return row ? decryptWorkerPii(row) : null;
 }
 
 export async function createWorker(

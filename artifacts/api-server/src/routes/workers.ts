@@ -3,9 +3,10 @@ import multer from "multer";
 // Anthropic SDK loaded dynamically where needed
 import { fetchAllWorkers, fetchWorkerById, createWorker, updateWorker } from "../lib/workers-db.js";
 import { mapRowToWorker, filterWorkers, type Worker } from "../lib/compliance.js";
+import type { Tier } from "../lib/encryption.js";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { sensitiveLimiter, publicLimiter } from "../lib/rate-limit.js";
-import { execute } from "../lib/db.js";
+import { execute, queryOne } from "../lib/db.js";
 import { appendAuditLog } from "../lib/audit-log.js";
 import { cached, cacheInvalidate } from "../lib/cache.js";
 import { validateBody, CreateWorkerSchema, UpdateWorkerSchema } from "../lib/validate.js";
@@ -112,6 +113,100 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 
 const router: IRouter = Router();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /workers/me — Self-service worker profile (workforce-app PWA Compliance Card)
+//
+// Default: returns own worker profile with PII masked per role (always masked for
+// T5 default code path).
+//
+// Compliance Card exception: when ?purpose=compliance_card is passed, returns
+// PLAINTEXT pesel/iban/passport_number — but ONLY if the requested record is
+// the authenticated user's own. Writes immutable audit entry on both success
+// (PLAINTEXT_PII_VIEWED) and denied attempts (PLAINTEXT_PII_ACCESS_DENIED).
+//
+// Defensive design (PC-1, R2): accepts optional ?worker_id=<id> param. If
+// provided and doesn't match the resolved worker, the access is denied and
+// audited as an attempted cross-record access.
+//
+// MUST be registered BEFORE GET /workers/:id so Express matches "me" first.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/workers/me", requireAuth, async (req, res) => {
+  try {
+    const userEmail = (req as any).user?.email as string | undefined;
+    const tenantId = req.tenantId;
+    if (!userEmail || !tenantId) return res.status(401).json({ error: "Unauthenticated" });
+
+    // Resolve own worker by email
+    const lookup = await queryOne<{ id: string }>(
+      "SELECT id FROM workers WHERE email = $1 AND tenant_id = $2 LIMIT 1",
+      [userEmail, tenantId]
+    );
+    if (!lookup) return res.status(404).json({ error: "Worker profile not found" });
+
+    // Fetch full row with PII decrypted by workers-db
+    const worker = await fetchWorkerById(lookup.id, tenantId);
+    if (!worker) return res.status(404).json({ error: "Worker profile not found" });
+
+    const purpose = req.query.purpose;
+    const requestedWorkerId = req.query.worker_id;
+
+    // Compliance Card plaintext exception (Apr 18 hybrid masking decision)
+    if (purpose === "compliance_card") {
+      // Own-record check: if worker_id query param provided AND doesn't match resolved worker, deny
+      const ownRecord = !requestedWorkerId || requestedWorkerId === worker.id;
+      if (!ownRecord) {
+        // R2: log denied access attempt as security signal
+        appendAuditLog({
+          timestamp: new Date().toISOString(),
+          actor: (req as any).user?.name ?? userEmail,
+          actorEmail: userEmail,
+          action: "PLAINTEXT_PII_ACCESS_DENIED" as any,
+          workerId: String(requestedWorkerId),
+          workerName: "(denied — own-record check failed)",
+          note: `purpose=compliance_card; resolved_user_worker_id=${worker.id}`,
+        });
+        // Fall back to masked response
+        return res.json({ worker: mapRowToWorker(worker, "T5") });
+      }
+
+      // Own record + valid flag → return plaintext + audit success
+      appendAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: (req as any).user?.name ?? userEmail,
+        actorEmail: userEmail,
+        action: "PLAINTEXT_PII_VIEWED" as any,
+        workerId: worker.id,
+        workerName: worker.full_name,
+        note: "purpose=compliance_card",
+      });
+      // Plaintext response: bypass mapRowToWorker (which would mask), construct directly
+      return res.json({
+        worker: {
+          id: worker.id,
+          name: worker.full_name,
+          pesel: worker.pesel,
+          iban: worker.iban,
+          passport_number: worker.passport_number,
+          nationality: (worker as any).nationality ?? null,
+          assignedSite: worker.assigned_site,
+          trcExpiry: worker.trc_expiry,
+          passportExpiry: worker.passport_expiry,
+        },
+      });
+    }
+
+    // Addition 5: warn on unexpected purpose value (typo defense — silent fallback would hide bugs)
+    if (purpose != null && purpose !== "") {
+      console.warn("[workers/me] unexpected purpose value:", purpose, "request:", req.method, req.path);
+    }
+
+    // Default: masked response via mapRowToWorker with T5 (always-mask)
+    return res.json({ worker: mapRowToWorker(worker, "T5") });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 // GET /workers
 router.get("/workers", requireAuth, async (req, res) => {
   try {
@@ -120,7 +215,7 @@ router.get("/workers", requireAuth, async (req, res) => {
       `workers:${req.tenantId}`,
       async () => {
         const rows = await fetchAllWorkers(req.tenantId!);
-        return rows.map(mapRowToWorker).filter(
+        return rows.map((r) => mapRowToWorker(r)).filter(
           (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
         );
       },
@@ -138,7 +233,7 @@ router.get("/workers", requireAuth, async (req, res) => {
 router.get("/workers/sites", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker).filter(
+    const workers = rows.map((r) => mapRowToWorker(r)).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
     const sites = Array.from(
@@ -155,7 +250,7 @@ router.get("/workers/sites", requireAuth, async (req, res) => {
 router.get("/workers/stats", requireAuth, async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker).filter(
+    const workers = rows.map((r) => mapRowToWorker(r)).filter(
       (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
     );
 
@@ -178,7 +273,7 @@ router.get("/workers/stats", requireAuth, async (req, res) => {
 router.get("/workers/report", requireAuth, requireRole("Admin", "Executive", "LegalHead"), async (req, res) => {
   try {
     const rows = await fetchAllWorkers(req.tenantId!);
-    const workers = rows.map(mapRowToWorker);
+    const workers = rows.map((r) => mapRowToWorker(r));
 
     const now = new Date();
     const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -416,7 +511,8 @@ router.post("/workers/bulk-create", requireAuth, requireRole("Admin", "Executive
     // TODO: implement file storage migration (previously Airtable attachments)
 
     const row = await fetchWorkerById(recordId, req.tenantId!);
-    res.json({ worker: mapRowToWorker(row!), extracted: extractedSummary });
+    // Role-aware projection: admins who just created the worker see plaintext PII (Apr 18 hybrid masking)
+    res.json({ worker: mapRowToWorker(row!, (req as any).user?.role as Tier), extracted: extractedSummary });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[bulk-create] Error:", message);
@@ -435,7 +531,8 @@ router.post("/workers", requireAuth, requireRole("Admin", "Executive", "TechOps"
     if (body.name && !body.fullName) { body.fullName = body.name; delete body.name; }
     const newRecord = await createWorker(body as any, req.tenantId!);
     const row = await fetchWorkerById(newRecord.id, req.tenantId!);
-    const mapped = mapRowToWorker(row!);
+    // Role-aware projection: admin just created — gets plaintext per Hybrid masking
+    const mapped = mapRowToWorker(row!, (req as any).user?.role as Tier);
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "CREATE_WORKER", workerId: newRecord.id, workerName: mapped.name, note: `Worker created with fields: ${Object.keys(body).join(", ")}` });
     cacheInvalidate(`workers:${req.tenantId}`);
     res.status(201).json(mapped);
@@ -451,7 +548,8 @@ router.get("/workers/:id", requireAuth, async (req, res) => {
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
-    res.json(mapRowToWorker(row));
+    // Role-aware projection: full worker detail view — admins see plaintext per Hybrid masking
+    res.json(mapRowToWorker(row, (req as any).user?.role as Tier));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -463,7 +561,8 @@ router.patch("/workers/:id", requireAuth, requireRole("Admin", "Executive", "Leg
   try {
     const body = req.body as Record<string, unknown>;
     const updated = await updateWorker(req.params.id, body, req.tenantId!);
-    const mapped = mapRowToWorker(updated);
+    // Role-aware projection: PATCH response — admin sees their just-applied changes in plaintext
+    const mapped = mapRowToWorker(updated, (req as any).user?.role as Tier);
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "UPDATE_WORKER", workerId: req.params.id, workerName: mapped.name, note: `Fields updated: ${Object.keys(body).join(", ")}` });
     cacheInvalidate(`workers:${req.tenantId}`);
     res.json(mapped);
@@ -531,7 +630,8 @@ router.post("/workers/:id/upload", requireAuth, requireRole("Admin", "Executive"
 
     // 4. Return updated worker + what was auto-filled
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
-    res.json({ worker: mapRowToWorker(row!), autoFilled: autoFilledFields, scanned: !!scanned });
+    // Role-aware projection: scan flow — admin needs plaintext to verify auto-fill against documents
+    res.json({ worker: mapRowToWorker(row!, (req as any).user?.role as Tier), autoFilled: autoFilledFields, scanned: !!scanned });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -611,7 +711,8 @@ router.post("/workers/:id/notify", requireAuth, requireRole("Admin", "Executive"
   try {
     const row = await fetchWorkerById(req.params.id, req.tenantId!);
     if (!row) { res.status(404).json({ error: "Worker not found" }); return; }
-    const worker = mapRowToWorker(row);
+    // Role-aware projection: another worker-detail read path — admins see plaintext per Hybrid masking
+    const worker = mapRowToWorker(row, (req as any).user?.role as Tier);
     const { type, expiryDate, channel } = req.body as { type?: string; expiryDate?: string; channel?: string };
 
     let sent = false;
