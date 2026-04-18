@@ -426,29 +426,122 @@ git commit -m "feat: encryption library (AES-256-GCM + HMAC-SHA256) + unit tests
 
 ---
 
-## Prompt 6 — Add hash columns to schema (30 min)
+## Prompt 6 — Edit schema code for hash columns (30 min)
+
+> ⚠️ **Code-only change.** Schema does NOT apply to any database in this prompt. Apatris applies schema via `init-db.ts` on app boot — the new columns take effect when Prompt 9 deploys to staging and Prompt 15 deploys to prod. This prompt only edits the code file.
 
 **Paste this:**
 
-> Now modify `artifacts/api-server/src/lib/init-db.ts` to add 3 new nullable TEXT columns via idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`:
+> Modify `artifacts/api-server/src/lib/init-db.ts` to add 3 new nullable TEXT columns + 3 indexes for hash-column lookups. Match the existing `DO $$ BEGIN ... END $$` pattern used for idempotent column additions elsewhere in that file.
 >
-> - `workers.pesel_hash TEXT`
-> - `workers.iban_hash TEXT`
-> - `workers.passport_hash TEXT`
+> ### Pre-flight C — verify `passport_number` exists in current workers schema
 >
-> Follow the existing pattern in init-db.ts (look for `ADD COLUMN IF NOT EXISTS` examples). Add one `CREATE INDEX IF NOT EXISTS` on each new hash column (these will be used for duplicate-lookup queries).
+> Before editing, grep `artifacts/api-server/src/lib/init-db.ts` for `passport_number`. Confirm the column is defined somewhere: either in the `CREATE TABLE IF NOT EXISTS workers (...)` block near lines 40-70, or added via a later `ALTER TABLE workers ADD COLUMN passport_number` block.
 >
-> Do NOT run the schema change yet — that happens when we deploy in Prompt 9. Just edit the file and show me the diff. Do NOT push or deploy.
+> If `passport_number` is NOT present in `init-db.ts`, STOP and report. Ask the user to decide:
+> - (a) add `passport_number TEXT` as a prerequisite ALTER in the same migration, then add `passport_hash`
+> - (b) skip `passport_hash` this migration, reducing scope to 2 fields (pesel, iban)
+> - (c) something else
 >
-> Then commit locally: `git commit -m "feat: add pesel_hash/iban_hash/passport_hash columns"`.
+> ### Pre-flight E — schema drift check against staging Neon
+>
+> Via Neon web console (or `psql` if `STAGING_DATABASE_URL` is set in shell env), run this read-only query — no writes, just verification:
+>
+> ```sql
+> SELECT column_name, data_type
+>   FROM information_schema.columns
+>  WHERE table_name='workers'
+>    AND column_name IN ('pesel','iban','passport_number');
+> ```
+>
+> Expected result: 3 rows, all with `data_type = 'text'`.
+>
+> If any column is missing, or `data_type` is `character varying` / `varchar` instead of `text`, STOP and report. Type mismatch means init-db.ts has drifted from what's live on staging; reconcile the drift before adding hash columns.
+>
+> ### Edit
+>
+> Once both pre-flights pass, add this block to `artifacts/api-server/src/lib/init-db.ts`. Place it **after** the workers `CREATE TABLE` and **after** any existing worker-column ALTER blocks (search for existing `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='workers'` — insert right after the last such block):
+>
+> ```ts
+> await execute(`
+>   DO $$ BEGIN
+>     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+>                    WHERE table_name='workers' AND column_name='pesel_hash') THEN
+>       ALTER TABLE workers ADD COLUMN pesel_hash TEXT;
+>       CREATE INDEX IF NOT EXISTS idx_workers_pesel_hash ON workers(pesel_hash);
+>     END IF;
+>   END $$;
+> `);
+>
+> await execute(`
+>   DO $$ BEGIN
+>     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+>                    WHERE table_name='workers' AND column_name='iban_hash') THEN
+>       ALTER TABLE workers ADD COLUMN iban_hash TEXT;
+>       CREATE INDEX IF NOT EXISTS idx_workers_iban_hash ON workers(iban_hash);
+>     END IF;
+>   END $$;
+> `);
+>
+> await execute(`
+>   DO $$ BEGIN
+>     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+>                    WHERE table_name='workers' AND column_name='passport_hash') THEN
+>       ALTER TABLE workers ADD COLUMN passport_hash TEXT;
+>       CREATE INDEX IF NOT EXISTS idx_workers_passport_hash ON workers(passport_hash);
+>     END IF;
+>   END $$;
+> `);
+> ```
+>
+> Each `DO $$` block is idempotent — safe to run multiple times and safe to race with a concurrent machine boot (Fly's 2-machine cold start). No transaction wrap (matches existing init-db.ts pattern).
+>
+> ### Checks (per execution-loop discipline)
+>
+> 1. **BUILD:** `cd artifacts/api-server && npx tsx ./build.ts` — must be clean
+> 2. **TEST:** `cd artifacts/api-server && npx vitest run` — expect 330 pass (same as after Prompt 5; this is schema-code-only, no logic change)
+> 3. **Diff:** `git diff artifacts/api-server/src/lib/init-db.ts` — should show ~21 new lines (3 `DO $$` blocks × ~7 lines each), ZERO other changes
+> 4. **Files touched:** `git status --short` — only `init-db.ts` as `M`, plus the usual 3 leave-alone items
+>
+> Report:
+> - Pre-flight C result: passport_number column present? (yes/no, cite file:line where found)
+> - Pre-flight E result: 3 Neon columns confirmed as `text`? (yes/no, paste query result rows)
+> - Diff size (lines added)
+> - Build status
+> - Test counts before → after
+> - `git status --short` output
+>
+> ### Hard boundaries
+>
+> - Do NOT modify any file other than `artifacts/api-server/src/lib/init-db.ts`
+> - Do NOT use `DROP COLUMN`, `ALTER COLUMN`, `TRUNCATE`, or any destructive DDL anywhere
+> - Do NOT run the migration against any live database — no `pnpm db push`, no `psql` writes, no Neon console SQL beyond the read-only pre-flight query
+> - Do NOT deploy — schema application is Prompt 9's job
+> - If either pre-flight fails, STOP and ask before proceeding
+>
+> Then commit locally (no push): `git commit -m "feat: add pesel_hash/iban_hash/passport_hash columns + indexes to workers schema"`
 
-**Time:** 30 min
-**Success looks like:** init-db.ts has 3 new `ALTER TABLE` blocks + 3 indexes, all using `IF NOT EXISTS`. One local commit. No deploy.
+**Time:** 30 min (~5 min pre-flights + ~5 min edit + ~10 min build/test + ~10 min review)
+
+**Success looks like:**
+- Pre-flight C: `passport_number` confirmed present in init-db.ts
+- Pre-flight E: all 3 target columns on staging Neon confirmed as `text`
+- `init-db.ts` has 3 new `DO $$ BEGIN ... END $$` blocks, ~21 lines added
+- `npx tsx ./build.ts` clean
+- `npx vitest run` shows 330 passing
+- `git status` shows only `init-db.ts` modified + usual 3 leave-alone items
+- 1 local commit, not pushed
+
 **If it fails:**
-- Claude added `DROP COLUMN` or `ALTER COLUMN` anywhere: STOP. Revert immediately. Non-idempotent DDL is dangerous. `git reset --hard HEAD~1`.
-- Claude ran a live migration: check `fly secrets list` + `fly logs` to see if staging rolled. If it did and the columns appear healthy, continue. If anything errored, paste the error.
+- Pre-flight C: `passport_number` not in init-db.ts → STOP. Ask user: (a) prerequisite add, (b) skip passport_hash, (c) custom plan.
+- Pre-flight E: Neon column missing or wrong type → STOP. Staging drifted from code — reconcile before continuing.
+- Build fails: paste error. Usually a heredoc/backtick syntax issue — Claude fixes.
+- Test fails: almost certainly unrelated (this prompt is schema-code only). Paste failure.
+- `git status` shows extra files → *"revert everything except init-db.ts. This prompt is surgical."*
+- Claude used `DROP` / `ALTER COLUMN` / `TRUNCATE` → STOP. `git reset --hard HEAD~1`, retry from Pre-flight C.
+- Claude ran the migration against any live DB → check `fly logs --app apatris-api-staging` + Neon console. If columns exist and look healthy, the migration is idempotent so continue — but flag the deviation. If errors, diagnose before continuing.
 
-⛔ **STOP. Verify the diff is small (3 ALTER + 3 CREATE INDEX, maybe ~20 lines). Do not paste Prompt 7 yet.**
+⛔ **STOP. Do not push. Do not paste Prompt 7.**
 
 ---
 
