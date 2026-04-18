@@ -312,34 +312,117 @@
 
 ## Prompt 5 — Build encryption library + tests (1.5-2 hours)
 
+> ⚠️ **Library only.** No write-path changes, no read-path changes, no workers-db.ts, no routes. Those come in Prompts 6-8. This prompt must stay surgical.
+
 **Paste this:**
 
-> Time to write code. Create `artifacts/api-server/src/lib/encryption.ts` following the plan's §3. Port from EEJ `/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/artifacts/api-server/src/lib/encryption.ts` but make these changes:
+> Build the encryption library per PII-ENCRYPTION-PLAN.md §3. Port from EEJ's proven pattern at `/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/artifacts/api-server/src/lib/encryption.ts`.
 >
-> - Env var: `APATRIS_ENCRYPTION_KEY` (not EEJ_...)
-> - Add a new `lookupHash(plain)` function using HMAC-SHA256 with `APATRIS_LOOKUP_KEY` as the key
-> - Add `maskForRole(value, role)` per the plan's §3 role table (T1/T2 plaintext, T3/T4 masked, T5 own-record plaintext / others masked, unknown = `***`)
-> - For the `APATRIS_ENCRYPTION_KEY` resolver: my blocker-4 answer was [YES fail-loud / NO use EEJ fallback — pick the one I said in Prompt 1]. Apply that.
+> Create exactly two new files:
+> - `artifacts/api-server/src/lib/encryption.ts`
+> - `artifacts/api-server/src/encryption.test.ts`
 >
-> Then write `artifacts/api-server/src/encryption.test.ts` with every test case listed in the plan's §7 (encrypt/decrypt round-trip, empty string, Polish UTF-8, legacy plaintext passthrough, null, garbage ciphertext, role masking for each tier, lookupHash determinism, different-key-different-hash).
+> ### Library spec
 >
-> Run: `cd artifacts/api-server && npx vitest run encryption.test.ts`
+> **Ciphertext format:** `enc:v1:<iv-base64>:<tag-base64>:<ciphertext-base64>` (bit-for-bit compatible with EEJ).
+>
+> **Two required env vars, both fail-loud if missing in non-test envs:**
+> - `APATRIS_ENCRYPTION_KEY` — 64 hex chars (32 bytes), AES-256-GCM key
+> - `APATRIS_LOOKUP_KEY` — 64 hex chars (32 bytes), HMAC-SHA256 key
+>
+> **Key-resolver behavior (critical — do not deviate):**
+> - If `process.env.NODE_ENV === 'test'` AND the env var is missing → use deterministic test values: `'00'.repeat(32)` for encryption key, `'11'.repeat(32)` for lookup key. This carveout MUST be guarded by the `NODE_ENV === 'test'` check and never triggerable in dev, staging, or prod.
+> - If `NODE_ENV !== 'test'` AND either env var is missing → throw on module init with exact message: `"[encryption] APATRIS_ENCRYPTION_KEY is required"` (or `APATRIS_LOOKUP_KEY`). **NO JWT-derived fallback. NO silent warning. App refuses to start.** (Blocker-4 decision, locked 2026-04-18.)
+> - Validate each provided key is exactly 64 lowercase hex chars; throw otherwise.
+>
+> **Functions to export:**
+> ```ts
+> export function encrypt(plain: string): string
+> export function decrypt(stored: string | null | undefined): string | null
+> export function isEncrypted(s: unknown): boolean
+> export function encryptIfPresent(value: unknown): string | undefined
+> export function lookupHash(plain: string): string  // hex, 64 chars
+> export function maskForRole(value: string | null, role: Tier): string | null
+> ```
+>
+> **Behaviors:**
+> - `encrypt`: empty-string passthrough, already-encrypted passthrough (detected via `enc:v1:` prefix), else AES-256-GCM with 12-byte random IV.
+> - `decrypt`: null → null. No `enc:v1:` prefix → return input unchanged (**LEGACY PLAINTEXT PASSTHROUGH** — required for backward compat during the backfill window). Malformed ciphertext → null + `console.error`.
+> - `lookupHash`: HMAC-SHA256 over trimmed plaintext with `APATRIS_LOOKUP_KEY`. Returns 64-char hex. Deterministic.
+> - `maskForRole(value, role)`:
+>   - `T1`, `T2` → `decrypt(value)` (plaintext)
+>   - `T3`, `T4`, `T5` → `***-****-<last4>` of decrypted value
+>   - Unknown role → `***`
+>   - Null input → null
+>   - **T5 is MASKED here by default.** The Compliance Card plaintext exception (`?purpose=compliance_card` + own-record check + audit log) is handled at the route level in Prompt 8, NOT inside this function.
+>
+> ### Tests spec — minimum 18 tests in `encryption.test.ts`
+>
+> **encrypt / decrypt:**
+> 1. round-trip simple ASCII (`"12345678901"`)
+> 2. round-trip Polish UTF-8 (`"Łódź ąćęłńóśźż"`)
+> 3. round-trip 64-char hex string (proves it works on any string)
+> 4. `encrypt("")` → `""`
+> 5. `encrypt(encrypt(x))` → same as `encrypt(x)` (no double-encrypt)
+> 6. `decrypt(null)` → `null`
+> 7. `decrypt("12345678901")` → `"12345678901"` (legacy passthrough)
+> 8. `decrypt("enc:v1:garbage")` → `null` (malformed, logs error)
+>
+> **lookupHash:**
+> 9. determinism: same input → same output (run 3x, assert equal)
+> 10. different inputs → different outputs
+> 11. whitespace trim: `lookupHash("  x  ") === lookupHash("x")`
+> 12. output length is exactly 64 hex chars
+>
+> **maskForRole:**
+> 13. T1 on encrypted value → plaintext
+> 14. T3 on encrypted value → `***-****-<last4>`
+> 15. T5 on encrypted value → `***-****-<last4>` (DEFAULT; Compliance Card exception is route-level)
+> 16. unknown role → `***`
+> 17. null input → null
+> 18. legacy plaintext input: T1 returns as-is; T3 returns `***-****-<last4>` of the plaintext
+>
+> ### Run tests
+>
+> ```bash
+> cd artifacts/api-server && npx vitest run src/encryption.test.ts
+> ```
 >
 > Report:
-> - How many tests written
-> - How many pass / fail
-> - Paste any failures verbatim
+> - Total test count (expect ≥18)
+> - Pass / fail counts
+> - Full stack trace for any failure
 >
-> Do NOT touch any other file. Do NOT modify `workers-db.ts` or any route yet. Just the library + its tests.
+> ### Hard boundaries
+>
+> - Do NOT modify `workers-db.ts`, `audit-log.ts`, `init-db.ts`, any route file, any service file.
+> - Do NOT add `pesel_hash` / `iban_hash` / `passport_hash` columns — that's Prompt 6.
+> - Do NOT wrap any write site — that's Prompt 7.
+> - Do NOT wrap any read site — that's Prompt 8.
+> - If you find yourself editing anything other than the 2 new files, STOP and revert.
 
-**Time:** 1.5-2 hours (mostly Claude writing code; ~15 min for you to review + approve)
-**Success looks like:** `lib/encryption.ts` + `encryption.test.ts` exist; all tests pass (probably 15-20 tests); no other files modified.
+**Time:** 1.5-2 hours (~90 min code + ~15 min review + ~15 min debug buffer)
+
+**Success looks like:**
+- Exactly 2 new files: `artifacts/api-server/src/lib/encryption.ts` + `artifacts/api-server/src/encryption.test.ts`
+- ≥18 tests written, all pass
+- `git status` shows only those 2 files (plus the usual 3 leave-alone items: `.mcp.json`, dist deletion, `.claude/skills/superpowers/`)
+- `npx vitest run src/encryption.test.ts` exit code 0
+
 **If it fails:**
-- Test count <10: Claude skipped cases. Paste the §7 list and say *"missed some — please add these: [list]."*
-- Any test failing: paste the failure verbatim and ask *"what does this error mean? fix it."*
-- Unit tests pass but Claude also touched other files: ask *"revert all files except `lib/encryption.ts` and `encryption.test.ts`. I want this prompt to be surgical."*
+- Vitest can't boot / `"APATRIS_ENCRYPTION_KEY required"` on test run → NODE_ENV==='test' carveout isn't wired. Ask Claude: *"the test-env carveout isn't working — fix the key resolver to use fixed test keys when NODE_ENV === 'test'."*
+- Test count <18 → Claude skipped cases. Paste the 18-item list and ask: *"add the missed cases: [list]."*
+- Any test fails → paste the full stack trace. Claude diagnoses and fixes. You don't read the code yourself.
+- `git status` shows extra files touched → *"revert everything except `lib/encryption.ts` and `encryption.test.ts`. This prompt is surgical."*
+- Polish UTF-8 round-trip fails → likely Buffer encoding bug. Ask Claude to verify `"utf8"` (not `"ascii"`).
 
-⛔ **STOP. Confirm tests pass. Commit the new files locally: `git add artifacts/api-server/src/lib/encryption.ts artifacts/api-server/src/encryption.test.ts && git commit -m "feat: encryption library + tests"`. Do not push. Do not paste Prompt 6 yet.**
+⛔ **STOP. Confirm vitest shows 0 failures. Commit the new files locally only:**
+```bash
+cd /Users/manishshetty/Desktop/Apatris-Compliance-Hub
+git add artifacts/api-server/src/lib/encryption.ts artifacts/api-server/src/encryption.test.ts
+git commit -m "feat: encryption library (AES-256-GCM + HMAC-SHA256) + unit tests"
+```
+**Do NOT push yet. Do NOT paste Prompt 6.**
 
 ---
 
