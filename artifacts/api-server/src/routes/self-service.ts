@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
 import { validateBody, SelfServiceUpdateSchema } from "../lib/validate.js";
+import { encryptIfPresent, lookupHash } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -50,7 +51,19 @@ router.patch("/self-service/profile", requireAuth, validateBody(SelfServiceUpdat
     const vals: unknown[] = [];
     let idx = 1;
     for (const [key, col] of Object.entries(allowed)) {
-      if (body[key] !== undefined) { sets.push(`${col} = $${idx++}`); vals.push(body[key]); }
+      if (body[key] !== undefined) {
+        if (col === "iban") {
+          // Hash-Column Atomicity: iban is encrypted at rest; iban_hash is updated in the SAME SET.
+          const plaintext = typeof body[key] === "string" ? body[key] as string : null;
+          sets.push(`iban = $${idx++}`);
+          vals.push(encryptIfPresent(body[key]));
+          sets.push(`iban_hash = $${idx++}`);
+          vals.push(lookupHash(plaintext));
+        } else {
+          sets.push(`${col} = $${idx++}`);
+          vals.push(body[key]);
+        }
+      }
     }
     if (sets.length === 0) return res.status(400).json({ error: "No fields to update (allowed: phone, email, iban)" });
     sets.push("updated_at = NOW()");

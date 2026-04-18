@@ -6,6 +6,7 @@ import { appendAuditLog } from "../lib/audit-log.js";
 import { generateContractPDF, streamContractPDF, type ContractData } from "../lib/contract-generator.js";
 import { logGdprAction } from "../lib/gdpr.js";
 import { validateBody, CreateContractSchema } from "../lib/validate.js";
+import { encryptIfPresent } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -48,7 +49,7 @@ router.post("/poa", requireAuth, requireRole("Admin", "Executive"), async (req, 
     const row = await queryOne(
       `INSERT INTO power_of_attorney (tenant_id, full_name, position, email, phone, pesel, can_sign_zlecenie, can_sign_o_prace, can_sign_b2b, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [req.tenantId!, fullName.trim(), position.trim(), email ?? null, phone ?? null, pesel ?? null,
+      [req.tenantId!, fullName.trim(), position.trim(), email ?? null, phone ?? null, encryptIfPresent(pesel),
        canSignZlecenie ?? true, canSignOPrace ?? true, canSignB2b ?? true, notes ?? null]
     );
     appendAuditLog({ timestamp: new Date().toISOString(), actor: req.user?.name ?? "unknown", actorEmail: req.user?.email ?? "", action: "POA_CREATE", workerId: (row as any)?.id ?? "", workerName: fullName!.trim(), note: `POA signatory created: ${position}` });
@@ -73,7 +74,11 @@ router.patch("/poa/:id", requireAuth, requireRole("Admin", "Executive"), async (
     };
 
     for (const [key, col] of Object.entries(fields)) {
-      if (body[key] !== undefined) { sets.push(`${col} = $${idx++}`); vals.push(body[key]); }
+      if (body[key] !== undefined) {
+        sets.push(`${col} = $${idx++}`);
+        // PESEL on power_of_attorney is encrypted at rest (no hash column — no WHERE lookups on this field).
+        vals.push(col === "pesel" ? encryptIfPresent(body[key]) : body[key]);
+      }
     }
     if (sets.length === 0) return res.status(400).json({ error: "No fields to update" });
     sets.push("updated_at = NOW()");

@@ -18,6 +18,7 @@
 
 import { query, queryOne, execute } from "../lib/db.js";
 import { hardenIntake, computeFileHash, type HardeningResult } from "./document-intake-hardening.service.js";
+import { encryptIfPresent, lookupHash } from "../lib/encryption.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -665,7 +666,14 @@ export async function confirmIntake(
           }
 
           // Identity fields
-          if (fields.passportNumber) { updates.push(`passport_number = $${idx++}`); values.push(fields.passportNumber); }
+          if (fields.passportNumber) {
+            // Hash-Column Atomicity: encrypted column + hash column updated in same SET.
+            const plaintext = typeof fields.passportNumber === "string" ? fields.passportNumber : null;
+            updates.push(`passport_number = $${idx++}`);
+            values.push(encryptIfPresent(fields.passportNumber));
+            updates.push(`passport_hash = $${idx++}`);
+            values.push(lookupHash(plaintext));
+          }
           if (fields.nationality) { updates.push(`nationality = $${idx++}`); values.push(fields.nationality); }
           if (fields.dateOfBirth) { updates.push(`date_of_birth = $${idx++}`); values.push(fields.dateOfBirth); }
 

@@ -1,5 +1,6 @@
 import { execute, query, queryOne } from "./db.js";
 import { setDefaultTenantId } from "./tenant.js";
+import { encryptIfPresent, lookupHash } from "./encryption.js";
 
 export async function initializeDatabase(): Promise<void> {
   console.log("[init-db] Creating tables if they do not exist…");
@@ -696,12 +697,14 @@ export async function initializeDatabase(): Promise<void> {
       await execute(
         `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, email, phone,
           trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date,
-          hourly_rate, monthly_hours, pesel, iban)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+          hourly_rate, monthly_hours, pesel, pesel_hash, iban, iban_hash)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
         [
           defaultTenantId, w.name, w.spec, w.site, w.email, w.phone,
           w.trc, w.passport, w.bhp, w.workPermit, w.contract,
-          w.rate, w.hours, w.pesel, w.iban,
+          w.rate, w.hours,
+          encryptIfPresent(w.pesel), lookupHash(w.pesel),
+          encryptIfPresent(w.iban), lookupHash(w.iban),
         ]
       );
     }

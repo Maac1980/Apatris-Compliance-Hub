@@ -15,6 +15,7 @@
  */
 
 import { execute, query, queryOne } from "./db.js";
+import { encryptIfPresent, lookupHash } from "./encryption.js";
 
 const d = (offsetDays: number) => {
   const dt = new Date(Date.now() + offsetDays * 86_400_000);
@@ -104,13 +105,16 @@ export async function seedTestScenarios(tenantId: string): Promise<{ created: nu
     if (exists) continue;
 
     await execute(
-      `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, nationality, passport_number,
+      `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, nationality, passport_number, passport_hash,
         passport_expiry, trc_expiry, work_permit_expiry, bhp_expiry, contract_end_date,
-        hourly_rate, monthly_hours, pesel, last_entry_date, visa_expiry)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-      [tenantId, w.name, w.spec, w.site, w.nationality, w.passport_number,
+        hourly_rate, monthly_hours, pesel, pesel_hash, last_entry_date, visa_expiry)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      [tenantId, w.name, w.spec, w.site, w.nationality,
+        encryptIfPresent(w.passport_number), lookupHash(w.passport_number),
         w.passport_expiry, w.trc_expiry, w.work_permit_expiry, w.bhp_expiry, w.contract_end_date,
-        31.40, 160, w.pesel, w.last_entry_date, w.visa_expiry]
+        31.40, 160,
+        encryptIfPresent(w.pesel), lookupHash(w.pesel),
+        w.last_entry_date, w.visa_expiry]
     );
     created++;
 

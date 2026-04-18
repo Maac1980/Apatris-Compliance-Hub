@@ -1,5 +1,6 @@
 import { query, queryOne, execute } from "./db.js";
 import { getDefaultTenantId } from "./tenant.js";
+import { encryptIfPresent, lookupHash } from "./encryption.js";
 
 export async function seedComprehensiveData(): Promise<void> {
   if (process.env.NODE_ENV === "production") { console.log("[seed-full] Production — skipping."); return; }
@@ -56,9 +57,12 @@ export async function seedComprehensiveData(): Promise<void> {
   const workerIds: string[] = [];
   for (const w of workers) {
     const row = await queryOne<{ id: string }>(
-      `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, phone, email, pesel, iban, hourly_rate, monthly_hours, trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date, medical_exam_expiry)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
-      [tenantId, w.name, w.spec, w.site, w.phone, w.email, w.pesel, w.iban, w.rate, w.hours, w.trc, w.passport, w.bhp, w.wp, w.contract, w.medical]
+      `INSERT INTO workers (tenant_id, full_name, specialization, assigned_site, phone, email, pesel, pesel_hash, iban, iban_hash, hourly_rate, monthly_hours, trc_expiry, passport_expiry, bhp_expiry, work_permit_expiry, contract_end_date, medical_exam_expiry)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
+      [tenantId, w.name, w.spec, w.site, w.phone, w.email,
+        encryptIfPresent(w.pesel), lookupHash(w.pesel),
+        encryptIfPresent(w.iban), lookupHash(w.iban),
+        w.rate, w.hours, w.trc, w.passport, w.bhp, w.wp, w.contract, w.medical]
     );
     workerIds.push(row!.id);
   }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { encryptIfPresent } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.post("/trc/cases", requireAuth, async (req, res) => {
         voivodeship, employer_name, employer_nip, start_date, expiry_date, notes, assigned_to)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
       [
-        req.tenantId!, workerId ?? null, workerName, nationality ?? null, passportNumber ?? null,
+        req.tenantId!, workerId ?? null, workerName, nationality ?? null, encryptIfPresent(passportNumber),
         caseType ?? "Type A", voivodeship ?? null, employerName ?? null, employerNip ?? null,
         startDate ?? null, expiryDate ?? null, notes ?? null, assignedTo ?? null,
       ]
@@ -72,7 +73,11 @@ router.patch("/trc/cases/:id", requireAuth, async (req, res) => {
     const vals: unknown[] = [];
     let idx = 1;
     for (const [key, col] of Object.entries(fieldMap)) {
-      if (body[key] !== undefined) { sets.push(`${col} = $${idx++}`); vals.push(body[key]); }
+      if (body[key] !== undefined) {
+        sets.push(`${col} = $${idx++}`);
+        // passport_number on trc_cases is encrypted at rest (no hash column — no WHERE lookups on this field).
+        vals.push(col === "passport_number" ? encryptIfPresent(body[key]) : body[key]);
+      }
     }
     if (sets.length === 0) return res.status(400).json({ error: "No fields to update" });
     sets.push("updated_at = NOW()");

@@ -1,4 +1,29 @@
 import { query, queryOne, execute } from "./db.js";
+import { encryptIfPresent, lookupHash, decrypt, isEncrypted } from "./encryption.js";
+
+// ── PII encryption: columns that get encrypted at rest + mirrored to a hash column
+//    for searchable duplicate detection. NOT including nip (Blocker 2 locked 2026-04-18).
+const PII_TO_HASH_COL: Record<string, string> = {
+  pesel: "pesel_hash",
+  iban: "iban_hash",
+  passport_number: "passport_hash",
+};
+
+/**
+ * Compute the lookup hash for a write value that may be plaintext or already ciphertext.
+ * Returns null for null/empty/invalid inputs. If input is ciphertext, decrypts first then
+ * hashes the plaintext so the hash column stays searchable even for already-encrypted input.
+ */
+function piiHashFromInput(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (isEncrypted(trimmed)) {
+    const pt = decrypt(trimmed);
+    return pt === null ? null : lookupHash(pt);
+  }
+  return lookupHash(trimmed);
+}
 
 export interface WorkerRow {
   id: string;
@@ -172,10 +197,12 @@ export async function createWorker(
   const pesel = fields.pesel ?? (fields as Record<string, unknown>)["PESEL"];
   const nip = fields.nip ?? (fields as Record<string, unknown>)["NIP"];
 
-  if (pesel && typeof pesel === "string" && pesel.trim() !== "") {
+  // Duplicate PESEL check: migrated to hash-column lookup since pesel itself is now ciphertext.
+  const peselHashForDupCheck = piiHashFromInput(pesel);
+  if (peselHashForDupCheck) {
     const dup = await queryOne(
-      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel = $2",
-      [tenantId, pesel.trim()]
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel_hash = $2",
+      [tenantId, peselHashForDupCheck]
     );
     if (dup) {
       throw new Error(`PESEL ${pesel} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
@@ -201,10 +228,23 @@ export async function createWorker(
     if (value === undefined) continue;
     const col = resolveColumn(key) ?? key;
     if (!MUTABLE_COLUMNS.has(col)) continue;
-    columns.push(col);
-    placeholders.push(`$${idx}`);
-    values.push(value);
-    idx++;
+    const hashCol = PII_TO_HASH_COL[col];
+    if (hashCol) {
+      // Hash-Column Atomicity: encrypted column + hash column added in same INSERT.
+      columns.push(col);
+      placeholders.push(`$${idx}`);
+      values.push(encryptIfPresent(value));
+      idx++;
+      columns.push(hashCol);
+      placeholders.push(`$${idx}`);
+      values.push(piiHashFromInput(value));
+      idx++;
+    } else {
+      columns.push(col);
+      placeholders.push(`$${idx}`);
+      values.push(value);
+      idx++;
+    }
   }
 
   if (columns.length === 1) {
@@ -228,10 +268,12 @@ export async function updateWorker(
 ): Promise<WorkerRow> {
   // Check for duplicate PESEL/NIP if these fields are being updated
   const peselVal = fields.pesel ?? fields.PESEL;
-  if (peselVal && typeof peselVal === "string" && peselVal.trim() !== "") {
+  // Duplicate PESEL check on update: migrated to hash-column lookup.
+  const peselHashForUpdateCheck = piiHashFromInput(peselVal);
+  if (peselHashForUpdateCheck) {
     const dup = await queryOne(
-      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel = $2 AND id != $3",
-      [tenantId, peselVal.trim(), id]
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND pesel_hash = $2 AND id != $3",
+      [tenantId, peselHashForUpdateCheck, id]
     );
     if (dup) {
       throw new Error(`PESEL ${peselVal} already exists for worker "${(dup as any).full_name}". Duplicate workers are not allowed.`);
@@ -257,9 +299,20 @@ export async function updateWorker(
     if (value === undefined) continue;
     const col = resolveColumn(key);
     if (!col || !MUTABLE_COLUMNS.has(col)) continue;
-    setClauses.push(`${col} = $${idx}`);
-    values.push(value);
-    idx++;
+    const hashCol = PII_TO_HASH_COL[col];
+    if (hashCol) {
+      // Hash-Column Atomicity: encrypted column + hash column updated in same SET.
+      setClauses.push(`${col} = $${idx}`);
+      values.push(encryptIfPresent(value));
+      idx++;
+      setClauses.push(`${hashCol} = $${idx}`);
+      values.push(piiHashFromInput(value));
+      idx++;
+    } else {
+      setClauses.push(`${col} = $${idx}`);
+      values.push(value);
+      idx++;
+    }
   }
 
   // Always bump updated_at

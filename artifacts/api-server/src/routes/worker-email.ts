@@ -13,6 +13,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { encryptIfPresent } from "../lib/encryption.js";
 
 const router = Router();
 const LEGAL_ROLES = ["Admin", "Executive", "LegalHead"];
@@ -218,7 +219,7 @@ router.post("/v1/poa/create", requireAuth, requireRole(...LEGAL_ROLES), async (r
       `INSERT INTO poa_registry (worker_id, tenant_id, representative_name, representative_role, worker_passport_number, scope, voivodeship, stamp_duty_paid, stamp_duty_amount, worker_signature, valid_from, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_DATE, 'active') RETURNING *`,
       [b.workerId, req.tenantId!, b.representativeName, b.representativeRole ?? null,
-       b.workerPassportNumber, b.scope, b.voivodeship ?? null,
+       encryptIfPresent(b.workerPassportNumber), b.scope, b.voivodeship ?? null,
        b.stampDutyPaid ?? false, 17.00, b.workerSignature ?? false]
     );
 
