@@ -77,6 +77,25 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // PII backfill one-shot script (Prompt 11). Bundled as sidecar so the
+  // deployed image can execute it via `node dist/scripts/backfill-pii.cjs`
+  // inside `fly ssh console`. esbuild inlines src/lib/encryption.ts and
+  // src/lib/db.ts — same compiled logic as the server, no duplication.
+  console.log("building backfill script...");
+  await esbuild({
+    entryPoints: [path.resolve(__dirname, "scripts/backfill-pii.ts")],
+    platform: "node",
+    bundle: true,
+    format: "cjs",
+    outfile: path.resolve(distDir, "scripts/backfill-pii.cjs"),
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
+    minify: true,
+    external: externals,
+    logLevel: "info",
+  });
 }
 
 buildAll().catch((err) => {
