@@ -211,16 +211,24 @@ router.get("/workers/me", requireAuth, async (req, res) => {
 router.get("/workers", requireAuth, async (req, res) => {
   try {
     const { search, specialization, status, site } = req.query as Record<string, string>;
-    const allWorkers = await cached(
-      `workers:${req.tenantId}`,
-      async () => {
-        const rows = await fetchAllWorkers(req.tenantId!);
-        return rows.map((r) => mapRowToWorker(r)).filter(
-          (w) => w.name && w.name !== "Unknown" && w.name.trim() !== ""
-        );
-      },
-      15_000 // 15s cache — workers list doesn't change every second
+
+    // Cache raw DB rows only; role-aware mapping happens per request so each
+    // role sees the correct mask. Prior bug (P0-1, fixed 2026-04-20): mapping
+    // inside cached() returned whichever role's mask filled the cache first —
+    // post-encryption this meant every caller got garbage-masked ciphertext.
+    // Cache key suffix `:raw` keeps existing `cacheInvalidate('workers:${t}')`
+    // substring match working (workers.ts:537, :567).
+    const rawRows = await cached(
+      `workers:${req.tenantId}:raw`,
+      () => fetchAllWorkers(req.tenantId!),
+      15_000 // 15s cache — raw row data doesn't change every second
     );
+
+    const role = (req as any).user?.role as Tier | undefined;
+    const allWorkers = rawRows
+      .map((r) => mapRowToWorker(r, role))
+      .filter((w) => w.name && w.name !== "Unknown" && w.name.trim() !== "");
+
     const filtered = filterWorkers(allWorkers, search, specialization, status, site);
     res.json({ workers: filtered, total: filtered.length });
   } catch (err) {

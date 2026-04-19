@@ -179,4 +179,27 @@ describe("Read paths — decrypt + role masking + Compliance Card + audit saniti
     expect(src).toMatch(/!ownRecord[\s\S]+?PLAINTEXT_PII_ACCESS_DENIED/);
     expect(src).toMatch(/!ownRecord[\s\S]+?mapRowToWorker\(worker,\s*"T5"\)/);
   });
+
+  // Test 19: P0-1 regression guard. The GET /workers list handler must pass
+  // `role` to mapRowToWorker — otherwise the mask fallback runs on ciphertext
+  // and returns garbage. Before 2026-04-20 this call omitted role AND cached
+  // the mapped result, which wedged every caller into the same broken mask.
+  // Two assertions: (1) cache key has `:raw` suffix signaling raw-row cache,
+  // (2) list handler passes `role` to mapRowToWorker after cache retrieval.
+  it("Test 19: GET /workers list passes role to mapRowToWorker (P0-1 guard)", () => {
+    const src = srcOf("routes/workers.ts");
+    // The list handler is the first router.get("/workers", ...) in the file.
+    const listMatch = src.match(/router\.get\("\/workers",\s*requireAuth[\s\S]+?^\}\);/m);
+    expect(listMatch).not.toBeNull();
+    const listHandler = listMatch![0];
+
+    // Cache must hold raw rows (not mapped workers). Key ends in `:raw`.
+    expect(listHandler).toMatch(/`workers:\$\{req\.tenantId\}:raw`/);
+    // Mapping uses role — either `role` local or `req.user.role as Tier`.
+    expect(listHandler).toMatch(/mapRowToWorker\(\s*r,\s*role\s*\)|mapRowToWorker\(r,\s*\(req as any\)\.user\?\.role as Tier\)/);
+    // Regression guard: the old pattern `.map((r) => mapRowToWorker(r))` must
+    // not be the only call shape present in the list handler.
+    const bareCalls = listHandler.match(/mapRowToWorker\(\s*r\s*\)/g) ?? [];
+    expect(bareCalls.length).toBe(0);
+  });
 });
