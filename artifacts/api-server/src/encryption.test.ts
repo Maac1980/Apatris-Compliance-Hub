@@ -194,8 +194,11 @@ describe("encryption — maskForRole", () => {
   });
 
   it("unknown role returns ***", () => {
+    // Note: truly unknown strings only. Legacy role names Admin/Executive/LegalHead/TechOps/
+    // Coordinator/Professional map to tiers via ROLE_TO_TIER (Apr 19 fix) and are covered
+    // in separate tests below. Empty string and typos fall through to ***.
     expect(maskForRole(encrypted, "unknown")).toBe("***");
-    expect(maskForRole(encrypted, "Executive")).toBe("***");
+    expect(maskForRole(encrypted, "Bogus")).toBe("***");
     expect(maskForRole(encrypted, "")).toBe("***");
   });
 
@@ -212,6 +215,46 @@ describe("encryption — maskForRole", () => {
   it("short plaintext (<=4 chars) masked to *** instead of last-4 format", () => {
     expect(maskForRole(encrypt("abc"), "T3")).toBe("***");
     expect(maskForRole("abcd", "T3")).toBe("***");
+  });
+
+  // ── Legacy role-name support (page-level masking model locked 2026-04-19) ──
+  it("legacy role name 'Admin' maps to T1 → returns plaintext", () => {
+    expect(maskForRole(encrypted, "Admin")).toBe("12345678901");
+  });
+
+  it("legacy role name 'Executive' maps to T1 → returns plaintext", () => {
+    expect(maskForRole(encrypted, "Executive")).toBe("12345678901");
+  });
+
+  it("legacy role name 'LegalHead' maps to T1 → returns plaintext", () => {
+    expect(maskForRole(encrypted, "LegalHead")).toBe("12345678901");
+  });
+
+  it("legacy role name 'TechOps' maps to T1 → returns plaintext (staff access, page-level model)", () => {
+    expect(maskForRole(encrypted, "TechOps")).toBe("12345678901");
+  });
+
+  it("legacy role name 'Coordinator' maps to T1 → returns plaintext (staff access)", () => {
+    expect(maskForRole(encrypted, "Coordinator")).toBe("12345678901");
+  });
+
+  it("legacy role name 'Professional' maps to T5 → returns masked last-4", () => {
+    expect(maskForRole(encrypted, "Professional")).toBe("***-****-8901");
+  });
+
+  it("null value + any role → null", () => {
+    expect(maskForRole(null, "Admin")).toBe(null);
+    expect(maskForRole(null, "T1")).toBe(null);
+  });
+
+  it("unknown role string → *** (defensive fallback)", () => {
+    expect(maskForRole(encrypted, "UnknownRole")).toBe("***");
+    expect(maskForRole(encrypted, "SuperUser")).toBe("***");
+    expect(maskForRole(encrypted, "")).toBe("***");
+  });
+
+  it("null role → *** (defensive — protects against missing JWT claim)", () => {
+    expect(maskForRole(encrypted, null)).toBe("***");
   });
 });
 

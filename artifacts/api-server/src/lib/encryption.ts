@@ -93,12 +93,28 @@ export function lookupHash(plain: string | null | undefined): string | null {
   return createHmac("sha256", getLookupKey()).update(trimmed).digest("hex");
 }
 
-export function maskForRole(value: string | null, role: Tier | string): string | null {
+// Role-to-tier mapping for JWT role strings (staff-vs-worker page-level masking, locked 2026-04-19).
+// Staff roles (Admin/Executive/LegalHead/TechOps/Coordinator) → T1 plaintext.
+// Only Professional (workers) is masked by default; their plaintext PII access is gated
+// via /workers/me?purpose=compliance_card own-record flow in Prompt 8.
+const ROLE_TO_TIER: Record<string, Tier> = {
+  Admin: "T1",
+  Executive: "T1",
+  LegalHead: "T1",
+  TechOps: "T1",
+  Coordinator: "T1",
+  Professional: "T5",
+};
+
+export function maskForRole(value: string | null, role: string | null): string | null {
   if (value == null) return null;
-  if (role === "T1" || role === "T2") {
+  if (role == null) return "***";
+  // Accept either legacy role name (Admin/Executive/...) or tier string (T1-T5) directly.
+  const tier = ROLE_TO_TIER[role] ?? role;
+  if (tier === "T1" || tier === "T2") {
     return decrypt(value);
   }
-  if (role === "T3" || role === "T4" || role === "T5") {
+  if (tier === "T3" || tier === "T4" || tier === "T5") {
     const plain = decrypt(value);
     if (plain == null) return null;
     if (plain.length <= 4) return "***";

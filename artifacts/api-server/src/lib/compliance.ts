@@ -1,5 +1,5 @@
 import type { WorkerRow } from "./workers-db.js";
-import { maskForRole, type Tier } from "./encryption.js";
+import { maskForRole } from "./encryption.js";
 
 export interface Attachment {
   id: string;
@@ -109,13 +109,22 @@ function computeStatus(worker: Partial<Worker>): {
 /**
  * Project a DB row into a Worker for API response.
  *
- * @param row - The DB row (PII fields should be plaintext post Step A decrypt)
- * @param role - Optional tier. If provided, uses role-aware masking via maskForRole
- *               (T1/T2 plaintext, T3-T5 masked). If omitted, uses legacy maskSensitive
- *               (always masked) for backward compatibility with existing callers.
+ * Overloaded for null-safety:
+ * - When caller passes a non-null `WorkerRow`, returns `Worker` (preserves backward compat).
+ * - When caller passes `WorkerRow | null` (e.g., from `fetchWorkerById`), returns `Worker | null`;
+ *   caller must handle the null case.
+ *
+ * @param row - The DB row (PII fields should be plaintext post Step A decrypt).
+ * @param role - Optional role string (staff role name like "Admin", "Executive", etc., OR
+ *               tier string T1-T5). If provided, uses role-aware masking via maskForRole
+ *               (staff → plaintext, Professional → masked). If omitted, uses legacy
+ *               maskSensitive (always masked) for backward compatibility.
  *               nip is always masked via maskSensitive (Blocker 2 — not encrypted).
  */
-export function mapRowToWorker(row: WorkerRow, role?: Tier): Worker {
+export function mapRowToWorker(row: WorkerRow, role?: string): Worker;
+export function mapRowToWorker(row: WorkerRow | null, role?: string): Worker | null;
+export function mapRowToWorker(row: WorkerRow | null, role?: string): Worker | null {
+  if (row == null) return null;
   const trcExpiry = formatDate(row.trc_expiry);
   const passportExpiry = formatDate(row.passport_expiry);
   const bhpExpiry = formatDate(row.bhp_expiry);

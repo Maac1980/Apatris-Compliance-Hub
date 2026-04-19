@@ -83,6 +83,14 @@ describe("Worker Data Mapping", () => {
     const w1 = mapRowToWorker({ ...MOCK_ROW, iban: null } as any);
     expect(w1.iban).toBeNull();
   });
+
+  it("null row → null (defensive guard, does not throw) — Apr 19 null-safety fix", () => {
+    // Before Apr 19, mapRowToWorker crashed on row.trc_expiry when callers
+    // passed null (e.g., fetchWorkerById returning null on tenant miss).
+    // The null guard returns null cleanly; callers must handle it (e.g., 404 or 500).
+    expect(() => mapRowToWorker(null)).not.toThrow();
+    expect(mapRowToWorker(null)).toBeNull();
+  });
 });
 
 // ═══ WORKER FILTERING ═══════════════════════════════════════════════════════
