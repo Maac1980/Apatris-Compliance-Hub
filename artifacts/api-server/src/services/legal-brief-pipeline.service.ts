@@ -18,6 +18,7 @@ import { queryOne, execute } from "../lib/db.js";
 import { getWorkerLegalSnapshot, type LegalSnapshot } from "./legal-status.service.js";
 import { checkAIRateLimit } from "../lib/ai-rate-limiter.js";
 import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
+import { callClaudeWithSchema } from "../lib/claude-schema.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -407,33 +408,42 @@ async function runStage1(caseData: string, tenantId: string): Promise<Stage1Resu
     ? `RECENT RESEARCH (from Perplexity real-time search):\n${perplexityResearch}\n\nUse this research to inform your analysis.`
     : "NOTE: Real-time legal research was NOT available for this analysis. Base your analysis on your training data only. Be MORE CONSERVATIVE with confidence scores — reduce by at least 0.15.";
 
-  // Claude for structured article mapping
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 3000,
-      system: `You are an immigration lawyer assistant specializing in Polish law. You are NOT making legal decisions. You are NOT giving final legal advice. You must connect legal provisions to THIS specific case. If unsure, say "uncertain" — do not guess.
+  // Claude for structured article mapping — schema-enforced via tool_use.
+  const STAGE1_SCHEMA = {
+    type: "object",
+    properties: {
+      articles: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            article: { type: "string" },
+            explanation: { type: "string" },
+            whyItApplies: { type: "string" },
+            impact: { type: "string", enum: ["SUPPORTS", "WEAKENS", "UNCLEAR"] },
+          },
+          required: ["article", "explanation", "whyItApplies", "impact"],
+        },
+      },
+      proceduralNotes: { type: "array", items: { type: "string" } },
+      commonPatterns: { type: "array", items: { type: "string" } },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+    },
+    required: ["articles", "proceduralNotes", "commonPatterns", "confidence"],
+  };
+
+  const json = await callClaudeWithSchema<any>({
+    apiKey, maxTokens: 3000,
+    system: `You are an immigration lawyer assistant specializing in Polish law. You are NOT making legal decisions. You are NOT giving final legal advice. You must connect legal provisions to THIS specific case. If unsure, say "uncertain" — do not guess.
 
 Identify relevant Polish immigration law: TRC provisions, Art. 108 continuity, deadlines, formal defects, appeals, Ustawa o cudzoziemcach, KPA procedures.
 
-${perplexityNote}
-
-Return ONLY valid JSON:
-{
-  "articles": [{"article":"Art. X","explanation":"...","whyItApplies":"...","impact":"SUPPORTS|WEAKENS|UNCLEAR"}],
-  "proceduralNotes": ["..."],
-  "commonPatterns": ["..."],
-  "confidence": 0.0-1.0
-}`,
-      messages: [{ role: "user", content: caseData }],
-    }),
+${perplexityNote}`,
+    userMessage: caseData,
+    toolName: "emit_stage1_research",
+    toolDescription: "Emit the Stage 1 legal research findings: relevant Polish immigration law articles, procedural notes, common patterns, and a confidence score.",
+    inputSchema: STAGE1_SCHEMA,
   });
-
-  if (!res.ok) throw new Error(`Stage 1 AI error: ${res.status}`);
-  const data = await res.json() as any;
-  const raw = data.content?.find((b: any) => b.type === "text")?.text ?? "";
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
 
   const rawConfidence = typeof json.confidence === "number" ? Math.min(1, Math.max(0, json.confidence)) : 0.5;
   const adjustedConfidence = perplexityAvailable ? rawConfidence : Math.max(0, rawConfidence - 0.15);
@@ -464,12 +474,43 @@ async function runStage2(caseData: string, snapshot: LegalSnapshot, stage1: Stag
 
   const stage1Context = `STAGE 1 RESEARCH RESULTS:\nArticles found: ${stage1.articles.map(a => `${a.article} (${a.impact}): ${a.explanation}`).join("\n")}\nProcedural notes: ${stage1.proceduralNotes.join("; ")}\nCommon patterns: ${stage1.commonPatterns.join("; ")}`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 4096,
-      system: `You are a legal assistant helping a lawyer review a Polish immigration case. Do NOT override the legal snapshot. Do NOT invent facts. Use ONLY provided data and research. This is for lawyer review only.
+  const STAGE2_SCHEMA = {
+    type: "object",
+    properties: {
+      caseSummary: { type: "string" },
+      likelyIssue: { type: "string" },
+      articleApplication: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            article: { type: "string" },
+            explanation: { type: "string" },
+            whyItApplies: { type: "string" },
+            impact: { type: "string", enum: ["SUPPORTS", "WEAKENS", "UNCLEAR"] },
+          },
+          required: ["article", "explanation", "whyItApplies", "impact"],
+        },
+      },
+      appealGrounds: { type: "array", items: { type: "string" } },
+      missingEvidence: { type: "array", items: { type: "string" } },
+      nextSteps: { type: "array", items: { type: "string" } },
+      lawyerReviewDraft: { type: "string" },
+      appealOutlineDraft: { type: "string" },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+      requiresLawyerReview: { type: "boolean" },
+    },
+    required: [
+      "caseSummary", "likelyIssue", "articleApplication",
+      "appealGrounds", "missingEvidence", "nextSteps",
+      "lawyerReviewDraft", "appealOutlineDraft",
+      "confidence", "requiresLawyerReview",
+    ],
+  };
+
+  const json = await callClaudeWithSchema<any>({
+    apiKey, maxTokens: 4096,
+    system: `You are a legal assistant helping a lawyer review a Polish immigration case. Do NOT override the legal snapshot. Do NOT invent facts. Use ONLY provided data and research. This is for lawyer review only.
 
 ${stage1Context}${rejectionWarning}
 
@@ -481,29 +522,12 @@ TASK:
 5. Missing evidence (what's needed)
 6. Next steps (prioritized)
 7. Draft lawyer note (internal, 3-5 sentences)
-8. Draft appeal outline (if appeal is possible)
-
-Return ONLY valid JSON:
-{
-  "caseSummary": "",
-  "likelyIssue": "",
-  "articleApplication": [{"article":"","explanation":"","whyItApplies":"","impact":"SUPPORTS|WEAKENS|UNCLEAR"}],
-  "appealGrounds": [],
-  "missingEvidence": [],
-  "nextSteps": [],
-  "lawyerReviewDraft": "",
-  "appealOutlineDraft": "",
-  "confidence": 0.0-1.0,
-  "requiresLawyerReview": true
-}`,
-      messages: [{ role: "user", content: `${caseData}\n\n${rejectionText ? `REJECTION TEXT:\n"${rejectionText.slice(0, 3000)}"` : ""}` }],
-    }),
+8. Draft appeal outline (if appeal is possible)`,
+    userMessage: `${caseData}\n\n${rejectionText ? `REJECTION TEXT:\n"${rejectionText.slice(0, 3000)}"` : ""}`,
+    toolName: "emit_stage2_case_review",
+    toolDescription: "Emit the Stage 2 case review: structured lawyer-facing analysis with appeal grounds, missing evidence, next steps, and draft appeal outline.",
+    inputSchema: STAGE2_SCHEMA,
   });
-
-  if (!res.ok) throw new Error(`Stage 2 AI error: ${res.status}`);
-  const data = await res.json() as any;
-  const raw = data.content?.find((b: any) => b.type === "text")?.text ?? "";
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
 
   return {
     caseSummary: String(json.caseSummary ?? "").slice(0, 3000),
@@ -567,13 +591,33 @@ async function runStage3(snapshot: LegalSnapshot, stage1: Stage1Result, stage2: 
   let aiValid = true;
   let aiNotes = "";
 
+  const STAGE3_SCHEMA = {
+    type: "object",
+    properties: {
+      isValid: { type: "boolean" },
+      issues: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["MISMATCH", "INVENTED_FACT", "IRRELEVANT_ARTICLE", "INCONSISTENT_ACTION", "SAFETY", "INCOMPLETE", "UNKNOWN"] },
+            description: { type: "string" },
+            severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+          },
+          required: ["type", "description", "severity"],
+        },
+      },
+      riskLevel: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+      requiresReview: { type: "boolean" },
+      notes: { type: "string" },
+    },
+    required: ["isValid", "issues", "riskLevel", "requiresReview", "notes"],
+  };
+
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6", max_tokens: 1500,
-        system: `You are a legal AI output validator. Do NOT generate new legal reasoning. ONLY validate.
+    const json = await callClaudeWithSchema<any>({
+      apiKey, maxTokens: 1500,
+      system: `You are a legal AI output validator. Do NOT generate new legal reasoning. ONLY validate.
 
 LEGAL SNAPSHOT (SOURCE OF TRUTH — do NOT contradict):
 Status: ${snapshot.legalStatus}
@@ -587,33 +631,17 @@ You MUST set isValid to false if:
 - ANY claim contradicts the legal snapshot
 - ANY fact is invented (not in provided data)
 - Articles cited are not relevant to this specific case type
-- Suggested actions are inconsistent with the legal status
-
-Return ONLY valid JSON:
-{
-  "isValid": true/false,
-  "issues": [{"type":"MISMATCH|INVENTED_FACT|IRRELEVANT_ARTICLE|INCONSISTENT_ACTION|SAFETY|INCOMPLETE","description":"...","severity":"LOW|MEDIUM|HIGH|CRITICAL"}],
-  "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL",
-  "requiresReview": true,
-  "notes": "overall assessment"
-}`,
-        messages: [{
-          role: "user",
-          content: `STAGE 1 OUTPUT:\n${JSON.stringify(stage1, null, 1).slice(0, 3000)}\n\nSTAGE 2 OUTPUT:\n${JSON.stringify(stage2, null, 1).slice(0, 4000)}`,
-        }],
-      }),
+- Suggested actions are inconsistent with the legal status`,
+      userMessage: `STAGE 1 OUTPUT:\n${JSON.stringify(stage1, null, 1).slice(0, 3000)}\n\nSTAGE 2 OUTPUT:\n${JSON.stringify(stage2, null, 1).slice(0, 4000)}`,
+      toolName: "emit_stage3_validation",
+      toolDescription: "Emit the Stage 3 validation verdict: isValid flag, list of issues with severity, overall risk level, and assessment notes.",
+      inputSchema: STAGE3_SCHEMA,
     });
-
-    if (res.ok) {
-      const data = await res.json() as any;
-      const raw = data.content?.find((b: any) => b.type === "text")?.text ?? "";
-      const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
-      aiValid = json.isValid === true;
-      aiIssues = Array.isArray(json.issues) ? json.issues.map((i: any) => ({
-        type: String(i.type ?? "UNKNOWN"), description: String(i.description ?? ""), severity: String(i.severity ?? "MEDIUM"),
-      })) : [];
-      aiNotes = String(json.notes ?? "").slice(0, 2000);
-    }
+    aiValid = json.isValid === true;
+    aiIssues = Array.isArray(json.issues) ? json.issues.map((i: any) => ({
+      type: String(i.type ?? "UNKNOWN"), description: String(i.description ?? ""), severity: String(i.severity ?? "MEDIUM"),
+    })) : [];
+    aiNotes = String(json.notes ?? "").slice(0, 2000);
   } catch { /* AI validation failed — rely on deterministic checks */ }
 
   // ── MERGE + CRITICAL OVERRIDE ─────────────────────────────────────────
@@ -739,12 +767,27 @@ async function runStage5(
     tone === "CAREFUL" ? "This is a complex situation. Do NOT promise success. Be honest and supportive without false hope." :
     "Provide a clear, neutral explanation.";
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 2000,
-      system: `You are writing a personal explanation for a worker named ${firstName} about their immigration case. ${languageInstruction}
+  const STAGE5_SCHEMA = {
+    type: "object",
+    properties: {
+      greeting: { type: "string" },
+      whatHappened: { type: "string" },
+      whyItWasNegative: { type: "string" },
+      whatWeAreDoing: { type: "string" },
+      whatYouNeedToDo: { type: "array", items: { type: "string" } },
+      timeline: { type: "string" },
+      reassurance: { type: "string" },
+      contactInfo: { type: "string" },
+    },
+    required: [
+      "greeting", "whatHappened", "whyItWasNegative", "whatWeAreDoing",
+      "whatYouNeedToDo", "timeline", "reassurance", "contactInfo",
+    ],
+  };
+
+  const json = await callClaudeWithSchema<any>({
+    apiKey, maxTokens: 2000,
+    system: `You are writing a personal explanation for a worker named ${firstName} about their immigration case. ${languageInstruction}
 
 TONE: ${toneInstruction}
 
@@ -755,30 +798,12 @@ STRICT RULES:
 - NO promises of success or percentages
 - Short paragraphs (2-3 sentences each)
 - Calm, human, reassuring tone
-- Address the worker by first name
-
-Return ONLY valid JSON:
-{
-  "greeting": "Dear [FirstName],",
-  "whatHappened": "simple explanation of what happened",
-  "whyItWasNegative": "simple explanation of why the decision was negative",
-  "whatWeAreDoing": "what the legal team is doing about it",
-  "whatYouNeedToDo": ["action 1", "action 2"],
-  "timeline": "when they will hear back",
-  "reassurance": "reassuring message appropriate to severity",
-  "contactInfo": "who to contact if they have questions"
-}`,
-      messages: [{
-        role: "user",
-        content: `Case summary: ${stage2.caseSummary}\nLikely issue: ${stage2.likelyIssue}\nPressure: ${stage4.pressureLevel}\nDeadline: ${stage4.daysUntilDeadline !== null ? `${stage4.daysUntilDeadline} days` : "no immediate deadline"}\nNext steps: ${stage2.nextSteps.join("; ")}\nMissing evidence: ${stage2.missingEvidence.join("; ")}`,
-      }],
-    }),
+- Address the worker by first name`,
+    userMessage: `Case summary: ${stage2.caseSummary}\nLikely issue: ${stage2.likelyIssue}\nPressure: ${stage4.pressureLevel}\nDeadline: ${stage4.daysUntilDeadline !== null ? `${stage4.daysUntilDeadline} days` : "no immediate deadline"}\nNext steps: ${stage2.nextSteps.join("; ")}\nMissing evidence: ${stage2.missingEvidence.join("; ")}`,
+    toolName: "emit_stage5_worker_explanation",
+    toolDescription: "Emit the Stage 5 worker-facing explanation of the case in plain language (no legal jargon), calibrated tone per rejection category.",
+    inputSchema: STAGE5_SCHEMA,
   });
-
-  if (!res.ok) throw new Error(`Stage 5 AI error: ${res.status}`);
-  const data = await res.json() as any;
-  const raw = data.content?.find((b: any) => b.type === "text")?.text ?? "";
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
 
   return {
     greeting: String(json.greeting ?? `Dear ${firstName},`),
@@ -799,12 +824,20 @@ Return ONLY valid JSON:
 async function runStage6(polishAppealDraft: string): Promise<Stage6Result> {
   const apiKey = process.env.ANTHROPIC_API_KEY!;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 4096,
-      system: `You are a legal translator specializing in Polish immigration law. Translate the following Polish legal appeal draft into English.
+  const STAGE6_SCHEMA = {
+    type: "object",
+    properties: {
+      englishAppealText: { type: "string" },
+      translationNotes: { type: "string" },
+      structuralChanges: { type: "array", items: { type: "string" } },
+      alignedWithPolish: { type: "boolean" },
+    },
+    required: ["englishAppealText", "translationNotes", "structuralChanges", "alignedWithPolish"],
+  };
+
+  const json = await callClaudeWithSchema<any>({
+    apiKey, maxTokens: 4096,
+    system: `You are a legal translator specializing in Polish immigration law. Translate the following Polish legal appeal draft into English.
 
 STRICT RULES:
 - PRESERVE all legal meaning exactly — do not simplify legal concepts
@@ -817,23 +850,12 @@ STRICT RULES:
   - "uzasadnienie" → "Grounds / Statement of Reasons"
   - Polish date format → English date format
   - Polish office names can be kept with English translation in parentheses
-- This translation is for INTERNAL LEGAL UNDERSTANDING, not for submission to Polish authorities
-
-Return ONLY valid JSON:
-{
-  "englishAppealText": "the full translated appeal",
-  "translationNotes": "any notes about translation choices",
-  "structuralChanges": ["list of structural adaptations made"],
-  "alignedWithPolish": true/false
-}`,
-      messages: [{ role: "user", content: polishAppealDraft.slice(0, 8000) }],
-    }),
+- This translation is for INTERNAL LEGAL UNDERSTANDING, not for submission to Polish authorities`,
+    userMessage: polishAppealDraft.slice(0, 8000),
+    toolName: "emit_stage6_translation",
+    toolDescription: "Emit the Stage 6 English translation of the Polish appeal draft, with translation notes, structural adaptations, and an alignment flag.",
+    inputSchema: STAGE6_SCHEMA,
   });
-
-  if (!res.ok) throw new Error(`Stage 6 AI error: ${res.status}`);
-  const data = await res.json() as any;
-  const raw = data.content?.find((b: any) => b.type === "text")?.text ?? "";
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
 
   return {
     englishAppealText: String(json.englishAppealText ?? "").slice(0, 10000),

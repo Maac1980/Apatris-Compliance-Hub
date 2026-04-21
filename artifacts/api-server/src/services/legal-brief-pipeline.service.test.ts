@@ -75,8 +75,12 @@ function setupQueryOneMocks() {
     .mockResolvedValueOnce({ id: BRIEF_ID } as never);  // INSERT RETURNING id
 }
 
-// Stage 1 Claude response (valid JSON the parser accepts).
-const STAGE1_CLAUDE_JSON = JSON.stringify({
+// Post-Sub-phase-1C-1.5: each stage now uses Anthropic tool_use. Fixtures must
+// return a `tool_use` block with `input: <object>` matching the stage's schema.
+// The test stub keys off the tool name so stages are served the right shape
+// regardless of call order (more robust than count-based routing).
+
+const STAGE1_INPUT = {
   articles: [
     { article: "Art. 108 ust. 1 pkt 2 Ustawy o cudzoziemcach", explanation: "TRC continuity",
       whyItApplies: "same employer", impact: "SUPPORTS" },
@@ -84,14 +88,13 @@ const STAGE1_CLAUDE_JSON = JSON.stringify({
   proceduralNotes: ["File within 45 days"],
   commonPatterns: ["Formal defect common"],
   confidence: 0.8,
-});
+};
 
-// Stage 2 Claude response — valid shape.
 // Crafted to pass Stage 3 deterministic checks:
 //   - article string matches Stage 1 verbatim (Check 2)
 //   - caseSummary contains "reject" so appealGrounds don't trip Check 4
 //   - confidence ≤ stage1.confidence + 0.1 (Check 3)
-const STAGE2_CLAUDE_JSON = JSON.stringify({
+const STAGE2_INPUT = {
   caseSummary: "Case review following TRC rejection decision",
   likelyIssue: "Missing document",
   articleApplication: [
@@ -105,19 +108,17 @@ const STAGE2_CLAUDE_JSON = JSON.stringify({
   appealOutlineDraft: "Outline that is longer than ten characters so stage 6 runs.",
   confidence: 0.8,
   requiresLawyerReview: true,
-});
+};
 
-// Stage 3 Claude response — valid isValid:true.
-const STAGE3_CLAUDE_JSON = JSON.stringify({
+const STAGE3_INPUT = {
   isValid: true,
   issues: [],
   riskLevel: "LOW",
   requiresReview: true,
   notes: "all good",
-});
+};
 
-// Stage 5 Claude response — worker explanation shape.
-const STAGE5_CLAUDE_JSON = JSON.stringify({
+const STAGE5_INPUT = {
   greeting: "Hello",
   whatHappened: "Summary",
   whyItWasNegative: "",
@@ -126,34 +127,38 @@ const STAGE5_CLAUDE_JSON = JSON.stringify({
   timeline: "2w",
   reassurance: "OK",
   contactInfo: "ops@apatris",
-  language: "pl",
-  toneCalibration: "NEUTRAL",
-});
+};
 
-// Stage 6 Claude response — english translation shape.
-const STAGE6_CLAUDE_JSON = JSON.stringify({
+const STAGE6_INPUT = {
   englishAppealText: "English appeal draft one two three four five six.",
   translationNotes: "",
   structuralChanges: [],
   alignedWithPolish: true,
-});
+};
 
-// Factory: a fetch implementation that routes by the number of Anthropic calls
-// seen so far to serve the right stage-specific JSON.
-function makeClaudeFetchStub(responses: string[]) {
-  let claudeCalls = 0;
-  return async (url: string | URL | Request, _init?: any) => {
+// Map tool name → stage input. Stub inspects the outgoing request body to
+// identify the stage and returns the matching tool_use block.
+const TOOL_INPUTS: Record<string, unknown> = {
+  emit_stage1_research: STAGE1_INPUT,
+  emit_stage2_case_review: STAGE2_INPUT,
+  emit_stage3_validation: STAGE3_INPUT,
+  emit_stage5_worker_explanation: STAGE5_INPUT,
+  emit_stage6_translation: STAGE6_INPUT,
+};
+
+function makeClaudeFetchStub(overrides: Partial<Record<string, unknown>> = {}) {
+  return async (url: string | URL | Request, init?: any) => {
     const u = String(url);
     if (u.includes("anthropic.com")) {
-      const body = responses[Math.min(claudeCalls, responses.length - 1)];
-      claudeCalls++;
+      const reqBody = init?.body ? JSON.parse(String(init.body)) : {};
+      const toolName = reqBody?.tool_choice?.name ?? reqBody?.tools?.[0]?.name ?? "unknown_tool";
+      const input = overrides[toolName] ?? TOOL_INPUTS[toolName] ?? {};
       return new Response(
-        JSON.stringify({ content: [{ type: "text", text: body }] }),
+        JSON.stringify({ content: [{ type: "tool_use", name: toolName, input }] }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ) as any;
     }
     if (u.includes("perplexity.ai")) {
-      // Shouldn't fire because PPLX_API_KEY is unset; return 500 just in case.
       return new Response("nope", { status: 500 }) as any;
     }
     return new Response("unknown", { status: 404 }) as any;
@@ -169,9 +174,8 @@ describe("legal-brief-pipeline — Wave 1 stage-level SSE events", () => {
   });
 
   it("Test A (relaxed): emits brief_stage events with a stable pipelineRunId and result exposes it", async () => {
-    // Minimal fetch stub — returns stage1 JSON for every call. Pipeline may
-    // halt early or progress; we only assert the relaxed invariants.
-    global.fetch = vi.fn(makeClaudeFetchStub([STAGE1_CLAUDE_JSON])) as any;
+    // Stub returns the correct tool_use shape per stage (routed by tool name).
+    global.fetch = vi.fn(makeClaudeFetchStub()) as any;
 
     let result: Awaited<ReturnType<typeof generateLegalBrief>> | null = null;
     try {
@@ -204,16 +208,9 @@ describe("legal-brief-pipeline — Wave 1 stage-level SSE events", () => {
   });
 
   it("Test B (happy path): emits started+completed for all 6 stages in order 1→2→3→4→5→6", async () => {
-    // Serve stage-specific JSON in order: Stage 1 Claude, Stage 2 Claude,
-    // Stage 3 Claude, Stage 5 Claude, Stage 6 Claude.
-    // (Stage 4 is deterministic — no Claude call.)
-    global.fetch = vi.fn(makeClaudeFetchStub([
-      STAGE1_CLAUDE_JSON,
-      STAGE2_CLAUDE_JSON,
-      STAGE3_CLAUDE_JSON,
-      STAGE5_CLAUDE_JSON,
-      STAGE6_CLAUDE_JSON,
-    ])) as any;
+    // Tool-name-routed stub returns the correct stage-specific input for each
+    // Claude call. (Stage 4 is deterministic — no Claude call.)
+    global.fetch = vi.fn(makeClaudeFetchStub()) as any;
 
     const result = await generateLegalBrief(WORKER_ID, TENANT_ID, "test-user");
 
@@ -255,5 +252,51 @@ describe("legal-brief-pipeline — Wave 1 stage-level SSE events", () => {
     expect(runIds.size).toBe(1);
     expect(result.pipelineRunId).toBe(result.id);
     expect(result.status).toBe("COMPLETE");
+  });
+
+  // Regression guard: even if Claude returns partial tool_use input (missing
+  // fields), the defensive field-coercion layer in each stage defaults to
+  // empty strings / arrays / numbers. The pipeline should not crash on
+  // incomplete-but-well-formed Claude output.
+  it("Test C (missing-fields defensive coercion): pipeline survives partial Claude outputs", async () => {
+    // Override Stage 2 + Stage 5 with partial objects missing several fields.
+    // Tool_use still returns a valid object (schema enforced), but fewer keys
+    // than the full shape. Downstream String(json.foo ?? "") logic kicks in.
+    global.fetch = vi.fn(makeClaudeFetchStub({
+      emit_stage2_case_review: {
+        caseSummary: "Case review following TRC rejection decision",
+        likelyIssue: "short",
+        articleApplication: [
+          { article: "Art. 108 ust. 1 pkt 2 Ustawy o cudzoziemcach",
+            explanation: "x", whyItApplies: "y", impact: "SUPPORTS" },
+        ],
+        appealGrounds: [],  // empty — no appeal grounds without full context
+        missingEvidence: [],
+        nextSteps: [],
+        lawyerReviewDraft: "",
+        appealOutlineDraft: "short < 10",   // will NOT trigger Stage 6
+        confidence: 0.6,
+        requiresLawyerReview: true,
+      },
+      emit_stage5_worker_explanation: {
+        // Intentionally minimal — several fields omitted, stage should still succeed
+        greeting: "Hi",
+        whatHappened: "x",
+        whyItWasNegative: "",
+        whatWeAreDoing: "",
+        whatYouNeedToDo: [],
+        timeline: "",
+        reassurance: "",
+        contactInfo: "",
+      },
+    })) as any;
+
+    const result = await generateLegalBrief(WORKER_ID, TENANT_ID, "test-user");
+    expect(result.status).toBe("COMPLETE");
+    // Stage 6 must have been skipped (appealOutlineDraft was too short)
+    expect(result.stage6).toBeNull();
+    // Stage 5 populated with coercions (empty strings are fine)
+    expect(result.stage5?.greeting).toBe("Hi");
+    expect(result.stage5?.language).toBe("pl");  // carried from worker
   });
 });
