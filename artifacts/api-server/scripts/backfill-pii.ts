@@ -1,17 +1,17 @@
 /**
- * One-shot PII backfill for Apatris staging.
+ * One-shot PII backfill for Apatris (staging + prod).
  *
  * Encrypts plaintext pesel / iban / passport_number rows at rest using the
  * same encryptIfPresent + lookupHash functions as live writes (imported from
  * src/lib/encryption.ts — no duplication). Populates companion
  * pesel_hash / iban_hash / passport_hash columns in the same transaction.
  *
- * Usage (inside Fly staging machine, via `fly ssh console`):
+ * Usage (inside a Fly Apatris machine, via `fly ssh console`):
  *   node /app/artifacts/api-server/dist/scripts/backfill-pii.cjs --dry-run
  *   node /app/artifacts/api-server/dist/scripts/backfill-pii.cjs --live
  *
  * Safety:
- *   - Refuses to run unless FLY_APP_NAME === "apatris-api-staging"
+ *   - Refuses to run unless FLY_APP_NAME ∈ { "apatris-api-staging", "apatris-api" }
  *   - Requires --dry-run OR --live (no default write behavior)
  *   - Per-row transaction via withTransaction; one row failure rolls back
  *     only that row, other rows proceed
@@ -64,16 +64,17 @@ function parseArgs(): { dryRun: boolean; live: boolean } {
   return { dryRun, live };
 }
 
-function assertStaging(): void {
+function assertKnownApp(): void {
   const flyApp = process.env.FLY_APP_NAME ?? "";
-  if (flyApp !== "apatris-api-staging") {
+  const allowed = new Set(["apatris-api-staging", "apatris-api"]);
+  if (!allowed.has(flyApp)) {
     console.error(
-      `[backfill] REFUSING TO RUN: FLY_APP_NAME="${flyApp}" (expected "apatris-api-staging").`
+      `[backfill] REFUSING TO RUN: FLY_APP_NAME="${flyApp}" (expected one of: ${[...allowed].join(", ")}).`
     );
-    console.error("[backfill] This script is staging-only. Exiting with code 2.");
+    console.error("[backfill] Exiting with code 2.");
     process.exit(2);
   }
-  console.log(`[backfill] FLY_APP_NAME=${flyApp} — staging safety check OK.`);
+  console.log(`[backfill] FLY_APP_NAME=${flyApp} — safety check OK.`);
 }
 
 function truncate(s: string, n: number): string {
@@ -95,7 +96,7 @@ async function main(): Promise<void> {
   const mode = live ? "LIVE" : "DRY-RUN";
   console.log(`[backfill] Mode: ${mode}`);
 
-  assertStaging();
+  assertKnownApp();
 
   // Warm-up query: wake the Neon compute endpoint and verify the pool can
   // reach it before we start doing real work. If this fails we bail out
