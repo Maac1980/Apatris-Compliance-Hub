@@ -8,12 +8,20 @@
 import { EventEmitter } from "events";
 
 export interface IntelligenceEvent {
-  type: "status_change" | "doc_verified" | "mos_ready";
+  type: "status_change" | "doc_verified" | "mos_ready" | "brief_stage";
   workerId: string;
-  workerName: string;
-  message: string;
+  workerName?: string;
+  message?: string;
   timestamp: string;
   meta?: Record<string, any>;
+  // brief_stage-specific optional fields (Wave 1 streaming — legal-brief-pipeline).
+  // For other event types these stay undefined.
+  pipelineRunId?: string;
+  stage?: 1 | 2 | 3 | 4 | 5 | 6;
+  stageName?: string;
+  status?: "started" | "completed" | "failed";
+  confidence?: number;
+  summary?: string;
 }
 
 const emitter = new EventEmitter();

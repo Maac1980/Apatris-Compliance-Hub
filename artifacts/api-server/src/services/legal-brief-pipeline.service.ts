@@ -17,6 +17,7 @@
 import { queryOne, execute } from "../lib/db.js";
 import { getWorkerLegalSnapshot, type LegalSnapshot } from "./legal-status.service.js";
 import { checkAIRateLimit } from "../lib/ai-rate-limiter.js";
+import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -87,6 +88,7 @@ export interface Stage6Result {
 
 export interface LegalBriefResult {
   id: string;
+  pipelineRunId: string;
   workerId: string;
   workerName: string;
   status: "COMPLETE" | "HALTED" | "FAILED";
@@ -163,50 +165,147 @@ export async function generateLegalBrief(
     [tenantId, workerId, caseId ?? legalCase?.id ?? null, generatedBy, rejectionText ?? latestRejection?.rejection_text ?? null]
   );
   const briefId = row!.id;
+  // pipelineRunId reuses briefId so the SSE stream and the DB row correlate by a
+  // single identifier. Decided 2026-04-21 (vs generating a fresh UUID).
+  const pipelineRunId = briefId;
+
+  // NOTE: emitStage publishes via the global intelligence-emitter. All connected
+  // SSE consumers receive brief_stage events. For Wave 1 (all staff roles can
+  // see each other's pipeline progress) this is acceptable. Wave 2 will
+  // introduce per-request SSE endpoints for per-user/per-pipeline filtering.
+  const STAGE_NAMES: Record<1 | 2 | 3 | 4 | 5 | 6, string> = {
+    1: "Legal Research",
+    2: "Case Review",
+    3: "Validation",
+    4: "Pressure Check",
+    5: "Worker Explanation",
+    6: "English Translation",
+  };
+  function emitStage(
+    stage: 1 | 2 | 3 | 4 | 5 | 6,
+    status: "started" | "completed" | "failed",
+    confidence?: number,
+    summary?: string,
+  ): void {
+    // Emit failures must NEVER break the pipeline. Any emitter bug is swallowed + logged.
+    try {
+      emitIntelligenceEvent({
+        type: "brief_stage",
+        workerId,
+        workerName: worker.full_name,
+        timestamp: new Date().toISOString(),
+        pipelineRunId,
+        stage,
+        stageName: STAGE_NAMES[stage],
+        status,
+        ...(confidence !== undefined ? { confidence } : {}),
+        ...(summary !== undefined ? { summary } : {}),
+        meta: { briefId },
+      });
+    } catch (e) {
+      console.error("[legal-brief-pipeline] emitStage failed (swallowed):", (e as Error)?.message);
+    }
+  }
 
   try {
     // ── STAGE 1: Legal Research ──────────────────────────────────────────
-    const stage1 = await runStage1(caseData, tenantId);
+    emitStage(1, "started");
+    let stage1: Stage1Result;
+    try {
+      stage1 = await runStage1(caseData, tenantId);
+      emitStage(1, "completed", stage1.confidence,
+        `${stage1.articles.length} articles · Perplexity ${stage1.perplexityAvailable ? "OK" : "unavailable"}`);
+    } catch (err) {
+      emitStage(1, "failed", undefined, err instanceof Error ? err.message : "research error");
+      throw err;
+    }
     await execute("UPDATE legal_briefs SET stage1_research_json = $1, updated_at = NOW() WHERE id = $2",
       [JSON.stringify(stage1), briefId]);
 
     // ── STAGE 2: Case Review ─────────────────────────────────────────────
-    const stage2 = await runStage2(caseData, snapshot, stage1, effectiveRejectionText, hasRejectionContext);
+    emitStage(2, "started");
+    let stage2: Stage2Result;
+    try {
+      stage2 = await runStage2(caseData, snapshot, stage1, effectiveRejectionText, hasRejectionContext);
+      emitStage(2, "completed", stage2.confidence,
+        `${stage2.appealGrounds.length} appeal grounds · ${stage2.missingEvidence.length} missing evidence`);
+    } catch (err) {
+      emitStage(2, "failed", undefined, err instanceof Error ? err.message : "review error");
+      throw err;
+    }
     await execute("UPDATE legal_briefs SET stage2_review_json = $1, updated_at = NOW() WHERE id = $2",
       [JSON.stringify(stage2), briefId]);
 
     // ── STAGE 3: Validation ──────────────────────────────────────────────
-    const stage3 = await runStage3(snapshot, stage1, stage2);
+    emitStage(3, "started");
+    let stage3: Stage3Result;
+    try {
+      stage3 = await runStage3(snapshot, stage1, stage2);
+    } catch (err) {
+      emitStage(3, "failed", undefined, err instanceof Error ? err.message : "validation error");
+      throw err;
+    }
     await execute("UPDATE legal_briefs SET stage3_validation_json = $1, updated_at = NOW() WHERE id = $2",
       [JSON.stringify(stage3), briefId]);
 
     // HALT if validation fails
     if (!stage3.isValid) {
+      emitStage(3, "failed", undefined, `Validation failed: ${stage3.notes || "invalid output"}`);
       await execute(
         "UPDATE legal_briefs SET status = 'HALTED', pipeline_halted_at = 'STAGE_3', pipeline_halt_reason = $1, is_valid = false, requires_review = true, overall_confidence = $2, updated_at = NOW() WHERE id = $3",
         [stage3.notes, Math.min(stage1.confidence, stage2.confidence) * 0.5, briefId]
       );
       return {
-        id: briefId, workerId, workerName: worker.full_name, status: "HALTED",
+        id: briefId, pipelineRunId, workerId, workerName: worker.full_name, status: "HALTED",
         stage1, stage2, stage3, stage4: null, stage5: null, stage6: null,
         overallConfidence: Math.min(stage1.confidence, stage2.confidence) * 0.5,
         isValid: false, requiresReview: true, pressureLevel: "UNKNOWN",
         haltedAt: "STAGE_3", haltReason: stage3.notes, createdAt,
       };
     }
+    emitStage(3, "completed", undefined,
+      `Valid · ${stage3.issues.length} issues flagged · risk=${stage3.riskLevel}`);
 
-    // ── STAGE 4: Pressure Check ──────────────────────────────────────────
-    const stage4 = runStage4(snapshot, legalCase, caseData);
+    // ── STAGE 4: Pressure Check (deterministic; try/catch kept for UX consistency) ─
+    emitStage(4, "started");
+    let stage4: Stage4Result;
+    try {
+      stage4 = runStage4(snapshot, legalCase, caseData);
+      emitStage(4, "completed", undefined,
+        `Pressure=${stage4.pressureLevel} · ${stage4.daysUntilDeadline ?? "?"}d to deadline`);
+    } catch (err) {
+      emitStage(4, "failed", undefined, err instanceof Error ? err.message : "pressure-check error");
+      throw err;
+    }
 
     // ── STAGE 5: Worker Explanation ──────────────────────────────────────
+    emitStage(5, "started");
     const workerLang = worker.preferred_language ?? "en";
     const rejectionCategory = latestRejection?.category ?? null;
-    const stage5 = await runStage5(worker.full_name, stage2, stage4, rejectionCategory, workerLang);
+    let stage5: Stage5Result;
+    try {
+      stage5 = await runStage5(worker.full_name, stage2, stage4, rejectionCategory, workerLang);
+      emitStage(5, "completed", undefined,
+        `Drafted in ${stage5.language} · tone=${stage5.toneCalibration}`);
+    } catch (err) {
+      emitStage(5, "failed", undefined, err instanceof Error ? err.message : "explanation error");
+      throw err;
+    }
 
-    // ── STAGE 6: English Appeal Translation ─────────────────────────────
+    // ── STAGE 6: English Appeal Translation (conditional on Stage 2 producing a draft) ──
+    emitStage(6, "started");
     let stage6: Stage6Result | null = null;
     if (stage2.appealOutlineDraft && stage2.appealOutlineDraft.length > 10) {
-      stage6 = await runStage6(stage2.appealOutlineDraft);
+      try {
+        stage6 = await runStage6(stage2.appealOutlineDraft);
+        const wordCount = stage6.englishAppealText?.split(/\s+/).filter(Boolean).length ?? 0;
+        emitStage(6, "completed", undefined, `English appeal drafted (${wordCount} words)`);
+      } catch (err) {
+        emitStage(6, "failed", undefined, err instanceof Error ? err.message : "translation error");
+        throw err;
+      }
+    } else {
+      emitStage(6, "completed", undefined, "Skipped — no appeal draft");
     }
 
     // Compute overall confidence
@@ -221,7 +320,7 @@ export async function generateLegalBrief(
     );
 
     return {
-      id: briefId, workerId, workerName: worker.full_name, status: "COMPLETE",
+      id: briefId, pipelineRunId, workerId, workerName: worker.full_name, status: "COMPLETE",
       stage1, stage2, stage3, stage4, stage5, stage6,
       overallConfidence, isValid: true, requiresReview: true,
       pressureLevel: stage4.pressureLevel, haltedAt: null, haltReason: null, createdAt,

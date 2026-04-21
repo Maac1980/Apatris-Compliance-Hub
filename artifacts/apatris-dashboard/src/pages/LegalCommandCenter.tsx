@@ -51,6 +51,13 @@ interface TickerEvent {
   workerName?: string;
   message?: string;
   timestamp: string;
+  // brief_stage extensions (Wave 1 streaming). Undefined for other event types.
+  pipelineRunId?: string;
+  stage?: 1 | 2 | 3 | 4 | 5 | 6;
+  stageName?: string;
+  status?: "started" | "completed" | "failed";
+  confidence?: number;
+  summary?: string;
 }
 
 function useSSEStream(): TickerEvent[] {
@@ -83,6 +90,139 @@ function useSSEStream(): TickerEvent[] {
   }, []);
 
   return events;
+}
+
+// ═══ BRIEF PIPELINE RUN TRACKER ═════════════════════════════════════════════
+// Groups brief_stage events by pipelineRunId into a 6-row progress view.
+// After all 6 stages reach a terminal state, the run auto-hides after 30s.
+
+interface BriefRunStage {
+  stage: 1 | 2 | 3 | 4 | 5 | 6;
+  stageName: string;
+  status: "pending" | "started" | "completed" | "failed";
+  confidence?: number;
+  summary?: string;
+  updatedAt: string;
+}
+
+interface BriefRunState {
+  runId: string;
+  workerId?: string;
+  workerName?: string;
+  stages: BriefRunStage[];   // always length 6, indexed by stage-1
+  startedAt: string;
+  finishedAt?: string;
+}
+
+const STAGE_NAMES_FALLBACK = [
+  "Legal Research", "Case Review", "Validation",
+  "Pressure Check", "Worker Explanation", "English Translation",
+];
+
+function useBriefRuns(events: TickerEvent[]): Record<string, BriefRunState> {
+  const [runs, setRuns] = useState<Record<string, BriefRunState>>({});
+  const fadeTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const processedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Process any new brief_stage events (dedup by timestamp + stage + status).
+    for (const ev of events) {
+      if (ev.type !== "brief_stage" || !ev.pipelineRunId || !ev.stage || !ev.status) continue;
+      const key = `${ev.pipelineRunId}:${ev.stage}:${ev.status}:${ev.timestamp}`;
+      if (processedRef.current.has(key)) continue;
+      processedRef.current.add(key);
+
+      const runId = ev.pipelineRunId;
+      setRuns(prev => {
+        const existing = prev[runId] ?? {
+          runId,
+          workerId: ev.workerId,
+          workerName: ev.workerName,
+          stages: Array.from({ length: 6 }, (_, i) => ({
+            stage: (i + 1) as 1 | 2 | 3 | 4 | 5 | 6,
+            stageName: STAGE_NAMES_FALLBACK[i],
+            status: "pending" as const,
+            updatedAt: ev.timestamp,
+          })),
+          startedAt: ev.timestamp,
+        };
+
+        const stages = [...existing.stages];
+        stages[ev.stage! - 1] = {
+          stage: ev.stage!,
+          stageName: ev.stageName ?? stages[ev.stage! - 1].stageName,
+          status: ev.status!,
+          confidence: ev.confidence,
+          summary: ev.summary,
+          updatedAt: ev.timestamp,
+        };
+
+        const allTerminal = stages.every(s => s.status === "completed" || s.status === "failed");
+        const updated: BriefRunState = {
+          ...existing,
+          stages,
+          workerName: existing.workerName ?? ev.workerName,
+          finishedAt: allTerminal ? (existing.finishedAt ?? ev.timestamp) : existing.finishedAt,
+        };
+
+        // Schedule 30s auto-hide once terminal. Don't reschedule if already scheduled.
+        if (allTerminal && !fadeTimersRef.current[runId]) {
+          fadeTimersRef.current[runId] = setTimeout(() => {
+            setRuns(p => { const next = { ...p }; delete next[runId]; return next; });
+            delete fadeTimersRef.current[runId];
+          }, 30_000);
+        }
+
+        return { ...prev, [runId]: updated };
+      });
+    }
+  }, [events]);
+
+  // Clear all pending fade timers on unmount.
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(fadeTimersRef.current)) clearTimeout(t);
+      fadeTimersRef.current = {};
+    };
+  }, []);
+
+  return runs;
+}
+
+function BriefRunPanel({ runs }: { runs: Record<string, BriefRunState> }) {
+  const activeRuns = Object.values(runs).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  if (activeRuns.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      {activeRuns.map(run => (
+        <div key={run.runId} className="border border-slate-700/50 rounded p-3">
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span>Brief Pipeline · {run.workerName ?? "worker"}</span>
+            {run.finishedAt && <span className="text-emerald-400">✓ complete</span>}
+          </div>
+          <div className="space-y-1">
+            {run.stages.map(s => (
+              <div key={s.stage} className="flex items-center gap-2 text-xs">
+                <span className="w-5 text-center">
+                  {s.status === "completed" ? <span className="text-emerald-400">✓</span>
+                    : s.status === "failed" ? <span className="text-red-400">✗</span>
+                    : s.status === "started" ? <Loader2 className="w-3 h-3 animate-spin inline text-amber-400" />
+                    : <span className="text-slate-600">○</span>}
+                </span>
+                <span className="w-32 text-slate-300 shrink-0">{s.stageName}</span>
+                {s.confidence !== undefined && (
+                  <span className="text-slate-500 shrink-0">conf {s.confidence.toFixed(2)}</span>
+                )}
+                {s.summary && (
+                  <span className="text-slate-500 truncate flex-1" title={s.summary}>· {s.summary}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ═══ TOOLKIT TABS ═══════════════════════════════════════════════════════════
@@ -721,6 +861,7 @@ export default function LegalCommandCenter() {
   const [toolkitTab, setToolkitTab] = useState<ToolkitTab>(initialTab);
   const [queueFilter, setQueueFilter] = useState("");
   const tickerEvents = useSSEStream();
+  const briefRuns = useBriefRuns(tickerEvents);
 
   // Update URL on state change
   useEffect(() => {
@@ -954,14 +1095,25 @@ export default function LegalCommandCenter() {
             <Radio className={`w-3 h-3 ${tickerEvents.length > 0 ? "text-emerald-400" : "text-slate-700"}`} />
           </div>
           <div className="flex-1 overflow-y-auto">
-            {tickerEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-slate-700">
-                <Radio className="w-5 h-5 mb-2" />
-                <p className="text-[10px]">Waiting for events...</p>
-                <p className="text-[9px] mt-1">Actions will appear here in real-time</p>
+            {/* Active brief pipeline runs (6-row progress view) render above the ticker */}
+            {Object.keys(briefRuns).length > 0 && (
+              <div className="p-2 border-b border-slate-800/50">
+                <BriefRunPanel runs={briefRuns} />
               </div>
-            ) : (
-              tickerEvents.map((ev, i) => {
+            )}
+            {(() => {
+              // Filter out brief_stage events from the flat ticker — they render in BriefRunPanel above.
+              const visible = tickerEvents.filter(ev => ev.type !== "brief_stage");
+              if (visible.length === 0 && Object.keys(briefRuns).length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-8 text-slate-700">
+                    <Radio className="w-5 h-5 mb-2" />
+                    <p className="text-[10px]">Waiting for events...</p>
+                    <p className="text-[9px] mt-1">Actions will appear here in real-time</p>
+                  </div>
+                );
+              }
+              return visible.map((ev, i) => {
                 const color = ev.type === "doc_verified" ? "text-emerald-400" : ev.type === "mos_ready" ? "text-blue-400" : "text-amber-400";
                 const bgColor = ev.type === "doc_verified" ? "bg-emerald-500/5" : ev.type === "mos_ready" ? "bg-blue-500/5" : "bg-amber-500/5";
                 return (
@@ -975,8 +1127,8 @@ export default function LegalCommandCenter() {
                     <p className="text-[8px] text-slate-600 mt-0.5">{new Date(ev.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p>
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
         </div>
       </div>
