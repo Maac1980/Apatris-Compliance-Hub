@@ -96,6 +96,24 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // Vector RAG embedding backfill (Sub-phase 1G-2 Phase 1). Same sidecar
+  // pattern as backfill-pii.cjs — executed via `fly ssh console` with
+  // --dry-run or --live. Inlines src/lib/embeddings.ts + src/lib/db.ts.
+  console.log("building embedding backfill script...");
+  await esbuild({
+    entryPoints: [path.resolve(__dirname, "scripts/backfill-embeddings.ts")],
+    platform: "node",
+    bundle: true,
+    format: "cjs",
+    outfile: path.resolve(distDir, "scripts/backfill-embeddings.cjs"),
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
+    minify: true,
+    external: externals,
+    logLevel: "info",
+  });
 }
 
 buildAll().catch((err) => {

@@ -3588,5 +3588,101 @@ export async function initializeDatabase(): Promise<void> {
     try { await execute(idx); } catch { /* column may not exist yet */ }
   }
 
+  // ── Vector RAG infrastructure (Sub-phase 1G-2 Phase 1) ────────────────
+  // pgvector extension + embedding columns on 4 target tables. Columns are
+  // inert until scripts/backfill-embeddings.ts populates them. Service
+  // wiring deferred to Phase 3. See VECTOR-RAG-AUDIT-1G1-2026-04-21.md.
+  try {
+    await execute(`CREATE EXTENSION IF NOT EXISTS vector`);
+  } catch (e) {
+    console.warn(`[init-db] pgvector extension unavailable — vector columns will be inert: ${(e as Error).message}`);
+  }
+
+  // legal_knowledge (public-law KB — no PII, embed title + content directly)
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name='legal_knowledge' AND column_name='embedding') THEN
+          ALTER TABLE legal_knowledge ADD COLUMN embedding vector(1024);
+          ALTER TABLE legal_knowledge ADD COLUMN embedded_at TIMESTAMPTZ;
+          ALTER TABLE legal_knowledge ADD COLUMN embedding_model TEXT;
+          ALTER TABLE legal_knowledge ADD COLUMN content_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_legal_kb_embedding
+            ON legal_knowledge USING hnsw (embedding vector_cosine_ops);
+          CREATE INDEX IF NOT EXISTS idx_legal_kb_content_hash
+            ON legal_knowledge(content_hash);
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.warn(`[init-db] legal_knowledge vector columns skipped: ${(e as Error).message}`);
+  }
+
+  // rejection_analyses (PII — anonymized_text is the embed subject)
+  // NOTE: HNSW index build is fast on current row counts (<100).
+  // When these tables exceed ~10,000 rows, future migrations should
+  // use CREATE INDEX CONCURRENTLY to avoid blocking startup.
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name='rejection_analyses' AND column_name='embedding') THEN
+          ALTER TABLE rejection_analyses ADD COLUMN embedding vector(1024);
+          ALTER TABLE rejection_analyses ADD COLUMN anonymized_text TEXT;
+          ALTER TABLE rejection_analyses ADD COLUMN embedded_at TIMESTAMPTZ;
+          ALTER TABLE rejection_analyses ADD COLUMN embedding_model TEXT;
+          ALTER TABLE rejection_analyses ADD COLUMN content_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_rejection_embedding
+            ON rejection_analyses USING hnsw (embedding vector_cosine_ops);
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.warn(`[init-db] rejection_analyses vector columns skipped: ${(e as Error).message}`);
+  }
+
+  // case_generated_docs (PII — anonymized_content is the embed subject)
+  // NOTE: HNSW index build is fast on current row counts (<100).
+  // When these tables exceed ~10,000 rows, future migrations should
+  // use CREATE INDEX CONCURRENTLY to avoid blocking startup.
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name='case_generated_docs' AND column_name='embedding') THEN
+          ALTER TABLE case_generated_docs ADD COLUMN embedding vector(1024);
+          ALTER TABLE case_generated_docs ADD COLUMN anonymized_content TEXT;
+          ALTER TABLE case_generated_docs ADD COLUMN embedded_at TIMESTAMPTZ;
+          ALTER TABLE case_generated_docs ADD COLUMN embedding_model TEXT;
+          ALTER TABLE case_generated_docs ADD COLUMN content_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_case_docs_embedding
+            ON case_generated_docs USING hnsw (embedding vector_cosine_ops);
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.warn(`[init-db] case_generated_docs vector columns skipped: ${(e as Error).message}`);
+  }
+
+  // workers (profile_embedding — derived from nationality + specialization + TRC + case outcome)
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name='workers' AND column_name='profile_embedding') THEN
+          ALTER TABLE workers ADD COLUMN profile_embedding vector(1024);
+          ALTER TABLE workers ADD COLUMN profile_embedded_at TIMESTAMPTZ;
+          ALTER TABLE workers ADD COLUMN profile_embedding_model TEXT;
+          ALTER TABLE workers ADD COLUMN profile_content_hash TEXT;
+          CREATE INDEX IF NOT EXISTS idx_workers_profile_embedding
+            ON workers USING hnsw (profile_embedding vector_cosine_ops);
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.warn(`[init-db] workers profile_embedding column skipped: ${(e as Error).message}`);
+  }
+
   console.log("[init-db] Database initialization complete.");
 }
