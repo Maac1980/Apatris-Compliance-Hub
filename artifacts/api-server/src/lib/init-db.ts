@@ -2319,6 +2319,18 @@ export async function initializeDatabase(): Promise<void> {
     expiry_date DATE, notes TEXT, assigned_to TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  // case_reference: Polish authority case ID (e.g. WSC-II-S.6151.111539.2025).
+  // Read by document-intake-hardening.service.ts::linkToCase to auto-link
+  // uploaded documents (rejections, UPOs, decisions) to existing TRC cases.
+  // Added 2026-04-23 — column was referenced before being created.
+  try {
+    await execute(`ALTER TABLE trc_cases ADD COLUMN IF NOT EXISTS case_reference TEXT`);
+    await execute(`CREATE INDEX IF NOT EXISTS idx_trc_cases_case_reference
+      ON trc_cases (tenant_id, worker_id, case_reference)
+      WHERE case_reference IS NOT NULL`);
+  } catch (e) {
+    console.warn(`[init-db] trc_cases.case_reference migration skipped: ${(e as Error).message}`);
+  }
   await execute(`CREATE TABLE IF NOT EXISTS trc_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     case_id UUID NOT NULL REFERENCES trc_cases(id) ON DELETE CASCADE,
