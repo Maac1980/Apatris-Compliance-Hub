@@ -19,6 +19,16 @@
 import { query, queryOne, execute } from "../lib/db.js";
 import { hardenIntake, computeFileHash, type HardeningResult } from "./document-intake-hardening.service.js";
 import { encryptIfPresent, lookupHash, decrypt } from "../lib/encryption.js";
+import {
+  INTAKE_TOOL_NAME,
+  INTAKE_TOOL_DESCRIPTION,
+  INTAKE_INPUT_SCHEMA,
+  INTAKE_PROMPT_V2,
+  toLegacyClassification,
+  bucketConfidence,
+  type TypedIntakeExtraction,
+  type IntakeClassification,
+} from "../lib/document-schemas.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -105,49 +115,14 @@ export interface IntakeResult {
   aiConfidence: number;
   status: string;
   hardening: HardeningResult;
+  /** Sub-phase B1: per-type structured extraction. Null when extraction falls back (no API key, tool call failure, etc.). Flat identity/credentials are still populated for backward compat. */
+  typeSpecific: TypedIntakeExtraction | null;
 }
 
 // ═══ AI EXTRACTION PROMPT ═══════════════════════════════════════════════════
-
-const INTAKE_PROMPT = `You are a document analysis expert for a Polish immigration staffing agency. Analyze this document with extreme precision.
-
-DOCUMENT TYPES (classify as one):
-PASSPORT, RESIDENCE_PERMIT, FILING_PROOF, UPO, MOS_SUBMISSION, DECISION_LETTER, REJECTION_LETTER, WORK_PERMIT, WORK_CONTRACT, MEDICAL_CERT, BHP_CERT, UDT_CERT, SUPPORTING_DOCUMENT, UNKNOWN
-
-EXTRACTION RULES:
-- PASSPORT: Read MRZ zone (two lines of <<< at bottom). Extract: surname, given names, passport number (8-9 alphanumeric), nationality (3-letter ISO → full country name), DOB, expiry, issuing country.
-- REJECTION/DECISION LETTERS: Look for "Wojewoda", "Szef UdSC", case numbers (WSC-...), dates, worker name, rejection reasons.
-- FILING PROOF/UPO: Look for timestamps, submission confirmation numbers, office stamps.
-- WORK PERMITS: Look for employer name, worker name, role, validity period.
-- CONTRACTS: Look for employer, employee, rate, dates, contract type (zlecenie/praca/B2B).
-
-DATES: Always YYYY-MM-DD. Convert Polish month names (stycznia=01, lutego=02, marca=03, kwietnia=04, maja=05, czerwca=06, lipca=07, sierpnia=08, września=09, października=10, listopada=11, grudnia=12).
-
-Return ONLY valid JSON:
-{
-  "classification": "PASSPORT|REJECTION_LETTER|...",
-  "identity": {
-    "fullName": "Given Names SURNAME or null",
-    "passportNumber": "passport/document number or null",
-    "pesel": "11-digit PESEL or null",
-    "dateOfBirth": "YYYY-MM-DD or null",
-    "nationality": "full country name or null",
-    "issuingCountry": "full country name or null"
-  },
-  "credentials": {
-    "documentNumber": "document/case number or null",
-    "issueDate": "YYYY-MM-DD or null",
-    "expiryDate": "YYYY-MM-DD or null",
-    "filingDate": "YYYY-MM-DD or null",
-    "authority": "issuing authority or null",
-    "caseReference": "case/reference number or null",
-    "employer": "employer name or null",
-    "role": "job role/position or null"
-  },
-  "keyContent": "2-3 sentence summary",
-  "confidence": "HIGH|MEDIUM|LOW",
-  "rejectionReasons": "text of rejection reasons if applicable, or null"
-}`;
+// Prompt + schema live in lib/document-schemas.ts (Sub-phase B1).
+// Legacy INTAKE_PROMPT retired in favour of tool_use with a discriminated
+// union schema — see callClaudeWithSchema wrapper in lib/claude-schema.ts.
 
 // ═══ CORE PROCESSING ════════════════════════════════════════════════════════
 
@@ -258,12 +233,13 @@ export async function processDocumentIntake(
     aiConfidence,
     status,
     hardening,
+    typeSpecific: extracted.typeSpecific,
   };
 }
 
 // ═══ AI VISION EXTRACTION ═══════════════════════════════════════════════════
 
-interface AIExtraction {
+export interface AIExtraction {
   classification: string;
   identity: ExtractedIdentity;
   credentials: ExtractedCredentials;
@@ -271,11 +247,12 @@ interface AIExtraction {
   rejectionReasons: string | null;
   confidence: string;
   language: string;
+  /** Sub-phase B1: per-type structured extraction. Null when Claude tool call fails or API key is missing. */
+  typeSpecific: TypedIntakeExtraction | null;
 }
 
-async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIExtraction> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  const fallback: AIExtraction = {
+function makeFallback(): AIExtraction {
+  return {
     classification: "UNKNOWN",
     identity: { fullName: null, passportNumber: null, pesel: null, dateOfBirth: null, nationality: null, issuingCountry: null },
     credentials: { documentNumber: null, issueDate: null, expiryDate: null, filingDate: null, decisionDate: null, authority: null, caseReference: null, employer: null, role: null },
@@ -283,59 +260,132 @@ async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIEx
     rejectionReasons: null,
     confidence: "LOW",
     language: "unknown",
+    typeSpecific: null,
+  };
+}
+
+/** Sub-phase B1: flatten the per-type extraction back onto the legacy flat
+ *  shape consumed by existing routes/DB rows. Preserves backward compat. */
+export function flattenTypedExtraction(typed: TypedIntakeExtraction): AIExtraction {
+  const c = typed.classification;
+  const cf = typed.commonFields;
+
+  const identity: ExtractedIdentity = {
+    fullName: cf.fullName,
+    passportNumber: typed.passport?.passportNumber ?? null,
+    pesel: cf.pesel,
+    dateOfBirth: cf.dateOfBirth,
+    nationality: cf.nationality,
+    issuingCountry: typed.passport?.issuingCountry ?? null,
   };
 
-  if (!apiKey) return fallback;
+  // Per-type credential mapping — preserves the "best fit" semantic of the
+  // legacy ExtractedCredentials shape.
+  const credentials: ExtractedCredentials = {
+    documentNumber: typed.passport?.passportNumber
+      ?? typed.trcDecision?.caseReference
+      ?? typed.trcRejection?.caseReference
+      ?? typed.filingProof?.submissionNumber
+      ?? null,
+    issueDate: typed.workPermit?.validFrom
+      ?? typed.passport?.issueDate
+      ?? null,
+    expiryDate: typed.workPermit?.validUntil
+      ?? typed.trcDecision?.validUntil
+      ?? typed.passport?.expiryDate
+      ?? null,
+    filingDate: typed.filingProof?.filingDate ?? null,
+    decisionDate: typed.trcDecision?.decisionDate
+      ?? typed.trcRejection?.decisionDate
+      ?? null,
+    authority: cf.authority,
+    caseReference: typed.trcDecision?.caseReference
+      ?? typed.trcRejection?.caseReference
+      ?? typed.filingProof?.caseReference
+      ?? null,
+    employer: typed.workPermit?.employerName ?? null,
+    role: typed.workPermit?.role ?? null,
+  };
+
+  return {
+    classification: toLegacyClassification(c),
+    identity,
+    credentials,
+    keyContent: (typed.keyContent ?? "").slice(0, 2000),
+    rejectionReasons: typed.trcRejection?.rejectionGrounds ?? null,
+    confidence: bucketConfidence(typed.overallConfidence),
+    language: (cf.language ?? "unknown").toLowerCase(),
+    typeSpecific: typed,
+  };
+}
+
+/** Exported for testability (Sub-phase B1). Direct callers should use
+ *  processDocumentIntake; tests mock global fetch and call extractWithAI. */
+export async function extractWithAI(fileBuffer: Buffer, mimeType: string): Promise<AIExtraction> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return makeFallback();
 
   try {
     const base64 = fileBuffer.toString("base64");
-    const contentBlocks: any[] = mimeType === "application/pdf"
-      ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }, { type: "text", text: INTAKE_PROMPT }]
-      : [{ type: "image", source: { type: "base64", media_type: mimeType, data: base64 } }, { type: "text", text: INTAKE_PROMPT }];
+    const contentBlocks: Array<Record<string, unknown>> = mimeType === "application/pdf"
+      ? [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+          { type: "text", text: INTAKE_PROMPT_V2 },
+        ]
+      : [
+          { type: "image", source: { type: "base64", media_type: mimeType, data: base64 } },
+          { type: "text", text: INTAKE_PROMPT_V2 },
+        ];
 
+    // Tool_use with schema-enforced JSON output. Same pattern as Legal Brief
+    // Pipeline Stage 1-6 (commit 95ab2b4) and rag.ts (commit 6ced45d).
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2048, messages: [{ role: "user", content: contentBlocks }] }),
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
+        system: "You extract structured data from Polish immigration documents and call the requested tool exactly once.",
+        tools: [{
+          name: INTAKE_TOOL_NAME,
+          description: INTAKE_TOOL_DESCRIPTION,
+          input_schema: INTAKE_INPUT_SCHEMA,
+        }],
+        tool_choice: { type: "tool", name: INTAKE_TOOL_NAME },
+        messages: [{ role: "user", content: contentBlocks }],
+      }),
     });
 
-    if (!res.ok) { console.error("[Intake] Vision API error:", res.status); return fallback; }
+    if (!res.ok) {
+      console.error("[Intake] Vision API error:", res.status);
+      return makeFallback();
+    }
 
-    const data = await res.json() as { content: Array<{ type: string; text?: string }> };
-    const raw = data.content?.find(b => b.type === "text")?.text ?? "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return fallback;
+    const data = await res.json() as { content?: Array<Record<string, unknown>> };
+    const blocks = Array.isArray(data.content) ? data.content : [];
+    const toolBlock = blocks.find(
+      (b) => b["type"] === "tool_use" && b["name"] === INTAKE_TOOL_NAME,
+    );
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    return {
-      classification: String(parsed.classification ?? "UNKNOWN"),
-      identity: {
-        fullName: parsed.identity?.fullName ?? null,
-        passportNumber: parsed.identity?.passportNumber ?? null,
-        pesel: parsed.identity?.pesel ?? null,
-        dateOfBirth: parsed.identity?.dateOfBirth ?? null,
-        nationality: parsed.identity?.nationality ?? null,
-        issuingCountry: parsed.identity?.issuingCountry ?? null,
-      },
-      credentials: {
-        documentNumber: parsed.credentials?.documentNumber ?? null,
-        issueDate: parsed.credentials?.issueDate ?? null,
-        expiryDate: parsed.credentials?.expiryDate ?? null,
-        filingDate: parsed.credentials?.filingDate ?? null,
-        decisionDate: parsed.credentials?.decisionDate ?? null,
-        authority: parsed.credentials?.authority ?? null,
-        caseReference: parsed.credentials?.caseReference ?? null,
-        employer: parsed.credentials?.employer ?? null,
-        role: parsed.credentials?.role ?? null,
-      },
-      keyContent: String(parsed.keyContent ?? "").slice(0, 2000),
-      rejectionReasons: parsed.rejectionReasons ?? null,
-      confidence: ["HIGH", "MEDIUM", "LOW"].includes(parsed.confidence) ? parsed.confidence : "LOW",
-      language: String(parsed.language ?? "unknown").toLowerCase(),
-    };
+    if (!toolBlock) {
+      console.error("[Intake] Claude did not emit required tool_use block.");
+      return makeFallback();
+    }
+
+    const input = toolBlock["input"];
+    if (!input || typeof input !== "object") {
+      console.error("[Intake] Tool input was non-object.");
+      return makeFallback();
+    }
+
+    return flattenTypedExtraction(input as TypedIntakeExtraction);
   } catch (err) {
     console.error("[Intake] Extraction error:", err instanceof Error ? err.message : err);
-    return fallback;
+    return makeFallback();
   }
 }
 
