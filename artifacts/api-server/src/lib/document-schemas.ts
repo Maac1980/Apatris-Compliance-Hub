@@ -243,3 +243,95 @@ export function bucketConfidence(overall: number): "HIGH" | "MEDIUM" | "LOW" {
   if (overall >= 0.5) return "MEDIUM";
   return "LOW";
 }
+
+// ── Per-type required fields + completeness scoring (Sub-phase B2) ───────
+//
+// The B1 prompt asks Claude to populate ONLY the sub-object matching the
+// classification. Scoring completeness over the whole mega-schema would
+// drag down rejection letters (which have no employer/passport fields) —
+// the "62% misread" bug. B2 scores only against the 5-field per-type
+// required set, mirroring AUDIT_DOC_TYPES from
+// routes/first-contact-verification.ts:48-54 but using the typed-path
+// field keys that match perFieldConfidence entries.
+
+export const REQUIRED_FIELDS_BY_TYPE: Record<IntakeClassification, readonly string[]> = {
+  WORK_PERMIT: [
+    "commonFields.fullName",
+    "workPermit.employerName",
+    "workPermit.validUntil",
+    "workPermit.role",
+    "workPermit.voivodeship",
+  ],
+  TRC_POSITIVE: [
+    "commonFields.fullName",
+    "trcDecision.caseReference",
+    "trcDecision.decisionDate",
+    "trcDecision.validUntil",
+    "commonFields.authority",
+  ],
+  TRC_REJECTION: [
+    "commonFields.fullName",
+    "trcRejection.caseReference",
+    "trcRejection.decisionDate",
+    "commonFields.authority",
+    "trcRejection.rejectionGrounds",
+  ],
+  FILING_PROOF: [
+    "commonFields.fullName",
+    "filingProof.caseReference",
+    "filingProof.filingDate",
+    "commonFields.authority",
+  ],
+  PASSPORT: [
+    "commonFields.fullName",
+    "passport.passportNumber",
+    "commonFields.dateOfBirth",
+    "passport.issuingCountry",
+    "passport.expiryDate",
+  ],
+  OTHER: [],
+};
+
+/** Missing perFieldConfidence entry for a populated field → assume this.
+ *  Claude's schema asks for per-field confidence on every non-null field,
+ *  but Claude occasionally forgets some. 0.8 is a reasonable "default
+ *  high" that rewards populated fields without trusting them blindly. */
+const DEFAULT_PRESENT_FIELD_CONFIDENCE = 0.8;
+
+/** Read a field from a TypedIntakeExtraction using a "sub.key" path.
+ *  Returns null for paths that don't resolve (sub-object is null, key
+ *  missing, value undefined or empty string). */
+function readField(typed: TypedIntakeExtraction, path: string): unknown {
+  const [group, key] = path.split(".");
+  if (!group || !key) return null;
+  const sub = (typed as unknown as Record<string, unknown>)[group];
+  if (sub == null || typeof sub !== "object") return null;
+  const v = (sub as Record<string, unknown>)[key];
+  if (v === undefined || v === null) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
+  if (Array.isArray(v) && v.length === 0) return null;
+  return v;
+}
+
+/** B2 per-type completeness score — averages per-field confidence over
+ *  exactly the fields required for the classified document type. Missing
+ *  fields contribute 0; present-but-unscored fields contribute
+ *  DEFAULT_PRESENT_FIELD_CONFIDENCE. For OTHER / unknown, falls back to
+ *  the model-reported overallConfidence (legacy behavior). */
+export function computeTypeScopedConfidence(typed: TypedIntakeExtraction): number {
+  const required = REQUIRED_FIELDS_BY_TYPE[typed.classification];
+  if (!required || required.length === 0) {
+    return typed.overallConfidence;
+  }
+
+  let sum = 0;
+  for (const path of required) {
+    const value = readField(typed, path);
+    if (value == null) continue;                              // missing → 0
+    const score = typed.perFieldConfidence?.[path];
+    sum += (typeof score === "number" && score >= 0 && score <= 1)
+      ? score
+      : DEFAULT_PRESENT_FIELD_CONFIDENCE;
+  }
+  return sum / required.length;
+}

@@ -75,6 +75,11 @@ describe("extractWithAI + flattenTypedExtraction — discriminated union schema"
     // New typed field attached for B2+:
     expect(r.typeSpecific?.classification).toBe("WORK_PERMIT");
     expect(r.typeSpecific?.workPermit?.employerNip).toBe("5252828706");
+    // B2 end-to-end: typeScopedConfidence computed over the 5 required WORK_PERMIT fields.
+    // 4 fields had scores (0.98, 0.95, 0.92 + default 0.8 for validUntil + default 0.8 for voivodeship via missing confidence)
+    // All 5 required fields are populated → score ≥ 0.8.
+    expect(r.typeScopedConfidence).toBeGreaterThanOrEqual(0.8);
+    expect(r.typeScopedConfidence).toBeLessThanOrEqual(1);
   });
 
   it("TRC_POSITIVE: maps to legacy DECISION_LETTER and populates credentials.decisionDate", async () => {
@@ -238,6 +243,7 @@ describe("extractWithAI + flattenTypedExtraction — discriminated union schema"
     expect(r.classification).toBe("UNKNOWN");
     expect(r.confidence).toBe("LOW");
     expect(r.typeSpecific).toBeNull();
+    expect(r.typeScopedConfidence).toBe(0);       // B2: fallback scores 0
   });
 
   it("returns fallback when Claude does not emit the required tool_use block", async () => {

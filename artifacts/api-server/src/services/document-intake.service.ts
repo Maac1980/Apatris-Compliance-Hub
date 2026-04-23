@@ -26,6 +26,7 @@ import {
   INTAKE_PROMPT_V2,
   toLegacyClassification,
   bucketConfidence,
+  computeTypeScopedConfidence,
   type TypedIntakeExtraction,
   type IntakeClassification,
 } from "../lib/document-schemas.js";
@@ -117,6 +118,8 @@ export interface IntakeResult {
   hardening: HardeningResult;
   /** Sub-phase B1: per-type structured extraction. Null when extraction falls back (no API key, tool call failure, etc.). Flat identity/credentials are still populated for backward compat. */
   typeSpecific: TypedIntakeExtraction | null;
+  /** Sub-phase B2: 0–1 completeness score computed over the 5-field per-type required set (see REQUIRED_FIELDS_BY_TYPE). Fixes the "62% misread" where rejection letters were scored against the whole mega-schema. Falls back to overallConfidence for OTHER/UNKNOWN. Legacy aiConfidence is preserved for backward compat. */
+  typeScopedConfidence: number;
 }
 
 // ═══ AI EXTRACTION PROMPT ═══════════════════════════════════════════════════
@@ -234,6 +237,7 @@ export async function processDocumentIntake(
     status,
     hardening,
     typeSpecific: extracted.typeSpecific,
+    typeScopedConfidence: extracted.typeScopedConfidence,
   };
 }
 
@@ -249,6 +253,8 @@ export interface AIExtraction {
   language: string;
   /** Sub-phase B1: per-type structured extraction. Null when Claude tool call fails or API key is missing. */
   typeSpecific: TypedIntakeExtraction | null;
+  /** Sub-phase B2: 0–1 score over per-type required fields (see REQUIRED_FIELDS_BY_TYPE). 0 when typeSpecific is null (fallback path). */
+  typeScopedConfidence: number;
 }
 
 function makeFallback(): AIExtraction {
@@ -261,6 +267,7 @@ function makeFallback(): AIExtraction {
     confidence: "LOW",
     language: "unknown",
     typeSpecific: null,
+    typeScopedConfidence: 0,
   };
 }
 
@@ -316,6 +323,7 @@ export function flattenTypedExtraction(typed: TypedIntakeExtraction): AIExtracti
     confidence: bucketConfidence(typed.overallConfidence),
     language: (cf.language ?? "unknown").toLowerCase(),
     typeSpecific: typed,
+    typeScopedConfidence: computeTypeScopedConfidence(typed),
   };
 }
 
