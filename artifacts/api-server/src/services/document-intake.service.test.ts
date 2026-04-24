@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { extractWithAI, flattenTypedExtraction } from "./document-intake.service.js";
+import { extractWithAI, flattenTypedExtraction, maybeEnrichEmployer } from "./document-intake.service.js";
 import type { TypedIntakeExtraction } from "../lib/document-schemas.js";
 
 // Mock fetch response helper that returns a tool_use block matching the
@@ -266,6 +266,120 @@ describe("extractWithAI + flattenTypedExtraction — discriminated union schema"
     expect(r.classification).toBe("UNKNOWN");
     expect(r.typeSpecific).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ── B3 employer enrichment dispatch ─────────────────────────────────────
+
+function workPermitTyped(employerNip: string | null): TypedIntakeExtraction {
+  return {
+    classification: "WORK_PERMIT",
+    commonFields: { ...EMPTY_COMMON, fullName: "Test Worker" },
+    workPermit: {
+      permitType: "Typ A", employerName: "Apatris Sp. z o.o.",
+      employerNip,
+      role: "Welder", voivodeship: "mazowieckie",
+      validFrom: "2026-01-01", validUntil: "2028-12-31", workHoursPerWeek: 40,
+    },
+    trcDecision: null, trcRejection: null, filingProof: null, passport: null,
+    perFieldConfidence: {},
+    overallConfidence: 0.9,
+    keyContent: "Work permit.",
+  };
+}
+
+function bialaResponse(subject: Record<string, unknown> | null, status = 200): Response {
+  const body = subject === null
+    ? { result: { subject: null } }
+    : { result: { subject } };
+  return new Response(JSON.stringify(body), {
+    status, headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("maybeEnrichEmployer — B3 enrichment dispatch", () => {
+  it("populates enrichment.employer when typed.workPermit.employerNip is present and Biała Lista succeeds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(bialaResponse({
+      name: "APATRIS SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+      nip: "5252828706", regon: "386546470", krs: "0000849614",
+      workingAddress: "CHŁODNA 51, 00-867 WARSZAWA", residenceAddress: null,
+      statusVat: "Czynny", accountNumbers: ["14109..."], registrationLegalDate: "2020-10-31",
+    })));
+
+    const r = await maybeEnrichEmployer(workPermitTyped("5252828706"));
+
+    expect(r).toBeDefined();
+    expect(r!.employer).toBeDefined();
+    expect(r!.employer!.source).toBe("biala_lista");
+    expect(r!.employer!.error).toBeUndefined();
+    expect(r!.employer!.data?.statusVat).toBe("Czynny");
+    expect(r!.employer!.data?.regon).toBe("386546470");
+  });
+
+  it("returns undefined (enrichment field omitted from IntakeResult) when employerNip is null", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const r = await maybeEnrichEmployer(workPermitTyped(null));
+
+    expect(r).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns undefined when typed extraction has no workPermit sub-object (TRC type)", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const trcTyped: TypedIntakeExtraction = {
+      classification: "TRC_REJECTION",
+      commonFields: { ...EMPTY_COMMON, fullName: "Worker" },
+      workPermit: null, trcDecision: null,
+      trcRejection: {
+        caseReference: "WSC-1", decisionDate: "2026-01-01",
+        voivodeship: null, rejectionGrounds: "...", citedArticles: [], appealDeadlineDays: 14,
+      },
+      filingProof: null, passport: null,
+      perFieldConfidence: {}, overallConfidence: 0.8, keyContent: "",
+    };
+    const r = await maybeEnrichEmployer(trcTyped);
+
+    expect(r).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns undefined when typed is null (extraction fallback path)", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    expect(await maybeEnrichEmployer(null)).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("populates enrichment.employer.error when Biała Lista returns 5xx (fail open, NOT thrown)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response("Service Unavailable", { status: 503 }),
+    ));
+
+    const r = await maybeEnrichEmployer(workPermitTyped("5252828706"));
+
+    expect(r).toBeDefined();
+    expect(r!.employer).toBeDefined();
+    expect(r!.employer!.data).toBeNull();
+    expect(r!.employer!.error).toBe("biala_lista_503");
+    // Critical: function did NOT throw — intake flow continues.
+  });
+
+  it("populates enrichment.employer with statusVat='Wykreślony' as a SUCCESS (lawyer must see this)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(bialaResponse({
+      name: "BANKRUPT SP Z O O", nip: "1111111111", regon: null, krs: null,
+      workingAddress: null, residenceAddress: null,
+      statusVat: "Wykreślony", accountNumbers: [], registrationLegalDate: null,
+    })));
+
+    const r = await maybeEnrichEmployer(workPermitTyped("1111111111"));
+
+    expect(r!.employer!.error).toBeUndefined();           // success path
+    expect(r!.employer!.data!.statusVat).toBe("Wykreślony"); // surfaced, not swallowed
   });
 });
 

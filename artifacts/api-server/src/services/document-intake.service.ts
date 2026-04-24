@@ -30,6 +30,14 @@ import {
   type TypedIntakeExtraction,
   type IntakeClassification,
 } from "../lib/document-schemas.js";
+import { lookupByNip, type EmployerLookupResult } from "./employer-lookup.service.js";
+
+/** Sub-phase B3: third-party enrichment surfaced alongside extraction.
+ *  Optional — only present when at least one enrichment ran successfully
+ *  or returned a structured failure. */
+export interface EnrichmentBlock {
+  employer?: EmployerLookupResult;
+}
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
 
@@ -120,6 +128,8 @@ export interface IntakeResult {
   typeSpecific: TypedIntakeExtraction | null;
   /** Sub-phase B2: 0–1 completeness score computed over the 5-field per-type required set (see REQUIRED_FIELDS_BY_TYPE). Fixes the "62% misread" where rejection letters were scored against the whole mega-schema. Falls back to overallConfidence for OTHER/UNKNOWN. Legacy aiConfidence is preserved for backward compat. */
   typeScopedConfidence: number;
+  /** Sub-phase B3: third-party enrichment results. Optional — only present when at least one enrichment ran. Currently: employer lookup via Biała Lista when typeSpecific.workPermit.employerNip is populated. Fail-open: API errors surface here as a structured error label, not as thrown exceptions. */
+  enrichment?: EnrichmentBlock;
 }
 
 // ═══ AI EXTRACTION PROMPT ═══════════════════════════════════════════════════
@@ -162,6 +172,11 @@ export async function processDocumentIntake(
 
   // 7. Confidence score
   const aiConfidence = extracted.confidence === "HIGH" ? 0.9 : extracted.confidence === "MEDIUM" ? 0.6 : 0.3;
+
+  // 7b. Sub-phase B3: third-party enrichment. Currently: Biała Lista
+  // employer lookup when typed extraction surfaced an employer NIP. Fail
+  // open — never blocks intake; errors surface on enrichment.employer.error.
+  const enrichment = await maybeEnrichEmployer(extracted.typeSpecific);
 
   // 8. Run hardening layer (10 production-safety checks)
   const hardening = await hardenIntake(
@@ -238,7 +253,29 @@ export async function processDocumentIntake(
     hardening,
     typeSpecific: extracted.typeSpecific,
     typeScopedConfidence: extracted.typeScopedConfidence,
+    ...(enrichment ? { enrichment } : {}),
   };
+}
+
+/** Sub-phase B3: dispatch third-party enrichment for whichever typed
+ *  sub-objects carry enrichable identifiers. Returns undefined when no
+ *  enrichment ran (no NIP present, etc.) so the field is omitted entirely
+ *  from IntakeResult — keeps the wire shape minimal for the common case.
+ *  Exported for direct unit testing; production callers use it via
+ *  processDocumentIntake. */
+export async function maybeEnrichEmployer(
+  typed: TypedIntakeExtraction | null,
+): Promise<EnrichmentBlock | undefined> {
+  if (!typed) return undefined;
+
+  // Only WORK_PERMIT carries employerNip in the B1 schema today. TRC types
+  // could be added later by extending trcDecision/trcRejection sub-objects
+  // with employerNip + re-running this function for them.
+  const nip = typed.workPermit?.employerNip;
+  if (!nip) return undefined;
+
+  const employer = await lookupByNip(nip);
+  return employer ? { employer } : undefined;
 }
 
 // ═══ AI VISION EXTRACTION ═══════════════════════════════════════════════════

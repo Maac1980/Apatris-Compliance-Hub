@@ -215,10 +215,11 @@ RULES:
 - Dates in YYYY-MM-DD. Polish month names: stycznia=01, lutego=02, marca=03, kwietnia=04, maja=05, czerwca=06, lipca=07, sierpnia=08, września=09, października=10, listopada=11, grudnia=12.
 - Authority: "Wojewoda [Voivode name]" or "Szef Urzędu ds. Cudzoziemców" or similar, exactly as printed.
 - For TRC_REJECTION: extract rejectionGrounds verbatim (or closely paraphrased). Cite articles like "Art. 108 Ustawy o cudzoziemcach" in citedArticles.
+- For WORK_PERMIT and TRC_* types: the employer's NIP is printed on every Polish work permit and most decision letters. Look ACTIVELY for it — usually near the employer name, formatted as "NIP: XXXXXXXXXX" or "NIP XXX-XXX-XX-XX" (10 digits with optional dashes). Do NOT skip or defer this field. Only leave it null after you have genuinely searched the document and cannot locate it.
 - perFieldConfidence: emit a 0–1 score for EVERY non-null field. Use 0.9+ when the value is unambiguous, 0.5–0.8 when partially legible or inferred, <0.5 when uncertain.
 - overallConfidence: average of populated sub-object + commonFields fields. Not over null/empty fields.
 - keyContent: 2–3 sentences plain language; lawyer should read this to grasp what the document is.
-- Do not invent fields. If the document doesn't have an employer's NIP, leave employerNip null — another service will look it up separately.`;
+- Do not invent fields. If a value is genuinely absent from the document, leave it null.`;
 
 // ── Legacy-compat classification mapping ─────────────────────────────────
 // Maps the B1 6-type enum onto the 14-type legacy DocumentClassification
