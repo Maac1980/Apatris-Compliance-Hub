@@ -3164,6 +3164,21 @@ export async function initializeDatabase(): Promise<void> {
     `);
   } catch { /* document_intake table may not exist yet */ }
 
+  // ── Document Intake Source File Storage (Sub-phase C1, 2026-04-24) ──────
+  // Persists the uploaded PDF so lawyers can retrieve the source later.
+  // file_key: pointer into lib/file-storage.ts (S3/R2 in prod, local in dev).
+  // file_storage_error: structured label when storage fails; NULL on success.
+  // Fail-open — extraction succeeds even if storage fails (lawyer loses the
+  // original file but keeps the AI extraction).
+  try {
+    await execute(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='file_key') THEN ALTER TABLE document_intake ADD COLUMN file_key TEXT; END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='document_intake' AND column_name='file_storage_error') THEN ALTER TABLE document_intake ADD COLUMN file_storage_error TEXT; END IF;
+      END $$;
+    `);
+  } catch { /* document_intake table may not exist yet */ }
+
   // ── Legal Brief Pipeline ──────────────────────────────────────────────────
   await execute(`CREATE TABLE IF NOT EXISTS legal_briefs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

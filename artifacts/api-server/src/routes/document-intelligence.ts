@@ -16,6 +16,7 @@ import {
 } from "../services/document-intelligence.service.js";
 import { confirmIntake, matchWorkerMultiSignal } from "../services/document-intake.service.js";
 import { emitIntelligenceEvent } from "../lib/intelligence-emitter.js";
+import { storeFile, getFile } from "../lib/file-storage.js";
 
 const router = Router();
 const VIEW = ["Admin", "Executive", "LegalHead", "TechOps", "Coordinator"];
@@ -77,14 +78,45 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
     // Use explicit workerId if provided, otherwise use high-confidence match
     const resolvedWorkerId = workerId ?? (workerMatch && workerMatch.confidence >= 0.6 ? workerMatch.workerId : null);
 
-    // Create document_intake row with real file metadata + match data
+    // Sub-phase C1: persist the uploaded PDF so lawyers can retrieve the source
+    // later. Fail-open — on storage error we still INSERT with file_key=null and
+    // a structured error label in file_storage_error. Extraction is never blocked.
+    let storedKey: string | null = null;
+    let storageErrorLabel: string | null = null;
+    if (file) {
+      try {
+        const stored = await storeFile({
+          tenantId: req.tenantId!,
+          category: "document-intake",
+          fileName: file.originalname,
+          buffer: file.buffer,
+          mimeType: file.mimetype,
+        });
+        storedKey = stored.key;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const httpStatus = (err as any)?.$metadata?.httpStatusCode;
+        if (msg.includes("BLOCKED in production")) {
+          storageErrorLabel = "storage_blocked";
+        } else if (typeof httpStatus === "number") {
+          storageErrorLabel = `s3_error:${httpStatus}`;
+        } else if (/timeout|abort|ECONNRESET|ENOTFOUND|socket hang up|network/i.test(msg)) {
+          storageErrorLabel = "network_error";
+        } else {
+          storageErrorLabel = `unknown:${msg.slice(0, 120)}`;
+        }
+      }
+    }
+
+    // Create document_intake row with real file metadata + match data + file_key
     const row = await queryOne<any>(
       `INSERT INTO document_intake (
         tenant_id, uploaded_by, file_name, mime_type, file_size,
         ai_classification, ai_extracted_json, ai_confidence,
         matched_worker_id, match_confidence, match_signals_json,
-        linked_case_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PENDING_REVIEW')
+        linked_case_id, status,
+        file_key, file_storage_error
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id, created_at`,
       [
         req.tenantId!,
@@ -99,9 +131,28 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
         workerMatch?.confidence ?? null,
         workerMatch ? JSON.stringify({ matchType: workerMatch.matchType, signals: workerMatch.signals, suggestions: workerMatch.suggestions }) : null,
         caseId ?? null,
+        "PENDING_REVIEW",
+        storedKey,
+        storageErrorLabel,
       ]
     );
 
+    // If storage failed, log structured warning with the REAL intake_id
+    // (not a sentinel). See Concern 1 from Sub-phase C1 review.
+    if (storageErrorLabel) {
+      console.warn("[docintel-storage] Persist failed", {
+        intakeId: row.id,
+        tenantId: req.tenantId,
+        fileName: file?.originalname ?? fileName,
+        fileSize: file?.size ?? null,
+        errorLabel: storageErrorLabel,
+      });
+    }
+
+    // file_key: null → no download available for this intake
+    // file_storage_error: present → why no download (structured label)
+    // Both fields are always present in the response; file_storage_error
+    // is undefined when storage succeeded.
     res.json({
       ...result,
       intake_id: row.id,
@@ -109,6 +160,8 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
       file_name: fileName,
       file_size: file?.size ?? null,
       mime_type: file?.mimetype ?? null,
+      file_key: storedKey,
+      ...(storageErrorLabel ? { file_storage_error: storageErrorLabel } : {}),
       suggested_worker: workerMatch && workerMatch.confidence >= 0.3 ? {
         workerId: workerMatch.workerId,
         displayName: workerMatch.workerName,
@@ -120,6 +173,47 @@ router.post("/v1/document-intelligence/extract", requireAuth, requireRole(...VIE
     });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Extraction failed" });
+  }
+});
+
+// GET /api/v1/document-intelligence/:id/file
+// Sub-phase C1: serves the original uploaded PDF so lawyers can retrieve the
+// source file later. Tenant-scoped; returns inline so the browser renders in a
+// tab. Three distinct 404 cases:
+//   - Intake row not found (bad id or wrong tenant)
+//   - Row exists but file_key is null (pre-C1 intake or storage failed)
+//   - file_key set but storage returned null (S3 object deleted/missing)
+router.get("/v1/document-intelligence/:id/file", requireAuth, requireRole(...VIEW), async (req, res) => {
+  try {
+    const row = await queryOne<{ file_key: string | null; file_name: string; mime_type: string | null }>(
+      "SELECT file_key, file_name, mime_type FROM document_intake WHERE id = $1 AND tenant_id = $2",
+      [req.params.id, req.tenantId!],
+    );
+    if (!row) return res.status(404).json({ error: "Intake record not found" });
+    if (!row.file_key) return res.status(404).json({ error: "Original file not available for this intake" });
+
+    const buffer = await getFile(row.file_key);
+    if (!buffer) return res.status(404).json({ error: "File deleted from storage" });
+
+    // RFC 5987: provide ASCII-safe fallback AND UTF-8 variant. Polish
+    // diacritics (ąćęłńóśźż) become "_" in the quoted fallback; modern
+    // browsers prefer filename*=UTF-8''<percent-encoded> and render correctly.
+    const safeFallback = row.file_name.replace(/[^\x20-\x7E]/g, "_");
+    const utf8Encoded = encodeURIComponent(row.file_name);
+
+    res.setHeader("Content-Type", row.mime_type || "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${safeFallback}"; filename*=UTF-8''${utf8Encoded}`,
+    );
+    res.send(buffer);
+  } catch (err) {
+    console.error("[docintel-download] Unexpected error", {
+      intakeId: req.params.id,
+      tenantId: req.tenantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    res.status(500).json({ error: "File retrieval failed" });
   }
 });
 
