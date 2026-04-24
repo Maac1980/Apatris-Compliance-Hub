@@ -1,9 +1,26 @@
 /**
  * Document Intelligence Service — extracts structured fields from uploaded documents.
  *
- * Phase 2 foundation: uses deterministic simulation based on document type.
- * Real OCR/AI extraction will replace the simulation layer without changing the output shape.
+ * UNIFIED PIPELINE (2026-04-24): this service now delegates to the new
+ * document-intake service (B1+B2+B3) and translates the typed extraction
+ * back to the legacy flat `extracted_fields` shape the UI expects.
+ *
+ * - B1 (`callClaudeWithSchema` + discriminated union) replaces the fragile
+ *   regex+JSON.parse path that previously lived here.
+ * - B2 (`typeScopedConfidence`) drives `overall_confidence` — typical 0.95+
+ *   on clean work permits (was 0.62–0.82 on the old scoring math).
+ * - B3 (`maybeEnrichEmployer`) populates an optional top-level `enrichment`
+ *   field with Biała Lista company details when an employer NIP is present.
+ *
+ * Backward compat: the legacy response keys (document_type, extracted_fields,
+ * missing_fields, overall_confidence, requires_review, extraction_timestamp)
+ * are preserved. New additive keys (classification, typeSpecific,
+ * typeScopedConfidence, enrichment, keyContent) ride alongside for
+ * progressive UI enhancement.
  */
+
+import { extractWithAI, maybeEnrichEmployer, type EnrichmentBlock } from "./document-intake.service.js";
+import type { IntakeClassification, TypedIntakeExtraction } from "../lib/document-schemas.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -27,6 +44,14 @@ export interface DocumentExtractionResult {
   overall_confidence: number;
   requires_review: boolean;
   extraction_timestamp: string;
+  // ── Additive fields (Option A unification, 2026-04-24) ────────────────
+  // UI consumers may progressively adopt these richer fields. Legacy
+  // consumers continue to read the flat extracted_fields shape above.
+  classification?: IntakeClassification;
+  typeSpecific?: TypedIntakeExtraction | null;
+  typeScopedConfidence?: number;
+  enrichment?: EnrichmentBlock;
+  keyContent?: string;
 }
 
 // ─── Field Definitions Per Document Type ─────────────────────────────────────
@@ -239,44 +264,6 @@ export function getFieldDefinitions(docType: DocumentType) {
   return FIELD_DEFS[docType] ?? FIELD_DEFS.UNKNOWN;
 }
 
-// ─── Simulated Extraction ───────────────────────────────────────────────────
-
-const SIMULATED_VALUES: Record<string, Record<string, { value: string; confidence: number }>> = {
-  TRC: {
-    full_name:       { value: "Oleksandr Petrov", confidence: 0.95 },
-    passport_number: { value: "FE123456",         confidence: 0.92 },
-    nationality:     { value: "Ukrainian",        confidence: 0.98 },
-    date_of_birth:   { value: "1990-03-15",       confidence: 0.90 },
-    employer_name:   { value: "Apatris Sp. z o.o.", confidence: 0.97 },
-    employer_nip:    { value: "5252828706",        confidence: 0.95 },
-    voivodeship:     { value: "Mazowieckie",       confidence: 0.88 },
-    filing_date:     { value: "2025-11-20",        confidence: 0.85 },
-    permit_type:     { value: "Temporary Residence and Work", confidence: 0.93 },
-    work_position:   { value: "TIG Welder",        confidence: 0.80 },
-  },
-  WORK_PERMIT: {
-    full_name:       { value: "Dmytro Kovalenko", confidence: 0.94 },
-    passport_number: { value: "GH789012",         confidence: 0.91 },
-    nationality:     { value: "Ukrainian",        confidence: 0.97 },
-    employer_name:   { value: "Apatris Sp. z o.o.", confidence: 0.96 },
-    employer_nip:    { value: "5252828706",        confidence: 0.95 },
-    permit_number:   { value: "WP/2025/MAZ/00123", confidence: 0.87 },
-    permit_type:     { value: "Type A",            confidence: 0.93 },
-    issue_date:      { value: "2025-06-01",        confidence: 0.90 },
-    expiry_date:     { value: "2026-05-31",        confidence: 0.90 },
-    work_position:   { value: "MIG Welder",        confidence: 0.82 },
-    voivodeship:     { value: "Mazowieckie",       confidence: 0.88 },
-  },
-  UPO: {
-    full_name:       { value: "Oleksandr Petrov",  confidence: 0.93 },
-    case_reference:  { value: "WSC-II-S.6151.111539.2025", confidence: 0.88 },
-    filing_date:     { value: "2025-11-20",        confidence: 0.92 },
-    filing_office:   { value: "Mazowiecki Urząd Wojewódzki", confidence: 0.85 },
-    application_type:{ value: "Temporary Residence", confidence: 0.90 },
-    confirmation_date:{ value: "2025-11-20",       confidence: 0.92 },
-  },
-};
-
 // ─── Main Function ──────────────────────────────────────────────────────────
 
 export interface ExtractDocumentInput {
@@ -289,173 +276,236 @@ export interface ExtractDocumentInput {
 }
 
 /**
- * Extracts structured data from a document.
- * Uses Claude Vision when file content + API key are available.
- * Falls back to simulated data otherwise.
+ * Extracts structured data from an uploaded document.
+ *
+ * Now delegates to the B1+B2+B3 pipeline in document-intake.service and
+ * translates the typed response to the legacy flat shape used by the UI.
+ * Claude tool_use + discriminated union schema replaces the old
+ * regex+JSON.parse extraction. `overall_confidence` comes from B2's
+ * type-scoped scoring. `enrichment` comes from B3's Biała Lista lookup.
  */
 export async function extractStructuredDocumentData(input: ExtractDocumentInput): Promise<DocumentExtractionResult> {
-  const docType = input.documentType ?? detectDocumentType(input.fileName);
-  const fields = FIELD_DEFS[docType] ?? FIELD_DEFS.UNKNOWN;
+  const hintDocType = input.documentType ?? detectDocumentType(input.fileName);
 
-  // Try real OCR extraction if file content is available
-  if (input.rawContent && process.env.ANTHROPIC_API_KEY) {
-    try {
-      const aiResult = await callClaudeVisionExtraction(input.rawContent, input.mimeType ?? "application/pdf", docType, fields);
-      console.log(`[DocIntel] Real extraction for ${docType}: ${Object.values(aiResult.extracted_fields).filter(f => f.value).length}/${fields.length} fields`);
-      return aiResult;
-    } catch (err) {
-      console.error(`[DocIntel] Claude Vision failed, falling back to simulation:`, err instanceof Error ? err.message : err);
-      // Fall through to simulation
-    }
+  // No file upload → no vision extraction possible. Return a minimal
+  // result. (Previously buildSimulatedResult returned fake data here;
+  // dropped per decision #3 — honest empty is cleaner than fake success.)
+  if (!input.rawContent) {
+    return buildEmptyResult(hintDocType, "AI extraction requires file upload");
   }
 
-  // Fallback: simulated extraction
-  return buildSimulatedResult(docType, fields);
+  const buffer = Buffer.from(input.rawContent, "base64");
+  const mimeType = input.mimeType ?? "application/pdf";
+
+  // New pipeline: B1 (schema-enforced tool_use) + B2 (type-scoped confidence)
+  const extracted = await extractWithAI(buffer, mimeType);
+
+  // B3: third-party enrichment (Biała Lista). Fail-open — errors surface
+  // on enrichment.employer.error, never throw.
+  const enrichment = await maybeEnrichEmployer(extracted.typeSpecific);
+
+  const typed = extracted.typeSpecific;
+  const legacyDocType = typed ? mapB1ToLegacyDocType(typed.classification) : hintDocType;
+  const fieldDefs = FIELD_DEFS[legacyDocType] ?? FIELD_DEFS.UNKNOWN;
+
+  const extractedFields: Record<string, ExtractedField> = typed
+    ? typedToLegacyExtractedFields(typed, legacyDocType)
+    : Object.fromEntries(fieldDefs.map((fd) => [fd.key, { value: null, confidence: 0, source: "ai" as const }]));
+
+  const missingFields = fieldDefs
+    .filter((fd) => fd.required && !extractedFields[fd.key]?.value)
+    .map((fd) => fd.key);
+
+  const overallConfidence = extracted.typeScopedConfidence;
+  const roundedOverall = Math.round(overallConfidence * 100) / 100;
+
+  const base: DocumentExtractionResult = {
+    document_type: legacyDocType,
+    extracted_fields: extractedFields,
+    missing_fields: missingFields,
+    overall_confidence: roundedOverall,
+    requires_review: missingFields.length > 0 || overallConfidence < 0.7,
+    extraction_timestamp: new Date().toISOString(),
+    // Additive fields for progressive UI adoption:
+    classification: typed?.classification ?? "OTHER",
+    typeSpecific: typed,
+    typeScopedConfidence: roundedOverall,
+    keyContent: extracted.keyContent,
+  };
+
+  if (enrichment) base.enrichment = enrichment;
+  return base;
 }
 
-// ─── Claude Vision Extraction ───────────────────────────────────────────────
-
-async function callClaudeVisionExtraction(
-  base64Content: string,
-  mimeType: string,
-  docType: DocumentType,
-  fields: { key: string; label: string; required: boolean }[],
-): Promise<DocumentExtractionResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY!;
-
-  const fieldList = fields.map(f => `"${f.key}": "${f.label}"${f.required ? " (REQUIRED)" : ""}`).join(",\n    ");
-
-  const prompt = `Extract structured data from this ${docType.replace("_", " ")} document.
-
-Return ONLY clean JSON (no markdown, no commentary) with this exact shape:
-{
-  "extracted": {
-    ${fieldList}
-  },
-  "confidence": <overall confidence 0.0 to 1.0>
-}
-
-Rules:
-- For each field, return the extracted value as a string, or null if not found
-- Extract dates in YYYY-MM-DD format when possible
-- Extract names exactly as written in the document
-- If the document is in Polish, translate field values to English where appropriate (except proper names)
-- Be precise — do not guess values that are not in the document`;
-
-  const contentBlocks: any[] = mimeType === "application/pdf"
-    ? [
-        { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Content } },
-        { type: "text", text: prompt },
-      ]
-    : [
-        { type: "image", source: { type: "base64", media_type: mimeType, data: base64Content } },
-        { type: "text", text: prompt },
-      ];
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
-      messages: [{ role: "user", content: contentBlocks }],
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Claude Vision API error ${res.status}: ${errText.slice(0, 200)}`);
-  }
-
-  const data = await res.json() as { content: Array<{ type: string; text?: string }> };
-  const raw = data.content?.find(b => b.type === "text")?.text ?? "";
-
-  return parseVisionResponse(raw, docType, fields);
-}
-
-function parseVisionResponse(
-  raw: string,
-  docType: DocumentType,
-  fields: { key: string; label: string; required: boolean }[],
-): DocumentExtractionResult {
-  // Strip markdown fences
-  let cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-
-  let parsed: any = null;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    const m = cleaned.match(/\{[\s\S]*\}/);
-    try { parsed = m ? JSON.parse(m[0]) : null; } catch { parsed = null; }
-  }
-
-  const aiValues = parsed?.extracted ?? parsed ?? {};
-  const aiConfidence = typeof parsed?.confidence === "number" ? parsed.confidence : 0.7;
-
-  const extracted: Record<string, ExtractedField> = {};
-  const missing: string[] = [];
-
-  for (const field of fields) {
-    const rawVal = aiValues[field.key];
-    const value = rawVal === null || rawVal === undefined || rawVal === "" ? null : String(rawVal);
-    const fieldConf = value ? Math.min(1, Math.max(0.3, aiConfidence + (Math.random() * 0.1 - 0.05))) : 0;
-
-    extracted[field.key] = { value, confidence: Math.round(fieldConf * 100) / 100, source: "ai" };
-
-    if (!value && field.required) {
-      missing.push(field.key);
-    }
-  }
-
-  const filledFields = Object.values(extracted).filter(f => f.value !== null);
-  const overall = filledFields.length > 0
-    ? filledFields.reduce((sum, f) => sum + f.confidence, 0) / filledFields.length
-    : 0;
-
+/** Empty-result helper for when no file content is provided. Preserves the
+ *  DocumentExtractionResult shape so callers can uniformly consume it. */
+function buildEmptyResult(docType: DocumentType, note: string): DocumentExtractionResult {
+  const fieldDefs = FIELD_DEFS[docType] ?? FIELD_DEFS.UNKNOWN;
   return {
     document_type: docType,
-    extracted_fields: extracted,
-    missing_fields: missing,
-    overall_confidence: Math.round(overall * 100) / 100,
-    requires_review: missing.length > 0 || overall < 0.8,
+    extracted_fields: Object.fromEntries(fieldDefs.map((fd) => [fd.key, { value: null, confidence: 0, source: "ai" as const }])),
+    missing_fields: fieldDefs.filter((fd) => fd.required).map((fd) => fd.key),
+    overall_confidence: 0,
+    requires_review: true,
     extraction_timestamp: new Date().toISOString(),
+    classification: "OTHER",
+    typeSpecific: null,
+    typeScopedConfidence: 0,
+    keyContent: note,
   };
 }
 
-// ─── Simulated Fallback ─────────────────────────────────────────────────────
+// ─── B1 → Legacy Translation ─────────────────────────────────────────────
 
-function buildSimulatedResult(docType: DocumentType, fields: { key: string; label: string; required: boolean }[]): DocumentExtractionResult {
-  const simulated = SIMULATED_VALUES[docType] ?? {};
-  const extracted: Record<string, ExtractedField> = {};
-  const missing: string[] = [];
+/** Map the B1 6-classification enum onto the legacy 22-type DocumentType
+ *  for backward compat. TRC_POSITIVE and TRC_REJECTION both flatten to
+ *  DECISION_LETTER; the distinction is preserved in the extracted
+ *  `decision_outcome` field ("positive" vs "negative"). */
+function mapB1ToLegacyDocType(b1: IntakeClassification): DocumentType {
+  switch (b1) {
+    case "WORK_PERMIT": return "WORK_PERMIT";
+    case "TRC_POSITIVE": return "DECISION_LETTER";
+    case "TRC_REJECTION": return "DECISION_LETTER";
+    case "FILING_PROOF": return "UPO";
+    case "PASSPORT": return "PASSPORT";
+    case "OTHER": return "UNKNOWN";
+  }
+}
 
-  for (const field of fields) {
-    const sim = simulated[field.key];
-    if (sim) {
-      extracted[field.key] = { value: sim.value, confidence: sim.confidence, source: "ai" };
-    } else {
-      extracted[field.key] = { value: null, confidence: 0, source: "ai" };
-      if (field.required) missing.push(field.key);
-    }
+/** Per-type flattener: take the B1 typed extraction + target legacy
+ *  DocumentType, emit a Record<string, ExtractedField> keyed by
+ *  FIELD_DEFS[legacyDocType] keys. Every FIELD_DEFS key is present; values
+ *  not captured in the B1 schema show as null with confidence 0.
+ *  Exported for direct unit testing. */
+export function typedToLegacyExtractedFields(
+  typed: TypedIntakeExtraction,
+  legacyDocType: DocumentType,
+): Record<string, ExtractedField> {
+  const fieldDefs = FIELD_DEFS[legacyDocType] ?? FIELD_DEFS.UNKNOWN;
+  const out: Record<string, ExtractedField> = {};
+
+  for (const fd of fieldDefs) {
+    const resolved = resolveFieldValue(typed, legacyDocType, fd.key);
+    const pfc = resolved.confidencePath
+      ? typed.perFieldConfidence?.[resolved.confidencePath]
+      : undefined;
+    const confidence = resolved.value
+      ? (typeof pfc === "number" && pfc >= 0 && pfc <= 1 ? pfc : 0.8)
+      : 0;
+    out[fd.key] = {
+      value: resolved.value,
+      confidence: Math.round(confidence * 100) / 100,
+      source: "ai",
+    };
   }
 
-  const filledFields = Object.values(extracted).filter(f => f.value !== null);
-  const overall = filledFields.length > 0
-    ? filledFields.reduce((sum, f) => sum + f.confidence, 0) / filledFields.length
-    : 0;
+  return out;
+}
 
-  return {
-    document_type: docType,
-    extracted_fields: extracted,
-    missing_fields: missing,
-    overall_confidence: Math.round(overall * 100) / 100,
-    requires_review: missing.length > 0 || overall < 0.8,
-    extraction_timestamp: new Date().toISOString(),
-  };
+/** Resolve a single legacy field key against the B1 typed extraction.
+ *  Returns the value and the perFieldConfidence path used to score it. */
+function resolveFieldValue(
+  typed: TypedIntakeExtraction,
+  legacyDocType: DocumentType,
+  key: string,
+): { value: string | null; confidencePath?: string } {
+  const cf = typed.commonFields;
+
+  // Common-field mappings (apply across types where the key matches)
+  switch (key) {
+    case "full_name": return { value: cf.fullName, confidencePath: "commonFields.fullName" };
+    case "pesel": return { value: cf.pesel, confidencePath: "commonFields.pesel" };
+    case "date_of_birth": return { value: cf.dateOfBirth, confidencePath: "commonFields.dateOfBirth" };
+    case "nationality": return { value: cf.nationality, confidencePath: "commonFields.nationality" };
+  }
+
+  // Per-type mappings
+  if (legacyDocType === "WORK_PERMIT") {
+    const wp = typed.workPermit;
+    if (!wp) return { value: null };
+    switch (key) {
+      case "employer_name": return { value: wp.employerName, confidencePath: "workPermit.employerName" };
+      case "employer_nip": return { value: wp.employerNip, confidencePath: "workPermit.employerNip" };
+      case "permit_type": return { value: wp.permitType, confidencePath: "workPermit.permitType" };
+      case "issue_date": return { value: wp.validFrom, confidencePath: "workPermit.validFrom" };
+      case "expiry_date": return { value: wp.validUntil, confidencePath: "workPermit.validUntil" };
+      case "work_position": return { value: wp.role, confidencePath: "workPermit.role" };
+      case "voivodeship": return { value: wp.voivodeship, confidencePath: "workPermit.voivodeship" };
+      // passport_number, permit_number, conditions not captured in B1 schema
+    }
+    return { value: null };
+  }
+
+  if (legacyDocType === "DECISION_LETTER") {
+    const td = typed.trcDecision;
+    const tr = typed.trcRejection;
+    const caseRef = td?.caseReference ?? tr?.caseReference ?? null;
+    const decisionDate = td?.decisionDate ?? tr?.decisionDate ?? null;
+    switch (key) {
+      case "case_reference": return {
+        value: caseRef,
+        confidencePath: td ? "trcDecision.caseReference" : "trcRejection.caseReference",
+      };
+      case "decision_date": return {
+        value: decisionDate,
+        confidencePath: td ? "trcDecision.decisionDate" : "trcRejection.decisionDate",
+      };
+      case "decision_type": return {
+        // Polish legal terminology: the document itself is called a "decyzja"
+        value: td ? "Decyzja o udzieleniu zezwolenia" : tr ? "Decyzja o odmowie" : null,
+      };
+      case "issuing_authority": return { value: cf.authority, confidencePath: "commonFields.authority" };
+      case "decision_outcome": return { value: td ? "positive" : tr ? "negative" : null };
+      case "legal_basis": {
+        const cited = tr?.citedArticles;
+        return { value: cited && cited.length > 0 ? cited.join("; ") : null };
+      }
+      case "appeal_deadline": {
+        // Convert appealDeadlineDays → date (decisionDate + days).
+        if (tr?.appealDeadlineDays && tr?.decisionDate) {
+          const d = new Date(tr.decisionDate);
+          if (!isNaN(d.getTime())) {
+            d.setDate(d.getDate() + tr.appealDeadlineDays);
+            return { value: d.toISOString().slice(0, 10) };
+          }
+        }
+        return { value: null };
+      }
+    }
+    return { value: null };
+  }
+
+  if (legacyDocType === "UPO") {
+    const fp = typed.filingProof;
+    if (!fp) return { value: null };
+    switch (key) {
+      case "case_reference": return { value: fp.caseReference, confidencePath: "filingProof.caseReference" };
+      case "filing_date": return { value: fp.filingDate, confidencePath: "filingProof.filingDate" };
+      case "filing_office": return { value: cf.authority, confidencePath: "commonFields.authority" };
+      case "upo_number": return { value: fp.submissionNumber, confidencePath: "filingProof.submissionNumber" };
+      case "confirmation_date": return { value: fp.filingDate, confidencePath: "filingProof.filingDate" };
+      // application_type not captured in B1 schema
+    }
+    return { value: null };
+  }
+
+  if (legacyDocType === "PASSPORT") {
+    const ps = typed.passport;
+    if (!ps) return { value: null };
+    switch (key) {
+      case "passport_number": return { value: ps.passportNumber, confidencePath: "passport.passportNumber" };
+      case "issue_date": return { value: ps.issueDate, confidencePath: "passport.issueDate" };
+      case "expiry_date": return { value: ps.expiryDate, confidencePath: "passport.expiryDate" };
+      case "issuing_country": return { value: ps.issuingCountry, confidencePath: "passport.issuingCountry" };
+      // sex not captured in B1 schema
+    }
+    return { value: null };
+  }
+
+  // UNKNOWN / everything else — minimal commonFields mapping
+  if (key === "document_date") return { value: cf.documentDate, confidencePath: "commonFields.documentDate" };
+
+  return { value: null };
 }
 
 // ─── Type Detection from Filename ───────────────────────────────────────────
