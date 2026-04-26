@@ -46,6 +46,16 @@ Audit trail completeness. Every action affecting a case is logged. The audit log
 
 Refusal to fabricate. When the AI lacks inputs to produce meaningful output, it refuses rather than producing fluent fiction. Paths that lack legal basis citations are not generated, not filtered out after generation.
 
+Law as argument-construction. Law has two sides. Each side argues from the law itself, not from preference. The decider judges between arguments. The AI must reason in two-sided form by structural design, constructing the strongest argument available for its side while understanding the opposing argument. AI drafts that produce only one-sided arguments without awareness of opposing arguments produce weak arguments.
+
+AI completes; lawyer edits and sends. The AI's job is deep research and complete drafting all the way through. Not "here are options" but full proposed outputs. The lawyer's exclusive role is to edit and send. The boundary is structural, not preferential. The AI is structurally prevented from sending.
+
+Continuous learning across three streams. The AI does not wait for case outcomes to learn. Stream A is in-flight engagement during lawyer editing where the AI evaluates edits in real time. Stream B is outcome attribution after case closure where positive or negative results are mapped back to AI drafts and lawyer edits. Stream C is continuous legal knowledge refresh from authoritative Polish sources.
+
+Lawyer as adversarial tester. Lawyers test AI comprehension during normal work by deliberately introducing wrong edits. If the AI catches the deliberate wrong edit and pushes back with sound legal reasoning, the AI passes the probe. If the AI accepts the wrong edit silently, the AI has revealed a comprehension gap. The system supports this testing pattern structurally. Layer 0 testability is continuous and embedded in production work, not episodic.
+
+Honest confidence calibration. When the AI raises a concern or makes a claim, its confidence level must be honest. False high-confidence is obstruction. False low-confidence is obsequiousness. Calibration is tested continuously through comprehension tests and through lawyer probes.
+
 Legitimacy by construction. The scenarios engine generates only paths that exist legally and are accessible. Illegitimate paths cannot enter the candidate set.
 
 Informed consent as data. Client choice of a legal path is recorded as a first-class entity with timestamp and consent context. Subsequent AI work on the case is scoped to the chosen path.
@@ -66,9 +76,9 @@ A parallel platform, EEJ, is shipping at eej-jobs-api.fly.dev with around 28 mod
 
 A recent audit identified five broken-on-prod gaps: zero of twenty documents linked to cases, missing case_reference writes, empty case_notebook_entries, empty case_generated_docs, empty legal_evidence. These are one structural issue: the case-centered architecture exists in the schema and not in the data flow.
 
-## THE FOUR-LAYER ARCHITECTURE
+## THE FIVE-LAYER ARCHITECTURE
 
-The build proceeds in four layers. Each layer is the foundation for the next. Skipping a layer means the layer above ships onto sand.
+The build proceeds in five layers (Layer 0 plus Layers 1-4). Each layer is the foundation for the next. Skipping a layer means the layer above ships onto sand.
 
 Layer 1: Fix the writes. The three writes that should already be firing must be made to fire. Without this, every layer above is hollow.
 
@@ -78,7 +88,23 @@ Layer 3: Scenarios engine. The new stage in the legal_briefs pipeline that gener
 
 Layer 4: Consent loop. The new client_path_selections table records which path was generated, which the lawyer recommended, which the client chose, when, how, and the consent context. Subsequent AI work is scoped to the chosen path. Consent context includes structured artifacts (uploaded signed forms, audio recording references with timestamps) where applicable, not freeform notes alone.
 
-Each layer has its own SUGGEST proposal, CHECK pass, and build sequence. The dependencies between layers are strict. Layer 2 cannot start until Layer 1 is complete. Layer 3 cannot start until Layer 2 is complete. Layer 4 cannot start until Layer 3 is complete.
+Each layer has its own SUGGEST proposal, CHECK pass, and build sequence. The dependencies between layers are strict. Layer 1 cannot start until Layer 0 v1 is complete. Layer 2 cannot start until Layer 1 is complete. Layer 3 cannot start until Layer 2 is complete. Layer 4 cannot start until Layer 3 is complete.
+
+## LAYER 0: LEGAL COMPREHENSION FOUNDATION
+
+Layer 0 is the prerequisite beneath all other layers. Without Layer 0, the writes (Layer 1) record fluent fiction. The evidence chain (Layer 2) preserves fiction. The scenarios engine (Layer 3) generates fiction with citations. The consent loop (Layer 4) records consent to fiction.
+
+Layer 0 is the AI's structural obligation to follow Polish law and learn from it continuously. The design specifies how legal knowledge is represented, how comprehension is verified, how arguments are constructed in two-sided form, how source linkage is enforced, how learning happens continuously across three streams, and how the boundary between AI drafting and lawyer sending is structurally protected.
+
+Layer 0 ships in two sub-phases.
+
+Layer 0 v1 (estimated 6 weeks): legal knowledge representation (structured spine), comprehension verification (test suite + LLM-judge scoring), source linkage enforcement (4-layer schema + prompt + validator + drift detection), refusal mode (structured state with what-would-be-needed-to-proceed records), boundary enforcement (5-layer structural prevention of AI-side send), and manual-curation Stream C for legal knowledge refresh. Layer 0 v1 is considered complete when the Layer 0 v1 testability suite passes at the agreed threshold and the boundary enforcement is verified end-to-end on production.
+
+Layer 0 v2 (estimated 6-10 weeks additional): two-sided argument construction with paired our/opposing schema, in-flight engagement during lawyer editing (Stream A), outcome attribution (Stream B), automated Polish-law-source ingestion (Stream C automation), in-flight UI surface, post-edit verification with different-model adversarial review, probe support for lawyer-as-tester pattern, and full population-aware prompt parameterization.
+
+Before Layer 0 v1 build begins, EU AI Act Article 6 conformity assessment must be completed. Polish-law-supporting AI in immigration is likely classified as high-risk; specific architectural requirements may emerge from this assessment that revise the design. This is a pre-build gate.
+
+The full Layer 0 design is documented at artifacts/api-server/docs/LAYER_0_DESIGN.md. The testability set is documented at artifacts/api-server/docs/LAYER_0_TESTABILITY.md.
 
 ## LAYER 1: FIX THE WRITES
 
@@ -170,7 +196,7 @@ Estimate at the demonstrated build pace: two to three weeks.
 
 ## CROSS-CUTTING WORK
 
-The unified case review surface. One page, displayed to the lawyer, showing client identity and case stage, every linked document with extracted facts, AI first-pass analysis, generated paths from Layer 3, verification report, risks, lawyer's input area, and approval and dispatch controls. This surface ships after Layer 4 because it depends on all four layers being real.
+The unified case review surface. One page, displayed to the lawyer, showing client identity and case stage, every linked document with extracted facts, AI first-pass analysis, generated paths from Layer 3, verification report, risks, lawyer's input area, and approval and dispatch controls. This surface ships after Layer 4 because it depends on all five layers being real.
 
 Before this surface ships: existing aggregator code (getLinkedCaseView in the legal services, routes/timeline.ts for worker scope) must be addressed. The decision is whether to deprecate them when the new surface ships, evolve them into the new surface, or maintain them alongside. Maintaining all three creates duplicate views of the same data with potential for drift and lawyer confusion. The plan decision: deprecate the existing aggregators when the unified surface ships, redirect their callers to the new surface, and remove the old code in a follow-up sub-phase. The deprecation plan is part of the Layer 3 or Layer 4 SUGGEST.
 
@@ -180,7 +206,7 @@ The client portal. Clients log in, see their case, upload documents, respond to 
 
 Estimate: six to eight weeks.
 
-The historical-case-data extraction. The firm's thirteen years of case files are the calibration source for Layer 3 v2 forecasts and the pattern source for the scenarios engine itself. This is a multi-month parallel project. It is not blocked on the four layers; it is blocked on someone deciding to start it. The earlier it starts, the better Layer 3 v2 will be.
+The historical-case-data extraction. The firm's thirteen years of case files are the calibration source for Layer 3 v2 forecasts and the pattern source for the scenarios engine itself. This is a multi-month parallel project. It is not blocked on the five layers; it is blocked on someone deciding to start it. The earlier it starts, the better Layer 3 v2 will be.
 
 ## WHAT IS EXPLICITLY DROPPED FROM THE MASTER SPEC FOR THIS VERSION
 
@@ -196,7 +222,7 @@ Full export pipeline. Does not build until paths and consent are real.
 
 Counterargument generation as a separate feature. Folded into the scenarios engine output where each path includes its strongest counterargument.
 
-Multi-case analytics. Defer until enough cases have flowed through the four layers to produce meaningful patterns.
+Multi-case analytics. Defer until enough cases have flowed through the five layers to produce meaningful patterns.
 
 Source provenance panel as a separate feature. Folded into the unified review surface where each paragraph of generated output carries its source citation.
 
@@ -218,7 +244,7 @@ The build agent executes the build, stopping between sub-steps for verification.
 
 Each sub-step's output is reviewed in three-lens mode.
 
-Tests run with at least three scenarios: positive (system handles correctly), negative (system refuses or escalates correctly), and dummy (system refuses to fabricate when inputs do not warrant output).
+Tests run with at least three scenarios: positive (system handles correctly), negative (system refuses or escalates correctly), and dummy (system refuses to fabricate when inputs do not warrant output). For features touching legal-comprehension surfaces, the Layer 0 comprehension test suite must pass before deploy. Failed comprehension tests block deploy via the standard pre-deploy gate.
 
 If tests pass, the build ships to staging. Smoke tests run. Smoke results are reviewed. On pass, the build promotes to production via a documented procedure with a pre-written rollback path.
 
