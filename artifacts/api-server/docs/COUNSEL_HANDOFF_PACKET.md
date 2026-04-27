@@ -162,7 +162,15 @@ Articles 8-15 obligations apply in full:
 - **Article 11** — Technical documentation per Annex IV
 - **Article 12** — Record-keeping (logs of operation)
 - **Article 13** — Transparency and information provision to users
-- **Article 14** — Human oversight. Specifically, counsel must determine whether the lawyer-as-structural-gate design (described in Section 3) satisfies Article 14's human oversight requirement, or whether additional oversight mechanisms are required. The interaction between this Article 14 question and the parallel RODO Article 22 question (Section 6) is one of the seven specific questions in Section 8 (pending).
+**Article 14 — Human oversight.** Specifically, counsel must determine whether the lawyer-as-structural-gate design (where the radca prawny reviews and signs all AI-prepared content before submission) satisfies Article 14's human oversight requirement. The lawyer's review is a meaningful human-in-the-loop intervention, not a rubber stamp.
+
+The Article 14 question and the parallel RODO Article 22 question (Section 6) are addressed across the seven specific questions in Section 8 where each surfaces in counsel's specialization area:
+
+- Q3 (Article 50 transparency obligations) — surfaces the disclosure dimension of human oversight (where what the user is told about the lawyer-as-gate design becomes operationally relevant)
+- Q5 (RODO + AI Act intersection on probe data and verification overrides) — surfaces the operational dimension of human oversight (the verification override mechanism is a structural gate that depends on meaningful human judgment)
+- Q6 (Polish AI implementation law substantive obligations) — surfaces any Polish-specific human-oversight requirements layered on the EU baseline
+
+Counsel addressing Articles 14 and 22 should consider these three questions together. APATRIS does not require counsel to surface Articles 14 and 22 as separate questions; counsel may address them naturally in the context of Q3, Q5, and Q6, or surface them as additional findings in Section 9's General Observations field of the response template.
 - **Article 15** — Accuracy, robustness, and cybersecurity
 
 Plus:
@@ -245,7 +253,14 @@ Articles 15-22 (access, rectification, erasure, restriction, portability, object
 - Article 22 specific safeguards: if Article 22 applies (per the question above), what specific human-intervention rights must APATRIS implement?
 - Article 21 objection: how does objection interact with the lawyer's professional obligations to maintain case records?
 
-**The seven specific questions in Section 8 (pending) surface RODO questions with operational context.**
+**Counsel question for Section 6**: The seven specific questions in Section 8 surface RODO concerns across multiple questions. Specifically:
+
+- Q5 (RODO + AI Act intersection on probe data and verification overrides) is the primary RODO + AI Act intersection question, addressing data governance, retention rules, and data minimization under the joint regimes
+- Q3 (Article 50 transparency obligations) intersects with RODO's transparency obligations under Articles 12-14 GDPR/RODO
+- Q6 (Polish AI implementation law substantive obligations) surfaces UODO's role in supervising high-risk AI in border control contexts and any Polish-specific RODO + AI Act overlay
+- Q7 (Polish-language considerations) intersects with RODO's transparency and consent requirements under Polish administrative practice
+
+Counsel covering Section 6 (RODO + AI Act intersection) will find the substantive deliverables in Q5 primarily, with Q3 and Q7 providing transparency and language dimensions. Article 22 (automated decision-making restrictions) surfaces naturally in Q5's analysis, given that APATRIS's lawyer-as-structural-gate design is the architectural response to Article 22 concerns.
 
 ---
 
@@ -637,8 +652,6 @@ Before this packet leaves the repository for counsel outreach, the following con
 These items are flagged here so the gap is visible. Population may happen as a manual edit before the packet is exported, or as a small commit before counsel outreach. Either way, the v1.0 packet is internally complete; the contact details are the engagement-readiness step.
 
 Additionally, after the v1.0 commit, a follow-up commit will update the self-referential SHA in Section 10's reading priority table and document description from "[SHA assigned at v1.0 commit, to be updated in next commit]" to the actual v1.0 commit SHA.
-
-A separate reconciliation commit (Pass 2) will edit Section 5 Branch B and Section 6 closing pointer to match what is actually in Section 8 — Articles 14 and 22 are addressed across the seven questions where each surfaces in counsel's specialization area, rather than as an "integrated Article 14/22 question" that does not exist in the seven.
 
 ---
 
