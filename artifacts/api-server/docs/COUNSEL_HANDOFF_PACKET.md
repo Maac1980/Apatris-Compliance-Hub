@@ -623,11 +623,13 @@ After APATRIS reads counsel's response, follow-up questions may arise. APATRIS w
 
 **Engagement contact**:
 
-- **Primary contact**: Manish Shetty, Owner, APATRIS Sp. z o.o.
-- **Email**: [TBD — pre-outreach action item; finalize before counsel outreach]
-- **Phone**: [TBD — pre-outreach action item; finalize before counsel outreach]
-- **Backup contact**: [TBD — pre-outreach action item; consider Anna or operations person; not required for engagement initiation]
+Current contacts:
+
+- **Primary**: Manish Shetty, Founder and Partner, APATRIS Sp. z o.o. — manish@apatris.pl — +48 576 341 732
+- **Backup**: Akshay Gandhi, Partner and Board Member, APATRIS Sp. z o.o. — akshay@apatris.pl — +48 578 781 000
 - **Mailing address**: ul. Chłodna 51, Warsaw, Poland (APATRIS Sp. z o.o.)
+
+For the canonical current state of engagement contacts (which may be updated independently of this packet's substantive content), see COUNSEL_PACKET_CONTACTS.md in the same directory.
 
 Counsel may contact APATRIS directly through the channels above. APATRIS will respond within 2 business days to engagement inquiries.
 
