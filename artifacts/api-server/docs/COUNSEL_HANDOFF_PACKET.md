@@ -4,7 +4,7 @@
 
 ---
 
-**Document version**: 1.0 (Sections 1-11 complete with seven verbatim questions embedded in Section 8). Internally complete and counsel-ready. Engagement contacts populated; canonical contacts maintained in COUNSEL_PACKET_CONTACTS.md.
+**Document version**: 1.0 (Sections 1-11 complete; seven verbatim questions in Section 8). Engagement contacts maintained in COUNSEL_PACKET_CONTACTS.md (independently editable).
 
 ---
 
