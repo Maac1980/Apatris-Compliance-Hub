@@ -34,7 +34,7 @@ Counsel covering multiple specializations should read the union of relevant sect
 
 **Engagement logistics**: Detailed in Section 11.
 
-**Decision authority**: APATRIS owner (Manish) holds final decision authority on all build decisions. Counsel provides legal analysis and recommendations; APATRIS interprets and acts on those recommendations.
+**Decision authority**: APATRIS Founder and Partner (Manish) holds final decision authority on all build decisions. Counsel provides legal analysis and recommendations; APATRIS interprets and acts on those recommendations.
 
 **Document version**: 1.0 — counsel handoff packet complete. Subsequent versions will incorporate counsel responses.
 
@@ -64,7 +64,7 @@ The APATRIS network includes three distinct legal entities relevant to counsel r
 
 (b) APATRIS and Co. — provides traditional (non-AI) immigration consulting services to foreign workers; sister entity sharing brand and ownership with APATRIS Sp. z o.o.
 
-(c) A licensed agencja pracy (job agency) operated by a related party (the spouse of APATRIS Sp. z o.o.'s owner); occasionally engaged by the welding outsourcing operation; distinct legal entity from the APATRIS-named entities.
+(c) A licensed agencja pracy (job agency) operated by a related party (the spouse of APATRIS Sp. z o.o.'s Founder and Partner); occasionally engaged by the welding outsourcing operation; distinct legal entity from the APATRIS-named entities.
 
 The three entities are distinct legal persons. Data-sharing relationships, RODO controller/processor designations, and labor-law boundaries between them are detailed in Section 6 (RODO intersection) and Section 7 (Polish administrative law, pending) as relevant. Counsel may verify the entity structure via KRS records.
 
@@ -313,7 +313,7 @@ Counsel covering Section 6 (RODO + AI Act intersection) will find the substantiv
 - Are there KPA provisions that constrain the form of representation when AI tools participate in case preparation?
 - What documentation must APATRIS maintain to demonstrate that the radca prawny remains the legal representative, not the AI?
 
-**Conflict-of-interest provisions for related-party arrangements** (forward-referenced from Section 3): The APATRIS network includes a related-party agencja pracy operated by the spouse of APATRIS Sp. z o.o.'s owner. Polish bar rules and general corporate law have provisions addressing related-party arrangements.
+**Conflict-of-interest provisions for related-party arrangements** (forward-referenced from Section 3): The APATRIS network includes a related-party agencja pracy operated by the spouse of APATRIS Sp. z o.o.'s Founder and Partner. Polish bar rules and general corporate law have provisions addressing related-party arrangements.
 
 **Counsel question — Related-party conflicts**: Are there conflict-of-interest provisions APATRIS should be aware of? Specifically:
 - Polish radca prawny ethics rules (Kodeks Etyki Radcy Prawnego) — any provisions addressing related-party clients or service arrangements?
@@ -566,7 +566,7 @@ Engagement logistics in Section 11 detail the access provisioning process.
 
 **Decision authority**:
 
-Decision authority on architectural and operational choices belongs to APATRIS (specifically: Manish Shetty, owner of APATRIS Sp. z o.o.). Counsel's role is to:
+Decision authority on architectural and operational choices belongs to APATRIS (specifically: Manish Shetty, Founder and Partner of APATRIS Sp. z o.o.). Counsel's role is to:
 - Answer the seven specific questions in Section 8 with confidence labels
 - Surface risks APATRIS may not have considered (Section 9 General Observations)
 - Recommend architectural refinements where compliance benefits would be material
