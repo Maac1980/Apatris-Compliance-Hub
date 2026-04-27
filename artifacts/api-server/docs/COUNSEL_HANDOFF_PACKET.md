@@ -651,8 +651,6 @@ Before this packet leaves the repository for counsel outreach, the following con
 
 These items are flagged here so the gap is visible. Population may happen as a manual edit before the packet is exported, or as a small commit before counsel outreach. Either way, the v1.0 packet is internally complete; the contact details are the engagement-readiness step.
 
-Additionally, after the v1.0 commit, a follow-up commit will update the self-referential SHA in Section 10's reading priority table and document description from "bd61ee3" to the actual v1.0 commit SHA.
-
 ---
 
 ## Document complete
