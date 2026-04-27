@@ -254,7 +254,7 @@ Articles 15-22 (access, rectification, erasure, restriction, portability, object
 **Polish AI implementation context**: The EU AI Act applies in Poland via direct effect for Regulations, but Polish national implementation legislation determines supervisory authority structure, enforcement procedures, and specific national obligations. As of this packet's date:
 
 - The Polish AI implementation law was accepted by the Council of Ministers on 2026-03-31 and is currently in Sejm review. The law has not yet been enacted.
-- The proposed structure designates **KRiBSI** (Komisja Rozwoju i Bezpieczeństwa Sztucznej Inteligencji — Commission for the Development and Security of Artificial Intelligence) as the primary supervisory authority for AI systems generally.
+- The proposed structure designates **KRiBSI** (Komisja Rozwoju i Bezpieczeństwa Sztucznej Inteligencji — Commission for the Development and Safety of Artificial Intelligence) as the primary supervisory authority for AI systems generally.
 - **UODO** (Urząd Ochrony Danych Osobowych — Personal Data Protection Office) retains advisory and supervisory roles, with primary supervision for high-risk AI systems used in border control and migration management contexts.
 
 **Counsel question — Polish AI law status**: Given the law is in Sejm review and not yet enacted, what is APATRIS's current and prospective compliance posture? Specifically:
