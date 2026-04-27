@@ -4,7 +4,7 @@
 
 ---
 
-**Document version**: 0.6 (Sections 1-6 complete; Sections 7-11 pending). The complete packet will be saved as Version 1.0 when Sections 7-11 are drafted, reviewed, and integrated.
+**Document version**: 0.9 (Sections 1-9 complete; Sections 10-11 pending; Section 8 scaffolded with verbatim questions to be embedded at v1.0). The complete packet will be saved as Version 1.0 when Sections 10-11 are drafted and the seven verbatim questions are extracted into Section 8.
 
 ---
 
@@ -249,16 +249,164 @@ Articles 15-22 (access, rectification, erasure, restriction, portability, object
 
 ---
 
-## PENDING SECTIONS (7-11)
+## Section 7 — Polish-Specific Considerations (for Polish Administrative Law Counsel)
+
+**Polish AI implementation context**: The EU AI Act applies in Poland via direct effect for Regulations, but Polish national implementation legislation determines supervisory authority structure, enforcement procedures, and specific national obligations. As of this packet's date:
+
+- The Polish AI implementation law was accepted by the Council of Ministers on 2026-03-31 and is currently in Sejm review. The law has not yet been enacted.
+- The proposed structure designates **KRiBSI** (Komisja Rozwoju i Bezpieczeństwa Sztucznej Inteligencji — Commission for the Development and Security of Artificial Intelligence) as the primary supervisory authority for AI systems generally.
+- **UODO** (Urząd Ochrony Danych Osobowych — Personal Data Protection Office) retains advisory and supervisory roles, with primary supervision for high-risk AI systems used in border control and migration management contexts.
+
+**Counsel question — Polish AI law status**: Given the law is in Sejm review and not yet enacted, what is APATRIS's current and prospective compliance posture? Specifically:
+- Does APATRIS need to comply with the proposed structure now (in anticipation), or only after enactment?
+- If APATRIS is classified as not-high-risk under the EU AI Act (per Section 4 verdict), is KRiBSI or UODO the relevant Polish supervisor?
+- If the Sejm modifies the proposed structure before enactment, what monitoring should APATRIS implement to track changes?
+
+**KPA + Foreigners Act intersection with AI Act**: APATRIS operates under the Kodeks postępowania administracyjnego (Administrative Procedure Code) and the Foreigners Act when preparing immigration submissions. The AI Act adds a layer of obligations on top of these existing regimes.
+
+**Counsel question — KPA intersection**: How do KPA procedural requirements interact with AI-assisted preparation? Specifically:
+- Are there KPA provisions that constrain what AI tools can prepare for administrative submissions?
+- Article 63 KPA (form of submissions) — does AI-prepared content require specific authentication or attribution?
+- Article 32 KPA (representation) — see representation regime question below
+- Foreigners Act Article 108 (fikcja prawna pobytu) — APATRIS's case practice relies on this provision; does AI involvement in case preparation affect its application?
+- Article 88 Foreigners Act on initial work permits, where AI-prepared application content interacts with the labor market test requirement and the wojewoda's discretion under specific provisions — what AI-specific compliance considerations arise? (This is APATRIS's primary case type: third-country nationals on initial work permits issued by the wojewoda, employed by industrial outsourcing clients.)
+
+**Polish-language disclosure standards**: Polish law has specific requirements for client communication, contractual language, and consumer protection in services rendered in Poland. APATRIS's bilingual architecture (Polish authoritative, English bridge — see Section 3) is designed with these requirements in mind, but legal validation is needed.
+
+**Counsel question — Bilingual disclosure**: Does APATRIS's bilingual architecture meet Polish legal requirements? Specifically:
+- Are there Polish consumer protection requirements that mandate primary-language disclosure standards (e.g., Article 384 Civil Code on standard contracts)?
+- Are there professional services regulations (radca prawny) requiring Polish as the authoritative language for client communications?
+- Does the "Polish prevails when translations diverge" principle align with Polish legal requirements, or is APATRIS's principle stricter, weaker, or aligned?
+- What documentation must APATRIS retain to demonstrate bilingual compliance?
+
+**Counsel question — Article 50 transparency disclosures in bilingual architecture**: How should EU AI Act Article 50 transparency disclosures (that the user is interacting with an AI system and that content is AI-generated) be rendered in APATRIS's bilingual architecture? Specifically:
+- Must the disclosure be in Polish only (per Polish administrative law and consumer protection requirements), in both languages (per the bilingual user experience), or in whichever language the user has selected?
+- If the disclosure is in Polish authoritative with English bridge, does this satisfy Article 50?
+- What documentation must APATRIS maintain to demonstrate Article 50 compliance in the bilingual context?
+
+**Representation regime** (forward-referenced from Section 3): Polish administrative law regulates who is authorized to represent applicants before authorities. The relevant framework includes:
+
+- Radca prawny (legal counsel) — authorized representative under Polish bar rules
+- Adwokat (advocate) — authorized representative under Polish bar rules
+- KPA Articles 32-33 — provisions on representation in administrative proceedings
+- Doradca podatkowy (tax adviser) — authorized in tax matters; not generally in immigration
+- Other authorized parties under specific statutes
+
+**Counsel question — Representation in AI-assisted case preparation**: Does APATRIS's design satisfy Polish representation requirements? Specifically:
+- When APATRIS's AI prepares an administrative submission and the radca prawny reviews and signs, who is "the representative" under KPA Articles 32-33?
+- Does AI-assisted preparation fall within the scope of services a radca prawny is authorized to delegate (to AI as a tool, to staff, to other parties)?
+- Are there KPA provisions that constrain the form of representation when AI tools participate in case preparation?
+- What documentation must APATRIS maintain to demonstrate that the radca prawny remains the legal representative, not the AI?
+
+**Conflict-of-interest provisions for related-party arrangements** (forward-referenced from Section 3): The APATRIS network includes a related-party agencja pracy operated by the spouse of APATRIS Sp. z o.o.'s owner. Polish bar rules and general corporate law have provisions addressing related-party arrangements.
+
+**Counsel question — Related-party conflicts**: Are there conflict-of-interest provisions APATRIS should be aware of? Specifically:
+- Polish radca prawny ethics rules (Kodeks Etyki Radcy Prawnego) — any provisions addressing related-party clients or service arrangements?
+- KPA representation provisions — any restrictions when the representative entity has related-party relationships?
+- Are there disclosure obligations to clients about the multi-entity structure including the related-party agencja pracy?
+- What conflict-of-interest documentation should APATRIS maintain?
+
+**Polish bar rules — radca prawny professional responsibility** (forward-referenced from Section 5): The radca prawny who serves as the structural gate for AI outputs is governed by Polish bar rules.
+
+**Counsel question — Professional responsibility in AI-assisted services**: How do Polish bar rules apply to the radca prawny's use of AI tools? Specifically:
+- Does the radca prawny's review-and-sign action satisfy the professional responsibility requirements when AI prepared the underlying content?
+- Are there mandatory disclosure obligations to clients about the AI-assisted nature of services rendered?
+- What documentation must the radca prawny maintain to demonstrate professional responsibility for AI-prepared content?
+- Are there professional liability insurance considerations specific to AI-assisted legal services?
+
+**The seven specific questions in Section 8 surface these Polish-specific concerns with operational context.**
+
+---
+
+## Section 8 — Seven Specific Questions (Substantive Deliverable)
+
+**Status: scaffolded. The seven verbatim questions will be embedded at the v1.0 save by extracting Section 13 of EU_AI_ACT_ARTICLE_6_RESEARCH.md (commit bf4d92b).**
+
+This section contains the seven specific questions counsel is asked to answer, drawn verbatim from the internal research at commit bf4d92b (EU_AI_ACT_ARTICLE_6_RESEARCH.md, Section 13). Each question will be presented with operational context to help counsel understand why APATRIS is asking and what level of detail is most useful in the response.
+
+**Per-question structure (will be applied to each of the seven questions at v1.0)**:
+
+- **Q[N] — [Question topic]**
+- *Verbatim question text from research document*
+- **Why APATRIS is asking**: [Operational context — what build decision depends on this answer]
+- **Sub-questions counsel may address** (if helpful): [Specific framings counsel may want to address]
+- **Suggested response format**: [E.g., "binary verdict + reasoning paragraph + caveats", or "structured analysis with citations to specific provisions"]
+- **Confidence level requested**: VERIFIED / ESTIMATE-high / ESTIMATE-medium / UNCERTAIN — counsel should label their confidence on each answer
+
+**The integrated Article 14 / Article 22 question**: Section 5 Branch B noted that the Article 14 (EU AI Act human oversight) question and the Article 22 (RODO automated decision-making) question are related but distinct, and that both are surfaced as one of the seven specific questions. This question asks counsel to address both Articles together — whether the lawyer-as-structural-gate design satisfies both provisions, what overlap and divergence exists between them, and how APATRIS should document the design to demonstrate compliance with both.
+
+**Response logistics**: Section 9 provides a pre-structured response template. Counsel may use the template, adapt it, or respond in any format they prefer. The structured form is offered to make integration of findings systematic — not to constrain counsel.
+
+**Engagement timing**: Section 11 (pending) details timing expectations. The seven questions are designed to be answerable in 5-15 hours of counsel time depending on specialization breadth. Some questions will be naturally answered together (e.g., questions about Article 14 and Article 22 by the same counsel covering both EU AI Act and RODO).
+
+---
+
+## Section 9 — Counsel Response Template
+
+This section provides a pre-structured form for counsel responses. Counsel may use the template directly, adapt it, or respond in any format preferred. The structured form is offered to make integration of counsel findings into APATRIS's pre-build architectural decisions systematic.
+
+**Response template structure**:
+
+COUNSEL RESPONSE — APATRIS COUNSEL HANDOFF PACKET v1.0
+
+Counsel: [Name, firm, bar number]
+Specialization(s) covered: [EU AI Act / RODO / Polish administrative law / multiple]
+Date of response: [YYYY-MM-DD]
+Hours spent on review: [Estimate]
+Repository documents reviewed: [List by filename and commit SHA from Section 10]
+
+Q1 — [Question topic]
+Counsel's answer: [Response text]
+Confidence: VERIFIED / ESTIMATE-high / ESTIMATE-medium / UNCERTAIN
+Reasoning summary: [1-3 sentences]
+Citations: [Specific provisions, case law, formal guidance, etc.]
+Caveats: [Limitations, scope of opinion, what would change the answer]
+
+Q2 — [Question topic]
+[Same structure]
+
+[... Q3 through Q7 follow same structure ...]
+
+GENERAL OBSERVATIONS
+
+Risks counsel surfaces that APATRIS may not have considered: [Free-text]
+Architectural recommendations counsel proposes: [Free-text]
+Questions counsel surfaces that need follow-up: [Free-text]
+Documentation counsel recommends APATRIS maintain: [Free-text]
+
+ENGAGEMENT TERMS
+
+Scope of opinion: [What is and isn't covered by this response]
+Reliance: [Who can rely on this opinion and for what purpose]
+Updates: [Will counsel update if law/circumstances change?]
+Fee summary: [If relevant; or reference to engagement letter]
+
+Counsel signature:
+Date:
+
+**Notes on template use**:
+
+- Counsel may answer questions in any order
+- Questions outside counsel's specialization may be marked "Outside scope — recommend [other counsel type]"
+- Confidence labels (VERIFIED/ESTIMATE-high/ESTIMATE-medium/UNCERTAIN) help APATRIS calibrate which counsel answers are decisive vs which warrant additional review
+- Citations to specific provisions, case law, or formal guidance are valuable for APATRIS's compliance documentation
+- Caveats are encouraged — overconfidence is not useful; honest uncertainty is
+
+**Response delivery**: Counsel may deliver responses by email, signed PDF, or any preferred format. APATRIS will integrate responses into its pre-build architectural decisions and update the master plan accordingly.
+
+**Follow-up process**: APATRIS may have follow-up questions after reading counsel's responses. Section 11 (pending) outlines the engagement process for follow-ups.
+
+---
+
+## PENDING SECTIONS (10-11)
 
 The following sections are pending and will be added in a subsequent edit:
 
-- **Section 7** — Polish-Specific Considerations (for Polish administrative law counsel): Polish AI implementation law status (KRiBSI/UODO), KPA + Foreigners Act intersection with AI Act, Polish-language disclosure standards, representation regime, conflict-of-interest provisions for related-party arrangements
-- **Section 8** — The Seven Specific Questions (verbatim from EU_AI_ACT_ARTICLE_6_RESEARCH.md commit bf4d92b Section 13, with operational context and suggested response format)
-- **Section 9** — Counsel Response Template (pre-structured form for counsel responses)
 - **Section 10** — Repository Document References (the seven foundation documents with brief descriptions and GitHub links)
 - **Section 11** — Engagement Logistics (timeline, decision authority, what APATRIS commits to providing)
 
-When Sections 7-11 are added, the document version will be updated from 0.6 to 1.0.
+Additionally, Section 8 currently scaffolded — the seven verbatim questions from EU_AI_ACT_ARTICLE_6_RESEARCH.md (commit bf4d92b) Section 13 will be embedded at v1.0.
+
+When Sections 10-11 are added and Section 8's verbatim questions are embedded, the document version will be updated from 0.9 to 1.0.
 
 ---
