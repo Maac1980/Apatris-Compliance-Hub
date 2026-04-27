@@ -4,7 +4,7 @@
 
 ---
 
-**Document version**: 0.9 (Sections 1-9 complete; Sections 10-11 pending; Section 8 scaffolded with verbatim questions to be embedded at v1.0). The complete packet will be saved as Version 1.0 when Sections 10-11 are drafted and the seven verbatim questions are extracted into Section 8.
+**Document version**: 1.0 (Sections 1-11 complete with seven verbatim questions embedded in Section 8). Internally complete and counsel-ready. Pre-outreach action items in Section 11 flag the contact details to be populated before the packet leaves the repository for counsel outreach.
 
 ---
 
@@ -320,11 +320,9 @@ Articles 15-22 (access, rectification, erasure, restriction, portability, object
 
 ## Section 8 — Seven Specific Questions (Substantive Deliverable)
 
-**Status: scaffolded. The seven verbatim questions will be embedded at the v1.0 save by extracting Section 13 of EU_AI_ACT_ARTICLE_6_RESEARCH.md (commit bf4d92b).**
+This section contains the seven specific questions counsel is asked to answer, drawn verbatim from the internal research at commit bf4d92b (EU_AI_ACT_ARTICLE_6_RESEARCH.md, Section 13). Each question is presented with operational context to help counsel understand why APATRIS is asking and what level of detail is most useful in the response.
 
-This section contains the seven specific questions counsel is asked to answer, drawn verbatim from the internal research at commit bf4d92b (EU_AI_ACT_ARTICLE_6_RESEARCH.md, Section 13). Each question will be presented with operational context to help counsel understand why APATRIS is asking and what level of detail is most useful in the response.
-
-**Per-question structure (will be applied to each of the seven questions at v1.0)**:
+**Per-question structure**:
 
 - **Q[N] — [Question topic]**
 - *Verbatim question text from research document*
@@ -333,11 +331,109 @@ This section contains the seven specific questions counsel is asked to answer, d
 - **Suggested response format**: [E.g., "binary verdict + reasoning paragraph + caveats", or "structured analysis with citations to specific provisions"]
 - **Confidence level requested**: VERIFIED / ESTIMATE-high / ESTIMATE-medium / UNCERTAIN — counsel should label their confidence on each answer
 
-**The integrated Article 14 / Article 22 question**: Section 5 Branch B noted that the Article 14 (EU AI Act human oversight) question and the Article 22 (RODO automated decision-making) question are related but distinct, and that both are surfaced as one of the seven specific questions. This question asks counsel to address both Articles together — whether the lawyer-as-structural-gate design satisfies both provisions, what overlap and divergence exists between them, and how APATRIS should document the design to demonstrate compliance with both.
+---
+
+### Q1 — Annex III(7) qualifier interpretation
+
+*Verbatim text from research document*: **Is APATRIS truly outside Annex III(7)?** The "on behalf of competent public authorities" qualifier interpretation requires counsel confirmation. Hypothetical contract-side facts (e.g., APATRIS providing services to UdSC or to a public agency) could shift this.
+
+**Why APATRIS is asking**: APATRIS's classification verdict in Section 4 (likely-not-high-risk, ESTIMATE-medium confidence) depends on the "by or on behalf of competent public authorities" qualifier excluding applicant-side legal services. Counsel confirmation determines whether APATRIS proceeds as not-high-risk under Article 50 + Article 6(4) self-assessment, or whether reclassification triggers the full Articles 8-15 + Annex IV + conformity assessment + CE marking + post-market monitoring obligation set. This is the single most consequential question for the build sequencing of Layer 0 v1.
+
+**Sub-questions counsel may address**: scope of Annex III(7) sub-items (a) through (d); authoritative interpretive sources for "on behalf of"; EU Commission guidance if any; whether contract-side facts (e.g., APATRIS hypothetically providing services to UdSC) would shift the verdict; treatment of mixed-context AI systems where the same model serves both applicant-side and authority-side users.
+
+**Suggested response format**: binary verdict (in scope / out of scope / ambiguous) + reasoning paragraph + caveats listing facts that would shift the verdict.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q2 — Profiling under Article 6(3)
+
+*Verbatim text from research document*: **Does the Layer 3 scenarios engine constitute "profiling of natural persons" under Article 6(3)?** If APATRIS were ever classified under Annex III, the profiling clause may close the Article 6(3) exclusions. Counsel must confirm whether per-worker viability scoring is profiling under GDPR Article 4(4) for AI Act Article 6(3) purposes.
+
+**Why APATRIS is asking**: Layer 3 (case_strategy) is designed to produce per-case viability scoring and case-strategy recommendations grounded in evidence. If APATRIS were reclassified under Annex III at any point, the profiling clause in Article 6(3) may foreclose the exclusion paths that would otherwise apply. Counsel confirmation affects Layer 3 v1 architectural decisions: specifically, whether to design viability scoring with profiling-clause assumptions baked in, or to design assuming the exclusion paths remain available.
+
+**Sub-questions counsel may address**: definition of "profiling of natural persons" under Article 6(3) and its relationship to GDPR Article 4(4); distinction between legal analysis (which scenarios engine produces) and decisions affecting natural persons; applicability to per-case viability scoring; relationship between Article 6(3) profiling clause and the Annex III(7)(b) "risk assessment" sub-item.
+
+**Suggested response format**: structured analysis with citations to specific provisions and any available guidance.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q3 — Article 50 transparency obligations
+
+*Verbatim text from research document*: **Article 50 transparency obligations**: counsel must confirm what specific disclosure language is required for the lawyer-and-client AI-disclosure surface, and whether disclosure to the immigrant client requires additional Polish-language considerations.
+
+**Why APATRIS is asking**: Article 50 transparency disclosures must surface to users that AI is involved in the system. APATRIS's bilingual architecture (Polish authoritative, English bridge — see Section 3) intersects with Polish-language disclosure standards. Counsel confirmation determines disclosure language requirements (Polish only, both languages, or user-selected language) and the documentation APATRIS must maintain to demonstrate Article 50 compliance in the bilingual context.
+
+**Sub-questions counsel may address**: required disclosure language for the lawyer-facing surface; required disclosure language for the client-facing surface; whether the "Polish authoritative with English bridge" architecture satisfies Article 50; documentation requirements for Article 50 compliance; intersection with Polish consumer protection requirements for primary-language disclosure.
+
+**Suggested response format**: specific recommended disclosure language (in Polish and English) + reasoning + documentation list.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q4 — Article 6(4) non-high-risk-assessment documentation
+
+*Verbatim text from research document*: **Article 6(4) non-high-risk-assessment documentation**: counsel must review the assessment record before APATRIS asserts non-high-risk classification. The record should be defensible to KRiBSI on inspection.
+
+**Why APATRIS is asking**: If APATRIS asserts non-high-risk classification under Article 6(4) per the verdict in Section 4, Article 6(4) requires a written record of the assessment. The record must be defensible to the Polish supervisory authority (KRiBSI under the proposed Polish AI implementation law) on inspection. Counsel confirmation determines whether APATRIS's reasoning satisfies Article 6(4)'s documentation requirements, what content the record must contain, who must review or sign, and what retention obligations apply.
+
+**Sub-questions counsel may address**: required content of the Article 6(4) self-assessment record; retention requirements; whether counsel review or signature is required for the record to be defensible; intersection with KRiBSI inspection authority once the Polish law enacts; format requirements (written vs. electronic, language, structure).
+
+**Suggested response format**: structured documentation requirements list + reasoning + reviewer/signature recommendations.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q5 — RODO + AI Act intersection on probe data and verification overrides
+
+*Verbatim text from research document*: **RODO + AI Act intersection on probe data and verification overrides** (per LAYER_0_DESIGN.md unknown unknown #6): counsel must confirm retention rules and data minimization obligations.
+
+**Why APATRIS is asking**: LAYER_0_DESIGN.md (commit 3e0dead) unknown unknown #6 surfaces probe data and verification override flows in the comprehension layer. These flows involve personal data captured during AI verification probes and lawyer override events. Counsel confirmation determines retention rules (RODO Article 5 storage limitation), data minimization obligations (RODO Article 5 minimization), and the intersection with EU AI Act Article 10 (data governance for high-risk AI). Affects Layer 0 v1 build decisions on probe-data architecture and verification override logging.
+
+**Sub-questions counsel may address**: retention rules under RODO Article 5(1)(e) for probe data and override logs; data minimization under RODO Article 5(1)(c) for the verification flows; special-category data implications if probes touch RODO Article 9 data; intersection with EU AI Act Article 10 if APATRIS were ever reclassified as high-risk; intersection with Article 22 RODO automated-decision-making for override events.
+
+**Suggested response format**: structured analysis with retention/minimization recommendations + RODO + EU AI Act citations.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q6 — Polish AI implementation law substantive obligations
+
+*Verbatim text from research document*: **Polish AI implementation law substantive obligations**: counsel must review the Council of Ministers draft (2026-03-31 version) to identify any APATRIS-specific obligations beyond EU AI Act baseline.
+
+**Why APATRIS is asking**: The Polish AI implementation law was accepted by the Council of Ministers on 2026-03-31 and is currently in Sejm review. The law adds enforcement infrastructure (KRiBSI as primary supervisor, UODO advisory plus supervisory role for high-risk AI in border control / migration) and may add substantive obligations beyond the EU AI Act baseline. Counsel review of the draft determines whether APATRIS faces Polish-specific obligations beyond the EU baseline. Affects compliance posture once the law enacts.
+
+**Sub-questions counsel may address**: Polish-specific obligations not in the EU AI Act baseline; KRiBSI / UODO supervisory overlap and APATRIS's reporting structure; enforcement timing (when do obligations attach — at acceptance, at enactment, or at a later commencement date?); transitional provisions for systems already in development at enactment.
+
+**Suggested response format**: gap analysis (Polish vs EU baseline) + monitoring recommendations + flagging of changes APATRIS should track during Sejm review.
+
+**Confidence level requested**: counsel should label.
+
+---
+
+### Q7 — Polish-language considerations
+
+*Verbatim text from research document*: **Polish-language considerations**: instructions for use, transparency disclosures, consent forms — counsel must confirm translation and presentation standards under Polish administrative practice.
+
+**Why APATRIS is asking**: Instructions for use, transparency disclosures, and consent forms must satisfy Polish administrative practice and Polish consumer protection requirements. APATRIS's bilingual architecture (Polish authoritative, English bridge) is the design response to this need. Counsel confirmation determines the translation and presentation standards required, whether the bilingual architecture satisfies them, and what documentation APATRIS must maintain to demonstrate bilingual compliance.
+
+**Sub-questions counsel may address**: required Polish-language standards for instructions for use; required standards for transparency disclosures (intersection with Q3); required standards for client consent forms; presentation conventions (e.g., font, prominence, order of language presentation); documentation of bilingual compliance for KRiBSI / UODO inspection.
+
+**Suggested response format**: specific language and presentation requirements + documentation list + intersection with Q3 if applicable.
+
+**Confidence level requested**: counsel should label.
+
+---
 
 **Response logistics**: Section 9 provides a pre-structured response template. Counsel may use the template, adapt it, or respond in any format they prefer. The structured form is offered to make integration of findings systematic — not to constrain counsel.
 
-**Engagement timing**: Section 11 (pending) details timing expectations. The seven questions are designed to be answerable in 5-15 hours of counsel time depending on specialization breadth. Some questions will be naturally answered together (e.g., questions about Article 14 and Article 22 by the same counsel covering both EU AI Act and RODO).
+**Engagement timing**: Section 11 details timing expectations. The seven questions are designed to be answerable in 5-15 hours of counsel time depending on specialization breadth.
 
 ---
 
@@ -398,15 +494,156 @@ Date:
 
 ---
 
-## PENDING SECTIONS (10-11)
+## Section 10 — Repository Document References
 
-The following sections are pending and will be added in a subsequent edit:
+This section lists the foundation documents that support the counsel handoff packet. Counsel may consult these documents in any order; reading priority is suggested but not required.
 
-- **Section 10** — Repository Document References (the seven foundation documents with brief descriptions and GitHub links)
-- **Section 11** — Engagement Logistics (timeline, decision authority, what APATRIS commits to providing)
+All documents are committed to the APATRIS repository on the main branch. Direct file access is available via the GitHub commit links below. APATRIS will provide alternative access (PDF export, email attachment, secure file share) on counsel's request.
 
-Additionally, Section 8 currently scaffolded — the seven verbatim questions from EU_AI_ACT_ARTICLE_6_RESEARCH.md (commit bf4d92b) Section 13 will be embedded at v1.0.
+**Document repository**: artifacts/api-server/docs/ (within the APATRIS Compliance Hub repository)
 
-When Sections 10-11 are added and Section 8's verbatim questions are embedded, the document version will be updated from 0.9 to 1.0.
+**Reading priority for the seven questions in Section 8**:
+
+| Priority | Document | Purpose | Commit SHA |
+|---|---|---|---|
+| Essential | MASTER_PLAN.md | Five-layer architecture, 20 non-negotiable principles, structural design | 5873fca |
+| Essential | EU_AI_ACT_ARTICLE_6_RESEARCH.md | Internal classification analysis, the seven specific counsel questions | bf4d92b |
+| Essential | LAYER_0_DESIGN.md | Comprehension layer architectural design with v1/v2 sub-phase split | 3e0dead |
+| High | LAYER_0_TESTABILITY.md | 17-test comprehension verification suite covering 8 principles | 1d10251 |
+| High | LANGUAGE_TOGGLE_VERIFICATION.md | Bilingual architecture audit with five-label classification (1.7 percent functional toggle) | 41dedd1 |
+| Medium | LANGUAGE_TIER1_REMEDIATION.md | Foundational fix plan for bilingual architecture (4-8 hour scope) | 7e6fa97 |
+| Reference | This packet (COUNSEL_HANDOFF_PACKET.md) | Counsel-facing synthesis document | [SHA assigned at v1.0 commit, to be updated in next commit] |
+
+**Foundation document descriptions**:
+
+**MASTER_PLAN.md** (commit 5873fca) — The architectural reference. Defines APATRIS's five-layer architecture: Layer 0 (comprehension/reasoning verification), Layer 1 (case_reference), Layer 2 (case_summary), Layer 3 (legal_analysis), Layer 4 (case_strategy). Lists the 20 non-negotiable principles that govern the system, including the lawyer-as-structural-gate provisions, the Polish authoritative / English bridge bilingual principle, the human review structural gate, and the refusal-to-fabricate discipline. Counsel reviewing the seven questions in Section 8 should read this first because the principles inform the design constraints that shape compliance posture.
+
+**EU_AI_ACT_ARTICLE_6_RESEARCH.md** (commit bf4d92b) — The internal classification analysis that produced the verdict in Section 4 of this packet (likely-not-high-risk under Article 6 / Annex III(7), confidence ESTIMATE-medium). Section 13 of this document contains the seven specific counsel questions verbatim. The reasoning chain in Sections 1-12 of this document supports why APATRIS is asking each question. Counsel addressing classification should read Sections 1-13 in full. Counsel addressing only specific questions may read only Section 13 plus the relevant supporting section.
+
+**LAYER_0_DESIGN.md** (commit 3e0dead) — The architectural design for Layer 0 with explicit v1/v2 sub-phase split. Layer 0 v1 is the implementation gated on counsel review; Layer 0 v2 is the post-counsel refinement. Counsel reviewing the lawyer-as-structural-gate design should read this document because the design lives at this architectural layer.
+
+**LAYER_0_TESTABILITY.md** (commit 1d10251) — The 17-test comprehension verification suite. Each test demonstrates a specific principle's testable behavior. Counsel reviewing the system's compliance posture may use this document as evidence that principles are operationalized, not just declared. The testability suite is also relevant to Article 9 (EU AI Act risk management system) compliance documentation.
+
+**LANGUAGE_TOGGLE_VERIFICATION.md** (commit 41dedd1) — The bilingual architecture audit. Documents that 1.7 percent (2 of 115) of result pages have a functional language toggle, 0 percent are Polish-default, and approximately 92 percent have no i18n at all. Five-label classification system used (VERIFIED, PARTIAL-FUNCTIONAL, PARTIAL-BROKEN, MISSING, AMBIGUOUS). Counsel reviewing Polish-language disclosure standards (Section 7), Article 50 transparency disclosures, and the bilingual disclosure question should read this document because it documents the gap between APATRIS's bilingual principle and current implementation.
+
+**LANGUAGE_TIER1_REMEDIATION.md** (commit 7e6fa97) — The foundational fix plan for the bilingual architecture. Sub-options A, B, C documented with trade-off analysis. Sub-option C (workforce-app default flip; defer dashboard) recommended. Acceptance criteria are structural (every AppShell-wrapped page passes verification). Counsel reviewing the bilingual remediation plan may consult this document for understanding the proposed compliance path.
+
+**This packet (COUNSEL_HANDOFF_PACKET.md, commit [SHA assigned at v1.0 commit, to be updated in next commit])** — The counsel-facing synthesis. Section 1 (Cover Page) introduces APATRIS. Section 2 (Executive Summary) outlines the engagement scope. Section 3 (System Context) describes the operational environment. Sections 4-7 (Classification, Conformity Path, RODO Intersection, Polish-Specific Considerations) frame each specialization area. Section 8 (Seven Specific Questions) contains the substantive deliverable. Section 9 (Counsel Response Template) provides the structured response form. Sections 10-11 (this section and the next) provide engagement logistics.
+
+**Documents not required for counsel review**:
+
+- CHECK_LAYER1_CASE_REFERENCE.md (commit ed0b31d) — Pre-build CHECK questions for Layer 1 architecture. Internal design exercise; not yet structurally relevant to counsel review.
+- MASTER_BLUEPRINT.md (commit 902117a) — Original master specification (superseded by MASTER_PLAN.md). Available for historical reference if counsel asks about architectural evolution.
+- TRACK2-INVENTORY.md (commit 739f592) — Codebase audit at Day 9 baseline. Available for technical reference if counsel asks about implementation state.
+
+**Repository access**:
+
+The APATRIS Compliance Hub repository is private. Counsel will receive read-only access via one of:
+- GitHub user invitation (preferred — versioned access, audit trail)
+- Repository archive (.zip with git history) shared via secure channel
+- Individual file PDFs if counsel prefers
+
+Engagement logistics in Section 11 detail the access provisioning process.
 
 ---
+
+## Section 11 — Engagement Logistics
+
+**Decision authority**:
+
+Decision authority on architectural and operational choices belongs to APATRIS (specifically: Manish Shetty, owner of APATRIS Sp. z o.o.). Counsel's role is to:
+- Answer the seven specific questions in Section 8 with confidence labels
+- Surface risks APATRIS may not have considered (Section 9 General Observations)
+- Recommend architectural refinements where compliance benefits would be material
+- Cite specific provisions, case law, or formal guidance that supports each answer
+
+Counsel does not decide: which sub-option APATRIS selects from a set of compliance paths, which features are prioritized, or which documentation strategies APATRIS adopts. APATRIS will weigh counsel's recommendations against operational constraints, capital priorities, and risk tolerance, and decide.
+
+**Counsel qualifications**:
+
+APATRIS expects counsel to be qualified in Polish law (radca prawny or adwokat) for the Polish administrative law and bar rules questions in Section 7, and qualified in EU regulatory practice for the EU AI Act questions in Sections 4 and 5 and the RODO questions in Section 6. A single counsel may cover multiple specializations; multiple counsel may collaborate on the engagement. APATRIS is open to either structure and will defer to counsel's recommendation on whether the seven questions in Section 8 are best addressed by one engagement or by multiple counsel working together.
+
+**What APATRIS commits to providing**:
+
+- Repository access (read-only) per Section 10
+- Operational clarification on request (case examples, current process documentation, business context)
+- Source documentation for any factual claim in this packet
+- Reasonable response time on counsel follow-up questions (target: within 3 business days)
+- Direct point of contact (Manish) for substantive questions; backup contact (TBD) for logistics
+
+**Timing expectations**:
+
+- **Counsel time estimate**: 5-15 hours total, depending on specialization breadth and depth of review.
+- **Response timeline**: 2-4 weeks from engagement letter signing.
+- **Engagement structure**: APATRIS prefers a written response (using the Section 9 template, adapted, or any preferred format). Optional follow-up call (60-90 minutes) to discuss findings and clarify recommendations.
+
+**Fee structure**:
+
+APATRIS expects to engage counsel on hourly billing or fixed-fee basis, at counsel's preference. Fee discussion happens in the engagement letter; this packet does not pre-negotiate fees. APATRIS budgets for thorough review and is not seeking the lowest-cost engagement.
+
+**Engagement letter**:
+
+A formal engagement letter will define scope, fees, reliance, confidentiality, and engagement-specific terms. APATRIS expects counsel to provide the engagement letter; APATRIS will review and execute.
+
+**Confidentiality**:
+
+This packet contains commercially sensitive information about APATRIS's architecture, operational processes, and business strategy. APATRIS expects counsel to treat this packet as confidential. The engagement letter should include standard confidentiality and non-disclosure provisions covering:
+- This packet and all foundation documents in Section 10
+- Any APATRIS internal information shared in operational clarification
+- Counsel's own work product produced in response to this engagement
+
+**Reliance**:
+
+Counsel's response will be relied upon by APATRIS for architectural decisions, compliance documentation, and pre-launch validation. APATRIS will not rely on counsel's response for third-party advice, client-facing claims, or post-launch dispute resolution.
+
+The engagement letter should clarify the scope of reliance APATRIS may place on counsel's response.
+
+**Updates and currency**:
+
+Polish AI implementation law is in Sejm review. The EU AI Act framework is being supplemented by Commission delegated acts and guidelines. APATRIS expects counsel's response to reflect the law as of the response date, with material changes flagged for follow-up.
+
+**Follow-up process**:
+
+After APATRIS reads counsel's response, follow-up questions may arise. APATRIS will read the response in full before submitting follow-up questions, group follow-up questions where possible, provide context, and respect counsel's billing structure.
+
+**Engagement contact**:
+
+- **Primary contact**: Manish Shetty, Owner, APATRIS Sp. z o.o.
+- **Email**: [TBD — pre-outreach action item; finalize before counsel outreach]
+- **Phone**: [TBD — pre-outreach action item; finalize before counsel outreach]
+- **Backup contact**: [TBD — pre-outreach action item; consider Anna or operations person; not required for engagement initiation]
+- **Mailing address**: ul. Chłodna 51, Warsaw, Poland (APATRIS Sp. z o.o.)
+
+Counsel may contact APATRIS directly through the channels above. APATRIS will respond within 2 business days to engagement inquiries.
+
+**Engagement initiation**:
+
+APATRIS welcomes counsel inquiries before formal engagement. A 30-minute introductory call to discuss scope, fit, and approach is offered free of charge. After the introductory call, formal engagement proceeds via:
+
+1. Engagement letter from counsel
+2. Repository access provisioning
+3. Counsel review per agreed timeline
+4. Written response per Section 9 template (or counsel's preferred format)
+5. Optional follow-up call after APATRIS reviews the response
+
+**Pre-outreach action items**:
+
+Before this packet leaves the repository for counsel outreach, the following contact details must be populated:
+
+1. Primary contact email — fill in actual email address
+2. Primary contact phone — fill in actual phone number
+3. Backup contact name and contact info — name a backup contact (Anna, operations person, or other) or confirm "Manish only"
+
+These items are flagged here so the gap is visible. Population may happen as a manual edit before the packet is exported, or as a small commit before counsel outreach. Either way, the v1.0 packet is internally complete; the contact details are the engagement-readiness step.
+
+Additionally, after the v1.0 commit, a follow-up commit will update the self-referential SHA in Section 10's reading priority table and document description from "[SHA assigned at v1.0 commit, to be updated in next commit]" to the actual v1.0 commit SHA.
+
+A separate reconciliation commit (Pass 2) will edit Section 5 Branch B and Section 6 closing pointer to match what is actually in Section 8 — Articles 14 and 22 are addressed across the seven questions where each surfaces in counsel's specialization area, rather than as an "integrated Article 14/22 question" that does not exist in the seven.
+
+---
+
+## Document complete
+
+The COUNSEL HANDOFF PACKET is at v1.0 — internally complete and counsel-ready for the substantive content. The seven foundation documents (Section 10) provide the supporting research. Sections 1-11 cover the engagement scope, classification, conformity path, RODO intersection, Polish-specific considerations, the seven specific questions, the response template, repository references, and engagement logistics.
+
+Pre-outreach action items (Section 11) flag the contact details that must be populated before the packet leaves the repository for counsel outreach. Two follow-up commits (Pass 2 and Pass 3) will reconcile Sections 5-6 forward references and update the self-referential SHA. After all three passes plus contact population, the packet is engagement-ready.
