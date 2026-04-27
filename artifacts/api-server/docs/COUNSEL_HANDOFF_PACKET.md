@@ -36,7 +36,7 @@ Counsel covering multiple specializations should read the union of relevant sect
 
 **Decision authority**: APATRIS owner (Manish) holds final decision authority on all build decisions. Counsel provides legal analysis and recommendations; APATRIS interprets and acts on those recommendations.
 
-**Document version**: 0.6 — initial counsel handoff, Sections 1-6 complete; Sections 7-11 pending. Subsequent versions will incorporate counsel responses.
+**Document version**: 1.0 — counsel handoff packet complete. Subsequent versions will incorporate counsel responses.
 
 **Related documents**: Section 10 lists the seven foundation documents that this packet synthesizes from.
 
