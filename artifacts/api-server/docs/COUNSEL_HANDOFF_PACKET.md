@@ -32,13 +32,13 @@ Counsel covering multiple specializations should read the union of relevant sect
 
 **Estimated counsel review time**: 5-15 hours depending on specialization breadth and depth of repo document review. The questions are answerable from publicly available legal sources combined with the operational context provided in this packet.
 
-**Engagement logistics**: Detailed in Section 11 (pending).
+**Engagement logistics**: Detailed in Section 11.
 
 **Decision authority**: APATRIS owner (Manish) holds final decision authority on all build decisions. Counsel provides legal analysis and recommendations; APATRIS interprets and acts on those recommendations.
 
 **Document version**: 0.6 — initial counsel handoff, Sections 1-6 complete; Sections 7-11 pending. Subsequent versions will incorporate counsel responses.
 
-**Related documents**: Section 10 (pending) lists the seven foundation documents that this packet synthesizes from.
+**Related documents**: Section 10 lists the seven foundation documents that this packet synthesizes from.
 
 ---
 
@@ -48,9 +48,9 @@ Counsel covering multiple specializations should read the union of relevant sect
 
 **The classification verdict** (preliminary, internal): Internal research has produced a likely-not-high-risk verdict under EU AI Act Article 6 and Annex III(7), with confidence labeled ESTIMATE-medium. The reasoning rests on the Annex III(7) qualifier "by or on behalf of competent public authorities." APATRIS is private applicant-side legal services — the opposite role from authority-side decision support. The verdict is contingent on counsel confirmation. If counsel reclassifies the system as high-risk (e.g., because Annex III(7) is read more broadly, or because Annex III(5)(b) on essential public benefits is triggered), the conformity path changes substantially. Specifically, high-risk classification triggers Articles 8-15 obligations (risk management, data governance, technical documentation, record-keeping, transparency, human oversight, accuracy/robustness/cybersecurity), Annex IV technical documentation, conformity assessment under Annex VI or VII, EU declaration of conformity, CE marking, and post-market monitoring. The not-high-risk path retains lighter obligations (general transparency under Article 50, RODO compliance, professional services regulation under Polish bar rules) without the Articles 8-15 burden. The internal research at commit bf4d92b walks through both paths.
 
-**What counsel must answer**: This packet asks counsel to confirm, correct, or reclassify the verdict; specify the conformity path obligations under either classification; address RODO Article 22 application to lawyer-supervised AI outputs; clarify Polish-specific disclosure and oversight requirements; and provide guidance on the bilingual user interface architecture's legal implications. The seven specific questions are listed in Section 8 (pending) with operational context. Counsel responses become inputs to APATRIS's pre-build architectural decisions.
+**What counsel must answer**: This packet asks counsel to confirm, correct, or reclassify the verdict; specify the conformity path obligations under either classification; address RODO Article 22 application to lawyer-supervised AI outputs; clarify Polish-specific disclosure and oversight requirements; and provide guidance on the bilingual user interface architecture's legal implications. The seven specific questions are listed in Section 8 with operational context. Counsel responses become inputs to APATRIS's pre-build architectural decisions.
 
-Additionally, Polish administrative law regulates who is authorized to represent applicants before authorities (radca prawny, adwokat, and specific provisions in the Code of Administrative Procedure on representation). The interaction between this representation regime and AI-assisted preparation of administrative submissions is a question that benefits from counsel addressing alongside the AI Act analysis. The seven specific questions in Section 8 (pending) surface this where relevant.
+Additionally, Polish administrative law regulates who is authorized to represent applicants before authorities (radca prawny, adwokat, and specific provisions in the Code of Administrative Procedure on representation). The interaction between this representation regime and AI-assisted preparation of administrative submissions is a question that benefits from counsel addressing alongside the AI Act analysis. The seven specific questions in Section 8 surface this where relevant.
 
 ---
 
@@ -134,7 +134,7 @@ The AI inference layer is not yet built. Counsel guidance from this packet shape
 - (c) Whether there are other Annex III categories APATRIS should be analyzed under that internal research did not surface
 - (d) Whether the verdict (likely-not-high-risk) survives counsel's full analysis
 
-**The seven specific questions in Section 8 (pending) surface this with operational context**.
+**The seven specific questions in Section 8 surface this with operational context**.
 
 ---
 
@@ -505,7 +505,7 @@ Date:
 
 **Response delivery**: Counsel may deliver responses by email, signed PDF, or any preferred format. APATRIS will integrate responses into its pre-build architectural decisions and update the master plan accordingly.
 
-**Follow-up process**: APATRIS may have follow-up questions after reading counsel's responses. Section 11 (pending) outlines the engagement process for follow-ups.
+**Follow-up process**: APATRIS may have follow-up questions after reading counsel's responses. Section 11 outlines the engagement process for follow-ups.
 
 ---
 
