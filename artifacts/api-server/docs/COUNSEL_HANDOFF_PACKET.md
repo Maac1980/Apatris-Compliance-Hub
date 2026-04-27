@@ -527,7 +527,7 @@ All documents are committed to the APATRIS repository on the main branch. Direct
 | High | LAYER_0_TESTABILITY.md | 17-test comprehension verification suite covering 8 principles | 1d10251 |
 | High | LANGUAGE_TOGGLE_VERIFICATION.md | Bilingual architecture audit with five-label classification (1.7 percent functional toggle) | 41dedd1 |
 | Medium | LANGUAGE_TIER1_REMEDIATION.md | Foundational fix plan for bilingual architecture (4-8 hour scope) | 7e6fa97 |
-| Reference | This packet (COUNSEL_HANDOFF_PACKET.md) | Counsel-facing synthesis document | [SHA assigned at v1.0 commit, to be updated in next commit] |
+| Reference | This packet (COUNSEL_HANDOFF_PACKET.md) | Counsel-facing synthesis document | bd61ee3 |
 
 **Foundation document descriptions**:
 
@@ -543,7 +543,7 @@ All documents are committed to the APATRIS repository on the main branch. Direct
 
 **LANGUAGE_TIER1_REMEDIATION.md** (commit 7e6fa97) — The foundational fix plan for the bilingual architecture. Sub-options A, B, C documented with trade-off analysis. Sub-option C (workforce-app default flip; defer dashboard) recommended. Acceptance criteria are structural (every AppShell-wrapped page passes verification). Counsel reviewing the bilingual remediation plan may consult this document for understanding the proposed compliance path.
 
-**This packet (COUNSEL_HANDOFF_PACKET.md, commit [SHA assigned at v1.0 commit, to be updated in next commit])** — The counsel-facing synthesis. Section 1 (Cover Page) introduces APATRIS. Section 2 (Executive Summary) outlines the engagement scope. Section 3 (System Context) describes the operational environment. Sections 4-7 (Classification, Conformity Path, RODO Intersection, Polish-Specific Considerations) frame each specialization area. Section 8 (Seven Specific Questions) contains the substantive deliverable. Section 9 (Counsel Response Template) provides the structured response form. Sections 10-11 (this section and the next) provide engagement logistics.
+**This packet (COUNSEL_HANDOFF_PACKET.md, commit bd61ee3)** — The counsel-facing synthesis. Section 1 (Cover Page) introduces APATRIS. Section 2 (Executive Summary) outlines the engagement scope. Section 3 (System Context) describes the operational environment. Sections 4-7 (Classification, Conformity Path, RODO Intersection, Polish-Specific Considerations) frame each specialization area. Section 8 (Seven Specific Questions) contains the substantive deliverable. Section 9 (Counsel Response Template) provides the structured response form. Sections 10-11 (this section and the next) provide engagement logistics.
 
 **Documents not required for counsel review**:
 
@@ -651,7 +651,7 @@ Before this packet leaves the repository for counsel outreach, the following con
 
 These items are flagged here so the gap is visible. Population may happen as a manual edit before the packet is exported, or as a small commit before counsel outreach. Either way, the v1.0 packet is internally complete; the contact details are the engagement-readiness step.
 
-Additionally, after the v1.0 commit, a follow-up commit will update the self-referential SHA in Section 10's reading priority table and document description from "[SHA assigned at v1.0 commit, to be updated in next commit]" to the actual v1.0 commit SHA.
+Additionally, after the v1.0 commit, a follow-up commit will update the self-referential SHA in Section 10's reading priority table and document description from "bd61ee3" to the actual v1.0 commit SHA.
 
 ---
 
