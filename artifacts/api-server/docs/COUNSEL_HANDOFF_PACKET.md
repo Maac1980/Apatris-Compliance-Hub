@@ -4,7 +4,7 @@
 
 ---
 
-**Document version**: 1.0 (Sections 1-11 complete with seven verbatim questions embedded in Section 8). Internally complete and counsel-ready. Pre-outreach action items in Section 11 flag the contact details to be populated before the packet leaves the repository for counsel outreach.
+**Document version**: 1.0 (Sections 1-11 complete with seven verbatim questions embedded in Section 8). Internally complete and counsel-ready. Engagement contacts populated; canonical contacts maintained in COUNSEL_PACKET_CONTACTS.md.
 
 ---
 
