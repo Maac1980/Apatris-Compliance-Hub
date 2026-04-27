@@ -643,20 +643,8 @@ APATRIS welcomes counsel inquiries before formal engagement. A 30-minute introdu
 4. Written response per Section 9 template (or counsel's preferred format)
 5. Optional follow-up call after APATRIS reviews the response
 
-**Pre-outreach action items**:
-
-Before this packet leaves the repository for counsel outreach, the following contact details must be populated:
-
-1. Primary contact email — fill in actual email address
-2. Primary contact phone — fill in actual phone number
-3. Backup contact name and contact info — name a backup contact (Anna, operations person, or other) or confirm "Manish only"
-
-These items are flagged here so the gap is visible. Population may happen as a manual edit before the packet is exported, or as a small commit before counsel outreach. Either way, the v1.0 packet is internally complete; the contact details are the engagement-readiness step.
-
 ---
 
 ## Document complete
 
 The COUNSEL HANDOFF PACKET is at v1.0 — internally complete and counsel-ready for the substantive content. The seven foundation documents (Section 10) provide the supporting research. Sections 1-11 cover the engagement scope, classification, conformity path, RODO intersection, Polish-specific considerations, the seven specific questions, the response template, repository references, and engagement logistics.
-
-Pre-outreach action items (Section 11) flag the contact details that must be populated before the packet leaves the repository for counsel outreach. Two follow-up commits (Pass 2 and Pass 3) will reconcile Sections 5-6 forward references and update the self-referential SHA. After all three passes plus contact population, the packet is engagement-ready.
