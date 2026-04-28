@@ -6,7 +6,7 @@ This document is the operational companion to the non-negotiable principle "Poli
 
 Tier 1 scope is limited: make the language toggle universally available across all result pages, addressing the four foundational defects identified in the language toggle verification report at commit 41dedd1. Tier 1 does NOT include per-page content translation across the 106 pages currently without i18n -- that is Tier 2, a multi-month sub-phase tracked separately.
 
-Tier 1 estimate: 4-8 hours of focused work.
+Tier 1 estimate: 6-9 hours of focused work.
 
 Tier 1 success: every result page in both apps (lawyer-facing dashboard and worker-facing workforce-app) inherits the canonical LanguageToggle component from a shared location. The toggle is accessible in zero or one clicks from every result page. The default language for new sessions is decided per Sub-task 4.
 
@@ -30,7 +30,7 @@ Tier 1 status: planned, not started.
 
 Tier 1 scope: four sub-tasks addressing the four foundational defects in the verification report. Sub-tasks 1-3 are straightforward extractions and mounts. Sub-task 4 (EN-to-PL default flip) carries a chicken-and-egg analysis and requires a design decision before execution.
 
-Tier 1 estimate: 4-8 hours of focused work, decomposed:
+Tier 1 estimate: 6-9 hours of focused work, decomposed:
 - Sub-task 1 (Extract LanguageToggle): ~30 minutes
 - Sub-task 2 (Mount in AppShell): ~5 minutes after extraction
 - Sub-task 3 (Workforce-app toggle): ~1 hour mirror
@@ -83,49 +83,75 @@ Estimate: ~5 minutes after Sub-task 1 completes. The technical change is trivial
 
 Acceptance: Every dashboard route wrapped by AppShell shows the LanguageToggle in its header. Verified by spot-check of 10 randomly selected pages from the verification report's MISSING list (which were all AppShell-wrapped per the architecture). No previously-working header functionality is regressed.
 
-## Sub-task 3 -- Workforce-app toggle
+## Sub-task 3 -- Workforce-app LanguageToggle (REFRAMED 2026-04-28)
 
-Foundational defect addressed: workforce-app has no language toggle UI at all. The i18n setup exists at artifacts/workforce-app/src/lib/i18n.ts (with localStorage key "wf_lang"), and DashboardPage uses useTranslation for t() keys, but no toggle component exists anywhere in the app. Workers have no way to switch language.
+**Erratum reference:** The original framing of this sub-task was based on the verification report's incorrect claim that workforce-app had no toggle UI. See LANGUAGE_TOGGLE_VERIFICATION.md erratum (commit 3a0f5e4) for correction.
 
-Action: mirror the dashboard's Sub-task 1 + Sub-task 2 work in workforce-app:
+**Reality:** A working language toggle exists in `artifacts/workforce-app/src/components/tabs/ProfileTab.tsx` lines 287-317 (added in commit 90800f0, 2026-03-27). The toggle calls `i18n.changeLanguage(lang)` and persists to `localStorage` as `wf_lang`.
 
-(a) Create artifacts/workforce-app/src/components/LanguageToggle.tsx with the equivalent component (reading from workforce-app's own useTranslation, toggling workforce-app's own i18n instance with localStorage key "wf_lang").
+**Decision: Option 3B -- Extract and elevate**
 
-(b) Mount the component in workforce-app's AppShell (artifacts/workforce-app/src/components/AppShell.tsx) or equivalent layout component. Workforce-app's AppShell is currently a pass-through; this Tier 1 work adds the toggle as the first substantive UI element it renders.
+Sub-task 3 work:
+1. Create `artifacts/workforce-app/src/components/LanguageToggle.tsx` as a shared component
+2. Move toggle logic and UI from ProfileTab.tsx (lines 287-317) into the new shared component
+3. Mount the shared component in workforce-app's AppShell (currently 11-line pass-through; will become ~40-line layout)
+4. Update ProfileTab.tsx to either reference the shared component OR remove its inline toggle (since AppShell now provides it)
 
-The two LanguageToggle components (dashboard's and workforce-app's) are not literally the same component because they bind to different i18n instances. They are functionally equivalent and visually consistent.
+**Estimate:** ~45-60 minutes
 
-Estimate: ~1 hour including the workforce-app's AppShell becoming non-trivial (it currently does very little; adding header layout for the toggle requires light design work).
+**Why Option 3B over 3A or 3C:**
+- 3B preserves symmetry with dashboard (both apps will have `components/LanguageToggle.tsx` mounted at AppShell level)
+- 3B improves discoverability (toggle visible from any tab, not just Profile)
+- 3B prepares for Tier 2 work (single canonical component to enhance)
+- 3A is acceptable but creates two toggle implementations to maintain
+- 3C is the cheapest (~0 minutes) but leaves ProfileTab as the only entry point for language switching, which violates the discoverability principle of putting language controls at AppShell level (matching dashboard pattern)
 
-Acceptance: workforce-app DashboardPage and any future workforce-app page wrapped by the layout component shows the LanguageToggle. Worker can toggle language without leaving the page.
+## Sub-task 4 -- EN-to-PL Default Flip Decision (with CHECK 9 pre-flip)
 
-## Sub-task 4 -- EN-to-PL Default Flip Decision
+**CHECK 9 -- pl.json key inventory before flip (ADDED 2026-04-28)**
 
-The verification report identified the EN-to-PL default flip as a candidate for Tier 1 inclusion. This sub-task evaluates whether and how to execute the flip given the chicken-and-egg analysis below.
+Before flipping the workforce-app default language to Polish, verify that `artifacts/workforce-app/src/locales/pl.json` has Polish translations for every `t()` call site across the 16 i18n-using files. If pl.json is incomplete, PL-default users will see English fallback strings (per i18next `fallbackLng: "en"`), partially defeating the flip's intent.
 
-Chicken-and-egg analysis:
+**CHECK 9 procedure:**
+1. Grep all `t("...")` and `t('...')` and `i18n.t(...)` calls across all 16 workforce-app files (App.tsx, BottomNav.tsx, DashboardPage.tsx, T1-T5 home tabs, Profile, Contract, Docs, GpsCheckin, Payroll, Sites, Timesheet, Workers, Alerts)
+2. Build a sorted unique list of i18n keys used
+3. Read `artifacts/workforce-app/src/locales/pl.json` and extract its keys
+4. Diff: report any keys used in code but missing from pl.json
+5. If missing keys found:
+   - Decide: (a) author missing Polish strings now (adds time to Sub-task 4), or (b) defer the flip with documented gap, or (c) accept fallback-to-English for missing keys with explicit acknowledgment in the commit message
+   - Manish decides
 
-If the default is flipped to PL while 92 percent of result pages have hard-coded English content (no i18n integration), the user experience is: page renders in PL by selection, but the actual displayed content is still English because strings are not wrapped in t() and pl.json keys do not exist. The user sees no improvement, only a confused state where the language toggle suggests Polish is active but Polish content does not appear.
+**Estimate for CHECK 9:** ~30 minutes (grep + diff + decide)
 
-If the default stays at EN until Tier 2 covers high-priority pages, the user experience is: pages render in EN by default, the user can toggle to PL and see PL content for the small number of fully-translated pages, but the system does not honor the principle's "Polish authoritative" framing at the default level.
+**Sub-task 4 main work (after CHECK 9 passes or is resolved):**
 
-The decision is between two imperfect options. Three sub-options for resolving:
+Change in `artifacts/workforce-app/src/lib/i18n.ts` line 6:
 
-Sub-option A -- Defer the flip until Tier 2 covers a defined set of high-priority pages (recommendation: cover at least all worker-facing pages and the top-10 lawyer-facing pages before flipping). Pro: avoids degraded UX. Con: principle's default-language clause stays unhonored at the technical level until Tier 2 progress is sufficient.
+- localStorage.getItem("wf_lang") || "en"
++ localStorage.getItem("wf_lang") || "pl"
 
-Sub-option B -- Flip the default now and accept the degraded UX as a known transition state. Document the transition state explicitly so users (lawyers, clients) understand. Pro: principle is structurally honored at the default level. Con: real users have a worse experience until Tier 2 catches up.
+This is a single-line change. Existing users with `wf_lang` already in localStorage retain their saved preference (the `||` short-circuits); only new users get PL default.
 
-Sub-option C -- Flip the default for the workforce-app only (client-facing, where worker comprehension matters most) and defer the dashboard flip until Tier 2 progresses. Pro: honors principle where it matters most (clients) without degrading lawyer UX. Con: introduces inconsistency between the two apps' default-language behavior.
+**Estimate for the flip itself:** ~5 minutes
 
-Recommended sub-option: C. Worker-facing pages have higher stakes for Polish-default rendering (foreign workers may not read English well). Lawyer-facing pages have lower stakes because lawyers are bilingual operators. Sub-option C prioritizes user impact.
+## Sub-task 5 -- ImmigrationSearch local-state full reconciliation (ADDED 2026-04-28)
 
-This sub-task as scoped:
+**Context:** During Tier 1 pre-execution audit, surfaced two related concerns in `artifacts/apatris-dashboard/src/pages/ImmigrationSearch.tsx`:
 
-(a) Confirm Sub-option selection (A, B, or C) before executing the flip
-(b) For workforce-app (Sub-option C path): change i18n.ts default from 'en' to 'pl'; verify against test workforce-app pages
-(c) For dashboard (Sub-option C path): defer until Tier 2 decision
+1. Lines 33, 39: `useState<"en" | "pl">(isPl ? "pl" : "en")` -- a local copy of `i18n.language`. Toggling here doesn't sync to the i18next global instance. The verification report flagged ImmigrationSearch as PARTIAL-FUNCTIONAL.
 
-If a different Sub-option is selected, the sub-task scope adjusts accordingly. Decision authority: Manish.
+2. Line 40 (and possibly elsewhere): `isPl` anti-pattern -- inline local language state divergence from i18next global. Same root cause as concern (1), expressed differently.
+
+**Why include in Tier 1:** Adjacent work to Sub-task 1 (LanguageToggle extraction) -- context is loaded; reconciling now is cheaper than addressing it during Tier 2's multi-month timeline. Both concerns are in the same file, both are local-state-vs-global-state divergence, one commit covers the full reconciliation.
+
+**Sub-task 5 work:**
+1. Remove the local `useState<"en" | "pl">` in ImmigrationSearch.tsx (lines 33, 39)
+2. Remove or replace the `isPl` anti-pattern at line 40 (and any other isPl occurrences in the file) with `useTranslation()` hook usage and `i18n.language` reads
+3. Replace local `setLanguage` calls with `i18n.changeLanguage()` directly
+4. Verify ImmigrationSearch now responds to global toggle changes (manual smoke test in dev)
+5. Confirm no other `isPl` or local language-state patterns remain in the file
+
+**Estimate:** ~30-45 minutes (covers full file reconciliation)
 
 ## Acceptance Criteria
 
