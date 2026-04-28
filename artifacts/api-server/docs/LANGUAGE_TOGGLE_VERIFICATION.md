@@ -1,5 +1,37 @@
 # LANGUAGE TOGGLE VERIFICATION REPORT
 
+## Erratum (added 2026-04-28)
+
+The pre-execution audit for Tier 1 bilingual remediation surfaced two factual errors in this document:
+
+**Error 1 — Workforce-app toggle UI claim**
+
+Lines 83-85 stated: "Toggle UI: NONE FOUND in artifacts/workforce-app/src/... So the workforce app has no canonical toggle implementation at all."
+
+This is incorrect. `artifacts/workforce-app/src/components/tabs/ProfileTab.tsx` (lines 287-317) renders a working language toggle (🇬🇧 EN / 🇵🇱 PL buttons with active-state styling). The toggle calls `i18n.changeLanguage(lang)` and persists to `localStorage` as `wf_lang`. ProfileTab is mounted in DashboardPage.tsx as one of the bottom-nav tabs.
+
+The toggle was added in commit `90800f0` ("Add Polish language toggle with full i18n across all components") on 2026-03-27 — 30 days BEFORE this verification report. The pre-existing toggle was missed during the verification scan.
+
+**Error 2 — Workforce-app i18n adoption count**
+
+Lines around 85 implied workforce-app's i18n usage was limited to "DashboardPage uses useTranslation() for t() only."
+
+Actual: 16 workforce-app files use `useTranslation`: App.tsx, BottomNav.tsx, DashboardPage.tsx, and 13 tab components (T1-T5 homes, Profile, Contract, Docs, GpsCheckin, Payroll, Sites, Timesheet, Workers, Alerts).
+
+**Implications**
+
+- Tier 1 plan's Sub-task 3 ("workforce-app toggle from scratch") needs reframing — the toggle exists; the question is whether to extract it to AppShell-level (Option 3B selected) or leave it at ProfileTab. Option 3B = extract the existing ProfileTab toggle into a shared `components/LanguageToggle.tsx` component, mount it in workforce-app's AppShell, and have ProfileTab reference the shared component.
+- Sub-option C (workforce-app PL flip; defer dashboard) is strengthened by this finding — workforce-app has substantially more i18n coverage than originally reported.
+- LANGUAGE_TIER1_REMEDIATION.md will be updated in a follow-up commit to reflect Sub-task 3 reframing (Option 3B), Sub-task 5 addition, and CHECK 9 addition.
+
+**Source of correction**
+
+Pre-execution audit performed by APATRIS Claude on 2026-04-28, against codebase at commit `27ff161`. Audit script verified ProfileTab.tsx contents, ran `git merge-base --is-ancestor 90800f0 41dedd1` (returned true), and counted i18n usages via grep across workforce-app/src/.
+
+The original analysis below remains intact for historical record. v2 verification (forthcoming after Tier 1 execution) will use the corrected baseline.
+
+---
+
 ## Frame
 
 This document captures the verification of language toggle presence on result pages across the APATRIS codebase. The verification was conducted by APATRIS Claude on 2026-04-26 in response to the bilingual architecture principle articulated as "Polish authoritative, English bridge."
