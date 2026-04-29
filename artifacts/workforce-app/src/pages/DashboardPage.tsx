@@ -72,6 +72,7 @@ import { LegalStatusTab } from "@/components/tabs/LegalStatusTab";
 import { SchengenTab } from "@/components/tabs/SchengenTab";
 import { UpoTab } from "@/components/tabs/UpoTab";
 import { useTranslation } from "react-i18next";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
@@ -445,13 +446,16 @@ export function DashboardPage() {
               {tierConfig.shortLabel}
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] active:scale-90 transition-all shrink-0"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" strokeWidth={2} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguageToggle compact />
+            <button
+              onClick={handleLogout}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] active:scale-90 transition-all shrink-0"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
         </div>
       </header>
 

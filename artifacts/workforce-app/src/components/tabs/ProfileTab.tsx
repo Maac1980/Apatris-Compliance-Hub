@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, KeyRound, ShieldCheck, ShieldX, LogOut, CheckCircle2, Globe } from "lucide-react";
+import { Eye, EyeOff, KeyRound, ShieldCheck, ShieldX, LogOut, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { changeMobilePin } from "@/lib/api";
 import { TIER_CONFIGS, Role } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const ROLE_BADGE_COLORS: Record<Role, string> = {
   Executive:    "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
@@ -66,18 +67,12 @@ interface ProfileTabProps {
 
 export function ProfileTab({ onLogout }: ProfileTabProps) {
   const { role, user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   if (!role) return null;
 
   const tierConfig = TIER_CONFIGS[role];
   const badgeColor = ROLE_BADGE_COLORS[role];
   const avatarColor = AVATAR_COLORS[role];
-  const currentLang = i18n.language;
-
-  const switchLanguage = (lang: string) => {
-    i18n.changeLanguage(lang);
-    localStorage.setItem("wf_lang", lang);
-  };
 
   const displayName = user?.name ?? tierConfig.shortLabel;
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -285,36 +280,7 @@ export function ProfileTab({ onLogout }: ProfileTabProps) {
       </div>
 
       {/* ── Language toggle ────────────────────────────────────────────── */}
-      <div className="premium-card rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 flex items-center gap-2.5">
-          <Globe className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">{t("profile.language")}</span>
-        </div>
-        <div className="px-4 pb-4 flex gap-2">
-          <button
-            onClick={() => switchLanguage("en")}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.97]",
-              currentLang === "en"
-                ? "bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 glow-indigo"
-                : "bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.06]"
-            )}
-          >
-            🇬🇧 {t("profile.english")}
-          </button>
-          <button
-            onClick={() => switchLanguage("pl")}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.97]",
-              currentLang === "pl"
-                ? "bg-red-500/15 text-red-400 border border-red-500/25 glow-red"
-                : "bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.06]"
-            )}
-          >
-            🇵🇱 {t("profile.polish")}
-          </button>
-        </div>
-      </div>
+      <LanguageToggle />
 
       {/* ── Log out ──────────────────────────────────────────────────────── */}
       <button
