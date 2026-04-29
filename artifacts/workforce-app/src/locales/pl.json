@@ -119,7 +119,9 @@
     "umowyZlecenie": "Umowy zlecenie",
     "contractsActive": "aktywnych umów",
     "exportCsv": "Eksport CSV",
-    "fullPayrollLedger": "Pełna księga płac"
+    "fullPayrollLedger": "Pełna księga płac",
+    "allWorkforceHours": "Godziny wszystkich pracowników",
+    "reviewApproveDocs": "Przeglądaj i zatwierdzaj dokumenty"
   },
   "manager": {
     "financialFirewall": "Zapora finansowa aktywna",
@@ -148,7 +150,12 @@
   "tier4": {
     "sharedWorkspaceDesc": "Pełny dostęp do odczytu/zapisu profili delegowanych specjalistów i kolejek dokumentów — współdzielony z działem technicznym.",
     "needsAttention": "Wymaga uwagi",
-    "workers": "pracowników"
+    "workers": "pracowników",
+    "allCompliant": "Wszyscy zgodni",
+    "expiringSoon": "Wygasa wkrótce",
+    "missingDocs": "Brakujące dokumenty",
+    "noDocsAttention": "Żadne dokumenty nie wymagają uwagi",
+    "nonCompliant": "Niezgodny"
   },
   "tier5": {
     "digitalSitePass": "Cyfrowa przepustka obiektowa",
@@ -177,7 +184,23 @@
     "coordinatorDesc": "Wyznaczone osoby kontaktowe w sprawie wsparcia na obiekcie i kwestii zgodności.",
     "hoursThisMonth": "Godziny w tym miesiącu",
     "validDocuments": "Ważne dokumenty",
-    "daysToNextRenewal": "Dni do następnego odnowienia"
+    "daysToNextRenewal": "Dni do następnego odnowienia",
+    "expired": "Wygasły",
+    "expires": "Wygasa",
+    "hours": "Godziny",
+    "hoursSubmitted": "Godziny zgłoszone",
+    "hoursWorked": "Godziny przepracowane",
+    "month": "Miesiąc",
+    "myStatus": "Mój status",
+    "noDocRecords": "Brak rejestru dokumentów",
+    "nonCompliant": "Niezgodny",
+    "notOnRecord": "Brak w rejestrze",
+    "note": "Notatka",
+    "optional": "(opcjonalne)",
+    "recordHoursDesc": "Zapisz przepracowane godziny w tym miesiącu",
+    "submitting": "Wysyłanie…",
+    "thisMonth": "Ten miesiąc",
+    "unknown": "Nieznany"
   },
   "workers": {
     "searchPlaceholder": "Szukaj po nazwisku, zawodzie, specjalizacji…",

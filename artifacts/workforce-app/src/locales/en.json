@@ -119,7 +119,9 @@
     "umowyZlecenie": "Umowy Zlecenie",
     "contractsActive": "contracts active",
     "exportCsv": "Export CSV",
-    "fullPayrollLedger": "Full payroll ledger"
+    "fullPayrollLedger": "Full payroll ledger",
+    "allWorkforceHours": "All Workforce Hours",
+    "reviewApproveDocs": "Review & Approve Documents"
   },
   "manager": {
     "financialFirewall": "Financial Firewall Active",
@@ -148,7 +150,12 @@
   "tier4": {
     "sharedWorkspaceDesc": "Full read/write access to Deployed Professional profiles & document queues — shared with Tech Ops.",
     "needsAttention": "Needs Attention",
-    "workers": "workers"
+    "workers": "workers",
+    "allCompliant": "All Compliant",
+    "expiringSoon": "Expiring Soon",
+    "missingDocs": "Missing Documents",
+    "noDocsAttention": "No Documents Need Attention",
+    "nonCompliant": "Non-Compliant"
   },
   "tier5": {
     "digitalSitePass": "Digital Site Pass",
@@ -177,7 +184,23 @@
     "coordinatorDesc": "Your designated contacts for site support and compliance queries.",
     "hoursThisMonth": "Hours This Month",
     "validDocuments": "Valid Documents",
-    "daysToNextRenewal": "Days to Next Renewal"
+    "daysToNextRenewal": "Days to Next Renewal",
+    "expired": "Expired",
+    "expires": "Expires",
+    "hours": "Hours",
+    "hoursSubmitted": "Hours Submitted",
+    "hoursWorked": "Hours Worked",
+    "month": "Month",
+    "myStatus": "My Status",
+    "noDocRecords": "No Document Records",
+    "nonCompliant": "Non-Compliant",
+    "notOnRecord": "Not on Record",
+    "note": "Note",
+    "optional": "(optional)",
+    "recordHoursDesc": "Record your hours worked this month",
+    "submitting": "Submitting…",
+    "thisMonth": "This Month",
+    "unknown": "Unknown"
   },
   "workers": {
     "searchPlaceholder": "Search by name, trade, specialization…",
