@@ -74,7 +74,6 @@ import { BulkUploadModal } from "@/components/BulkUploadModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AddWorkerModal } from "@/components/AddWorkerModal";
 import { BulkImportModal } from "@/components/BulkImportModal";
-import LanguageToggle from "@/components/LanguageToggle";
 
 interface TrendSnapshot { date: string; total: number; compliant: number; warning: number; critical: number; expired: number; }
 
@@ -365,9 +364,6 @@ export default function Dashboard() {
 
               {/* 🔔 Notifications */}
               <NotificationBell onSelectWorker={(id) => setSelectedWorkerId(id)} />
-
-              {/* 🌐 Language */}
-              <LanguageToggle />
 
               {/* 📲 Install App */}
               <button

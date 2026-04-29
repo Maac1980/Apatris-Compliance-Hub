@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
 import { GlobalDropZone } from "./GlobalDropZone";
+import LanguageToggle from "@/components/LanguageToggle";
 import {
   Users, Calculator, AlertTriangle, History, Settings, LogOut,
   FileSignature, FileCheck, MapPin, BarChart3, Sparkles,
@@ -388,6 +389,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {activeGroup.label}
             </span>
           )}
+
+          {/* 🌐 Language */}
+          <LanguageToggle />
 
           <div className="flex items-center gap-2 pl-2 border-l border-slate-700/60">
             <div className="w-7 h-7 rounded-full bg-red-900/50 border border-red-500/30 flex items-center justify-center flex-shrink-0">
