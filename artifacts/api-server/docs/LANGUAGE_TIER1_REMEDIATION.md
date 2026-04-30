@@ -26,6 +26,19 @@ Forward reference (document to be saved subsequently):
 
 ## Status
 
+Tier 1 status: **COMPLETE** as of Phase 8 (2026-04-30). All five sub-tasks landed in code; documentation closed via `LANGUAGE_TOGGLE_VERIFICATION_v2.md` (in same directory).
+
+Sub-task implementation commits:
+- Sub-task 1: `035acb8` (Phase 3, dashboard `LanguageToggle` extraction)
+- Sub-task 2: `f2e77d0` (Phase 4, dashboard AppShell mount)
+- Sub-task 3: `89b5abd` (Phase 5b-1, workforce-app `LanguageToggle` with `compact?: boolean` prop; Option 5B-1 architectural adaptation per Phase 5 V4 STOP gates)
+- Sub-task 4: `52e064f` + `e0d668f` (Phase 6 Part 2a 23 missing keys + Phase 6 Part 2b EN→PL flip)
+- Sub-task 5: `f7262a5` (Phase 7 Part 2 Shape A, `ImmigrationSearch.tsx` reconciliation)
+
+All seven acceptance criteria (below) MET. See `LANGUAGE_TOGGLE_VERIFICATION_v2.md` Section 2 for per-criterion evidence.
+
+### Original planning record (preserved for historical reference)
+
 Tier 1 status: planned, not started.
 
 Tier 1 scope: four sub-tasks addressing the four foundational defects in the verification report. Sub-tasks 1-3 are straightforward extractions and mounts. Sub-task 4 (EN-to-PL default flip) carries a chicken-and-egg analysis and requires a design decision before execution.
