@@ -48,7 +48,7 @@ Apatris Compliance Hub is an industrial compliance and workforce management plat
 ```
 /                              # pnpm workspace root
 ├── artifacts/
-│   ├── api-server/            # Express API (100+ endpoints)
+│   ├── api-server/            # Express API (~688 endpoints across 131 route files)
 │   ├── apatris-dashboard/     # Admin dashboard (React)
 │   ├── workforce-app/         # Worker mobile PWA (React)
 │   └── mockup-sandbox/        # UI staging
@@ -145,17 +145,17 @@ S3_SECRET_ACCESS_KEY=<secret>
 
 ## Database
 - PostgreSQL 16 with Drizzle ORM
-- 25+ tables: workers, documents, contracts, signatures, audit_logs, payroll_commits, payroll_snapshots, hours_log, mobile_pins, notification_log, document_workflows, face_encodings, a1_certificates, posting_assignments, site_geofences, gps_checkins, push_subscriptions, consent_records, gdpr_log, refresh_tokens, tenants, site_coordinators, admins, power_of_attorney, client_portal_tokens, regulatory_updates, immigration_searches
+- ~150 tables: workers, documents, contracts, signatures, audit_logs, payroll_commits, payroll_snapshots, hours_log, mobile_pins, notification_log, document_workflows, face_encodings, a1_certificates, posting_assignments, site_geofences, gps_checkins, push_subscriptions, consent_records, gdpr_log, refresh_tokens, tenants, site_coordinators, admins, power_of_attorney, client_portal_tokens, regulatory_updates, immigration_searches, plus many additional case-event, regulatory, intelligence, payroll, and audit tables (full count via `grep -c "CREATE TABLE" artifacts/api-server/src/lib/init-db.ts`)
 - Push schema: `cd lib/db && pnpm push`
 
 ## API Structure
-- 100+ endpoints across 27 route files in `artifacts/api-server/src/routes/`
+- ~688 endpoints across 131 route files in `artifacts/api-server/src/routes/`
 - Key route groups: auth, workers, hours, payroll, documents, document-workflow, contracts, signatures, compliance, country-compliance, gps, posted-workers, gdpr, face-auth, ai, analytics, admins, site-coordinators, tenants, history, logs, push, platform, files, settings, regulatory, immigration
 
 ## Dashboard Navigation
 - URL-based routing via Wouter
 - Pages: Workers (main), Payroll, Compliance Alerts, Contracts, Documents, GPS Tracking, Analytics, AI Copilot, Regulatory Intelligence, Immigration Search, History, Admin Settings
-- i18n: English/Polish toggle (i18next)
+- i18n: English/Polish via canonical LanguageToggle component (mounted in AppShell post-Phase-4); default EN; localStorage key `apatris_lang`; i18n config at `src/i18n.ts` (note: directly under `src/`, not `src/lib/`)
 - Dark theme with Apatris red (#C41E18) branding
 
 ## Workforce App (5-Tier RBAC)
@@ -164,17 +164,73 @@ S3_SECRET_ACCESS_KEY=<secret>
 - T3 (Tech Ops): Operational modules, site deployments, timesheets
 - T4 (Coordinator): Worker queue, compliance alerts, document management
 - T5 (Professional): Digital site pass, document reminders, hours submission
+- i18n: English/Polish via canonical LanguageToggle component (with `compact?: boolean` prop variant; mounted in DashboardPage premium-header + ProfileTab settings card); default Polish (post-Phase-6 Part 2b honoring principle #16); fallbackLng EN; localStorage key `wf_lang`; i18n config at `src/lib/i18n.ts`
+
+## Bilingual Architecture (post-Tier-1)
+
+Tier 1 bilingual remediation closed 2026-04-30 (commit `0f3a8d6`). All five sub-tasks complete. The canonical bilingual architecture across both apatris-dashboard and workforce-app:
+
+**Canonical components**
+- Dashboard: `artifacts/apatris-dashboard/src/components/LanguageToggle.tsx` (extracted Phase 3, commit `035acb8`); mounted in AppShell.tsx (Phase 4, commit `f2e77d0`); primary-red color semantic.
+- Workforce-app: `artifacts/workforce-app/src/components/LanguageToggle.tsx` (extracted Phase 5b-1, commit `89b5abd`); `compact?: boolean` prop variant (compact pill in DashboardPage premium-header `h-14`; default settings-card in ProfileTab); indigo-EN / red-PL color semantics.
+
+**i18n configuration**
+- Dashboard: `src/i18n.ts` (note: directly under `src/`, NOT `src/lib/`); default EN; fallbackLng EN; localStorage key `apatris_lang`.
+- Workforce-app: `src/lib/i18n.ts`; default PL post-Phase-6 Part 2b (commit `e0d668f` honoring principle #16); fallbackLng EN; localStorage key `wf_lang`.
+
+**Translation files**
+- Dashboard `en.json`: 243 keys / 19 namespaces (post-Phase-7 with `immigrationSearch.*` added).
+- Dashboard `pl.json`: 292 keys / 23 namespaces.
+- Workforce-app `en.json`: 349 keys (post-Phase-6 Part 2a with 23 keys filled).
+- Workforce-app `pl.json`: 366 keys.
+
+**Conventions**
+- Polish authoritative, English bridge (MASTER_PLAN principle #16, commit `5873fca` constitutional).
+- New bilingual features: use `t()` calls in components; add keys to BOTH `en.json` and `pl.json`; use proper Polish diacritics (ł, ą, ę, ż, ó, ś, ć, ń, ź — NEVER ASCII transliteration); match existing `pl.json` terminology conventions (V3 convention search pattern from Phase 6 Part 2a + Phase 7 Part 2 Shape A).
+- `isPl` boolean variable + manual EN/PL ternaries are the anti-pattern; use `t()` calls for UI text and `i18n.language?.startsWith("pl")` explicit ternary for data-content selection or API parameters.
+- AppShell-mounted LanguageToggle is the authoritative UI for language switching; in-page EN/PL button clusters are anti-pattern.
+
+**Tier 2 inheritance**
+- `artifacts/apatris-dashboard/src/pages/RegulatoryIntelligence.tsx` (~17 isPl ternaries) — broader dashboard isPl anti-pattern.
+- `artifacts/apatris-dashboard/src/components/LegalStatusPanel.tsx` (1 ternary in `L()` helper).
+- Plural forms support (i18next plural feature).
+- Comprehensive Polish translation review pass across full dashboard `pl.json`.
+
+**Reference**
+- Plan: `artifacts/api-server/docs/LANGUAGE_TIER1_REMEDIATION.md` (status: COMPLETE).
+- Verification: `artifacts/api-server/docs/LANGUAGE_TOGGLE_VERIFICATION_v2.md` (closure document with 10 sections, claim-by-claim drift corrections from v1, full Phase Index).
+
+## Track 0 Documentation
+
+Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents for AI assistants and future engineers:
+
+- `MASTER_PLAN.md` — Constitutional plan with non-negotiable principles (#16 Polish authoritative is most-cited).
+- `LAYER_0_DESIGN.md` — Layer 0 architectural design.
+- `LAYER_0_TESTABILITY.md` — Layer 0 testability framework.
+- `LANGUAGE_TIER1_REMEDIATION.md` — Tier 1 bilingual remediation plan (status: COMPLETE 2026-04-30).
+- `LANGUAGE_TOGGLE_VERIFICATION_v2.md` — Tier 1 closure document; truthful current-state successor to v1 (which had drift).
+- `LANGUAGE_TOGGLE_VERIFICATION.md` — Original v1 (preserved for historical reference; superseded by v2 per Phase 1 erratum at commit `3a0f5e4`).
+- `COUNSEL_HANDOFF_PACKET.md` — Engagement-ready packet at v1.0 (commit `27ff161`); send to Polish radca prawny + EU regulatory firm.
+- `COUNSEL_PACKET_CONTACTS.md` — Counsel firm contact tracking.
+- `EU_AI_ACT_ARTICLE_6_RESEARCH.md` — EU AI Act Article 6 regulatory research (commit `bf4d92b`).
 
 ## Testing
 - Vitest unit tests in `artifacts/api-server/src/*.test.ts`
 - Run: `cd artifacts/api-server && npx vitest run`
 - Test coverage: auth, payroll, GDPR, country compliance, ZUS calculations
-- Current count: **304 tests passing** (11 test files)
+- Current count: **488 tests passing** (24 test files; api-server only — dashboard + workforce-app have no test infrastructure as of 2026-04-30)
 
 ## Type check state
-- `npm run typecheck` (api-server): ~179 strict errors remaining (down from 527 on 2026-04-17)
+- `npm run typecheck` (api-server): 159 strict errors remaining as of 2026-04-30 (down from 527 baseline on 2026-04-17)
+- `pnpm tsc --noEmit` (apatris-dashboard): 18 strict errors as of 2026-04-30 (LegalImmigrationCommand.tsx + LegalQueue.tsx; unrelated to bilingual work)
+- `pnpm tsc --noEmit` (workforce-app): 15 strict errors as of 2026-04-30 (React 19 + DOM ArrayBufferLike compatibility)
 - Build + runtime not affected — errors are route/service layer type drift
 - tsconfig overrides in `artifacts/api-server/tsconfig.json`: `noImplicitReturns: false`, `useUnknownInCatchVariables: false`
+
+## Commit Messages
+- Use the commit message text I provide VERBATIM
+- Do NOT append Co-Authored-By trailers unless I explicitly include them
+- Do NOT add emojis, signatures, or metadata not in my specified message
 
 ---
 
