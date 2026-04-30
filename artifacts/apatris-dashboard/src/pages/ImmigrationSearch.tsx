@@ -29,14 +29,12 @@ interface SearchResult {
 }
 
 export default function ImmigrationSearch() {
-  const { i18n } = useTranslation();
-  const isPl = i18n.language?.startsWith("pl");
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"en" | "pl">(isPl ? "pl" : "en");
   const [popular, setPopular] = useState<{ en: string; pl: string }[]>([]);
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -65,7 +63,7 @@ export default function ImmigrationSearch() {
       const res = await fetch(`${BASE}api/immigration/search`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ query: searchQuery, language }),
+        body: JSON.stringify({ query: searchQuery, language: i18n.language?.startsWith("pl") ? "pl" : "en" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -101,12 +99,10 @@ export default function ImmigrationSearch() {
             <Sparkles className="w-3 h-3" /> AI-Powered
           </div>
           <h1 className="text-2xl font-bold text-white">
-            {isPl ? "Wyszukiwarka Imigracyjna" : "Immigration Search Engine"}
+            {t("immigrationSearch.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {isPl
-              ? "Przeszukuj polskie prawo imigracyjne i przepisy dotyczace pracy"
-              : "Search Polish immigration law and employment regulations"}
+            {t("immigrationSearch.subtitle")}
           </p>
         </div>
 
@@ -115,7 +111,7 @@ export default function ImmigrationSearch() {
           <input
             ref={inputRef}
             type="text"
-            placeholder={language === "en" ? "Ask about Polish immigration law..." : "Zapytaj o polskie prawo imigracyjne..."}
+            placeholder={t("immigrationSearch.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -127,43 +123,25 @@ export default function ImmigrationSearch() {
             disabled={loading || !query.trim()}
             className="absolute right-2 top-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-50 transition-all"
           >
-            {loading ? "..." : (isPl ? "Szukaj" : "Search")}
+            {loading ? "..." : t("immigrationSearch.searchButton")}
           </button>
         </div>
 
-        {/* Language + History toggles */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setLanguage("en")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                language === "en" ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-border"
-              }`}
-            >
-              English
-            </button>
-            <button
-              onClick={() => setLanguage("pl")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                language === "pl" ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-border"
-              }`}
-            >
-              Polski
-            </button>
-          </div>
+        {/* History toggle */}
+        <div className="flex items-center justify-end mb-6">
           <button
             onClick={() => setShowHistory(!showHistory)}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <History className="w-3.5 h-3.5" />
-            {isPl ? "Historia" : "History"} ({searchHistory.length})
+            {t("immigrationSearch.history")} ({searchHistory.length})
           </button>
         </div>
 
         {/* Search History */}
         {showHistory && searchHistory.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-4 mb-6">
-            <h3 className="text-sm font-bold text-foreground mb-3">{isPl ? "Ostatnie wyszukiwania" : "Recent Searches"}</h3>
+            <h3 className="text-sm font-bold text-foreground mb-3">{t("immigrationSearch.recentSearches")}</h3>
             {searchHistory.slice(0, 8).map((h: any, i: number) => (
               <button
                 key={i}
@@ -188,10 +166,10 @@ export default function ImmigrationSearch() {
           <div className="text-center py-10">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
             <div className="text-sm font-medium text-foreground">
-              {isPl ? "Przeszukiwanie baz danych..." : "Searching immigration databases..."}
+              {t("immigrationSearch.searchingDatabases")}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {isPl ? "Analiza praca.gov.pl, ZUS, legislacja..." : "Analyzing praca.gov.pl, ZUS, legislation..."}
+              {t("immigrationSearch.analyzingSources")}
             </div>
           </div>
         )}
@@ -206,7 +184,7 @@ export default function ImmigrationSearch() {
 
         {/* Result */}
         {result && !loading && (
-          <StructuredResult result={result} isPl={isPl} />
+          <StructuredResult result={result} />
         )}
 
         {/* Popular questions */}
@@ -214,21 +192,21 @@ export default function ImmigrationSearch() {
           <div>
             <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
-              {isPl ? "Popularne pytania" : "Popular Questions"}
+              {t("immigrationSearch.popularQuestions")}
             </h3>
             <div className="space-y-2">
               {popular.slice(0, 8).map((q, i) => (
                 <button
                   key={i}
                   onClick={() => {
-                    const text = language === "en" ? q.en : q.pl;
+                    const text = i18n.language?.startsWith("pl") ? q.pl : q.en;
                     setQuery(text);
                     handleSearch(text);
                   }}
                   className="w-full text-left p-3 rounded-xl bg-card border border-border hover:border-primary/30 text-sm text-muted-foreground hover:text-foreground transition-all flex items-center gap-3"
                 >
                   <BookOpen className="w-4 h-4 text-primary flex-shrink-0" />
-                  {language === "en" ? q.en : q.pl}
+                  {i18n.language?.startsWith("pl") ? q.pl : q.en}
                 </button>
               ))}
             </div>
@@ -247,7 +225,7 @@ const DECISION_CFG: Record<string, { icon: React.ElementType; color: string; bg:
   BLOCKED: { icon: XOctagon, color: "text-red-400", bg: "bg-red-500/15 border-red-500/30", label: "BLOCKED" },
 };
 
-function StructuredResult({ result: r, isPl }: { result: SearchResult; isPl: boolean }) {
+function StructuredResult({ result: r }: { result: SearchResult }) {
   const d = DECISION_CFG[r.decision ?? ""] ?? DECISION_CFG.CAUTION;
   const DIcon = d.icon;
   const hasStructured = !!(r.operator_summary || r.legal_summary || (r.legal_basis?.length ?? 0) > 0 || (r.next_actions?.length ?? 0) > 0);

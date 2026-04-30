@@ -268,5 +268,16 @@
     "poweredBy": "Powered by GPT-4o",
     "rulesBased": "Rules-based analysis",
     "error": "Failed to connect to AI service. Check your connection."
+  },
+  "immigrationSearch": {
+    "title": "Immigration Search Engine",
+    "subtitle": "Search Polish immigration law and employment regulations",
+    "searchButton": "Search",
+    "searchPlaceholder": "Ask about Polish immigration law…",
+    "history": "History",
+    "recentSearches": "Recent Searches",
+    "searchingDatabases": "Searching immigration databases…",
+    "analyzingSources": "Analyzing praca.gov.pl, ZUS, legislation…",
+    "popularQuestions": "Popular Questions"
   }
 }

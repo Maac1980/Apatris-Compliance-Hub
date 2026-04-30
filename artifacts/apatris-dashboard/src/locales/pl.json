@@ -325,5 +325,16 @@
     "poweredBy": "Napędzany przez GPT-4o",
     "rulesBased": "Analiza regułowa",
     "error": "Nie udało się połączyć z usługą AI. Sprawdź połączenie."
+  },
+  "immigrationSearch": {
+    "title": "Wyszukiwarka Imigracyjna",
+    "subtitle": "Przeszukuj polskie prawo imigracyjne i przepisy dotyczące pracy",
+    "searchButton": "Szukaj",
+    "searchPlaceholder": "Zapytaj o polskie prawo imigracyjne…",
+    "history": "Historia",
+    "recentSearches": "Ostatnie Wyszukiwania",
+    "searchingDatabases": "Przeszukiwanie baz danych imigracyjnych…",
+    "analyzingSources": "Analizowanie praca.gov.pl, ZUS, ustawodawstwa…",
+    "popularQuestions": "Popularne Pytania"
   }
 }
