@@ -204,9 +204,12 @@ Tier 1 bilingual remediation closed 2026-04-30 (commit `0f3a8d6`). All five sub-
 
 Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents for AI assistants and future engineers:
 
+- `MASTER_BLUEPRINT.md` — Original project blueprint (commit `902117a`); foundational planning record.
 - `MASTER_PLAN.md` — Constitutional plan with non-negotiable principles (#16 Polish authoritative is most-cited).
+- `TRACK2-INVENTORY.md` — Internal codebase audit (commit `902117a`); referenced extensively in audit Stage 1 findings.
 - `LAYER_0_DESIGN.md` — Layer 0 architectural design.
 - `LAYER_0_TESTABILITY.md` — Layer 0 testability framework.
+- `CHECK_LAYER1_CASE_REFERENCE.md` — Layer 1 product decisions (commit `ed0b31d`).
 - `LANGUAGE_TIER1_REMEDIATION.md` — Tier 1 bilingual remediation plan (status: COMPLETE 2026-04-30).
 - `LANGUAGE_TOGGLE_VERIFICATION_v2.md` — Tier 1 closure document; truthful current-state successor to v1 (which had drift).
 - `LANGUAGE_TOGGLE_VERIFICATION.md` — Original v1 (preserved for historical reference; superseded by v2 per Phase 1 erratum at commit `3a0f5e4`).
