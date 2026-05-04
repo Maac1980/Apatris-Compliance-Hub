@@ -16,7 +16,7 @@ export const pool = new Pool({
   connectionString: dbUrl || undefined,
   ssl: useSSL,
   max: 20,                      // Scale for multi-tenant SaaS
-  min: 2,                       // Keep 2 warm connections
+  min: 0,                       // Neon serverless: no warm connections (avoids idle-close stale-socket errors)
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
   allowExitOnIdle: false,       // Keep pool alive
