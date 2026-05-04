@@ -1,25 +1,33 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth-middleware.js";
 import { query, queryOne, execute } from "../lib/db.js";
+import { encrypt as aesEncrypt, decrypt as aesDecrypt, isEncrypted } from "../lib/encryption.js";
 import { createHash } from "crypto";
 
 const router = Router();
 
-// Simple encryption (XOR with key hash — production should use AES)
-const ENC_KEY = process.env.JWT_SECRET || "apatris-msg-key";
-function encrypt(text: string): string {
-  const keyHash = createHash("sha256").update(ENC_KEY).digest();
-  const buf = Buffer.from(text, "utf8");
-  const enc = Buffer.alloc(buf.length);
-  for (let i = 0; i < buf.length; i++) enc[i] = buf[i] ^ keyHash[i % keyHash.length];
-  return enc.toString("base64");
-}
-function decrypt(encoded: string): string {
-  const keyHash = createHash("sha256").update(ENC_KEY).digest();
+// Encryption: AES-256-GCM via lib/encryption.ts for new writes.
+// Legacy XOR fallback on read for messages encrypted before this migration.
+// Migration: Option (i) — no batch re-encrypt; legacy rows stay readable via fallback path.
+const LEGACY_ENC_KEY = process.env.JWT_SECRET || "apatris-msg-key";
+function legacyXorDecrypt(encoded: string): string {
+  const keyHash = createHash("sha256").update(LEGACY_ENC_KEY).digest();
   const buf = Buffer.from(encoded, "base64");
   const dec = Buffer.alloc(buf.length);
   for (let i = 0; i < buf.length; i++) dec[i] = buf[i] ^ keyHash[i % keyHash.length];
   return dec.toString("utf8");
+}
+
+function encrypt(text: string): string {
+  return aesEncrypt(text);
+}
+
+function decrypt(encoded: string): string {
+  if (isEncrypted(encoded)) {
+    const result = aesDecrypt(encoded);
+    return result ?? "";
+  }
+  return legacyXorDecrypt(encoded);
 }
 
 function getUserId(req: any): string { return req.user?.email || req.user?.name || "unknown"; }
