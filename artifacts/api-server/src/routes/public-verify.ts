@@ -48,7 +48,7 @@ router.get("/public/verify/:token", async (req, res) => {
 
     // Fetch worker data
     const worker = await queryOne<any>(
-      `SELECT w.first_name, w.last_name, w.nationality, w.specialization,
+      `SELECT w.full_name, w.nationality, w.specialization,
               w.trc_expiry, w.work_permit_expiry, w.passport_expiry,
               w.bhp_expiry, w.medical_exam_expiry, w.contract_end_date,
               w.pesel, w.passport_number
@@ -78,7 +78,7 @@ router.get("/public/verify/:token", async (req, res) => {
       timestamp: now.toISOString(),
       employer: tenant?.name ?? "Apatris Sp. z o.o.",
       worker: {
-        name: `${worker.first_name} ${worker.last_name}`,
+        name: worker.full_name,
         nationality: worker.nationality,
         specialization: worker.specialization,
         // Decrypt passport_number, then apply existing last-4 mask (public token endpoint — must stay masked)
@@ -259,14 +259,14 @@ router.get("/public/client/:token", async (req, res) => {
     let workers: any[];
     if (link.worker_ids?.length > 0) {
       workers = await query<any>(
-        `SELECT id, first_name, last_name, nationality, specialization,
+        `SELECT id, full_name, nationality, specialization,
                 trc_expiry, work_permit_expiry, bhp_expiry, medical_exam_expiry, contract_end_date
          FROM workers WHERE id = ANY($1) AND tenant_id = $2`,
         [link.worker_ids, link.tenant_id]
       );
     } else {
       workers = await query<any>(
-        `SELECT id, first_name, last_name, nationality, specialization,
+        `SELECT id, full_name, nationality, specialization,
                 trc_expiry, work_permit_expiry, bhp_expiry, medical_exam_expiry, contract_end_date
          FROM workers WHERE tenant_id = $1 LIMIT 50`,
         [link.tenant_id]
@@ -278,7 +278,7 @@ router.get("/public/client/:token", async (req, res) => {
     const zone = (days: number | null) => days === null ? "unknown" : days < 0 ? "expired" : days < 30 ? "red" : days <= 60 ? "yellow" : "green";
 
     const workerList = workers.map(w => ({
-      name: `${w.first_name} ${w.last_name}`,
+      name: w.full_name,
       nationality: w.nationality,
       specialization: w.specialization,
       documents: {

@@ -24,7 +24,7 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
 
   // ── 1. Case SLA breach escalation ──────────────────────────────────
   const breachedCases = await query<any>(
-    `SELECT c.*, w.first_name, w.last_name,
+    `SELECT c.*, w.full_name,
        EXTRACT(EPOCH FROM (NOW() - c.stage_entered_at)) / 86400 AS days_in_stage,
        CASE WHEN c.sla_deadline IS NOT NULL AND NOW() > c.sla_deadline THEN true ELSE false END AS sla_breached
      FROM legal_cases c JOIN workers w ON c.worker_id = w.id
@@ -35,7 +35,7 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
 
   for (const c of breachedCases) {
     try {
-      const workerName = `${c.first_name} ${c.last_name}`;
+      const workerName = c.full_name;
       const daysOver = Math.round(c.days_in_stage - (c.sla_deadline ? 0 : 999));
 
       // Push notification (1+ day)
@@ -103,7 +103,7 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
     for (const field of fields) {
       try {
         const workers = await query<any>(
-          `SELECT id, first_name, last_name, ${field.col}
+          `SELECT id, full_name, ${field.col}
            FROM workers WHERE tenant_id = $1 AND ${field.col}::date = $2::date`,
           [tenantId, targetDate]
         );
@@ -111,7 +111,7 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
         for (const w of workers) {
           try {
             const { notifyDocExpiry } = await import("./push-sender.service.js");
-            await notifyDocExpiry(tenantId, `${w.first_name} ${w.last_name}`, field.label, threshold);
+            await notifyDocExpiry(tenantId, w.full_name, field.label, threshold);
             docAlerts++;
           } catch { /* push may not be configured */ }
         }

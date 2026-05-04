@@ -40,14 +40,14 @@ export async function buildWeeklyDigest(tenantId: string): Promise<DigestData> {
   for (const f of fields) {
     try {
       const rows = await query<any>(
-        `SELECT first_name, last_name, ${f.col} FROM workers
+        `SELECT full_name, ${f.col} FROM workers
          WHERE tenant_id = $1 AND ${f.col}::date BETWEEN $2::date AND $3::date`,
         [tenantId, today, weekEnd]
       );
       for (const r of rows) {
         const daysLeft = Math.ceil((new Date(r[f.col]).getTime() - now.getTime()) / 86_400_000);
         expiringThisWeek.push({
-          workerName: `${r.first_name} ${r.last_name}`,
+          workerName: r.full_name,
           docType: f.label,
           expiryDate: r[f.col],
           daysLeft,
@@ -58,7 +58,7 @@ export async function buildWeeklyDigest(tenantId: string): Promise<DigestData> {
 
   // SLA breaches
   const slaBreaches = await query<any>(
-    `SELECT c.case_type, c.status, w.first_name, w.last_name,
+    `SELECT c.case_type, c.status, w.full_name,
        EXTRACT(EPOCH FROM (NOW() - c.stage_entered_at)) / 86400 AS days_in_stage
      FROM legal_cases c JOIN workers w ON c.worker_id = w.id
      WHERE c.tenant_id = $1 AND c.status NOT IN ('APPROVED')
@@ -97,7 +97,7 @@ export async function buildWeeklyDigest(tenantId: string): Promise<DigestData> {
   return {
     expiringThisWeek: expiringThisWeek.sort((a, b) => a.daysLeft - b.daysLeft),
     slaBreaches: slaBreaches.map((s: any) => ({
-      workerName: `${s.first_name} ${s.last_name}`,
+      workerName: s.full_name,
       caseType: s.case_type,
       stage: s.status,
       daysInStage: Math.round(s.days_in_stage),

@@ -22,7 +22,7 @@ export async function sendPushToTenant(
   // Log the notification intent regardless of push capability
   try {
     await execute(
-      "INSERT INTO notification_log (tenant_id, channel, worker_name, message, status, created_at) VALUES ($1, 'push', $2, $3, 'pending', NOW())",
+      "INSERT INTO notification_log (tenant_id, channel, worker_name, message_preview, status, created_at) VALUES ($1, 'push', $2, $3, 'pending', NOW())",
       [tenantId, payload.title, payload.body]
     );
   } catch { /* notification_log may not exist */ }
