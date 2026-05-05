@@ -7,6 +7,20 @@
 
 ---
 
+## Quick reference (under stress, start here)
+
+- **Bad pushed commit:** `git revert <sha> && git push origin main`
+- **Bad staging deploy:** `flyctl deploy --app apatris-api-staging --image registry.fly.io/apatris-api-staging:deployment-<TAG>`
+- **Bad prod deploy:** same as staging but `--app apatris-api`. ⚠️ Joint Manish + chat-Claude go required.
+- **Schema corruption:** `flyctl machine restart <id> --app <app-name>` (init-db reruns CREATE TABLE IF NOT EXISTS)
+- **Missing secret:** `flyctl secrets set <NAME>=<VALUE> --app <app-name>` (auto-restarts machines)
+- **Lost local repo:** `git clone https://github.com/Maac1980/Apatris-Compliance-Hub.git` + restore `.env` from password manager
+- **Lost work after `git reset --hard`:** `git reflog` shows recent HEAD movements; `git reset --hard <reflog-sha>` returns to pre-reset state (reflog persists ~90 days)
+
+Detailed procedures + verification + caveats below.
+
+---
+
 ## How to use this document
 
 1. Identify which surface is affected (code / database / Fly app / configuration / cross-repo).
@@ -69,6 +83,8 @@ git diff                                    # should be empty
 
 ⚠️ `git checkout -- .` and `git reset --hard HEAD` permanently discard local changes. Use only when sure.
 
+**Recovery if reset was a mistake:** `git reflog` shows recent HEAD movements; `git reset --hard <reflog-sha>` returns to the state before reset. Reflog entries persist ~90 days by default.
+
 ---
 
 #### Scenario B — Bad local commit, NOT yet pushed
@@ -91,6 +107,8 @@ git rev-list --left-right --count origin/main...HEAD   # should show 0 ahead, 0 
 ```
 
 **Tested:** 2026-05-05. Used during Item 2.2 GATE T1-D-1 take 2 (after the committer-identity divergence, soft-reset + re-config + re-commit).
+
+**Recovery if reset was a mistake:** `git reflog` shows recent HEAD movements; `git reset --hard <reflog-sha>` returns to the state before reset. Reflog entries persist ~90 days by default.
 
 ---
 
@@ -139,6 +157,8 @@ git rev-list --left-right --count origin/main...HEAD   # 0 0
 
 **Tested:** Never invoked on this repo. **Hard Boundary 13: NO git history modification (force-push, history rewrite) without explicit Manish go.**
 
+**Recovery if reset was a mistake (LOCAL only — pre-push):** `git reflog` shows recent HEAD movements; `git reset --hard <reflog-sha>` returns to the state before reset. Reflog entries persist ~90 days by default. ⚠️ This does NOT undo a force-push that has already reached origin — once pushed, history rewrite is visible to all collaborators and `git reflog` only helps your local clone.
+
 ---
 
 #### Scenario E — Lost local repo (entire clone gone — disk failure / accidental `rm -rf` / new machine)
@@ -165,7 +185,7 @@ git log --oneline -3                        # latest commit matches expected ori
 ls artifacts/api-server/.env                # .env present (DO NOT cat or commit)
 ```
 
-**Tested:** Pattern verified Day 8 (initial clone setup). Re-cloning is a standard git operation; not a destructive recovery — original GitHub remains the source of truth.
+**Tested:** Pattern verified during initial clone setup early in the build. Re-cloning is a standard git operation; not a destructive recovery — original GitHub remains the source of truth.
 
 ---
 
@@ -201,7 +221,7 @@ git rev-list --left-right --count origin/main...HEAD   # 0 0 = in sync
 | Prod and staging are different databases | ✅ digests differ → confirmed separate Neon projects/branches |
 | Migrations directory | NOT present — confirms idempotent `CREATE TABLE IF NOT EXISTS` pattern in `lib/init-db.ts` |
 | Pool config (`lib/db.ts:15-23`) | `max:20, min:0, idleTimeoutMillis:30_000, connectionTimeoutMillis:5_000, allowExitOnIdle:false` (Item 1.3 fix in place) |
-| Neon point-in-time recovery (PITR) | Per Neon docs: free tier retains 7 days of branch history; paid tier retains up to 30 days. Recovery via "branch from a point in time" in Neon dashboard. Not verified by direct query per Hard Boundary 2. |
+| Neon point-in-time recovery (PITR) | Per Neon docs (verify current at https://neon.tech/docs/manage/branches): free tier retains 7 days of branch history; paid tier retains up to 30 days. Recovery via "branch from a point in time" in Neon dashboard. Not verified by direct query per Hard Boundary 2. |
 
 ### Decision tree
 
