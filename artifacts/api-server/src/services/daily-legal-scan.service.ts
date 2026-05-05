@@ -10,6 +10,7 @@
  */
 
 import { query, queryOne, execute } from "../lib/db.js";
+import { logger } from "../lib/logger.js";
 import { refreshWorkerLegalSnapshot } from "./legal-status.service.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
@@ -136,7 +137,7 @@ export async function runDailyLegalScan(tenantId?: string): Promise<ScanResult> 
         }
       } catch (err) {
         errors++;
-        console.error(`[LegalScan] Error scanning worker ${worker.id}:`, err instanceof Error ? err.message : err);
+        logger.error({ err, workerId: worker.id, tenantId: tid }, "[LegalScan] Error scanning worker");
       }
     }
 

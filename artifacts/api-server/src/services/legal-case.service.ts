@@ -12,6 +12,7 @@
  */
 
 import { query, queryOne, execute } from "../lib/db.js";
+import { logger } from "../lib/logger.js";
 import { refreshWorkerLegalSnapshot } from "./legal-status.service.js";
 
 // ═══ TYPES ══════════════════════════════════════════════════════════════════
@@ -254,32 +255,33 @@ export async function updateCaseStatus(
   );
   if (!updated) throw new Error("Failed to update legal case");
 
-  try { await refreshWorkerLegalSnapshot(existing.worker_id, tenantId); } catch { /* non-blocking */ }
+  try { await refreshWorkerLegalSnapshot(existing.worker_id, tenantId); }
+  catch (err) { logger.error({ err, caseId, tenantId, workerId: existing.worker_id }, "[LegalCase] non-blocking failure: refreshWorkerLegalSnapshot"); }
 
   // Log in case notebook (non-blocking)
   try {
     const { logStatusChange } = await import("./case-notebook.service.js");
     await logStatusChange(caseId, tenantId, existing.status, newStatus);
-  } catch { /* non-blocking */ }
+  } catch (err) { logger.error({ err, caseId, tenantId }, "[LegalCase] non-blocking failure: logStatusChange"); }
 
   if (newStatus === "REJECTED" || newStatus === "APPROVED") {
     try {
       const { syncLegalCaseToTrcCase } = await import("./case-sync.service.js");
       await syncLegalCaseToTrcCase(caseId, tenantId);
-    } catch { /* non-blocking */ }
+    } catch (err) { logger.error({ err, caseId, tenantId, newStatus }, "[LegalCase] non-blocking failure: syncLegalCaseToTrcCase"); }
   }
 
   // Record in knowledge graph (non-blocking)
   try {
     const { recordCaseInGraph } = await import("./knowledge-graph.service.js");
     await recordCaseInGraph(tenantId, caseId, existing.worker_id, existing.case_type, newStatus);
-  } catch { /* non-blocking */ }
+  } catch (err) { logger.error({ err, caseId, tenantId, workerId: existing.worker_id }, "[LegalCase] non-blocking failure: recordCaseInGraph"); }
 
   // Auto-generate AI document for this stage (non-blocking)
   try {
     const { generateDocumentForStage } = await import("./case-doc-generator.service.js");
     await generateDocumentForStage(caseId, tenantId, newStatus);
-  } catch { /* non-blocking */ }
+  } catch (err) { logger.error({ err, caseId, tenantId, newStatus }, "[LegalCase] non-blocking failure: generateDocumentForStage"); }
 
   return updated;
 }

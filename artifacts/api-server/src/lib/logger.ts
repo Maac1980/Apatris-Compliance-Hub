@@ -1,12 +1,43 @@
 import pino from 'pino'
 
 const isDev = process.env.NODE_ENV !== 'production'
+const sentryDsn = process.env.SENTRY_DSN
+
+// Build transport targets dynamically. In all modes, info+ goes to stdout.
+// When SENTRY_DSN is set, error+fatal also flow to Sentry via pino-sentry-transport.
+const targets: any[] = []
+
+if (isDev) {
+  targets.push({
+    target: 'pino-pretty',
+    level: 'info',
+    options: { colorize: true, translateTime: 'SYS:standard' },
+  })
+} else {
+  targets.push({
+    target: 'pino/file',
+    level: 'info',
+    options: { destination: 1 },
+  })
+}
+
+if (sentryDsn) {
+  targets.push({
+    target: 'pino-sentry-transport',
+    level: 'error',
+    options: {
+      sentry: {
+        dsn: sentryDsn,
+        environment: process.env.NODE_ENV ?? 'production',
+      },
+      minLevel: 50,
+    },
+  })
+}
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? 'info',
-  transport: isDev
-    ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } }
-    : undefined,
+  transport: { targets },
   base: { service: 'apatris-api' },
   timestamp: pino.stdTimeFunctions.isoTime,
   redact: {

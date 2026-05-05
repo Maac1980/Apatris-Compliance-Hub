@@ -11,6 +11,7 @@
  */
 
 import { query } from "../lib/db.js";
+import { logger } from "../lib/logger.js";
 
 interface EscalationResult {
   casesChecked: number;
@@ -83,7 +84,10 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
       } catch { /* non-blocking */ }
 
       escalations++;
-    } catch { errors++; }
+    } catch (err) {
+      logger.error({ err, tenantId, caseId: c.id }, "[Escalation] outer catch: SLA breach loop");
+      errors++;
+    }
   }
 
   // ── 2. Document expiry alerts ──────────────────────────────────────
@@ -115,7 +119,10 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
             docAlerts++;
           } catch { /* push may not be configured */ }
         }
-      } catch { errors++; }
+      } catch (err) {
+        logger.error({ err, tenantId, threshold, field: field.col }, "[Escalation] outer catch: doc expiry loop");
+        errors++;
+      }
     }
   }
 
@@ -125,7 +132,10 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
     const deadlineResult = await runDeadlineCheck(tenantId);
     escalations += deadlineResult.escalated;
     docAlerts += deadlineResult.expired;
-  } catch { errors++; }
+  } catch (err) {
+    logger.error({ err, tenantId }, "[Escalation] outer catch: runDeadlineCheck");
+    errors++;
+  }
 
   return { casesChecked: breachedCases.length, escalations, docAlerts, errors };
 }

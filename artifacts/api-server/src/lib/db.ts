@@ -1,4 +1,5 @@
 import pkg from "pg";
+import { logger } from "./logger.js";
 const { Pool } = pkg;
 
 // Detect if SSL should be used — Replit's built-in PostgreSQL uses sslmode=disable
@@ -23,7 +24,7 @@ export const pool = new Pool({
 });
 
 pool.on("error", (err) => {
-  console.error("[DB] Unexpected pool client error:", err.message);
+  logger.error({ err }, "[DB] Unexpected pool client error");
 });
 
 export async function query<T = Record<string, unknown>>(

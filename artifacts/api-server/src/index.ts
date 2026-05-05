@@ -11,7 +11,10 @@ const port = Number(process.env["PORT"] || "8080");
       Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "production", tracesSampleRate: 0.1 });
       console.log("[Sentry] Initialized.");
     }
-  } catch { /* Sentry is optional */ }
+  } catch (err) {
+    // Sentry init failed — logger may also be unavailable at this boot stage; console.error is the safe fallback.
+    console.error("[Sentry] init failed:", err instanceof Error ? err.message : err);
+  }
 
   let app: any;
   let initError: string | null = null;
