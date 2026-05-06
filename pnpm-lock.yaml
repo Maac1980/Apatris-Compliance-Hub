@@ -6,66 +6,15 @@ settings:
 
 catalogs:
   default:
-    '@replit/vite-plugin-cartographer':
-      specifier: ^0.5.0
-      version: 0.5.1
-    '@replit/vite-plugin-dev-banner':
-      specifier: ^0.1.1
-      version: 0.1.2
-    '@replit/vite-plugin-runtime-error-modal':
-      specifier: ^0.0.6
-      version: 0.0.6
-    '@tailwindcss/vite':
-      specifier: ^4.1.14
-      version: 4.2.2
-    '@tanstack/react-query':
-      specifier: ^5.90.21
-      version: 5.94.5
     '@types/node':
       specifier: ^25.3.3
       version: 25.5.0
-    '@types/react':
-      specifier: ^19.2.0
-      version: 19.2.14
-    '@types/react-dom':
-      specifier: ^19.2.0
-      version: 19.2.3
-    '@vitejs/plugin-react':
-      specifier: ^5.0.4
-      version: 5.2.0
-    class-variance-authority:
-      specifier: ^0.7.1
-      version: 0.7.1
-    clsx:
-      specifier: 2.1.1
-      version: 2.1.1
     drizzle-orm:
       specifier: ^0.45.1
       version: 0.45.1
-    framer-motion:
-      specifier: 12.35.1
-      version: 12.35.1
-    lucide-react:
-      specifier: ^0.545.0
-      version: 0.545.0
-    react:
-      specifier: 19.1.0
-      version: 19.1.0
-    react-dom:
-      specifier: 19.1.0
-      version: 19.1.0
-    tailwind-merge:
-      specifier: 3.5.0
-      version: 3.5.0
-    tailwindcss:
-      specifier: ^4.1.14
-      version: 4.2.2
     tsx:
       specifier: ^4.21.0
       version: 4.21.0
-    vite:
-      specifier: ^7.3.0
-      version: 7.3.1
     zod:
       specifier: ^3.25.76
       version: 3.25.76
@@ -391,9 +340,6 @@ importers:
       pino-pretty:
         specifier: ^13.1.3
         version: 13.1.3
-      pino-sentry-transport:
-        specifier: ^1.6.0
-        version: 1.6.0(@sentry/node@10.45.0)(pino@10.3.1)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -439,7 +385,7 @@ importers:
         version: 8.20.0
       '@vitest/coverage-v8':
         specifier: ^4.1.0
-        version: 4.1.0(vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.0(vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0))
       esbuild:
         specifier: 0.27.4
         version: 0.27.4
@@ -448,7 +394,7 @@ importers:
         version: 4.21.0
       vitest:
         specifier: ^4.1.0
-        version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0)
 
   artifacts/mockup-sandbox:
     devDependencies:
@@ -3496,9 +3442,6 @@ packages:
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
-  buffer@6.0.3:
-    resolution: {integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==}
-
   busboy@1.6.0:
     resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
     engines: {node: '>=10.16.0'}
@@ -3935,10 +3878,6 @@ packages:
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
 
-  events@3.3.0:
-    resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
-    engines: {node: '>=0.8.x'}
-
   execa@9.6.1:
     resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
     engines: {node: ^18.19.0 || >=20.5.0}
@@ -4198,9 +4137,6 @@ packages:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
 
-  ieee754@1.2.1:
-    resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
-
   ignore@7.0.5:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
@@ -4436,10 +4372,6 @@ packages:
   locate-path@8.0.0:
     resolution: {integrity: sha512-XT9ewWAC43tiAV7xDAPflMkG0qOPn2QjHqlgX8FOqmWa/rxnyYDulF9T0F7tRy1u+TVTmK/M//6VIOye+2zDXg==}
     engines: {node: '>=20'}
-
-  lodash.get@4.4.2:
-    resolution: {integrity: sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==}
-    deprecated: This package is deprecated. Use the optional chaining (?.) operator instead.
 
   lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
@@ -4760,22 +4692,12 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
-  pino-abstract-transport@1.2.0:
-    resolution: {integrity: sha512-Guhh8EZfPCfH+PMXAb6rKOjGQEoy0xlAIn+irODG5kgfYV+BQ0rGYYWTIel3P5mmyXqkYkPmdIkywsn6QKUR1Q==}
-
   pino-abstract-transport@3.0.0:
     resolution: {integrity: sha512-wlfUczU+n7Hy/Ha5j9a/gZNy7We5+cXp8YL+X+PG8S0KXxw7n/JXA3c46Y0zQznIJ83URJiwy7Lh56WLokNuxg==}
 
   pino-pretty@13.1.3:
     resolution: {integrity: sha512-ttXRkkOz6WWC95KeY9+xxWL6AtImwbyMHrL1mSwqwW9u+vLp/WIElvHvCSDg0xO/Dzrggz1zv3rN5ovTRVowKg==}
     hasBin: true
-
-  pino-sentry-transport@1.6.0:
-    resolution: {integrity: sha512-UyV2TlTn7sL7Rinr69vGzpGBOhh/ueuMrFz3qASauHDHfklDFXfH+6Hc11EXSVH86nxHgF8kx6/fAOgQJhcsIQ==}
-    engines: {node: '> 14'}
-    peerDependencies:
-      '@sentry/node': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
-      pino: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
 
   pino-std-serializers@7.1.0:
     resolution: {integrity: sha512-BndPH67/JxGExRgiX1dX0w1FvZck5Wa4aal9198SrRhZjH3GxKQUKIBnYJTdj2HDN3UQAS06HlfcSbQj2OHmaw==}
@@ -4839,10 +4761,6 @@ packages:
 
   process-warning@5.0.0:
     resolution: {integrity: sha512-a39t9ApHNx2L4+HBnQKqxxHNs1r7KF+Intd8Q/g1bUh6q0WIp9voPXJ/x0j+ZL45KF1pJd9+q2jLIRMfvEshkA==}
-
-  process@0.11.10:
-    resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
-    engines: {node: '>= 0.6.0'}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -4995,10 +4913,6 @@ packages:
   readable-stream@3.6.2:
     resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
     engines: {node: '>= 6'}
-
-  readable-stream@4.7.0:
-    resolution: {integrity: sha512-oIGGmcpTLwPga8Bn6/Z75SVaH1z5dUut2ibSyAMVhmUggWpmDn2dapB0n7f8nwaSiRtepAsfJyfXIO5DCVAODg==}
-    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   readdirp@4.1.2:
     resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
@@ -8538,7 +8452,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@4.1.0(vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
+  '@vitest/coverage-v8@4.1.0(vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.1.0
@@ -8550,7 +8464,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vitest: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0)
 
   '@vitest/expect@4.1.0':
     dependencies:
@@ -8561,13 +8475,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.0(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
+  '@vitest/mocker@4.1.0(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0))':
     dependencies:
       '@vitest/spy': 4.1.0
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0)
 
   '@vitest/pretty-format@4.1.0':
     dependencies:
@@ -8727,11 +8641,6 @@ snapshots:
   buffer-equal-constant-time@1.0.1: {}
 
   buffer-from@1.1.2: {}
-
-  buffer@6.0.3:
-    dependencies:
-      base64-js: 1.5.1
-      ieee754: 1.2.1
 
   busboy@1.6.0:
     dependencies:
@@ -9069,8 +8978,6 @@ snapshots:
 
   eventemitter3@4.0.7: {}
 
-  events@3.3.0: {}
-
   execa@9.6.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
@@ -9377,8 +9284,6 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  ieee754@1.2.1: {}
-
   ignore@7.0.5: {}
 
   import-in-the-middle@2.0.6:
@@ -9578,8 +9483,6 @@ snapshots:
   locate-path@8.0.0:
     dependencies:
       p-locate: 6.0.0
-
-  lodash.get@4.4.2: {}
 
   lodash.includes@4.3.0: {}
 
@@ -9869,11 +9772,6 @@ snapshots:
 
   picomatch@4.0.3: {}
 
-  pino-abstract-transport@1.2.0:
-    dependencies:
-      readable-stream: 4.7.0
-      split2: 4.2.0
-
   pino-abstract-transport@3.0.0:
     dependencies:
       split2: 4.2.0
@@ -9893,13 +9791,6 @@ snapshots:
       secure-json-parse: 4.1.0
       sonic-boom: 4.2.1
       strip-json-comments: 5.0.3
-
-  pino-sentry-transport@1.6.0(@sentry/node@10.45.0)(pino@10.3.1):
-    dependencies:
-      '@sentry/node': 10.45.0
-      lodash.get: 4.4.2
-      pino: 10.3.1
-      pino-abstract-transport: 1.2.0
 
   pino-std-serializers@7.1.0: {}
 
@@ -9959,8 +9850,6 @@ snapshots:
       parse-ms: 4.0.0
 
   process-warning@5.0.0: {}
-
-  process@0.11.10: {}
 
   prop-types@15.8.1:
     dependencies:
@@ -10108,14 +9997,6 @@ snapshots:
       inherits: 2.0.4
       string_decoder: 1.3.0
       util-deprecate: 1.0.2
-
-  readable-stream@4.7.0:
-    dependencies:
-      abort-controller: 3.0.0
-      buffer: 6.0.3
-      events: 3.3.0
-      process: 0.11.10
-      string_decoder: 1.3.0
 
   readdirp@4.1.2: {}
 
@@ -10642,7 +10523,7 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.3
 
-  vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
+  vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.3
@@ -10653,14 +10534,12 @@ snapshots:
       '@types/node': 25.5.0
       esbuild: 0.27.4
       fsevents: 2.3.3
-      jiti: 2.6.1
       tsx: 4.21.0
-      yaml: 2.8.3
 
-  vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
+  vitest@4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.1.0(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0))
       '@vitest/pretty-format': 4.1.0
       '@vitest/runner': 4.1.0
       '@vitest/snapshot': 4.1.0
@@ -10677,7 +10556,7 @@ snapshots:
       tinyexec: 1.0.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(tsx@4.21.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0

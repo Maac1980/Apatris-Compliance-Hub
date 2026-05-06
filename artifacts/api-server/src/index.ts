@@ -10,6 +10,13 @@ const port = Number(process.env["PORT"] || "8080");
       const Sentry = await import("@sentry/node");
       Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "production", tracesSampleRate: 0.1 });
       console.log("[Sentry] Initialized.");
+      // Post-init validation — Sentry.init() can silently fail to attach a client.
+      const sentryClient = Sentry.getClient();
+      if (!sentryClient) {
+        console.error("[Sentry] init returned no client despite SENTRY_DSN set — observability degraded");
+      } else {
+        console.log("[Sentry] post-init validation OK");
+      }
     }
   } catch (err) {
     // Sentry init failed — logger may also be unavailable at this boot stage; console.error is the safe fallback.
