@@ -3,7 +3,7 @@
 **Authored:** 2026-05-02 (Q&A mode, post-Operational-Pass close)
 **Authored by:** APATRIS Claude (the engine)
 **For:** chat-Claude (to derive subsequent save-prompts) + Manish (direct reading without translation)
-**Status:** Working draft; untracked; not committed. Durable reference across sessions.
+**Status:** Tracked; committed 2026-05-04 as 2d20156. Updated 2026-05-06 (Day 19) with progress on Track 1 + Track 2.
 
 ---
 
@@ -23,15 +23,18 @@ Restore the test substrate; close the verification-discipline gap that let `6197
 ### Actions
 
 **1.1 Reactivate `apatris-api-staging` Fly app.**
+- ✅ DONE 2026-05-06 — staging reactivated and verified during Item 2.3 deploy
 - WHY: precondition for Manish's standing "test data, never real data" principle. Currently suspended (Session 3 D7-4); operational pass items (a) + (b) deferred because of this.
 - WHO: Manish authorizes; reactivation IS state-changing flyctl (FORBIDDEN list per Operational Pass save prompt). Either Manish runs `flyctl machines start --app apatris-api-staging` himself OR explicitly authorizes APATRIS Claude with narrow scope-exception.
 - DONE WHEN: `flyctl status --app apatris-api-staging` shows running machines + DB connection works.
 
 **1.2 `61977ad` schema-assumption bug cluster fix sweep (Production fixes pending #2).**
+- ✅ DONE 2026-05-04 (Day 17) — commit 77267dc
 - SCOPE: replace `first_name, last_name` with `full_name` (or `split_part(full_name, ' ', 1)`) in `services/escalation-engine.service.ts` (lines 27, 106), `routes/public-verify.ts` (lines 51, 262, 269), `services/weekly-digest.service.ts` (lines 43, 61). Replace `notification_log.message` with `message_preview` in `services/push-sender.service.ts` (line 25). Sub-30-minute sweep covering 8 broken queries.
 - WHO: chat-Claude routes → APATRIS Claude executes; deploy gated on staging verification per Rule 5.1.
 
 **1.3 DB pool quick-fix (Production fixes pending #3).**
+- ✅ DONE 2026-05-04 (Day 17) — commit 6ef9087
 - SCOPE: edit `lib/db.ts:18-19` — Option A (`min: 0`) or Option B (`idleTimeoutMillis: 10_000`). One-line config change.
 - WHO: chat-Claude routes → APATRIS Claude executes; 24h staging soak before prod deploy.
 
@@ -51,11 +54,14 @@ Close known security gaps before counsel review surfaces them.
 ### Actions
 
 **2.1 Replace `routes/messaging.ts` XOR with AES via `lib/encryption.ts` (Production fixes pending #6).**
+- ✅ DONE 2026-05-05 (Day 18) — commit b02b326, prod deploy v297
 - SCOPE: ~20-line edit at `routes/messaging.ts:9-23`. Remove local XOR `encrypt`/`decrypt`; import from `lib/encryption.ts`. Existing `APATRIS_ENCRYPTION_KEY` infrastructure used.
 - DECISION REQUIRED: legacy fallback path for any existing plaintext / XOR-encrypted messaging payloads in DB? — staging inspection answers this.
 
-**2.2 Pino-Sentry transport + `logger.error` in silent catches (Tier-2 #5).**
-- SCOPE: configure `pino-sentry-transport` in logger; add `logger.error({err, ...}, "[Service] non-blocking failure")` inside ~13 catch blocks across `lib/db.ts:25` pool.on("error"); `services/legal-case.service.ts:260-282` fan-out (4 sites); `services/escalation-engine.service.ts` cron; `services/daily-legal-scan.service.ts` cron; `index.ts:15` Sentry init; `init-db.ts:2332/3625/3646/3669/3692/3711` boot catches (6 sites).
+**2.2 Wire Sentry capture for error+ logger calls (mechanism: main-thread Sentry capture hook in `lib/logger.ts` via pino's `hooks.logMethod`) (Tier-2 #5).**
+- ✅ DONE 2026-05-06 (Day 19) — commit f33d067, prod deploy v298 (image 01KQY9E50KR2TMNSM9MQ3H95WR)
+- SCOPE (final): main-thread `hooks.logMethod` in `lib/logger.ts` filters at `level >= 50` and forwards to `Sentry.captureException`; hook wrapped in try/catch so Sentry failure cannot crash callers. `index.ts` adds Sentry post-init validation via `Sentry.getClient()`. `pino-sentry-transport` dependency removed.
+- HISTORY: Day 18 attempted `pino-sentry-transport` approach failed at staging boot due to esbuild bundling pino, breaking pino's `__dirname`-relative `worker_threads` spawn. Day 19 Phase A definitively identified root cause; Option 2 (main-thread hook) implemented, all 4 staging tests passed, prod deploy v298 healthy.
 - VALUE: 5-site systemic observability gap closes with one architectural fix.
 
 ### Stop-and-confirm gates

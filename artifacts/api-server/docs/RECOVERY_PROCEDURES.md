@@ -1,6 +1,6 @@
 # APATRIS — RECOVERY PROCEDURES
 
-**Last verified:** 2026-05-05 (Day 18)
+**Last verified:** 2026-05-06 (Day 19) — Day 19 prod deploy validated procedures by NOT triggering them; PAT-on-disk references updated post-Item 2.5.y closure; Appendix root cause superseded with Day 19 Phase A definitive finding.
 **Authored after:** Item 2.3 staging rollback case study (live recovery event ~25 min from failure detection to verified recovery)
 **Scope:** five recovery surfaces — code, database, Fly app, configuration, cross-repo
 **Discipline:** every command in this document has been empirically tested, OR is explicitly marked as `⚠️ UNTESTED` with a planned drill date. No commands fabricated from training memory.
@@ -53,7 +53,7 @@ Detailed procedures + verification + caveats below.
 | Property | Value |
 |---|---|
 | GitHub remote | `https://github.com/Maac1980/Apatris-Compliance-Hub.git` |
-| Repo authentication | A Personal Access Token is currently embedded in the local `.git/config` `remote.origin.url`. Hygiene improvement pending: switch to SSH remote OR `gh` CLI auth so the token isn't on disk. |
+| Repo authentication | Auth via SSH (key at `~/.ssh/id_ed25519`, public key registered at `https://github.com/settings/keys`). Switched from PAT-embedded HTTPS to SSH on Day 18 (2026-05-05) per Item 2.5.y. All 3 prior PATs revoked at `github.com/settings/tokens`. |
 | Total commits on `origin/main` | **797** |
 | HEAD on `origin/main` (this snapshot) | `321564a` (Item 2.3 commit; preserved while item paused for debug) |
 | Branch protection | Cannot inspect via flyctl/git CLI; verify via GitHub UI at `https://github.com/Maac1980/Apatris-Compliance-Hub/settings/branches` |
@@ -194,7 +194,7 @@ ls artifacts/api-server/.env                # .env present (DO NOT cat or commit
 ```bash
 git log --oneline -3                        # confirm HEAD + recent commits
 git status                                  # confirm working tree state
-git remote -v                               # confirm remote URL (note: PAT exposed; see hygiene note above)
+git remote -v                               # confirm remote URL (Auth posture: SSH — Item 2.5.y closed Day 18)
 git rev-list --left-right --count origin/main...HEAD   # 0 0 = in sync
 ```
 
@@ -569,7 +569,7 @@ flyctl logs --app <app-name> --no-tail | grep -E "Schedulers started|Database in
 
 - `fly.toml` accidentally modified or deleted (causes deploy to fail or use wrong settings)
 - Secret accidentally unset (`flyctl secrets unset`) — app boots but errors at runtime when the secret is needed
-- Secret value compromised (e.g., GitHub PAT exposed in `.git/config` — observed today; API key leaked to logs/screenshots)
+- Secret value compromised. GitHub PAT exposure pattern observed Day 18 (2026-05-05); remediated same day via Item 2.5.y. Procedure for future occurrences: revoke at `github.com/settings/tokens`, switch remote to SSH, verify with `ssh -T git@github.com`.
 - Secret values lost without external backup (Fly cannot recover secret values; one-way encrypted storage)
 - Drift between local `fly.toml` and deployed Fly config
 
@@ -645,7 +645,7 @@ flyctl logs --app <app-name> --no-tail | grep -i "Schedulers started"
 
 #### Scenario C — Secret value compromised
 
-**Symptom:** secret value leaked to logs, screenshots, or shared documents. Today's example: GitHub PAT (`ghp_*`) embedded in local `.git/config` `remote.origin.url`, visible to anyone running `git remote -v`.
+**Symptom:** secret value leaked to logs, screenshots, or shared documents. Day 18 example: GitHub PAT (`ghp_*`) was embedded in `.git/config`; remediated via Item 2.5.y same day.
 
 **Recovery:**
 
@@ -828,13 +828,19 @@ This is a **real recovery event**, documented while the procedures used were sti
 
 ### Root cause analysis
 
-`pino-sentry-transport` spawns a **worker thread per transport target**. Under the new `transport.targets` array configuration in `lib/logger.ts` (added by Item 2.3 commit `321564a`), pino spawned multiple worker threads on boot. **At least one worker thread crashed at boot** in the Fly Alpine Linux runtime, with the Sentry-side `level=error` event reporting `Cannot find module '/app/artifacts/api-server/dist/lib/worker.js'`.
+Root cause (definitively identified Day 19, 2026-05-06 via Phase A debug investigation):
 
-**Multiple possible specific causes (held for fresh investigation in a future session):**
-- ESM/CJS interaction at worker thread bootstrap. The package is `"type": "module"` and `"exports": { ".": { "import": "./dist/index.js", "default": "./dist/index.cjs" } }`. The compiled APATRIS bundle is CJS. Worker thread resolution may pick the wrong entry.
-- Sentry init in worker thread context — DNS, network access, or `@sentry/node` v10 compatibility differences vs main thread.
-- `pino-sentry-transport` target configuration edge case — the `level: 'error'` filter on the target combined with `minLevel: 50` inside the options may have an ordering or initialization bug.
-- `pino/file` target running in parallel as a separate worker thread may have its own loader issue with the bundled output.
+esbuild bundles pino into the single `dist/index.cjs` output (`build.ts` allowlist line 36). When pino's `transport: { targets: [...] }` is configured (commit `321564a`), bundled-pino spawns a Node `worker_threads.Worker` pointed at `lib/worker.js` — but the path is computed by pino at runtime via `__dirname`-relative resolution. After bundling, source-level `__dirname` references are rewritten by esbuild to point at the BUNDLE's directory (`/app/artifacts/api-server/dist/`), so bundled pino's worker spawn looks for `worker.js` at `/app/artifacts/api-server/dist/lib/worker.js` — exactly the path that appeared in the Day 18 Sentry error. That file doesn't exist because esbuild bundled pino's source code into `index.cjs` without preserving `lib/worker.js` separately.
+
+Four independent evidence points confirmed root cause:
+1. pino in `build.ts` allowlist line 36 (verified)
+2. Day 18 error path `/app/artifacts/api-server/dist/lib/worker.js` exactly matched bundled-pino's `__dirname`-relative worker spawn target (verified)
+3. NO `dist/lib/` directory exists in build output (verified)
+4. Pre-`321564a` code never set transport in production, never spawned workers, never crashed — failure first surfaced when commit `321564a` introduced production transports (verified)
+
+Resolution path chosen: Option 2 (main-thread Sentry capture hook). Bypasses `worker_threads` entirely. Removes `pino-sentry-transport` dependency. Implemented commit `f33d067` (Item 2.3 Option 2), prod deployed Day 19 image `01KQY9E50KR2TMNSM9MQ3H95WR`.
+
+Tier-2 awareness for future package additions: packages with `worker_threads` / fs-relative resolution (worker spawn by path) cannot be bundled by esbuild without preserving the worker file separately. If future package additions need `worker_threads`, mark them external in `build.ts` allowlist.
 
 ### What worked
 

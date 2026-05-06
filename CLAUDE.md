@@ -216,6 +216,10 @@ Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents f
 - `COUNSEL_HANDOFF_PACKET.md` — Engagement-ready packet at v1.0 (commit `27ff161`); send to Polish radca prawny + EU regulatory firm.
 - `COUNSEL_PACKET_CONTACTS.md` — Counsel firm contact tracking.
 - `EU_AI_ACT_ARTICLE_6_RESEARCH.md` — EU AI Act Article 6 regulatory research (commit `bf4d92b`).
+- `STRATEGIC_RECOMMENDATIONS.md` — Six-track strategic recommendations from APATRIS Claude (added 2026-05-04 Day 17 as commit `2d20156`; refined Day 19 with Track 1 + Track 2 progress markers).
+- `RECOVERY_PROCEDURES.md` — Five-surface recovery playbook (code, database, Fly app, configuration, cross-repo) with Item 2.3 staging rollback case study (added 2026-05-05 Day 18 as commit `3733aaf`, refined Day 19 with definitive root cause).
+- `C1-SMOKE-CHECKLIST.md` — Smoke checklist artifact.
+- `BUILD_INTEGRITY_AUDIT_*.md` (7 sub-files: DIMENSION_0/1/2/3/4/7 + OPERATIONAL_PASS) — audit working files; untracked by design.
 
 ## Testing
 - Vitest unit tests in `artifacts/api-server/src/*.test.ts`
