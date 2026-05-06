@@ -880,6 +880,85 @@ flyctl deploy --app <app-name> --image registry.fly.io/<app-name>:deployment-<TA
 
 ---
 
+## Appendix B — Secret source-of-truth table
+
+*Inventoried 2026-05-06 (Day 19) per Item 2.5.x. Maps each Fly secret name to its external source. Used when secrets are lost from Fly and must be restored. NEVER stores secret values — only NAMES and SOURCE LOCATIONS.*
+
+### Counts
+
+- Production (`apatris-api`): 29 secrets
+- Staging (`apatris-api-staging`): 28 secrets
+- Common to both: 27 secrets
+- Production-only: 2 (`APATRIS_ENCRYPTION_KEY_BACKUP`, `APATRIS_LOOKUP_KEY_BACKUP` — legacy-decrypt fallback per Item 2.2 AES messaging migration)
+- Staging-only: 1 (`APATRIS_VOYAGE_API_KEY` — Voyage embeddings feature in test, not yet on prod)
+
+### Recovery categories
+
+- **Category A — Database connection:** Source = Neon dashboard. Recovery = copy connection string, no regeneration needed.
+- **Category B — Cryptographic key (regeneration has data implications):** Source = password manager. Recovery = restore from PM. Regeneration may invalidate sessions / orphan encrypted data — proceed with caution.
+- **Category B-like — Authentication passphrase / PIN:** Source = password manager. Reset propagates to affected users; no data loss.
+- **Category C — API key / service credential:** Source = provider dashboard. Recovery = regenerate at provider, then `flyctl secrets set`.
+- **Category D — Service URL / configuration value:** Source = app config or external service settings. Recovery = re-derive from source.
+
+### Classification table
+
+| Secret name | Cat | External source | Recovery action |
+|---|---|---|---|
+| `NEON_DATABASE_URL` | A | Neon dashboard → project → Connection Details | Copy from Neon; no regeneration |
+| `JWT_SECRET` | B | Password manager | Restore from PM. Regen invalidates ALL active sessions (users re-login); no data loss |
+| `APATRIS_ENCRYPTION_KEY` | B ⚠️ | Password manager | Restore from PM. Regen orphans all AES-encrypted messaging data — never regenerate without `_BACKUP` migration plan |
+| `APATRIS_LOOKUP_KEY` | B ⚠️ | Password manager | Restore from PM. Regen orphans lookup-encrypted data |
+| `APATRIS_ENCRYPTION_KEY_BACKUP` | B | Password manager | Holds previous key for legacy-decrypt fallback (per commit `b02b326`). Restore from PM if lost; loss = inability to decrypt pre-migration messages |
+| `APATRIS_LOOKUP_KEY_BACKUP` | B | Password manager | Same as above for lookup data |
+| `VAPID_PRIVATE_KEY` | B | Password manager (or regenerate via web-push CLI) | Regen invalidates ALL existing push subscriptions; users must re-subscribe |
+| `VAPID_PUBLIC_KEY` | B | Paired with private key | Must match PRIVATE; regen together |
+| `APATRIS_PASS_MANISH` | B-like | Password manager (Manish's vault) | Owner passphrase; reset = re-set, no data loss |
+| `APATRIS_PASS_AKSHAY` | B-like | Password manager (Manish's vault) | Same |
+| `MOBILE_T2_PIN` | B-like | Password manager | Tier-2 mobile PIN; reset propagates to T2 admins |
+| `MOBILE_T3_PIN` | B-like | Password manager | T3 PIN |
+| `MOBILE_T4_PIN` | B-like | Password manager | T4 PIN |
+| `MOBILE_T5_PIN` | B-like | Password manager | T5 PIN |
+| `ANTHROPIC_API_KEY` | C | Anthropic Console (`console.anthropic.com` → API Keys) | Regenerate at console; impact: any in-flight rate-limit windows reset |
+| `PPLX_API_KEY` | C | Perplexity dashboard | Regenerate; same impact |
+| `APATRIS_VOYAGE_API_KEY` | C | Voyage AI dashboard (`dash.voyageai.com`) | Regenerate; staging-only |
+| `SENTRY_DSN` | C | Sentry project → Settings → Client Keys (DSN) | Copy DSN from Sentry project; or rotate key in Sentry UI |
+| `SENTRY_AUTH_TOKEN` | C | Sentry account → User Auth Tokens | Regenerate (used for sourcemap upload / release CLI; no runtime impact) |
+| `SMTP_USER` | C | Brevo dashboard → SMTP & API → SMTP keys | Regenerate at Brevo |
+| `SMTP_PASS` | C | Brevo dashboard | Same |
+| `S3_ACCESS_KEY_ID` | C | Cloudflare R2 dashboard → R2 → Manage R2 API Tokens | Rotate token at Cloudflare |
+| `S3_SECRET_ACCESS_KEY` | C | Cloudflare R2 dashboard | Paired with `KEY_ID`; regenerate together |
+| `SMTP_HOST` | D | Brevo docs (typically `smtp-relay.brevo.com`) | Re-derive from Brevo SMTP setup page |
+| `SMTP_PORT` | D | Brevo docs (typically `587`) | Re-derive |
+| `S3_BUCKET` | D | Cloudflare R2 bucket name | Re-derive from R2 dashboard |
+| `S3_ENDPOINT` | D | R2 dashboard → bucket → endpoint URL | Re-derive |
+| `S3_REGION` | D | R2 region constant (typically `auto`) | Re-derive |
+| `FILE_STORAGE` | D | App config flag (per CLAUDE.md, `s3` for R2 mode) | Re-derive from CLAUDE.md / code |
+| `VAPID_SUBJECT` | D | App config (typically `mailto:admin@apatris.pl` per VAPID spec) | Re-derive |
+
+### Critical operational notes
+
+- **Backup keys (`_BACKUP` suffix) are prod-only and intentional.** They preserve the ability to decrypt pre-AES-migration messaging data per commit `b02b326`. **Never delete `_BACKUP` keys until legacy-data migration is verified complete.** Currently held; deletion criteria TBD per future migration audit.
+- **Cryptographic keys (Category B) require special handling.** `APATRIS_ENCRYPTION_KEY` and `APATRIS_LOOKUP_KEY` regeneration would orphan existing encrypted data. If regeneration is unavoidable, the migration plan must decrypt with old key → re-encrypt with new key → verify before swapping.
+- **VAPID keypair must be regenerated together.** PUBLIC and PRIVATE are mathematically paired; mismatched keys break web push entirely.
+- **Password manager is the source-of-truth for Categories B + B-like.** If the password manager itself is lost, Category B keys cannot be recovered without regeneration (with data implications). The password manager is therefore an Apatris-critical asset; backup posture for the password manager itself is operational hygiene held outside this document.
+
+### Gaps surfaced 2026-05-06 (Day 19), held in Core Plan as deferred items
+
+- **Stripe operational status:** `stripe` library installed, `routes/saas-billing.ts` exists, but NO Stripe secrets in Fly. SaaS scaffolding ahead of operational use. When billing becomes the next feature (Movement 4+), provision Stripe account, set `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` via `flyctl`.
+- **Twilio/WhatsApp operational status:** Twilio in CLAUDE.md tech stack but NO Twilio secrets in Fly. Same SaaS-scaffolding-ahead pattern. When WhatsApp messaging becomes the next feature, provision Twilio account, set `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` (or current equivalents).
+
+### Maintenance
+
+This appendix should be re-inventoried whenever:
+- New secrets are added or removed from either app
+- Provider changes (e.g., switching email provider away from Brevo)
+- A secret is rotated (especially Categories B and C — note rotation date)
+- After any recovery event that exercised this table (note what worked / what didn't)
+
+Last inventory: 2026-05-06 (Day 19) per Item 2.5.x.
+
+---
+
 ## End of RECOVERY_PROCEDURES.md
 
 Authored Day 18 (2026-05-05) by Manish + chat-Claude + Apatris Claude.
