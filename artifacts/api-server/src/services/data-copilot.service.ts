@@ -109,8 +109,9 @@ function detectIntent(question: string): IntentMatch {
 
 async function handleUkrainianStatus(tenantId: string): Promise<CopilotResponse> {
   const workers = await query<any>(
-    `SELECT id, first_name, last_name, trc_expiry, work_permit_expiry, pesel
-     FROM workers WHERE tenant_id = $1 AND LOWER(nationality) LIKE '%ukrain%' ORDER BY last_name`,
+    // ORDER BY last word of full_name (last name in 2+ word names; full string for mononyms)
+    `SELECT id, full_name, trc_expiry, work_permit_expiry, pesel
+     FROM workers WHERE tenant_id = $1 AND LOWER(nationality) LIKE '%ukrain%' ORDER BY split_part(full_name, ' ', -1)`,
     [tenantId]
   );
 
@@ -126,7 +127,7 @@ async function handleUkrainianStatus(tenantId: string): Promise<CopilotResponse>
   if (needsAction > 0) {
     answer += `⚠️ ${needsAction} worker(s) need action — no TRC or work permit on record:\n`;
     workers.filter((w: any) => !w.trc_expiry && !w.work_permit_expiry).forEach((w: any) => {
-      answer += `• ${w.first_name} ${w.last_name} (PESEL: ${w.pesel ?? "N/A"})\n`;
+      answer += `• ${w.full_name} (PESEL: ${w.pesel ?? "N/A"})\n`;
     });
   } else {
     answer += `✓ All Ukrainian workers have permits on record.`;
@@ -138,7 +139,7 @@ async function handleUkrainianStatus(tenantId: string): Promise<CopilotResponse>
 async function handleDeadlines(tenantId: string): Promise<CopilotResponse> {
   const active = await query<any>(
     `SELECT d.*, (d.deadline_date::date - CURRENT_DATE) AS days_remaining,
-            w.first_name || ' ' || w.last_name AS worker_name
+            w.full_name AS worker_name
      FROM deadline_countdowns d LEFT JOIN workers w ON d.worker_id = w.id
      WHERE d.tenant_id = $1 AND d.status IN ('active','escalated')
      ORDER BY d.deadline_date ASC LIMIT 20`,
@@ -170,7 +171,7 @@ async function handleCasesPipeline(tenantId: string): Promise<CopilotResponse> {
     [tenantId]
   );
   const blocked = await query<any>(
-    `SELECT c.status, c.case_type, c.blocker_reason, w.first_name, w.last_name,
+    `SELECT c.status, c.case_type, c.blocker_reason, w.full_name,
        EXTRACT(EPOCH FROM (NOW() - c.stage_entered_at)) / 86400 AS days_in_stage
      FROM legal_cases c JOIN workers w ON c.worker_id = w.id
      WHERE c.tenant_id = $1 AND c.blocker_type = 'HARD'`,
@@ -183,7 +184,7 @@ async function handleCasesPipeline(tenantId: string): Promise<CopilotResponse> {
   if (blocked.length > 0) {
     answer += `\n🔴 ${blocked.length} HARD BLOCKED case(s):\n`;
     blocked.forEach((b: any) => {
-      answer += `• ${b.first_name} ${b.last_name} — ${b.case_type} in ${b.status} (${Math.round(b.days_in_stage)}d). Reason: ${b.blocker_reason}\n`;
+      answer += `• ${b.full_name} — ${b.case_type} in ${b.status} (${Math.round(b.days_in_stage)}d). Reason: ${b.blocker_reason}\n`;
     });
   }
 
@@ -191,16 +192,17 @@ async function handleCasesPipeline(tenantId: string): Promise<CopilotResponse> {
 }
 
 async function handleSafetyCheck(tenantId: string, params: Record<string, string>): Promise<CopilotResponse> {
-  let sql = `SELECT id, first_name, last_name, bhp_expiry, medical_exam_expiry FROM workers WHERE tenant_id = $1`;
+  let sql = `SELECT id, full_name, bhp_expiry, medical_exam_expiry FROM workers WHERE tenant_id = $1`;
   const sqlParams: any[] = [tenantId];
 
   if (params.workerName) {
     sqlParams.push(`%${params.workerName}%`);
-    sql += ` AND (first_name || ' ' || last_name) ILIKE $2`;
+    sql += ` AND full_name ILIKE $2`;
   } else {
     sql += ` AND (bhp_expiry < CURRENT_DATE OR medical_exam_expiry < CURRENT_DATE)`;
   }
-  sql += " ORDER BY last_name LIMIT 20";
+  // ORDER BY last word of full_name (last name in 2+ word names; full string for mononyms)
+  sql += " ORDER BY split_part(full_name, ' ', -1) LIMIT 20";
 
   const workers = await query<any>(sql, sqlParams);
   const now = new Date();
@@ -213,7 +215,7 @@ async function handleSafetyCheck(tenantId: string, params: Record<string, string
   workers.forEach((w: any) => {
     const bhpDays = w.bhp_expiry ? Math.ceil((new Date(w.bhp_expiry).getTime() - now.getTime()) / 86_400_000) : null;
     const medDays = w.medical_exam_expiry ? Math.ceil((new Date(w.medical_exam_expiry).getTime() - now.getTime()) / 86_400_000) : null;
-    answer += `${w.first_name} ${w.last_name}:\n`;
+    answer += `${w.full_name}:\n`;
     if (bhpDays !== null && bhpDays < 0) answer += `  🔴 BHP EXPIRED (${Math.abs(bhpDays)} days ago) — CANNOT WORK\n`;
     else if (bhpDays !== null) answer += `  BHP: ${bhpDays} days left\n`;
     if (medDays !== null && medDays < 0) answer += `  🔴 Medical EXPIRED (${Math.abs(medDays)} days ago) — CANNOT WORK\n`;
@@ -273,12 +275,13 @@ async function handleComplianceRate(tenantId: string): Promise<CopilotResponse> 
 }
 
 async function handleWorkersQuery(tenantId: string, params: Record<string, string>): Promise<CopilotResponse> {
-  let sql = "SELECT first_name, last_name, nationality, specialization, assigned_site, compliance_status FROM workers WHERE tenant_id = $1";
+  let sql = "SELECT full_name, nationality, specialization, assigned_site, compliance_status FROM workers WHERE tenant_id = $1";
   const p: any[] = [tenantId];
 
   if (params.site) { p.push(`%${params.site}%`); sql += ` AND assigned_site ILIKE $${p.length}`; }
   if (params.nationality) { p.push(`%${params.nationality}%`); sql += ` AND nationality ILIKE $${p.length}`; }
-  sql += " ORDER BY last_name LIMIT 30";
+  // ORDER BY last word of full_name (last name in 2+ word names; full string for mononyms)
+  sql += " ORDER BY split_part(full_name, ' ', -1) LIMIT 30";
 
   const workers = await query<any>(sql, p);
   const total = await queryOne<any>("SELECT COUNT(*)::int AS c FROM workers WHERE tenant_id = $1", [tenantId]);
@@ -289,7 +292,7 @@ async function handleWorkersQuery(tenantId: string, params: Record<string, strin
   answer += ` (${total?.c ?? 0} total):\n\n`;
 
   workers.slice(0, 15).forEach((w: any) => {
-    answer += `• ${w.first_name} ${w.last_name} — ${w.nationality ?? "?"} | ${w.specialization ?? "?"} | ${w.assigned_site ?? "unassigned"} | ${w.compliance_status ?? "unknown"}\n`;
+    answer += `• ${w.full_name} — ${w.nationality ?? "?"} | ${w.specialization ?? "?"} | ${w.assigned_site ?? "unassigned"} | ${w.compliance_status ?? "unknown"}\n`;
   });
   if (workers.length > 15) answer += `\n... and ${workers.length - 15} more.`;
 

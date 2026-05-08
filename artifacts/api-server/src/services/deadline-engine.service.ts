@@ -62,7 +62,7 @@ export async function completeDeadline(deadlineId: string, tenantId: string): Pr
 export async function getActiveDeadlines(tenantId: string): Promise<Deadline[]> {
   return query<Deadline>(
     `SELECT d.*, (d.deadline_date::date - CURRENT_DATE) AS days_remaining,
-            w.first_name || ' ' || w.last_name AS worker_name
+            w.full_name AS worker_name
      FROM deadline_countdowns d
      LEFT JOIN workers w ON d.worker_id = w.id
      WHERE d.tenant_id = $1 AND d.status IN ('active', 'escalated')
@@ -74,7 +74,7 @@ export async function getActiveDeadlines(tenantId: string): Promise<Deadline[]> 
 export async function getOverdueDeadlines(tenantId: string): Promise<Deadline[]> {
   return query<Deadline>(
     `SELECT d.*, (d.deadline_date::date - CURRENT_DATE) AS days_remaining,
-            w.first_name || ' ' || w.last_name AS worker_name
+            w.full_name AS worker_name
      FROM deadline_countdowns d
      LEFT JOIN workers w ON d.worker_id = w.id
      WHERE d.tenant_id = $1 AND d.status = 'active' AND d.deadline_date::date < CURRENT_DATE
@@ -88,7 +88,7 @@ export async function runDeadlineCheck(tenantId: string): Promise<{ checked: num
 
   // Find deadlines expiring today or past
   const overdue = await query<any>(
-    `SELECT d.*, w.first_name, w.last_name, (d.deadline_date::date - CURRENT_DATE) AS days_remaining
+    `SELECT d.*, w.full_name, (d.deadline_date::date - CURRENT_DATE) AS days_remaining
      FROM deadline_countdowns d LEFT JOIN workers w ON d.worker_id = w.id
      WHERE d.tenant_id = $1 AND d.status = 'active' AND d.deadline_date::date <= CURRENT_DATE`,
     [tenantId]
@@ -103,14 +103,14 @@ export async function runDeadlineCheck(tenantId: string): Promise<{ checked: num
       const { logAlert } = await import("./case-notebook.service.js");
       if (d.case_id) {
         await logAlert(d.case_id, tenantId, "DEADLINE_EXPIRED",
-          `Deadline expired: ${d.deadline_type} — ${d.description}. Worker: ${d.first_name ?? ""} ${d.last_name ?? ""}`);
+          `Deadline expired: ${d.deadline_type} — ${d.description}. Worker: ${d.full_name ?? ""}`);
       }
     } catch { /* non-blocking */ }
   }
 
   // Find deadlines approaching (≤2 days) and escalate
   const approaching = await query<any>(
-    `SELECT d.*, w.first_name, w.last_name, (d.deadline_date::date - CURRENT_DATE) AS days_remaining
+    `SELECT d.*, w.full_name, (d.deadline_date::date - CURRENT_DATE) AS days_remaining
      FROM deadline_countdowns d LEFT JOIN workers w ON d.worker_id = w.id
      WHERE d.tenant_id = $1 AND d.status = 'active'
        AND (d.deadline_date::date - CURRENT_DATE) BETWEEN 0 AND 2
@@ -124,7 +124,7 @@ export async function runDeadlineCheck(tenantId: string): Promise<{ checked: num
 
     try {
       const { notifySLABreach } = await import("./push-sender.service.js");
-      await notifySLABreach(tenantId, `${d.first_name ?? ""} ${d.last_name ?? ""}`, d.deadline_type, d.description, d.days_remaining);
+      await notifySLABreach(tenantId, d.full_name ?? "", d.deadline_type, d.description, d.days_remaining);
     } catch { /* non-blocking */ }
   }
 

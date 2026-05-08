@@ -116,7 +116,7 @@ router.get("/v1/vault/docs/:id/pdf", requireAuth, async (req, res) => {
   try {
     const lang = (req.query.lang as string) === "en" ? "en" : "pl";
     const doc = await queryOne<any>(
-      "SELECT d.*, w.first_name, w.last_name FROM case_generated_docs d JOIN workers w ON d.worker_id = w.id WHERE d.id = $1 AND d.tenant_id = $2",
+      "SELECT d.*, w.full_name FROM case_generated_docs d JOIN workers w ON d.worker_id = w.id WHERE d.id = $1 AND d.tenant_id = $2",
       [req.params.id, req.tenantId!]
     );
     if (!doc) return res.status(404).json({ error: "Document not found" });
@@ -125,7 +125,7 @@ router.get("/v1/vault/docs/:id/pdf", requireAuth, async (req, res) => {
     const pdf = new PDFDocument({ size: "A4", margin: 50 });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${doc.doc_type}_${doc.first_name}_${doc.last_name}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${doc.doc_type}_${doc.full_name.replace(/\s+/g, '_')}.pdf"`);
     pdf.pipe(res);
 
     // Header
@@ -137,7 +137,7 @@ router.get("/v1/vault/docs/:id/pdf", requireAuth, async (req, res) => {
     // Title
     pdf.fontSize(16).fillColor("#111").text(doc.title, { align: "left" });
     pdf.moveDown(0.3);
-    pdf.fontSize(9).fillColor("#666").text(`Worker: ${doc.first_name} ${doc.last_name} | Case: ${doc.case_id.slice(0, 8)} | Stage: ${doc.stage_trigger}`);
+    pdf.fontSize(9).fillColor("#666").text(`Worker: ${doc.full_name} | Case: ${doc.case_id.slice(0, 8)} | Stage: ${doc.stage_trigger}`);
     pdf.moveDown(0.5);
 
     // Legal basis
@@ -166,7 +166,7 @@ router.post("/v1/vault/docs/:id/email", requireAuth, requireRole(...LEGAL_ROLES)
     if (!to) return res.status(400).json({ error: "to (email address) required" });
 
     const doc = await queryOne<any>(
-      "SELECT d.*, w.first_name, w.last_name FROM case_generated_docs d JOIN workers w ON d.worker_id = w.id WHERE d.id = $1 AND d.tenant_id = $2",
+      "SELECT d.*, w.full_name FROM case_generated_docs d JOIN workers w ON d.worker_id = w.id WHERE d.id = $1 AND d.tenant_id = $2",
       [req.params.id, req.tenantId!]
     );
     if (!doc) return res.status(404).json({ error: "Document not found" });
@@ -176,7 +176,7 @@ router.post("/v1/vault/docs/:id/email", requireAuth, requireRole(...LEGAL_ROLES)
     const { sendAlertEmail } = await import("../lib/mailer.js");
     await sendAlertEmail({
       to,
-      workerName: `${doc.first_name} ${doc.last_name}`,
+      workerName: doc.full_name,
       subject: `[Apatris] ${doc.title}`,
       status: "info",
       details: content.slice(0, 200) + "...",

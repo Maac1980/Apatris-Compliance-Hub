@@ -134,7 +134,7 @@ export async function generateDocumentForStage(
 
   // Fetch case + worker data
   const caseData = await queryOne<any>(
-    `SELECT c.*, w.first_name, w.last_name, w.nationality, w.pesel, w.passport_number,
+    `SELECT c.*, w.full_name, w.nationality, w.pesel, w.passport_number,
             w.trc_expiry, w.work_permit_expiry, w.date_of_birth,
             w.specialization, w.contract_type
      FROM legal_cases c JOIN workers w ON c.worker_id = w.id
@@ -188,7 +188,7 @@ export async function generateDocumentForStage(
   // Build worker context
   const workerContext = `
 WORKER DATA:
-- Name: ${caseData.first_name} ${caseData.last_name}
+- Name: ${caseData.full_name}
 - Nationality: ${caseData.nationality ?? "Unknown"}
 - PESEL: ${caseData.pesel ?? "Not assigned"}
 - Passport: ${caseData.passport_number ?? "Unknown"}
@@ -249,8 +249,8 @@ ${config.legalArticles.join("\n")}`;
 
   // Fallback: template-based generation
   if (!contentPl) {
-    contentPl = `[SZABLON — ${config.title}]\n\nDotyczy: ${caseData.first_name} ${caseData.last_name} (${caseData.nationality ?? ""})\nNumer paszportu: ${caseData.passport_number ?? "—"}\nPESEL: ${caseData.pesel ?? "—"}\nTyp sprawy: ${caseData.case_type}\nStatus: ${stage}\n\nPodstawa prawna: ${config.legalArticles.join(", ")}\n\n${config.promptPl}\n\n[Wymaga uzupełnienia przez prawnika]`;
-    contentEn = `[TEMPLATE — ${config.title}]\n\nRe: ${caseData.first_name} ${caseData.last_name} (${caseData.nationality ?? ""})\nPassport: ${caseData.passport_number ?? "—"}\nPESEL: ${caseData.pesel ?? "—"}\nCase Type: ${caseData.case_type}\nStatus: ${stage}\n\nLegal Basis: ${config.legalArticles.join(", ")}\n\n${config.promptEn}\n\n[Requires lawyer completion]`;
+    contentPl = `[SZABLON — ${config.title}]\n\nDotyczy: ${caseData.full_name} (${caseData.nationality ?? ""})\nNumer paszportu: ${caseData.passport_number ?? "—"}\nPESEL: ${caseData.pesel ?? "—"}\nTyp sprawy: ${caseData.case_type}\nStatus: ${stage}\n\nPodstawa prawna: ${config.legalArticles.join(", ")}\n\n${config.promptPl}\n\n[Wymaga uzupełnienia przez prawnika]`;
+    contentEn = `[TEMPLATE — ${config.title}]\n\nRe: ${caseData.full_name} (${caseData.nationality ?? ""})\nPassport: ${caseData.passport_number ?? "—"}\nPESEL: ${caseData.pesel ?? "—"}\nCase Type: ${caseData.case_type}\nStatus: ${stage}\n\nLegal Basis: ${config.legalArticles.join(", ")}\n\n${config.promptEn}\n\n[Requires lawyer completion]`;
     confidence = 40;
   }
 
@@ -274,7 +274,7 @@ ${config.legalArticles.join("\n")}`;
       contentPl, contentEn,
       config.legalArticles, similarCount,
       kbArticlesUsed.slice(0, 10), aiModel, confidence,
-      JSON.stringify({ workerName: `${caseData.first_name} ${caseData.last_name}`, nationality: caseData.nationality }),
+      JSON.stringify({ workerName: caseData.full_name, nationality: caseData.nationality }),
     ]
   );
 
@@ -320,7 +320,7 @@ ${config.legalArticles.join("\n")}`;
 
 export async function getDraftDocuments(tenantId: string): Promise<GeneratedDoc[]> {
   return query<GeneratedDoc>(
-    `SELECT d.*, c.case_type, w.first_name || ' ' || w.last_name AS worker_name
+    `SELECT d.*, c.case_type, w.full_name AS worker_name
      FROM case_generated_docs d
      JOIN legal_cases c ON d.case_id = c.id
      JOIN workers w ON d.worker_id = w.id
@@ -332,7 +332,7 @@ export async function getDraftDocuments(tenantId: string): Promise<GeneratedDoc[
 
 export async function getAllGeneratedDocs(tenantId: string, limit: number = 50): Promise<GeneratedDoc[]> {
   return query<GeneratedDoc>(
-    `SELECT d.*, c.case_type, w.first_name || ' ' || w.last_name AS worker_name
+    `SELECT d.*, c.case_type, w.full_name AS worker_name
      FROM case_generated_docs d
      JOIN legal_cases c ON d.case_id = c.id
      JOIN workers w ON d.worker_id = w.id

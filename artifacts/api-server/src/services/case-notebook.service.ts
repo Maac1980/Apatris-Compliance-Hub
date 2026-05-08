@@ -140,7 +140,7 @@ export async function getRecentEntriesAcrossCases(
   limit: number = 50,
 ): Promise<(NotebookEntry & { case_type?: string; worker_name?: string })[]> {
   return query(
-    `SELECT n.*, c.case_type, w.first_name || ' ' || w.last_name AS worker_name
+    `SELECT n.*, c.case_type, w.full_name AS worker_name
      FROM case_notebook_entries n
      JOIN legal_cases c ON n.case_id = c.id
      JOIN workers w ON c.worker_id = w.id

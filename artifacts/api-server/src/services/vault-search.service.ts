@@ -49,10 +49,10 @@ export async function vaultSearch(
   // 1. Workers — name, PESEL, passport
   try {
     const workers = await query<any>(
-      `SELECT id, first_name, last_name, nationality, specialization, pesel,
+      `SELECT id, full_name, nationality, specialization, pesel,
               COALESCE(trc_expiry::text, '') AS trc_exp, COALESCE(work_permit_expiry::text, '') AS wp_exp
        FROM workers WHERE tenant_id = $1
-       AND (first_name || ' ' || last_name || ' ' || COALESCE(pesel,'') || ' ' || COALESCE(passport_number,'') || ' ' || COALESCE(nationality,'')) ILIKE $2
+       AND (full_name || ' ' || COALESCE(pesel,'') || ' ' || COALESCE(passport_number,'') || ' ' || COALESCE(nationality,'')) ILIKE $2
        LIMIT 10`,
       [tenantId, ilike]
     );
@@ -64,7 +64,7 @@ export async function vaultSearch(
       w.pesel = decrypt(w.pesel);
       allResults.push({
         id: w.id, category: "worker",
-        title: `${w.first_name} ${w.last_name}`,
+        title: w.full_name,
         snippet: [w.nationality, w.specialization, w.trc_exp ? `TRC: ${w.trc_exp}` : null].filter(Boolean).join(" · "),
         relevance: 90, metadata: { workerId: w.id },
       });
@@ -75,10 +75,10 @@ export async function vaultSearch(
   try {
     const cases = await query<any>(
       `SELECT c.id, c.case_type, c.status, c.next_action, c.notes, c.blocker_type,
-              w.first_name || ' ' || w.last_name AS worker_name
+              w.full_name AS worker_name
        FROM legal_cases c JOIN workers w ON c.worker_id = w.id
        WHERE c.tenant_id = $1
-       AND (c.case_type || ' ' || COALESCE(c.notes,'') || ' ' || COALESCE(c.next_action,'') || ' ' || w.first_name || ' ' || w.last_name) ILIKE $2
+       AND (c.case_type || ' ' || COALESCE(c.notes,'') || ' ' || COALESCE(c.next_action,'') || ' ' || w.full_name) ILIKE $2
        LIMIT 10`,
       [tenantId, ilike]
     );

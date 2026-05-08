@@ -32,8 +32,9 @@ router.post("/v1/worker-email/generate", requireAuth, async (req, res) => {
     const { workerId } = req.body as { workerId?: string };
     if (!workerId) return res.status(400).json({ error: "workerId required" });
 
+    // SQL aliases first_name/last_name from workers.full_name (Option γ — preserves generateEmail() caller signature)
     const worker = await queryOne<any>(
-      "SELECT first_name, last_name FROM workers WHERE id = $1 AND tenant_id = $2",
+      "SELECT split_part(full_name, ' ', 1) AS first_name, substring(full_name from position(' ' in full_name) + 1) AS last_name FROM workers WHERE id = $1 AND tenant_id = $2",
       [workerId, req.tenantId!]
     );
     if (!worker) return res.status(404).json({ error: "Worker not found" });
@@ -64,8 +65,9 @@ router.post("/v1/worker-email/generate", requireAuth, async (req, res) => {
 // GET /api/v1/worker-email/list — all generated emails
 router.get("/v1/worker-email/list", requireAuth, async (req, res) => {
   try {
+    // SQL aliases first_name/last_name from workers.full_name (Option γ — preserves generateEmail() caller signature)
     const emails = await query<any>(
-      `SELECT we.*, w.first_name, w.last_name FROM worker_emails we
+      `SELECT we.*, split_part(w.full_name, ' ', 1) AS first_name, substring(w.full_name from position(' ' in w.full_name) + 1) AS last_name FROM worker_emails we
        JOIN workers w ON we.worker_id = w.id
        WHERE we.tenant_id = $1 ORDER BY we.created_at DESC`,
       [req.tenantId!]
@@ -79,8 +81,9 @@ router.get("/v1/worker-email/list", requireAuth, async (req, res) => {
 // POST /api/v1/worker-email/generate-all — bulk generate emails for all workers without one
 router.post("/v1/worker-email/generate-all", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
+    // SQL aliases first_name/last_name from workers.full_name (Option γ — preserves generateEmail() caller signature)
     const workers = await query<any>(
-      `SELECT w.id, w.first_name, w.last_name FROM workers w
+      `SELECT w.id, split_part(w.full_name, ' ', 1) AS first_name, substring(w.full_name from position(' ' in w.full_name) + 1) AS last_name FROM workers w
        WHERE w.tenant_id = $1 AND NOT EXISTS (SELECT 1 FROM worker_emails we WHERE we.worker_id = w.id)`,
       [req.tenantId!]
     );
@@ -296,8 +299,9 @@ router.post("/v1/gdpr/consent", requireAuth, async (req, res) => {
 
 router.get("/v1/gdpr/retention-flags", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
+    // SQL aliases first_name/last_name from workers.full_name (Option γ — preserves generateEmail() caller signature)
     const flagged = await query<any>(
-      `SELECT gc.*, w.first_name, w.last_name
+      `SELECT gc.*, split_part(w.full_name, ' ', 1) AS first_name, substring(w.full_name from position(' ' in w.full_name) + 1) AS last_name
        FROM gdpr_consent_records gc JOIN workers w ON gc.worker_id = w.id
        WHERE gc.tenant_id = $1 AND gc.retention_until < CURRENT_DATE AND gc.status = 'active'
        ORDER BY gc.retention_until ASC`,

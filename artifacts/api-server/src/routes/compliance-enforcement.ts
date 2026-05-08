@@ -51,14 +51,15 @@ router.post("/v1/enforcement/deadlines/check", requireAuth, requireRole(...LEGAL
 router.get("/v1/enforcement/pip-pack", requireAuth, requireRole(...LEGAL_ROLES), async (req, res) => {
   try {
     const site = (req.query.site as string) || "all";
-    let sql = `SELECT w.id, w.first_name, w.last_name, w.nationality, w.specialization,
+    let sql = `SELECT w.id, w.full_name, w.nationality, w.specialization,
       w.trc_expiry, w.work_permit_expiry, w.passport_expiry, w.bhp_expiry,
       w.medical_exam_expiry, w.contract_end_date, w.contract_type, w.pesel,
       w.assigned_site, w.compliance_status
       FROM workers w WHERE w.tenant_id = $1`;
     const params: any[] = [req.tenantId!];
     if (site !== "all") { params.push(site); sql += ` AND w.assigned_site = $2`; }
-    sql += " ORDER BY w.last_name";
+    // ORDER BY last word of full_name (last name in 2+ word names; full string for mononyms)
+    sql += " ORDER BY split_part(w.full_name, ' ', -1)";
 
     const workers = await query<any>(sql, params);
     const now = new Date();
@@ -66,7 +67,7 @@ router.get("/v1/enforcement/pip-pack", requireAuth, requireRole(...LEGAL_ROLES),
     const status = (days: number | null) => days === null ? "MISSING" : days < 0 ? "EXPIRED" : days < 30 ? "CRITICAL" : days <= 60 ? "WARNING" : "VALID";
 
     const pack = workers.map((w: any) => ({
-      name: `${w.first_name} ${w.last_name}`,
+      name: w.full_name,
       nationality: w.nationality,
       // Decrypt PESEL for PIP inspection pack (legal-role-gated, plaintext required for PIP submission)
       pesel: decrypt(w.pesel),
@@ -194,10 +195,11 @@ router.get("/v1/enforcement/validate-contract/:workerId", requireAuth, async (re
 router.get("/v1/enforcement/ukrainian-status", requireAuth, async (req, res) => {
   try {
     const workers = await query<any>(
-      `SELECT id, first_name, last_name, nationality, trc_expiry, work_permit_expiry,
+      `SELECT id, full_name, nationality, trc_expiry, work_permit_expiry,
               pesel, passport_expiry, contract_end_date, compliance_status
        FROM workers WHERE tenant_id = $1 AND LOWER(nationality) LIKE '%ukrain%'
-       ORDER BY last_name`,
+       -- ORDER BY last word of full_name (last name in 2+ word names; full string for mononyms)
+       ORDER BY split_part(full_name, ' ', -1)`,
       [req.tenantId!]
     );
 
@@ -207,7 +209,7 @@ router.get("/v1/enforcement/ukrainian-status", requireAuth, async (req, res) => 
 
     const tracked = workers.map((w: any) => ({
       id: w.id,
-      name: `${w.first_name} ${w.last_name}`,
+      name: w.full_name,
       // Decrypt PESEL for Ukrainian status tracker (admin/legal view)
       pesel: decrypt(w.pesel),
       permitExpiry: w.work_permit_expiry,
@@ -314,7 +316,7 @@ router.get("/v1/enforcement/certificate/pdf", requireAuth, requireRole(...LEGAL_
 router.get("/v1/enforcement/safety-check/:workerId", requireAuth, async (req, res) => {
   try {
     const worker = await queryOne<any>(
-      "SELECT bhp_expiry, medical_exam_expiry, first_name, last_name FROM workers WHERE id = $1 AND tenant_id = $2",
+      "SELECT bhp_expiry, medical_exam_expiry, full_name FROM workers WHERE id = $1 AND tenant_id = $2",
       [req.params.workerId, req.tenantId!]
     );
     if (!worker) return res.status(404).json({ error: "Worker not found" });
@@ -331,7 +333,7 @@ router.get("/v1/enforcement/safety-check/:workerId", requireAuth, async (req, re
 
     res.json({
       workerId: req.params.workerId,
-      workerName: `${worker.first_name} ${worker.last_name}`,
+      workerName: worker.full_name,
       canCheckIn: blocks.length === 0,
       blocks,
     });
@@ -344,7 +346,7 @@ router.get("/v1/enforcement/zus-audit", requireAuth, requireRole(...LEGAL_ROLES)
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const trails = await query<any>(
-      `SELECT z.*, w.first_name || ' ' || w.last_name AS worker_name
+      `SELECT z.*, w.full_name AS worker_name
        FROM zus_audit_trail z JOIN workers w ON z.worker_id = w.id
        WHERE z.tenant_id = $1 ORDER BY z.calculated_at DESC LIMIT $2`,
       [req.tenantId!, limit]
@@ -371,7 +373,7 @@ router.get("/v1/enforcement/annex1", requireAuth, async (req, res) => {
   try {
     const cases = await query<any>(
       `SELECT c.id, c.case_type, c.status, c.mos_employer_sig_status, c.mos_employer_sig_deadline,
-              c.mos_fee_pln, w.first_name, w.last_name,
+              c.mos_fee_pln, w.full_name,
               (c.mos_employer_sig_deadline::date - CURRENT_DATE) AS days_until_sig
        FROM legal_cases c JOIN workers w ON c.worker_id = w.id
        WHERE c.tenant_id = $1 AND c.mos_employer_sig_status IS NOT NULL
