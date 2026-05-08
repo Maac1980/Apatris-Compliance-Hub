@@ -1,2 +1,37 @@
 .github/workflows/
 pnpm-lock 2.yaml
+
+# --- Defense-in-depth additions (M3-Item-3.0b, 2026-05-08) ---
+# Workspace-root .gitignore catches these too; explicit api-server-level
+# guardrail prevents accidental commit if git is run from this directory.
+
+# Environment files (never commit)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+*.env
+
+# Local development databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Build artifacts
+node_modules/
+dist/
+build/
+.next/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
