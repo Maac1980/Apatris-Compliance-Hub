@@ -133,7 +133,7 @@ V1-V3 happen before EXECUTION TASK begins. If V fails, work stops. Don't smuggle
 
 Do not auto-advance through GATEs.
 
-GATE means STOP. Recipient reports, waits for review, then proceeds. Auto-advancing through gates was Day 20 lesson — incomplete refactor pattern (startScheduler) was the consequence.
+GATE means STOP. Recipient reports, waits for review, then proceeds. Auto-advancing without operator review compounds errors. The Day 20 startScheduler finding (10 of 13 jobs gapped) is one downstream consequence of the broader verification-discipline gap that arises when transitions happen without explicit review points.
 
 Do not skip HARD BOUNDARIES.
 

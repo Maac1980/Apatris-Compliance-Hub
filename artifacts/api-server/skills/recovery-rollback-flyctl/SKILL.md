@@ -62,10 +62,11 @@ Step 6 — Update RECOVERY_PROCEDURES.md with date-tested entry if applicable.
 - Target: prior known-good staging image
 - Outcome: 25-minute recovery timeline, full restoration to working baseline
 
-**Day 18 staging boot-soak surfacing crash:**
-- Boot-soak window caught worker_threads crash within minutes
+**Day 18 staging deploy crash:**
+- Staging deploy surfaced worker_threads crash within minutes of deploy
 - No prod impact because staging caught it
 - Confirmed staging-as-firewall pattern works
+- The boot-soak verification pattern was named retrospectively after this incident
 
 ## Anti-patterns
 

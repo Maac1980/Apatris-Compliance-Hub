@@ -109,9 +109,9 @@ OR if revisions needed:
 
 **Day 18 Item 2.5 self-review** — caught speculative original framing in RECOVERY_PROCEDURES.md before commit; replaced with Day 19 Phase A definitive root cause.
 
-**Day 19 Item 2.4.x self-review** — caught Day-19 framing in commit message before push; corrected to honor multi-day work pattern.
+**Day 19 Item 2.4.x Phase B-1.5 self-review** — caught Day-17-vs-Day-18 dating discrepancy on b02b326 commit reference before commit; corrected to honor multi-day work pattern.
 
-**Day 19 Item 2.5.x Appendix B self-review** — caught secret value almost exposed in commit message; redacted before staging.
+**Day 19 Item 2.5.x Appendix B self-review** — verified zero secret values across 30 mapped secrets via grep before commit; every external source path verified before staging.
 
 **Day 20 Phase B-1 reconstitution self-review** — caught "stale by 4 commits" anti-hallucination slip mid-review; corrected to "stale by 5 commits" verified against actual git log.
 
@@ -119,7 +119,7 @@ OR if revisions needed:
 
 Do not skip self-review because work feels routine.
 
-61977ad-style failures (5 of 10 features broken silently for 19 days) happened in commits that felt routine. Routine is when discipline matters most.
+Verification-discipline gaps of any kind produce silent failures. The 61977ad cluster (5 of 10 features broken silently for 19 days) pre-dates the explicit self-review discipline; the lesson it taught is that any verification-discipline gap — pre-merge, post-deploy, or pre-commit — produces this pattern. Routine work is when discipline matters most.
 
 Do not collapse 5 elements into one general check.
 

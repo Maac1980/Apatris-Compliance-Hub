@@ -61,7 +61,7 @@ The flow protects each intelligence's role: Holmes reviews, chat-Claude integrat
 
 - Holmes DISCOVERY-FIRST + MULTI-METHOD refinements added to DIMENSION_7
 - Holmes review of Operational Pass save-prompt
-- Holmes review of Multi-LLM proposal Day 20
+- Holmes review of cross-build Multi-LLM proposal (chat-session pattern, not committed in repo) — verified APATRIS chat-Claude rejection of Gemini integration was structurally correct
 - Holmes NOT involved sometimes — DIMENSION_1, DIMENSION_2, DIMENSION_4 had no Holmes involvement (sometimes the right call is to not invoke)
 
 ## Anti-patterns
@@ -70,11 +70,11 @@ Do not invoke Holmes for every save-prompt. Holmes time is finite (primary work 
 
 Do not let Holmes make decisions. Holmes reviews structurally; Manish + chat-Claude decide.
 
-Do not skip Holmes for high-stakes work because urgency. Day 17 lesson: urgency is when discipline matters most.
+Do not skip Holmes for high-stakes work because urgency. Urgency-driven Holmes-skip is a recurring failure mode — high-stakes work happening fast is exactly when structural review catches errors that compound. Urgency is when discipline matters, not when it slips.
 
 Do not bypass Holmes by routing direct to Apatris Claude when trigger says invoke.
 
-Do not embed Holmes review request as placeholder. Workflow change Day 15: Holmes review requests must contain save-prompt content INLINE.
+Do not embed Holmes review request as placeholder. Holmes review requests must contain save-prompt content INLINE — embedded placeholders break the review (Holmes cannot review what is not present in the request).
 
 ## When NOT to use
 
