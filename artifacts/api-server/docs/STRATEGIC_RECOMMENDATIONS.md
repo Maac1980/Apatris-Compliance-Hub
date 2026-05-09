@@ -156,7 +156,7 @@ Preserve the operating posture that has been working through Sessions 1–3 + Op
 - Runs verification gates; surfaces empirical evidence beyond literal items (active reviewer).
 - Surfaces reality-vs-plan in escalation format before deep execution when premise is wrong.
 
-### "Protected" means — 11 hard boundaries to preserve in every save-prompt
+### "Protected" means — 16 hard boundaries to preserve in every save-prompt
 
 1. **Repo posture:** READ-ONLY by default. Code changes require explicit "go." Audit work read-only; remediation explicit-go-required.
 2. **Production DB:** NO connection. NO SELECT. ABSOLUTE. (Reinforced by `feedback_test_data_only.md`.) Staging/dummy DB only.
@@ -187,7 +187,7 @@ Preserve the operating posture that has been working through Sessions 1–3 + Op
 3. **OUTPUT STRUCTURE** (one new sub-file at exact path; no other file creation; no edits to existing files unless cross-pass recharacterization warrants AND Manish confirms)
 4. **EXECUTION ORDER** (numbered items grouped into gates)
 5. **STOP-AND-CONFIRM GATES** at appropriate boundaries
-6. **HARD BOUNDARIES** (the 11 items above, restated verbatim)
+6. **HARD BOUNDARIES** (the 16 items above, restated verbatim)
 7. **REPORT FORMAT at each gate** (Findings / Issues / Implications / Cross-pass / Suggestion / Awaiting confirmation)
 8. **ESCALATION RULES for item-internal expansion** (per Operational Pass item (h) escalation rule pattern: if scope blows past threshold, narrow with explicit prioritization)
 
