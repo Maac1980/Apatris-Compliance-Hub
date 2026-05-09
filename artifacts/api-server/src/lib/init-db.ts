@@ -587,6 +587,22 @@ export async function initializeDatabase(): Promise<void> {
     );
   }
 
+  // AC-21 idempotent backfill (Day 23): protects against production admins
+  // rows seeded before email column was populated. No-op if rows already
+  // have emails populated; backfills only the 2 originally-seeded admins
+  // (Manish + Akshay) by full_name match. Other admins added via routes/admins.ts
+  // are not touched. Pattern precedent: init-db.ts:914 conditional UPDATE.
+  await execute(`
+    UPDATE admins
+    SET email = CASE
+      WHEN full_name = 'Manish Suresh Shetty' THEN 'manish@apatris.pl'
+      WHEN full_name = 'Akshay Gandhi' THEN 'akshay@apatris.pl'
+      ELSE email
+    END
+    WHERE (email IS NULL OR email = '')
+      AND full_name IN ('Manish Suresh Shetty', 'Akshay Gandhi')
+  `);
+
   // ── Seed demo workers if table is empty (non-production only) ──────────
   const workerCount = parseInt(
     (await query<{ count: string }>("SELECT count(*)::text AS count FROM workers"))[0]?.count ?? "0", 10
