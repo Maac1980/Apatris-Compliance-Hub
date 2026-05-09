@@ -7,7 +7,8 @@ Apatris Compliance Hub is an industrial compliance and workforce management plat
 `Maac1980/Apatris-Compliance-Hub`
 
 ## Deployment
-- **Primary:** Replit (autoscale deployment, PNPM workspace)
+- **Primary:** Fly.io (apatris-api at apatris-api.fly.dev). Deploy: `flyctl deploy --remote-only --app apatris-api` (rebuilds dist via Dockerfile remote builder from current main HEAD).
+- **Deprecated:** Replit (autoscale deployment was used historically; migration to Fly completed. Any remaining Replit instances are zombie/abandoned and should be ignored if surfaced via Sentry — Day 23 cross-build observation surfaced 76 events from a stale Replit instance running pre-fix code).
 - **Build:** `pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/workforce-app run build && pnpm --filter @workspace/apatris-dashboard run build`
 - **Run:** `node artifacts/api-server/dist/index.cjs`
 - **Health Check:** `GET /api/healthz`
@@ -258,7 +259,7 @@ Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents f
 - Use NEON_DATABASE_URL for Apatris database connection
 - Push to `main` branch for Apatris
 - After every change: build dist → copy to artifacts → commit → push
-- Replit deploy: `git fetch origin main && git reset --hard origin/main`
+- Fly deploy: `flyctl deploy --remote-only --app apatris-api` (deploys current main HEAD; rebuilds dist via Dockerfile remote builder)
 
 ## MANDATORY VALIDATION FRAMEWORK
 
