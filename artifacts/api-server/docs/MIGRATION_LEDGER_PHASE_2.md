@@ -162,7 +162,7 @@ The ledger uses two categories with different decision shapes:
 | **Decision** | CLOSED-with-completion-sweep — Day 17 commit `77267dc` was incomplete (4 of 12 files / 8 of 53 sites). Day 22 Sentry email caught 16 events/day firing in prod. Phase A enumeration revealed full 8-file / 53-site scope. Phase B Holmes-reviewed completion sweep shipped Day 22 commit `c28e207` (8 files / 60 insertions / 51 deletions). Deployed to prod v299 Day 23 at 08:00:22Z. |
 | **Commits** | `77267dc` (Day 17 — partial 4 files) + `c28e207` (Day 22 — completion sweep 8 files Holmes-reviewed) |
 | **North Star service** | CRITICAL — features (regulatory scan, escalation, weekly digest, public-verify, push-sender, deadline-engine, worker-email, case-doc-generator, compliance-enforcement, vault-search, data-copilot, case-notebook) directly serve case workflows. Worker permit-renewal awareness was compromised pre-fix. |
-| **Runtime verification** | PENDING — escalation cycle has not yet fired on c28e207 code (last check 08:51Z; next expected ~09:23Z wall-clock-anchored OR ~11:58Z process-anchored). Until cycle fires clean (zero "column w.first_name does not exist" events), runtime-CLOSED status held. |
+| **Runtime verification** | ✅ CLOSED Day 23 — multiple cycles fired post-deploy (v299 boot + v300 boot + v300 4h interval); runDeadlineCheck (workers JOIN with full_name) executes at end of every runEscalationScan regardless of escalation dispatch; zero schema-assumption errors in entire visible buffer; silent-success pattern + code-side audit confirms M9 fix exercised cleanly. Sentry zombie Replit instance was sole source of historical "column w.first_name does not exist" events; deleted Day 23 14:00Z. |
 | **Cross-pass learnings** | (a) Deploy-gap discovered Day 23 — code shipped to main but not deployed to Fly for ~13 hours; bug continued firing 12 events in that window. Codified as Hard Boundary 15 (deployment claim integrity). (b) Same audit-pattern weakness Holmes flagged across portfolio (claimed-verified-without-verification-mechanism). Codified as Hard Boundary 12 + AC-8.X expanded (see below). |
 | **Follow-up** | (1) Re-verify post-cycle ~09:23Z or ~11:58Z. (2) AC-8 Operational Verification Sweep includes M9 schema-assumption sweep verification element per AC-8.X discipline. (3) eod-health-check skill (Layer 1 ritual) verifies absence-of-regression nightly. |
 
@@ -293,7 +293,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 
 ---
 
-## ACTION CANDIDATES (26 total)
+## ACTION CANDIDATES (27 total)
 
 | ID | Action | Movement |
 |---|---|---|
@@ -325,6 +325,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-24 | **Audit existing contract-generation capability** — Day 23 audit-first investigation surfaced 517 contract grep matches + routes/contract-gen.ts + routes/contracts.ts + generated_contracts + contracts schema + role-gated AI flow ("Umowa Zlecenie" / "Umowa o Pracę" / "B2B") + lib/contract-generator.ts PDF generation + CONTRACT_GENERATED audit logging. Movement 4 framing as greenfield was wrong premise. Audit determines: does existing AI flow use Polish labor code + EU directive + regulatory_intelligence integration? Is there lawyer-review-workflow surface? Does it integrate with kg_* knowledge graph? Output: scope decision (Movement 3 hygiene Item / no work needed / requires Movement 4) based on audit baseline. Activation: Movement 3 close. | M3-or-later |
 | AC-25 | **Backfill UPDATE row-count logging (Hygiene Item)** — Day 23 AC-21 backfill (init-db.ts:596) executes silently with no console.log of row count. Future backfills should log `[init-db] AC-NN backfill: N rows updated` so post-deploy verification can confirm without prod DB read. Hard Boundary 12 self-application. Folds into M3-Item-3.7 doc/code sweep batch. ~5 min targeted edit. | M3 |
 | AC-26 | **scheduler.ts unused fetchAdmins import (Hygiene Item)** — Day 23 AC-21 promoted getAdminContacts to lib/admins-db.ts; scheduler.ts retained `import { fetchAdmins, getAdminContacts, type AdminContact }` but no longer calls fetchAdmins directly. Tighten to `import { getAdminContacts, type AdminContact }`. Folds into M3-Item-3.7 doc/code sweep batch. ~2 min targeted edit. Verify no other indirect usage before removing. | M3 |
+| AC-27 | **Unconditional cycle-complete logging (Hygiene Item)** — Day 23 runtime verification surfaced silent-success cron pattern: cycles with no work to do log NOTHING (escalation-engine.service.ts:620-622 conditional log). Silence is ambiguous — could be success OR cycle-not-fired. Fly log buffer retention compounds. Add unconditional `console.log('[Escalation] cycle complete: N checked, N escalated')` at end of runEscalationScan. Hard Boundary 12 self-application. Folds into M3-Item-3.7 doc/code sweep batch. ~5 min targeted edit. | M3 |
 
 ---
 
