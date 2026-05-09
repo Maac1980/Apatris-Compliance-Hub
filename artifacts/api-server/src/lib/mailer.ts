@@ -172,7 +172,7 @@ export async function sendOtpEmail(to: string, name: string, otp: string): Promi
 </body>
 </html>`.trim();
   await transport.sendMail({
-    from: `"Apatris Portal" <manishshetty79@gmail.com>`,
+    from: `"Apatris Portal" <noreply@apatris.pl>`,
     to,
     subject: `Your Apatris Login Code: ${otp}`,
     html,

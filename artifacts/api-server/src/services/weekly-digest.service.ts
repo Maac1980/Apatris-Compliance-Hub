@@ -138,13 +138,28 @@ Compliant: ${digest.docHealth.compliant} | Expiring: ${digest.docHealth.expiring
 `.trim();
 
   try {
-    const { sendAlertEmail } = await import("../lib/mailer.js");
-    await sendAlertEmail({
-      to: "manish@apatris.pl",
-      workerName: "Apatris System",
+    const { getAdminContacts } = await import("../lib/admins-db.js");
+    const contacts = await getAdminContacts(tenantId);
+    const recipients = contacts.map((c) => c.email).filter(Boolean);
+    if (recipients.length === 0) {
+      console.warn("[WeeklyDigest] No admin contacts for tenant", tenantId, "— digest email skipped");
+      return;
+    }
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.warn("[WeeklyDigest] SMTP_USER/SMTP_PASS not set — digest email skipped");
+      return;
+    }
+    const nodemailer = await import("nodemailer");
+    const transport = nodemailer.default.createTransport({
+      host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+    await transport.sendMail({
+      from: `"Apatris Compliance" <${process.env.SMTP_USER || "noreply@apatris.pl"}>`,
+      to: recipients.join(", "),
       subject: `[Apatris] Weekly Digest — ${complianceRate}% compliance, ${digest.expiringThisWeek.length} expiring, ${digest.slaBreaches.length} SLA breaches`,
-      status: digest.slaBreaches.length > 0 ? "critical" : digest.expiringThisWeek.length > 0 ? "warning" : "info",
-      details: body,
+      text: body,
     });
   } catch { /* email may not be configured */ }
 }

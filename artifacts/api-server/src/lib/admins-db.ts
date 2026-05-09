@@ -23,6 +23,27 @@ export async function fetchAdmins(tenantId: string): Promise<AdminRecord[]> {
   return rows.map(mapRow);
 }
 
+export interface AdminContact {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export async function getAdminContacts(tenantId: string): Promise<AdminContact[]> {
+  try {
+    const admins = await fetchAdmins(tenantId);
+    return admins
+      .filter((a) => a.email || a.phone)
+      .map((a) => ({
+        name: a.fullName || "Admin",
+        email: a.email || "",
+        phone: a.phone || "",
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function updateAdmin(
   id: string,
   fields: { email?: string; phone?: string },

@@ -1,6 +1,6 @@
 import { getDefaultTenantId, requireDefaultTenantId } from "./tenant.js";
 import { fetchDocuments, type DocumentRecord } from "./documents-db.js";
-import { fetchAdmins } from "./admins-db.js";
+import { fetchAdmins, getAdminContacts, type AdminContact } from "./admins-db.js";
 import { sendAlertEmail, isMailConfigured } from "./mailer.js";
 import { fetchAllWorkers } from "./workers-db.js";
 import { mapRowToWorker, type Worker } from "./compliance.js";
@@ -30,23 +30,6 @@ export const alertLog: Array<{
   daysUntilExpiry: number;
   notified: string[];
 }> = [];
-
-interface AdminContact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-async function getAdminContacts(): Promise<AdminContact[]> {
-  try {
-    const admins = await fetchAdmins(requireDefaultTenantId());
-    return admins
-      .filter((a) => a.email || a.phone)
-      .map((a) => ({ name: a.fullName, email: a.email, phone: a.phone }));
-  } catch {
-    return [];
-  }
-}
 
 function formatNotifyTargets(contacts: AdminContact[]): string[] {
   return contacts.map(
@@ -78,7 +61,7 @@ function pushAlertLog(
 export async function fireAlertForDocument(doc: DocumentRecord, workerSite?: string | null): Promise<void> {
   if (doc.status !== "RED" && doc.status !== "YELLOW" && doc.status !== "EXPIRED") return;
 
-  const contacts = await getAdminContacts();
+  const contacts = await getAdminContacts(requireDefaultTenantId());
 
   // CC site coordinator if known
   const coordRecipients: Array<{ name: string; email: string }> = [];
@@ -212,7 +195,7 @@ async function runDailyScan(): Promise<void> {
       return;
     }
 
-    const contacts = await getAdminContacts();
+    const contacts = await getAdminContacts(requireDefaultTenantId());
     const notifyTargets = formatNotifyTargets(contacts);
     const emailRecipients = contacts.filter((c) => c.email).map((c) => ({ name: c.name, email: c.email }));
 

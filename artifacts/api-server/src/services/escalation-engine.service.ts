@@ -63,15 +63,22 @@ export async function runEscalationScan(tenantId: string): Promise<EscalationRes
       // Email to executive (7+ days over SLA)
       if (daysOver >= 7) {
         try {
-          const { sendAlertEmail } = await import("../lib/mailer.js");
-          await sendAlertEmail({
-            workerName,
-            documentType: `${c.case_type} Case — SLA breach (${Math.round(c.days_in_stage)}d in ${c.status}; blocker: ${c.blocker_reason ?? "none"})`,
-            expiryDate: c.sla_deadline ?? new Date().toISOString(),
-            daysUntilExpiry: -daysOver,
-            status: "RED",
-            recipients: [{ name: "Executive", email: "manish@apatris.pl" }],
-          });
+          const { getAdminContacts } = await import("../lib/admins-db.js");
+          const contacts = await getAdminContacts(tenantId);
+          const recipients = contacts.filter((c) => c.email).map((c) => ({ name: c.name, email: c.email }));
+          if (recipients.length === 0) {
+            console.warn("[Escalation] No admin contacts found for tenant", tenantId, "— SLA-breach email skipped");
+          } else {
+            const { sendAlertEmail } = await import("../lib/mailer.js");
+            await sendAlertEmail({
+              workerName,
+              documentType: `${c.case_type} Case — SLA breach (${Math.round(c.days_in_stage)}d in ${c.status}; blocker: ${c.blocker_reason ?? "none"})`,
+              expiryDate: c.sla_deadline ?? new Date().toISOString(),
+              daysUntilExpiry: -daysOver,
+              status: "RED",
+              recipients,
+            });
+          }
         } catch { /* email may not be configured */ }
       }
 

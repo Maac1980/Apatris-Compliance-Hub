@@ -582,8 +582,8 @@ export async function initializeDatabase(): Promise<void> {
   if (adminCount === 0) {
     console.log("[init-db] Seeding default admins…");
     await execute(
-      "INSERT INTO admins (full_name, role) VALUES ($1, $2), ($3, $4)",
-      ["Akshay Gandhi", "Admin", "Manish Suresh Shetty", "Admin"]
+      "INSERT INTO admins (full_name, email, role) VALUES ($1, $2, $3), ($4, $5, $6) ON CONFLICT DO NOTHING",
+      ["Akshay Gandhi", "akshay@apatris.pl", "Admin", "Manish Suresh Shetty", "manish@apatris.pl", "Admin"]
     );
   }
 
