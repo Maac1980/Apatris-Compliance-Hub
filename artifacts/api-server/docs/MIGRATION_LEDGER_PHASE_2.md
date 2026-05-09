@@ -293,7 +293,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 
 ---
 
-## ACTION CANDIDATES (23 total)
+## ACTION CANDIDATES (24 total)
 
 | ID | Action | Movement |
 |---|---|---|
@@ -321,6 +321,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-21 | **Alert recipient consolidation (build fix)** — escalation-engine.service.ts:73 + weekly-digest.service.ts:143 + mailer.ts:175 hardcode manish@apatris.pl / manishshetty79@gmail.com. Pattern at scheduler.ts:500 (reads admins table dynamically) is the canonical fix. Single Phase B commit replaces 3 hardcoded recipients with admins-table reads. Closes Day 22 M9-style "single-recipient silent failure" risk. ~30 min execution. | M3 |
 | AC-22 | **External-systems provisioning audit (procedural)** — provision Akshay access on Sentry (priority — early-warning channel) + Fly.io app membership (deploy + log access) + Neon dashboard (DB health visibility) + R2 (file storage) + Anthropic Console (billing-sensitive, optional) + Perplexity (billing-sensitive, optional). Dashboard-side work, not code. ~30 min total clicking through admin UIs. Manish-action only. Closes external-systems-single-bound gap surfaced in audit Zone 4. | M3 |
 | AC-23 | **Layer 1 alternate-authority designation** — operator-presence audit confirmed Hard Boundaries 6/8/13/16 are INTENTIONAL safety gates, not gaps. Layer 1 of Operator Transition Plan (per APATRIS_CORE_PLAN.md Section 12) must specify alternate-authority routing per boundary (e.g., Akshay-as-alternate-Manish for time-bounded scenarios; Piotr/Łukasz for legal compliance decisions) without weakening boundaries themselves. Drafts AFTER AC-21 + AC-22 land so Layer 1 reflects corrected state (Hard Boundary 12 self-applies). | M3 |
+| AC-24 | **Audit existing contract-generation capability** — Day 23 audit-first investigation surfaced 517 contract grep matches + routes/contract-gen.ts + routes/contracts.ts + generated_contracts + contracts schema + role-gated AI flow ("Umowa Zlecenie" / "Umowa o Pracę" / "B2B") + lib/contract-generator.ts PDF generation + CONTRACT_GENERATED audit logging. Movement 4 framing as greenfield was wrong premise. Audit determines: does existing AI flow use Polish labor code + EU directive + regulatory_intelligence integration? Is there lawyer-review-workflow surface? Does it integrate with kg_* knowledge graph? Output: scope decision (Movement 3 hygiene Item / no work needed / requires Movement 4) based on audit baseline. Activation: Movement 3 close. | M3-or-later |
 
 ---
 
