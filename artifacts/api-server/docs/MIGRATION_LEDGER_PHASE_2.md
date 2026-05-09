@@ -331,7 +331,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 ## SYNTHESIS PATTERN
 
 Movement 2 shipped fast. Verification discipline gap (Operational Pass INPUT 2 Gap 2) shows up in this ledger:
-- 7 clean closes (M1, M3, M5, M6, M7-DORMANT KEEP, M9-with-completion-sweep, M10) — verified delivered + 2 ACs CLOSED Day 23 (AC-21a recipient consolidation, AC-21b OTP From-address)
+- 7 clean closes (M1, M3, M5, M6, M7-DORMANT KEEP, M9-with-completion-sweep, M10) — verified delivered + 2 ACs CLOSED Day 23 (AC-21a recipient consolidation, AC-21b OTP From-address) + Day 23 Manish-action: Replit deployment deleted (cross-build observation revealed zombie autoscale instance polluting Sentry; Fly is sole production target since weeks ago; CLAUDE.md aligned at commit 019ed03)
 - 2 reframe-with-verification (M2, M8) — code shipped, runtime unverified (M9 reclassified to clean-close-with-completion-sweep)
 - 1 reframe-with-investigation (M4 Airtable residue)
 
