@@ -293,7 +293,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 
 ---
 
-## ACTION CANDIDATES (20 total)
+## ACTION CANDIDATES (23 total)
 
 | ID | Action | Movement |
 |---|---|---|
@@ -318,6 +318,9 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-18 | **PreToolUse Hook destructive command firewall** — `.claude/settings.json` hook intercepts destructive commands at infrastructure layer. Firewall list: rm -rf broad scope, DROP TABLE/DATABASE, TRUNCATE without WHERE, DELETE FROM whole-table, flyctl destroy, flyctl secrets unset on production, force-push to main. Defense-in-depth alongside Hard Boundary 14. ~1-2 hours implementation. | M3 |
 | AC-19 | **Skills directory CLAUDE.md addition** — codify 3-location skills convention discovered Day 21 (artifacts/api-server/skills/ APATRIS-specific + .agents/skills/ caveman family + .claude/skills/superpowers/ plugin-managed). Prevents future re-discovery confusion. ~10 min targeted edit. Folds into M3-Item-3.7 doc sweep batch. | M3 |
 | AC-20 | **Operator Transition Plan Phase 1A drafting** — Layer 1 1-7 day absence procedures per APATRIS_CORE_PLAN.md Section 12. APATRIS-specific (Akshay welding president, Yulia immigration partner, Piotr+Łukasz lawyers, production coordinator, Anna's separate agencja pracy). Substantive standalone work, ~1-2 sessions. Hard Boundary 12 applies — claim of operator-redundancy without verification mechanism is hope, not plan. | M3 |
+| AC-21 | **Alert recipient consolidation (build fix)** — escalation-engine.service.ts:73 + weekly-digest.service.ts:143 + mailer.ts:175 hardcode manish@apatris.pl / manishshetty79@gmail.com. Pattern at scheduler.ts:500 (reads admins table dynamically) is the canonical fix. Single Phase B commit replaces 3 hardcoded recipients with admins-table reads. Closes Day 22 M9-style "single-recipient silent failure" risk. ~30 min execution. | M3 |
+| AC-22 | **External-systems provisioning audit (procedural)** — provision Akshay access on Sentry (priority — early-warning channel) + Fly.io app membership (deploy + log access) + Neon dashboard (DB health visibility) + R2 (file storage) + Anthropic Console (billing-sensitive, optional) + Perplexity (billing-sensitive, optional). Dashboard-side work, not code. ~30 min total clicking through admin UIs. Manish-action only. Closes external-systems-single-bound gap surfaced in audit Zone 4. | M3 |
+| AC-23 | **Layer 1 alternate-authority designation** — operator-presence audit confirmed Hard Boundaries 6/8/13/16 are INTENTIONAL safety gates, not gaps. Layer 1 of Operator Transition Plan (per APATRIS_CORE_PLAN.md Section 12) must specify alternate-authority routing per boundary (e.g., Akshay-as-alternate-Manish for time-bounded scenarios; Piotr/Łukasz for legal compliance decisions) without weakening boundaries themselves. Drafts AFTER AC-21 + AC-22 land so Layer 1 reflects corrected state (Hard Boundary 12 self-applies). | M3 |
 
 ---
 
