@@ -158,12 +158,13 @@ The ledger uses two categories with different decision shapes:
 | Field | Value |
 |---|---|
 | **Migration name** | Replace `workers.first_name`/`last_name` references with `full_name`; replace `notification_log.message` with `message_preview` |
-| **Status** | ✅ COMPLETE in code |
-| **Decision** | REFRAME — close pending operational verification of all 5 affected features |
-| **Commit** | `77267dc` (Day 17) |
-| **North Star service** | CRITICAL — features (regulatory scan, escalation, weekly digest, public-verify, push-sender) directly serve case workflows. |
-| **Verification (pending)** | Are all 5 features actually firing successfully in current prod? |
-| **Follow-up** | Action Candidate AC-5: verify each of 5 features in prod logs Day 17+. |
+| **Status** | code CLOSED-with-completion-sweep / runtime PENDING (escalation cycle verification) |
+| **Decision** | CLOSED-with-completion-sweep — Day 17 commit `77267dc` was incomplete (4 of 12 files / 8 of 53 sites). Day 22 Sentry email caught 16 events/day firing in prod. Phase A enumeration revealed full 8-file / 53-site scope. Phase B Holmes-reviewed completion sweep shipped Day 22 commit `c28e207` (8 files / 60 insertions / 51 deletions). Deployed to prod v299 Day 23 at 08:00:22Z. |
+| **Commits** | `77267dc` (Day 17 — partial 4 files) + `c28e207` (Day 22 — completion sweep 8 files Holmes-reviewed) |
+| **North Star service** | CRITICAL — features (regulatory scan, escalation, weekly digest, public-verify, push-sender, deadline-engine, worker-email, case-doc-generator, compliance-enforcement, vault-search, data-copilot, case-notebook) directly serve case workflows. Worker permit-renewal awareness was compromised pre-fix. |
+| **Runtime verification** | PENDING — escalation cycle has not yet fired on c28e207 code (last check 08:51Z; next expected ~09:23Z wall-clock-anchored OR ~11:58Z process-anchored). Until cycle fires clean (zero "column w.first_name does not exist" events), runtime-CLOSED status held. |
+| **Cross-pass learnings** | (a) Deploy-gap discovered Day 23 — code shipped to main but not deployed to Fly for ~13 hours; bug continued firing 12 events in that window. Codified as Hard Boundary 15 (deployment claim integrity). (b) Same audit-pattern weakness Holmes flagged across portfolio (claimed-verified-without-verification-mechanism). Codified as Hard Boundary 12 + AC-8.X expanded (see below). |
+| **Follow-up** | (1) Re-verify post-cycle ~09:23Z or ~11:58Z. (2) AC-8 Operational Verification Sweep includes M9 schema-assumption sweep verification element per AC-8.X discipline. (3) eod-health-check skill (Layer 1 ritual) verifies absence-of-regression nightly. |
 
 ---
 
@@ -292,7 +293,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 
 ---
 
-## ACTION CANDIDATES (15 total)
+## ACTION CANDIDATES (20 total)
 
 | ID | Action | Movement |
 |---|---|---|
@@ -304,6 +305,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-6 | Run deferred Operational Pass items (a) + (b) (M10 unlocked) | M3 |
 | AC-7 | Multi-tenant DELETE discipline tighten (gates B1 activation) | M3 |
 | AC-8 | **Operational verification sweep** — bundles AC-1+AC-4+AC-5+AC-6 | M3 |
+| AC-8.X | **Verification Mechanism Discipline** — for any fix or refactor with scope claim ("4 files affected," "all callers updated," "schema-assumption removed," "deployed"), verification must mechanize the claim: grep/AST-walk for scope claims (complete enumeration not sample); multiple search patterns for coverage claims (synonyms + aliases + indirect references); exhaustive search with documented terms for negative claims ("no X remains"); explicit deploy step for deployment claims (code-on-main ≠ code-in-production per Hard Boundary 15); verification artifact saved to docs/ for audit trail. If verification cannot be mechanized, claim must be scoped down to what CAN be verified. Pattern violations across portfolio: Phase A audit undercounts, files claimed-in-repo but actually gitignored, route count plan-vs-reality drift, M9 4-vs-8-file scope, M9 deploy-gap (Day 22-23), Hard Boundaries list (1-vs-16). | M3 |
 | AC-9-Twilio | Twilio pre-activation scheduler call-site audit (gates B2 activation) | M4+ |
 | AC-10b | startScheduler 13-job mapping | COMPLETED Day 20. Outcome → AC-15. |
 | AC-12 | Knowledge graph substrate consolidation (B11 tech debt) | M3 (Layer 3 prerequisite) |
@@ -311,14 +313,19 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-13b | OpenAI provider abstraction stub cleanup | M3 hygiene |
 | AC-14 | Stripe SDK-vs-fetch re-evaluation at M5+ if not activated | M5 (deferred trigger) |
 | AC-15 | **startScheduler selective re-wire (B13 outcome) — Job 12 North Star + Job 11 EU compliance + Job 1 hygiene** | **M3 EARLY PRIORITY** |
+| AC-16 | **Worker portal first-step extension** — extend `GET /workers/me` with case-status + deadlines + 5 most recent notifications. Activates 10 existing Pattern 1A spare tyres. ~1-2 days, Holmes review trigger. | M3 |
+| AC-17 | **Daily Health Check Ritual Layer 1 codification** — extract `eod-health-check` SKILL.md as 8th skill in artifacts/api-server/skills/. Codifies Sentry sweep + prod smoke test + cron job verification + scheduler-job-by-job status + database health + background jobs + manual review. ~10-15 min/day at EOD. | M3 |
+| AC-18 | **PreToolUse Hook destructive command firewall** — `.claude/settings.json` hook intercepts destructive commands at infrastructure layer. Firewall list: rm -rf broad scope, DROP TABLE/DATABASE, TRUNCATE without WHERE, DELETE FROM whole-table, flyctl destroy, flyctl secrets unset on production, force-push to main. Defense-in-depth alongside Hard Boundary 14. ~1-2 hours implementation. | M3 |
+| AC-19 | **Skills directory CLAUDE.md addition** — codify 3-location skills convention discovered Day 21 (artifacts/api-server/skills/ APATRIS-specific + .agents/skills/ caveman family + .claude/skills/superpowers/ plugin-managed). Prevents future re-discovery confusion. ~10 min targeted edit. Folds into M3-Item-3.7 doc sweep batch. | M3 |
+| AC-20 | **Operator Transition Plan Phase 1A drafting** — Layer 1 1-7 day absence procedures per APATRIS_CORE_PLAN.md Section 12. APATRIS-specific (Akshay welding president, Yulia immigration partner, Piotr+Łukasz lawyers, production coordinator, Anna's separate agencja pracy). Substantive standalone work, ~1-2 sessions. Hard Boundary 12 applies — claim of operator-redundancy without verification mechanism is hope, not plan. | M3 |
 
 ---
 
 ## SYNTHESIS PATTERN
 
 Movement 2 shipped fast. Verification discipline gap (Operational Pass INPUT 2 Gap 2) shows up in this ledger:
-- 6 clean closes (M1, M3, M5, M6, M7-DORMANT KEEP, M10) — verified delivered
-- 3 reframe-with-verification (M2, M8, M9) — code shipped, runtime unverified
+- 7 clean closes (M1, M3, M5, M6, M7-DORMANT KEEP, M9-with-completion-sweep, M10) — verified delivered
+- 2 reframe-with-verification (M2, M8) — code shipped, runtime unverified (M9 reclassified to clean-close-with-completion-sweep)
 - 1 reframe-with-investigation (M4 Airtable residue)
 
 Each Item closure passed its own gates. Cross-cutting questions weren't part of any single Item's scope. Remediation: AC-8 Operational verification sweep becomes the recurring discipline.
