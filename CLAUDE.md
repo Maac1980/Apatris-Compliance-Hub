@@ -8,7 +8,8 @@ Apatris Compliance Hub is an industrial compliance and workforce management plat
 
 ## Deployment
 - **Primary:** Fly.io (apatris-api at apatris-api.fly.dev). Deploy: `flyctl deploy --remote-only --app apatris-api` (rebuilds dist via Dockerfile remote builder from current main HEAD).
-- **Deprecated:** Replit (autoscale deployment was used historically; migration to Fly completed. Any remaining Replit instances are zombie/abandoned and should be ignored if surfaced via Sentry — Day 23 cross-build observation surfaced 76 events from a stale Replit instance running pre-fix code).
+- **Deprecated:** Replit (autoscale deployment was used historically; migration to Fly completed; Replit project deleted Day 23 May 9, 2026).
+- **Note (added Day 24):** Sentry M9 events that surfaced Day 22-23 were initially attributed to Replit zombie — that framing was incorrect. Actual source was apatris-api-staging on Fly running stale May 6 image, sharing SENTRY_DSN with prod. Staging suspended Day 24 (flyctl scale count 0 destroyed both machines; app shell preserved). When staging is needed again, deploy strategy decision pending per AC-28.
 - **Build:** `pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/workforce-app run build && pnpm --filter @workspace/apatris-dashboard run build`
 - **Run:** `node artifacts/api-server/dist/index.cjs`
 - **Health Check:** `GET /api/healthz`
