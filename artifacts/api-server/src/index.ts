@@ -96,7 +96,7 @@ const port = Number(process.env["PORT"] || "8080");
 
   // Weekly report + monthly invoices — non-fatal
   try {
-    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan, startDailyRegulatoryScan, startEscalationEngine, startWeeklyDigest } = await import("./lib/scheduler.js");
+    const { startWeeklyReport, startMonthlyInvoices, startWeeklyMoodPrompts, startWeeklyCompetitorScan, startWeeklySignalScan, startDailyRegulatoryScan, startEscalationEngine, startWeeklyDigest, startDailyLegalScan } = await import("./lib/scheduler.js");
     startWeeklyReport();
     startMonthlyInvoices();
     startWeeklyMoodPrompts();
@@ -105,6 +105,9 @@ const port = Number(process.env["PORT"] || "8080");
     startDailyRegulatoryScan();
     startEscalationEngine();
     startWeeklyDigest();
+    // AC-15 Tier 1: Job 12 runDailyLegalScan wired in DRY-RUN mode (logs would-be alerts without writing).
+    // Day 25+ flip to startDailyLegalScan(false) after reviewing dry-run output.
+    startDailyLegalScan(true);
 
     // Report scheduler + notification scanner — checks every hour
     try {

@@ -679,3 +679,35 @@ export function startDailyRegulatoryScan(): void {
       .finally(() => setTimeout(regScan, DAY_MS));
   }, ms);
 }
+
+// AC-15 Tier 1 — Job 12 (runDailyLegalScan) granular boot-time scheduler.
+// Mirrors startDailyRegulatoryScan pattern. Daily at 04:00 UTC (offset from
+// regulatory scan at 06:00). dryRun=true logs would-be alerts without writing
+// to legal_alerts (safety for first-fire flood prevention; flip to false
+// after Day 25+ review of dry-run output).
+export function startDailyLegalScan(dryRun: boolean = false): void {
+  function msUntilNext4am(): number {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(4, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next.getTime() - now.getTime();
+  }
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const ms = msUntilNext4am();
+  const modeTag = dryRun ? "DRY-RUN" : "LIVE";
+  console.log(`[Scheduler] Daily legal scan (${modeTag}) scheduled in ${Math.round(ms / 1000 / 60 / 60)} hours (04:00).`);
+  setTimeout(function legalScan() {
+    import("../services/daily-legal-scan.service.js")
+      .then(m => m.runDailyLegalScan(undefined, dryRun))
+      .then(r => {
+        if (dryRun) {
+          console.log(`[Scheduler] Legal scan (DRY-RUN): ${r.workersScanned} workers, ${r.dryRunAlertsWouldHaveBeenCreated ?? 0} alerts WOULD HAVE BEEN created, ${r.errors} errors`);
+        } else {
+          console.log(`[Scheduler] Legal scan: ${r.workersScanned} workers, ${r.alertsCreated} alerts, ${r.errors} errors`);
+        }
+      })
+      .catch(err => console.error("[Scheduler] Daily legal scan error:", err))
+      .finally(() => setTimeout(legalScan, DAY_MS));
+  }, ms);
+}

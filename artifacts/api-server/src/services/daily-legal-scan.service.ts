@@ -37,6 +37,8 @@ interface ScanResult {
   alertsCreated: number;
   errors: number;
   duration: number;
+  dryRunMode: boolean;
+  dryRunAlertsWouldHaveBeenCreated?: number;
 }
 
 // ═══ SEVERITY DERIVATION ════════════════════════════════════════════════════
@@ -71,7 +73,7 @@ function getExpiryWarningDays(permitExpiresAt: string | null): number | null {
 
 // ═══ CORE SCAN ══════════════════════════════════════════════════════════════
 
-export async function runDailyLegalScan(tenantId?: string): Promise<ScanResult> {
+export async function runDailyLegalScan(tenantId?: string, dryRun: boolean = false): Promise<ScanResult> {
   const start = Date.now();
 
   // Resolve tenant(s)
@@ -82,6 +84,7 @@ export async function runDailyLegalScan(tenantId?: string): Promise<ScanResult> 
   let totalScanned = 0;
   let totalAlerts = 0;
   let totalErrors = 0;
+  let totalDryRunWouldHaveCreated = 0;
 
   for (const tenant of tenants) {
     const tid = tenant.id;
@@ -128,12 +131,18 @@ export async function runDailyLegalScan(tenantId?: string): Promise<ScanResult> 
           );
           if (existing) continue;
 
-          await execute(
-            `INSERT INTO legal_alerts (tenant_id, worker_id, alert_type, severity, previous_status, new_status, previous_risk_level, new_risk_level, message)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-            [tid, worker.id, alert.alertType, alert.severity, alert.prevStatus, alert.newStatus, alert.prevRisk, alert.newRisk, alert.message]
-          );
-          alerts++;
+          if (dryRun) {
+            // DRY-RUN: log would-be alert without writing to legal_alerts
+            console.log(`[LegalScan][DRY-RUN] Would create alert: worker=${worker.id} type=${alert.alertType} severity=${alert.severity} message="${alert.message}"`);
+            totalDryRunWouldHaveCreated++;
+          } else {
+            await execute(
+              `INSERT INTO legal_alerts (tenant_id, worker_id, alert_type, severity, previous_status, new_status, previous_risk_level, new_risk_level, message)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+              [tid, worker.id, alert.alertType, alert.severity, alert.prevStatus, alert.newStatus, alert.prevRisk, alert.newRisk, alert.message]
+            );
+            alerts++;
+          }
         }
       } catch (err) {
         errors++;
@@ -156,9 +165,21 @@ export async function runDailyLegalScan(tenantId?: string): Promise<ScanResult> 
   }
 
   const duration = Date.now() - start;
-  console.log(`[LegalScan] Complete: ${totalScanned} workers, ${totalAlerts} alerts, ${totalErrors} errors, ${duration}ms`);
+  if (dryRun) {
+    console.log(`[LegalScan][DRY-RUN] Complete: ${totalScanned} workers scanned, ${totalDryRunWouldHaveCreated} alerts WOULD HAVE BEEN created (none written), ${totalErrors} errors, ${duration}ms`);
+  } else {
+    console.log(`[LegalScan] Complete: ${totalScanned} workers, ${totalAlerts} alerts, ${totalErrors} errors, ${duration}ms`);
+  }
 
-  return { scanId: "batch", workersScanned: totalScanned, alertsCreated: totalAlerts, errors: totalErrors, duration };
+  return {
+    scanId: "batch",
+    workersScanned: totalScanned,
+    alertsCreated: totalAlerts,
+    errors: totalErrors,
+    duration,
+    dryRunMode: dryRun,
+    ...(dryRun ? { dryRunAlertsWouldHaveBeenCreated: totalDryRunWouldHaveCreated } : {}),
+  };
 }
 
 // ═══ ALERT DETECTION ════════════════════════════════════════════════════════
