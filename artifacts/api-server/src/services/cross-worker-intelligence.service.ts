@@ -68,7 +68,7 @@ export async function getRiskPatterns(tenantId: string): Promise<InsightPattern[
       COUNT(*) FILTER (WHERE COALESCE(trc_expiry, work_permit_expiry) > CURRENT_DATE + 7 AND COALESCE(trc_expiry, work_permit_expiry) <= CURRENT_DATE + 14) as in_14d,
       COUNT(*) FILTER (WHERE COALESCE(trc_expiry, work_permit_expiry) > CURRENT_DATE + 14 AND COALESCE(trc_expiry, work_permit_expiry) <= CURRENT_DATE + 30) as in_30d,
       COUNT(*) as total
-    FROM workers WHERE tenant_id = $1 AND (status IS NULL OR status NOT IN ('departed','terminated'))
+    FROM workers WHERE tenant_id = $1
   `, [tenantId]);
 
   const e = expiryRows[0] ?? {};

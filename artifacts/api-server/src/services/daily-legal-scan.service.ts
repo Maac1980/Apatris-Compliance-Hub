@@ -96,9 +96,10 @@ export async function runDailyLegalScan(tenantId?: string, dryRun: boolean = fal
     );
     const scanId = scanRun?.id;
 
-    // Get all active workers
+    // Scan all workers in tenant (workers schema has no status column —
+    // historical filter referenced workers.status which never existed)
     const workers = await query<{ id: string; full_name: string }>(
-      "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND (status IS NULL OR status NOT IN ('departed','terminated'))",
+      "SELECT id, full_name FROM workers WHERE tenant_id = $1",
       [tid]
     );
 

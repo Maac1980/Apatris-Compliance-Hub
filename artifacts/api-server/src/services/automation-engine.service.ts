@@ -93,9 +93,10 @@ export async function runAutomationCycle(tenantId?: string, modeOverride?: Autom
   );
   const runId = run!.id;
 
-  // Get all active workers
+  // Scan all workers in tenant (workers schema has no status column —
+  // historical filter referenced workers.status which never existed)
   const workers = await query<any>(
-    "SELECT id, full_name FROM workers WHERE tenant_id = $1 AND (status IS NULL OR status NOT IN ('departed','terminated'))",
+    "SELECT id, full_name FROM workers WHERE tenant_id = $1",
     [tenantId]
   );
 
