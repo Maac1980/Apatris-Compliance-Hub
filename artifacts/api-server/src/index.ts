@@ -105,9 +105,9 @@ const port = Number(process.env["PORT"] || "8080");
     startDailyRegulatoryScan();
     startEscalationEngine();
     startWeeklyDigest();
-    // AC-15 Tier 1: Job 12 runDailyLegalScan wired in DRY-RUN mode (logs would-be alerts without writing).
-    // Day 25+ flip to startDailyLegalScan(false) after reviewing dry-run output.
-    startDailyLegalScan(true);
+    // AC-15 Tier 1: Job 12 runDailyLegalScan LIVE.
+    // Phase B.2 Day 26: flipped from dry-run after 04:00Z May 12 cycle verified clean (31 workers, 1 alert, 0 errors).
+    startDailyLegalScan(false);
 
     // Report scheduler + notification scanner — checks every hour
     try {
