@@ -8,7 +8,7 @@ COPY lib ./lib
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/apatris-dashboard/package.json ./artifacts/apatris-dashboard/
 COPY artifacts/workforce-app/package.json ./artifacts/workforce-app/
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
