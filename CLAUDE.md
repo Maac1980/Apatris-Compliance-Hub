@@ -243,6 +243,88 @@ Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents f
 
 ---
 
+## Working Doctrine (durable — applies every session)
+
+### Working conventions
+- **Prompt format:** every instruction carries `IF / WHY / FOR WHAT` — the reasoning travels with the instruction.
+- **Header:** every prompt opens with a `TO: / FROM: / SUBJECT:` header identifying who it's for.
+- **Code boxes:** every command, URL, SQL block, and code snippet goes in its own copy-paste code box. No exceptions.
+- **One prompt at a time:** never two parallel work-prompts in flight. When multiple items exist, one stepped prompt covering them, sequenced — not multiple separate prompts.
+- **Implement what you learn:** corrections become permanent immediately, applied in the next instance — not the third.
+- **Brevity:** explanations kill time. Prompts and responses stay to the point.
+- **Time is in Manish's hand:** no calendar narration. Sessions are bounded by laptop-open / laptop-shut, not clocks. EOD is the physical act of Manish closing the laptop — chat-Claude may recommend ending, only Manish decides.
+- **Estimates:** NEVER given in human-developer hours. The real constraint is Manish's thinking, review, and routing bandwidth. Scope is expressed as work units / milestones, not clock time.
+
+### Team structure
+Three roles:
+- **Manish** — architect: decides, detects, routes. The detection and direction layer.
+- **chat-Claude** — drafts prompts, applies systemic pressure, holds the session tracker, makes architecture calls. Manish is not asked to make architecture decisions.
+- **Claude Code** — executes AND reviews / suggests / pushes back. Closest to the code. Suggestions are the default path. chat-Claude does not inject competing preferences on the work plan; chat-Claude may suggest, framed as a question — not a directive.
+
+**Standing discipline:** chat-Claude asks Claude Code for its peer suggestion (`WHAT / WHY / FOR WHAT`) before locking a plan, then tests the chosen plan against it. Claude Code reasons as a peer, not a task executor.
+
+No separate structural-review seat — Claude Code does review and suggestion directly.
+
+**Cross-build observation (APATRIS-specific):** Manish operates multiple builds (APATRIS + EEJ + IWS + STPG). When an observation surfaces in one build that's relevant to another, treat it as legitimate routing input from Manish, not as a third party. The cross-build observation pattern is the discipline (caught Day 22-23 staging incident); it is NOT a fourth team role.
+
+### /goal usage doctrine
+- `/goal` is for substantial work with a verifiable end state. ONE `/goal` per scoped batch — never one mega-goal across an entire backlog.
+- Every `/goal` carries: (a) concrete numbered acceptance criteria the evaluator can check from surfaced output, (b) an explicit turn cap, (c) a scope/constraint section stating what NOT to touch.
+- The `/goal` evaluator cannot call tools and cannot see deployed environments. It only judges what Claude Code surfaces in conversation. `/goal` completion is NOT the same as "verified working."
+- **Two-layer verification:**
+  - Layer 1 = what the evaluator + Claude Code can verify (compiles, tests pass, endpoint returns 200).
+  - Layer 2 = what only Manish can verify (the feature works when used).
+  - A `/goal` completing satisfies Layer 1 only. Manish's detection is Layer 2 and is mandatory between batches.
+- **Workflow:** one `/goal` completes → Claude Code reports → Manish detects → next batch's `/goal`. Never chain batches without the Manish-detection gate.
+
+### Save-prompt / GATE pattern (APATRIS current rhythm — Reconciliation R1)
+Save-prompt / GATE STOP-AND-CONFIRM is the current per-commit workflow used Days 23-28:
+- Each commit is preceded by a save-prompt carrying `WHY / FOR WHAT / PRE-EXECUTION / EXECUTION TASKS / GATE / HARD BOUNDARIES / ANTI-HALLUCINATION CHECK`.
+- Each commit closes with a STOP-AND-CONFIRM gate and a 5-element self-review (What changed / Why this scope / Verification mechanism / What was NOT touched / Risk + honest gap).
+
+**Relation to /goal — both coexist, with this boundary:**
+- **Save-prompt / GATE** — atomic single-commit work (audits, doc updates, single deploys, ledger edits, Phase A scoping). Default mode for current APATRIS rhythm.
+- **/goal** — substantial multi-step batches with concrete acceptance criteria (e.g., AC-31 Phase B building 4 tabs across sessions, AC-38 Phase B 50-surface sweep, multi-file refactors).
+- Most APATRIS sessions to date are save-prompt / GATE. When a Phase B workstream opens, that batch may be wrapped in a `/goal`. Manish-detection gate applies in both — `/goal` completion ≠ Layer 2 verified.
+
+### Persistent capture (Reconciliation R2)
+Two distinct surfaces, NOT the same thing:
+
+- **Migration Ledger** (`artifacts/api-server/docs/MIGRATION_LEDGER_PHASE_2.md`) — long-lived, single source of truth for Action Candidates (ACs) across the entire build. 38 ACs as of Day 28. Each AC has status (captured / operationally validated / CLOSED / SUPERSEDED). Append-only history; status notes appended inline. Survives every session.
+- **PENDING SCOPE TRACKER** — session-scoped, pasted at the end of work prompts. Holds in-flight work for the current session that risks drift or compaction. NOT the AC ledger. When a tracker item resolves to a real candidate, it migrates into the Migration Ledger as an AC row.
+
+Day EOD docs (`artifacts/api-server/docs/EOD/Apatris_Day{N}_EOD_{date}.md`) close each session by recording which ACs changed status that day + which session-level work landed. EOD doc is the link between session-level tracker and long-lived ledger.
+
+### Tooling notes
+- **Agent View** (`claude agents`) is the monitoring surface during long `/goal` runs.
+- Use `claude agents --cwd <path>` to scope the session list — APATRIS and other builds (EEJ, IWS, STPG) live in separate directories.
+- `/loop` (time-interval re-run) is distinct from `/goal` (run-until-condition). Substantial remediation work uses `/goal`, not `/loop`.
+- `claude project purge` is destructive — never run without `--dry-run` first.
+
+### Pre-deploy discipline
+- `git ls-files --deleted` must return empty before any deploy — the deploy packages the local filesystem, not git HEAD; CI-green does not mean deploy-safe.
+- CI green is CHECKED, never assumed.
+- Fly deploy chain: `git status --short` → `git ls-files --deleted` → `flyctl deploy --remote-only --app apatris-api` → `flyctl status` → `curl /api/healthz` → `flyctl logs` (boot lines).
+
+### Hard Boundaries
+Hard Boundaries remain pre-conditional gates and hold at all times. The canonical list (HB 1-16) lives in `artifacts/api-server/docs/STRATEGIC_RECOMMENDATIONS.md` (established commits `0bc8e02` + `c2987af`; HB12 audit-first sub-discipline expanded at commit `d1ddc66`). HB12 (audit-first: grep enumeration before any fix) is the most-cited in Day 22-28 work.
+
+This doctrine layer is additive — Hard Boundaries are NOT replaced by it; they continue as-is.
+
+### APATRIS-specific patterns (preserve)
+- **Audit-first sub-discipline (HB12):** grep enumeration before any fix. Cross-file pattern search is mechanism; honest fix scope matches grep findings. Caught Day 22 M9 sweep, Day 25 Job 12 schema-assumption, Day 26 Dockerfile location, Day 27 AC-34 manual-trigger discovery.
+- **eod-health-check skill** (`artifacts/api-server/skills/eod-health-check/SKILL.md`): 6-zone Layer 1 sweep applied at EOD (Sentry / Prod / Scheduler / Database / Background jobs / Anomalies). Days 23-28 all closed with this ritual.
+- **Operator-principle capture pattern:** when an operator-principle is named (e.g., AC-38 worker-link invariant), capture it as an AC in the ledger first, then scope Phase A audit, then gate Phase B on operator interview validation (AC-35 pattern).
+- **AC lifecycle:** new candidates land as AC rows in `MIGRATION_LEDGER_PHASE_2.md` with description + M-phase tag. Status notes appended inline as the AC moves through `captured → operationally validated → CLOSED` (or `SUPERSEDED` when overtaken by a successor AC).
+- **Verbatim commit messages:** preserve user-provided commit message text; do not append Co-Authored-By trailers unless explicitly included; do not add emojis or metadata not in the message. (Existing rule above; reinforced here.)
+
+### Historical context (Reconciliation R3 — note, not active doctrine)
+Earlier APATRIS sessions (pre-Day 28) used a four-role framing: Manish + chat-Claude + Apatris Claude (executor) + Holmes (cross-build reviewer). The current three-role framing folds Apatris-Claude-executor into "Claude Code" and removes Holmes as a separate seat. The cross-build observation pattern (the legitimate routing of observations between builds) is preserved as a discipline — see Team Structure above. Memory file `feedback_cross_build_observation.md` remains load-bearing for that pattern.
+
+CLAUDE.md itself contains no Holmes references; this paragraph exists only to keep future sessions oriented when reading memory that does reference Holmes.
+
+---
+
 ## ROADMAP — Phase 1-3 Execution Plan
 
 ### Owner: Manish Shetty
