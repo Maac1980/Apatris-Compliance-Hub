@@ -268,7 +268,9 @@ No separate structural-review seat — Claude Code does review and suggestion di
 **Cross-build observation (APATRIS-specific):** Manish operates multiple builds (APATRIS + EEJ + IWS + STPG). When an observation surfaces in one build that's relevant to another, treat it as legitimate routing input from Manish, not as a third party. The cross-build observation pattern is the discipline (caught Day 22-23 staging incident); it is NOT a fourth team role.
 
 ### /goal usage doctrine
-- `/goal` is for substantial work with a verifiable end state. ONE `/goal` per scoped batch — never one mega-goal across an entire backlog.
+`/goal` is the **exception**, not the default. Save-prompt / GATE (below) is the default APATRIS rhythm. `/goal` is chosen deliberately when one dedicated batch of substantial work has a verifiable end state — and it follows every rule below without negotiation.
+
+- ONE `/goal` per scoped batch — never one mega-goal across an entire backlog. The batch has a clear finish line stated up front.
 - Every `/goal` carries: (a) concrete numbered acceptance criteria the evaluator can check from surfaced output, (b) an explicit turn cap, (c) a scope/constraint section stating what NOT to touch.
 - The `/goal` evaluator cannot call tools and cannot see deployed environments. It only judges what Claude Code surfaces in conversation. `/goal` completion is NOT the same as "verified working."
 - **Two-layer verification:**
