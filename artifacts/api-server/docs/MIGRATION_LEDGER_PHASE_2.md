@@ -293,7 +293,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 
 ---
 
-## ACTION CANDIDATES (51 total)
+## ACTION CANDIDATES (52 total)
 
 | ID | Action | Movement |
 |---|---|---|
@@ -350,6 +350,7 @@ Movement positioning: Movement 3 EARLY PRIORITY. After Item 3.0, before AC-12.
 | AC-49 | **Client Contact role (RBAC 6th tier extension)** — extend current 5-tier T1-T5 RBAC with Client Contact role for optional client-company portal access. Includes Manager/Office Staff mapping clarification per existing T2/T3 tiers. Type: NEW BUILD (incremental). Upstream gate: RBAC audit + role-mapping clarification with Manish + Yulia. Phase A: pending. Phase B: pending. Source: Worker App Vision Scoping Audit Day 30. | M3 |
 | AC-50 | **Configurable penalty / reward engine** — rule-driven penalty + reward configuration feeding AC-41 + AC-42. **RED RISK — LEGAL REVIEW REQUIRED.** Polish Labour Code Art. 87 (wage deduction limits) + Art. 108 (penalty procedure: hearing, documentation, time limits) + EU Posted Workers Directive constrain allowed configuration space. Configuration flexibility cannot exceed legal allowed space. Type: NEW BUILD. Upstream gate: Yulia legal-input MANDATORY before Phase A. Phase A: pending (sequenced LAST). Phase B: pending. Source: Worker App Vision Scoping Audit Day 30. | M3 |
 | AC-51 | **System-wide admin-route role-gating audit** - admin/management routes across the API check requireAuth but not requireRole. Multiple authenticated users could access tenant-wide data not scoped to their role. Evidence: AC-39 Phase A flagged GET /api/leave + PATCH /api/leave/:id (self-service.ts:190 + 203); AC-40 Phase A flagged messaging admin routes (same pattern). Type: NEW BUILD (security hardening). Upstream gate: none - independent of vision sprint. Phase A: pending (full route-gating sweep across all /api/* routes). Phase B: pending (apply requireRole correctly per route). Source: AC-39 + AC-40 Phase A footnotes Day 30. | M3 |
+| AC-52 | **System-wide drift consolidation across paired/duplicated infrastructure** - Multiple instances of duplicate/divergent infrastructure surface across audits. Evidence: AC-44 Phase A flagged ai-provider drift (services/ai-provider.ts vs services/ai/provider.ts); AC-43 Phase A flagged consent table drift (consent_records vs gdpr_consent_records); AC-42 Phase A flagged trust_scores-vs-reliability_points naming consistency. Type: NEW BUILD (hygiene consolidation). Upstream gate: none - independent of vision sprint. Phase A: pending (full /api/* drift sweep + naming convention review). Phase B: pending (consolidate per-instance, deprecate divergent paths). Source: AC-42 + AC-43 + AC-44 Phase A footnotes Day 30. | M3 |
 
 ---
 
