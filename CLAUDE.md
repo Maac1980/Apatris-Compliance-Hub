@@ -344,7 +344,9 @@ APATRIS context that makes direct ports wrong:
 3. Design APATRIS-better version (informed by reference, fitted to APATRIS)
 4. Capture as new AC stub (NOT "port AC", but APATRIS-specific feature AC)
 
-Reference builds today: EEJ (`/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/`) accessible from APATRIS session per Day 30 filesystem audit. APATRIS-vs-EEJ Feature Audit (commit `c4355d8`) inventories 10 surfaces with port-vs-build viability per surface. AC-53 + AC-54 captured Day 30 as first APATRIS-better-than-EEJ feature candidates.
+EEJ codebase (`/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/`) is accessible from APATRIS session per Day 30 filesystem audit. EEJ is **NOT** a "reference build" for design or UX. APATRIS layout is operator-validated excellent (Manish: *"APATRIS layout is amazing and I love it"*); EEJ layout has been operationally painful to maintain (Manish: *"took me hours to fix"*). EEJ may occasionally have reusable architecture concepts (AI Decisions log shape, AI synthesis pattern, individual service files) that APATRIS can examine when a specific need arises — but never as design or layout authority.
+
+Default: build APATRIS-way. Examine EEJ only when an operator-validated need + specific concept overlap.
 
 ### Historical context (Reconciliation R3 — note, not active doctrine)
 Earlier APATRIS sessions (pre-Day 28) used a four-role framing: Manish + chat-Claude + Apatris Claude (executor) + Holmes (cross-build reviewer). The current three-role framing folds Apatris-Claude-executor into "Claude Code" and removes Holmes as a separate seat. The cross-build observation pattern (the legitimate routing of observations between builds) is preserved as a discipline — see Team Structure above. Memory file `feedback_cross_build_observation.md` remains load-bearing for that pattern.
