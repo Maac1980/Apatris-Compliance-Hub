@@ -385,5 +385,20 @@
     "expired": "Expired",
     "noSite": "No site",
     "notAssigned": "Not assigned"
+  },
+  "leaveTab": {
+    "title": "Leave",
+    "cancel": "Cancel",
+    "request": "Request",
+    "typeAnnual": "Annual",
+    "typeSick": "Sick",
+    "typeUnpaid": "Unpaid",
+    "reasonPlaceholder": "Reason (optional)",
+    "submit": "Submit",
+    "noRequests": "No leave requests",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "days": "days"
   }
 }

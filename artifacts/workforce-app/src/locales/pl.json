@@ -408,5 +408,20 @@
     "expired": "Wygasły",
     "noSite": "Brak przypisania do obiektu",
     "notAssigned": "Nieprzypisany"
+  },
+  "leaveTab": {
+    "title": "Urlop",
+    "cancel": "Anuluj",
+    "request": "Wniosek",
+    "typeAnnual": "Urlop wypoczynkowy",
+    "typeSick": "Urlop chorobowy",
+    "typeUnpaid": "Urlop bezpłatny",
+    "reasonPlaceholder": "Powód (opcjonalnie)",
+    "submit": "Wyślij",
+    "noRequests": "Brak wniosków urlopowych",
+    "statusPending": "Oczekujący",
+    "statusApproved": "Zatwierdzony",
+    "statusRejected": "Odrzucony",
+    "days": "dni"
   }
 }

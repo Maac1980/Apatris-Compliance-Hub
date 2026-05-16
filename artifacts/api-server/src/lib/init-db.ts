@@ -1256,9 +1256,11 @@ export async function initializeDatabase(): Promise<void> {
       status TEXT NOT NULL DEFAULT 'pending',
       reviewed_by TEXT,
       reviewed_at TIMESTAMPTZ,
+      notice_timing_days INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+  await execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS notice_timing_days INTEGER");
   await execute("CREATE INDEX IF NOT EXISTS idx_leave_tenant ON leave_requests(tenant_id)");
   await execute("CREATE INDEX IF NOT EXISTS idx_leave_worker ON leave_requests(worker_id)");
 

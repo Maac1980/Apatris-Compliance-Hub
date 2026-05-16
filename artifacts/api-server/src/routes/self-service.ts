@@ -6,6 +6,24 @@ import { encryptIfPresent, lookupHash } from "../lib/encryption.js";
 
 const router = Router();
 
+// Helper: count workdays between two dates (inclusive). Excludes Saturday + Sunday.
+// Weekend exclusion only — Polish public holidays still counted pending data source decision (AC-39 Wave 2)
+function countWorkdays(start: Date, end: Date): number {
+  let count = 0;
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endDate = new Date(end);
+  endDate.setHours(0, 0, 0, 0);
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return Math.max(1, count);
+}
+
 // Helper: resolve worker from JWT user (by email or name)
 async function resolveWorker(req: any): Promise<Record<string, any> | null> {
   const email = req.user?.email;
@@ -143,12 +161,16 @@ router.post("/self-service/leave", requireAuth, async (req, res) => {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000) + 1);
+    const days = countWorkdays(start, end);
+
+    // Notice timing: days between submission and shift start (for reliability scoring per AC-42)
+    const submittedAt = new Date();
+    const noticeTimingDays = Math.max(0, Math.floor((start.getTime() - submittedAt.getTime()) / 86_400_000));
 
     const row = await queryOne(
-      `INSERT INTO leave_requests (tenant_id, worker_id, worker_name, leave_type, start_date, end_date, days, reason)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [req.tenantId!, worker.id, worker.full_name, leaveType || "annual", startDate, endDate, days, reason ?? null]
+      `INSERT INTO leave_requests (tenant_id, worker_id, worker_name, leave_type, start_date, end_date, days, reason, notice_timing_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [req.tenantId!, worker.id, worker.full_name, leaveType || "annual", startDate, endDate, days, reason ?? null, noticeTimingDays]
     );
     res.status(201).json({ leave: row });
   } catch (err) {
