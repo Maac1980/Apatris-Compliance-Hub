@@ -254,6 +254,8 @@ Build-phase documentation lives at `artifacts/api-server/docs/`. Key documents f
 - **Brevity:** explanations kill time. Prompts and responses stay to the point.
 - **Time is in Manish's hand:** no calendar narration. Sessions are bounded by laptop-open / laptop-shut, not clocks. EOD is the physical act of Manish closing the laptop — chat-Claude may recommend ending, only Manish decides.
 - **Estimates:** NEVER given in human-developer hours. The real constraint is Manish's thinking, review, and routing bandwidth. Scope is expressed as work units / milestones, not clock time.
+- **Two-step ship discipline:** Phase B builds use scope-confirm GATE first (investigate + propose scope), then code-edit GATE second (apply + commit + verify). Prevents half-built commits. Proven twice Day 30 (AC-39 + AC-40 Wave 1 ships).
+- **URL + login credentials in every deploy/ship response:** every deploy or ship message includes the production URL + login mechanism in copy-paste code boxes so Manish can smoke-test immediately. Mandatory per Day 30 rule.
 
 ### Team structure
 Three roles:
@@ -289,6 +291,10 @@ Save-prompt / GATE STOP-AND-CONFIRM is the current per-commit workflow used Days
 - **/goal** — substantial multi-step batches with concrete acceptance criteria (e.g., AC-31 Phase B building 4 tabs across sessions, AC-38 Phase B 50-surface sweep, multi-file refactors).
 - Most APATRIS sessions to date are save-prompt / GATE. When a Phase B workstream opens, that batch may be wrapped in a `/goal`. Manish-detection gate applies in both — `/goal` completion ≠ Layer 2 verified.
 
+**Cross-audit pattern threshold heuristic:** 2-footnote evidence triggers AC capture (AC-51 admin-route role-gating from AC-39 + AC-40 footnotes). 3-instance evidence on broader patterns triggers cross-cutting AC capture (AC-52 drift consolidation from AC-42 + AC-43 + AC-44 footnotes). Prevents findings getting lost in audit doc footnotes.
+
+**Yulia legal-input batching:** legal-gated items across multiple ACs batch into a single consolidated Yulia conversation. Reduces operator-interruption count; concentrates legal expertise. Day 30 surfaced 8 items currently stacked (AC-50 + AC-39 cutoffs + AC-41 no-show penalty + AC-43 consent text + AC-43 sensitive messages + AC-42 penalty rules + AC-49 ClientContact consent + AC-45 Tier 3 approval).
+
 ### Persistent capture (Reconciliation R2)
 Two distinct surfaces, NOT the same thing:
 
@@ -319,6 +325,26 @@ This doctrine layer is additive — Hard Boundaries are NOT replaced by it; they
 - **Operator-principle capture pattern:** when an operator-principle is named (e.g., AC-38 worker-link invariant), capture it as an AC in the ledger first, then scope Phase A audit, then gate Phase B on operator interview validation (AC-35 pattern).
 - **AC lifecycle:** new candidates land as AC rows in `MIGRATION_LEDGER_PHASE_2.md` with description + M-phase tag. Status notes appended inline as the AC moves through `captured → operationally validated → CLOSED` (or `SUPERSEDED` when overtaken by a successor AC).
 - **Verbatim commit messages:** preserve user-provided commit message text; do not append Co-Authored-By trailers unless explicitly included; do not add emojis or metadata not in the message. (Existing rule above; reinforced here.)
+
+### Cross-build feature decisions — "better not copy"
+
+When EEJ (or any other reference build) has a feature APATRIS doesn't, the decision is NOT "port as-is." The decision is "use the reference as proof-of-concept, audit APATRIS's specific context, build APATRIS-better."
+
+APATRIS context that makes direct ports wrong:
+- Different schema (Worker vs Candidate; raw SQL vs Drizzle ORM)
+- 6 RBAC roles (worker / coordinator / manager / office / owner / client-contact) vs reference builds with different role taxonomies
+- Polish labor law specificity (Art. 87 deductions / Art. 108 disciplinary / Posted Workers Directive / TRC / A1)
+- 50+ existing operator-facing AI call sites with established prompt patterns
+- Immigration side (Apatris-Co): Yulia's TRC + work permit + MOS portal workflow
+- Welding-ops side (Apatris Sp. z o.o.): Akshay's site allocation + welder qualifications + Tekra / Izotechnik / Gaztech client relationships
+
+**Architect cycle for cross-build decisions:**
+1. Audit reference build (what it has + how it works)
+2. Audit APATRIS context (what's different + what matters)
+3. Design APATRIS-better version (informed by reference, fitted to APATRIS)
+4. Capture as new AC stub (NOT "port AC", but APATRIS-specific feature AC)
+
+Reference builds today: EEJ (`/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/`) accessible from APATRIS session per Day 30 filesystem audit. APATRIS-vs-EEJ Feature Audit (commit `c4355d8`) inventories 10 surfaces with port-vs-build viability per surface. AC-53 + AC-54 captured Day 30 as first APATRIS-better-than-EEJ feature candidates.
 
 ### Historical context (Reconciliation R3 — note, not active doctrine)
 Earlier APATRIS sessions (pre-Day 28) used a four-role framing: Manish + chat-Claude + Apatris Claude (executor) + Holmes (cross-build reviewer). The current three-role framing folds Apatris-Claude-executor into "Claude Code" and removes Holmes as a separate seat. The cross-build observation pattern (the legitimate routing of observations between builds) is preserved as a discipline — see Team Structure above. Memory file `feedback_cross_build_observation.md` remains load-bearing for that pattern.
