@@ -107,6 +107,44 @@ Healthcheck:                                          https://apatris-api.fly.de
 
 ---
 
+## Flagged for Day 31+ attention
+
+Items surfaced during Day 30 work that need attention but didn't fit today's audit-build rhythm. NOT yet captured as ACs (each below the 2-footnote threshold or otherwise gated). Tracked here so Sunday opens with visibility.
+
+1. **`apatris_jwt` vs `wf_jwt` localStorage drift** (2-instance evidence)
+   - Pre-existing bug, surfaced during AC-40 Wave 1 deploy
+   - Workers may have `wf_jwt` but `authHeaders()` reads `apatris_jwt` → empty → 401
+   - If surfaces a third time, capture as AC-53 per threshold heuristic
+
+2. **Browser smoke-tests pending** (AC-39 + AC-40 Wave 1 deployed but visually unverified)
+   - LeaveTab: PL/EN rendering, diacritics, weekend day count
+   - MessagingTab: worker reply to coordinator-initiated thread routes correctly
+   - Manish Layer-2 verification when convenient
+
+3. **Yulia legal-batched session** — 8 items stacked
+   - AC-50 + AC-39 cutoffs + AC-41 no-show penalty + AC-43 consent text + AC-43 sensitive messages + AC-42 penalty rules + AC-49 ClientContact consent + AC-45 Tier 3 approval
+   - Single Yulia conversation discharges 8 cross-AC legal gates
+   - Schedule when Yulia available
+
+4. **Polish public holidays data source decision** (AC-39 Wave 2)
+   - Weekend-only ships (Wave 1); holidays still counted
+   - Data source: hardcode list / library / new table — decision needed before Wave 2
+
+5. **Timezone-naive `notice_timing_days`** (deferred to AC-43)
+   - Server-local `Date` arithmetic
+   - Edge case: 23:30 UTC submission computes 0 days vs 1
+   - Folded into AC-43 timezone work
+
+6. **Job 12 cycle 3 observation** (~04:00 UTC May 17 / ~06:00 Poland)
+   - Third consecutive LIVE cycle confirmation
+   - 5-minute save-prompt + GATE check
+
+7. **Workforce-app pre-existing TS errors** (Tier5Home + main.tsx)
+   - CLAUDE.md baseline acknowledged; not introduced Day 30
+   - Could batch with AC-52 drift consolidation if Phase A surfaces other TS issues
+
+---
+
 ## Sunday anchors (Day 31)
 
 1. **Job 12 cycle 3 observation** — third consecutive LIVE confirmation. If clean, AC-30 dual-machine race fully de-rated.
