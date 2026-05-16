@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Send, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("apatris_jwt");
@@ -11,11 +12,12 @@ function authHeaders(): Record<string, string> {
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
-interface Thread { id: string; participant_names: any; last_message: string | null; last_message_at: string; }
+interface Thread { id: string; participant_names: any; participant_ids: any; last_message: string | null; last_message_at: string; }
 interface Message { id: string; sender_name: string; sender_id: string; message: string; created_at: string; }
 
 export function MessagingTab() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [threadId, setThreadId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -42,6 +44,11 @@ export function MessagingTab() {
   if (threadId) {
     const thread = threads.find(t => t.id === threadId);
     const names = typeof thread?.participant_names === "string" ? JSON.parse(thread.participant_names) : (thread?.participant_names || []);
+    // Derive receiverId from participant_ids (SORTED canonical source-of-truth per messaging.ts:66).
+    // Filter for the participant that is NOT the current user. Fixes silent misroute when the
+    // current user is the original receiver of the thread (participant_names[1] would = self).
+    const ids: string[] = typeof thread?.participant_ids === "string" ? JSON.parse(thread.participant_ids) : (thread?.participant_ids || []);
+    const receiverId = ids.find(id => id !== user?.name) || "unknown";
     return (
       <div className="flex flex-col h-full bg-[#0c0c0e]">
         <div className="px-4 pt-4 pb-2 flex items-center gap-2">
@@ -61,9 +68,9 @@ export function MessagingTab() {
         </div>
         <div className="px-4 pb-4 pt-2 flex gap-2">
           <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="Message..."
-            onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMutation.mutate({ receiverId: names[1] || "unknown", message: msg }); }}
+            onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMutation.mutate({ receiverId, message: msg }); }}
             className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none" />
-          <button onClick={() => { if (msg.trim()) sendMutation.mutate({ receiverId: names[1] || "unknown", message: msg }); }}
+          <button onClick={() => { if (msg.trim()) sendMutation.mutate({ receiverId, message: msg }); }}
             className="p-2 bg-[#C41E18] rounded-xl active:scale-95"><Send className="w-4 h-4 text-white" /></button>
         </div>
       </div>
