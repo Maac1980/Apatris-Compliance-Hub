@@ -22,7 +22,8 @@
     "leave": "Leave",
     "legalStatus": "Legal Status",
     "schengen": "Schengen 90/180",
-    "upo": "UPO Certificates"
+    "upo": "UPO Certificates",
+    "messages": "Messages"
   },
   "login": {
     "selectDesignation": "Select your designation",

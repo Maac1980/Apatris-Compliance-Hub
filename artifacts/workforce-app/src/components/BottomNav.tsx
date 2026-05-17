@@ -4,7 +4,7 @@ import {
   Home, Users, Bell, User, FileText, Clock, ClipboardList, MapPin,
   DollarSign, LayoutGrid, Calculator, FileSignature, Navigation, Stamp,
   ClipboardCheck, Receipt, MoreHorizontal, X, Shield, Globe, FileCheck,
-  Upload,
+  Upload, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@/types";
@@ -39,9 +39,10 @@ function getPrimaryTabs(role: Role): Tab[] {
     case "Executive":
     case "LegalHead":
       return [
-        { id: "home",        label: "nav.home",      icon: Home },
+        { id: "home",        label: "nav.home",       icon: Home },
         { id: "workers",     label: "nav.directory",  icon: Users },
         { id: "alerts",      label: "nav.alerts",     icon: Bell },
+        { id: "messages",    label: "nav.messages",   icon: MessageSquare },
         { id: "immigration", label: "nav.permits",    icon: Stamp },
       ];
     case "TechOps":
@@ -49,6 +50,7 @@ function getPrimaryTabs(role: Role): Tab[] {
         { id: "home",        label: "nav.directory",  icon: Users },
         { id: "workers",     label: "nav.workspace",  icon: LayoutGrid },
         { id: "sites",       label: "nav.sites",      icon: MapPin },
+        { id: "messages",    label: "nav.messages",   icon: MessageSquare },
         { id: "immigration", label: "nav.permits",    icon: Stamp },
       ];
     case "Coordinator":
@@ -56,6 +58,7 @@ function getPrimaryTabs(role: Role): Tab[] {
         { id: "home",        label: "nav.directory",  icon: Users },
         { id: "workers",     label: "nav.workspace",  icon: LayoutGrid },
         { id: "queue",       label: "nav.docQueue",   icon: ClipboardList },
+        { id: "messages",    label: "nav.messages",   icon: MessageSquare },
         { id: "immigration", label: "nav.permits",    icon: Stamp },
       ];
     case "Professional":
@@ -64,6 +67,7 @@ function getPrimaryTabs(role: Role): Tab[] {
         { id: "docs",        label: "nav.myDocs",     icon: FileText },
         { id: "timesheet",   label: "nav.timesheet",  icon: Clock },
         { id: "gps",         label: "nav.gps",        icon: Navigation },
+        { id: "messages",    label: "nav.messages",   icon: MessageSquare },
       ];
   }
 }

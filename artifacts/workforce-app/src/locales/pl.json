@@ -22,7 +22,8 @@
     "leave": "Urlop",
     "legalStatus": "Status prawny",
     "schengen": "Schengen 90/180",
-    "upo": "Certyfikaty UPO"
+    "upo": "Certyfikaty UPO",
+    "messages": "Wiadomości"
   },
   "login": {
     "selectDesignation": "Wybierz stanowisko",
