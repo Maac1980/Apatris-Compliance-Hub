@@ -326,27 +326,28 @@ This doctrine layer is additive — Hard Boundaries are NOT replaced by it; they
 - **AC lifecycle:** new candidates land as AC rows in `MIGRATION_LEDGER_PHASE_2.md` with description + M-phase tag. Status notes appended inline as the AC moves through `captured → operationally validated → CLOSED` (or `SUPERSEDED` when overtaken by a successor AC).
 - **Verbatim commit messages:** preserve user-provided commit message text; do not append Co-Authored-By trailers unless explicitly included; do not add emojis or metadata not in the message. (Existing rule above; reinforced here.)
 
-### Cross-build feature decisions — "better not copy"
+### Cross-build feature decisions — audit, refine, bidirectional flow
 
-When EEJ (or any other reference build) has a feature APATRIS doesn't, the decision is NOT "port as-is." The decision is "use the reference as proof-of-concept, audit APATRIS's specific context, build APATRIS-better."
+Both APATRIS and EEJ are Manish's companies. Cross-pollination is valid in both directions when business model overlaps.
 
-APATRIS context that makes direct ports wrong:
-- Different schema (Worker vs Candidate; raw SQL vs Drizzle ORM)
-- 6 RBAC roles (worker / coordinator / manager / office / owner / client-contact) vs reference builds with different role taxonomies
-- Polish labor law specificity (Art. 87 deductions / Art. 108 disciplinary / Posted Workers Directive / TRC / A1)
-- 50+ existing operator-facing AI call sites with established prompt patterns
-- Immigration side (Apatris-Co): Yulia's TRC + work permit + MOS portal workflow
-- Welding-ops side (Apatris Sp. z o.o.): Akshay's site allocation + welder qualifications + Tekra / Izotechnik / Gaztech client relationships
+**Principle** (Manish Day 31 verbatim): *"If we do an audit and find something on EEJ we do not copy we make it better and then EEJ had a concept and we made a product and then EEJ as well can strengthen the better version. Vice versa."*
 
-**Architect cycle for cross-build decisions:**
-1. Audit reference build (what it has + how it works)
-2. Audit APATRIS context (what's different + what matters)
-3. Design APATRIS-better version (informed by reference, fitted to APATRIS)
-4. Capture as new AC stub (NOT "port AC", but APATRIS-specific feature AC)
+**Architect cycle:**
+1. Audit either codebase (APATRIS or EEJ)
+2. Find a concept that exists on one side
+3. Don't copy it — build a refined/better version where it's most needed
+4. The refined version then flows back to strengthen the source codebase too
 
-EEJ codebase (`/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/`) is accessible from APATRIS session per Day 30 filesystem audit. EEJ is **NOT** a "reference build" for design or UX. APATRIS layout is operator-validated excellent (Manish: *"APATRIS layout is amazing and I love it"*); EEJ layout has been operationally painful to maintain (Manish: *"took me hours to fix"*). EEJ may occasionally have reusable architecture concepts (AI Decisions log shape, AI synthesis pattern, individual service files) that APATRIS can examine when a specific need arises — but never as design or layout authority.
+Both apps end at 100% — no "good enough" tier on either side.
 
-Default: build APATRIS-way. Examine EEJ only when an operator-validated need + specific concept overlap.
+**Business model filter:**
+- EEJ-specific (job agency licensing, candidate placement, employer flows): stays EEJ
+- APATRIS-specific (immigration/TRC, welding-ops, outsourcing contracts): stays APATRIS
+- Shared domains (comms, AI orchestration, worker management, compliance, role gating, audit logs): cross-pollinate via the refine-and-flow-back pattern
+
+**Layout/UX specific caveat:** APATRIS layout is operator-validated excellent (Manish Day 30: *"APATRIS layout is amazing and I love it"*); EEJ layout has been operationally painful to maintain (Manish Day 30: *"took me hours to fix"*). For layout/UX specifically: APATRIS leads, don't port EEJ's painful patterns. For architecture/features in shared domains: refine + flow both directions.
+
+EEJ codebase accessible at `/Users/manishshetty/Desktop/EURO-EDU-JOBS-app/` per Day 30 filesystem audit. EEJ is not a "reference build" in the design-target sense; it's a sibling codebase where concepts can originate before refinement.
 
 ### Historical context (Reconciliation R3 — note, not active doctrine)
 Earlier APATRIS sessions (pre-Day 28) used a four-role framing: Manish + chat-Claude + Apatris Claude (executor) + Holmes (cross-build reviewer). The current three-role framing folds Apatris-Claude-executor into "Claude Code" and removes Holmes as a separate seat. The cross-build observation pattern (the legitimate routing of observations between builds) is preserved as a discipline — see Team Structure above. Memory file `feedback_cross_build_observation.md` remains load-bearing for that pattern.
