@@ -7,6 +7,24 @@
 
 ---
 
+## Layer 1 Health Check (seventh application of eod-health-check skill)
+
+| Zone | Verdict | Notes |
+|------|---------|-------|
+| 1 Sentry | clean | No new error patterns across v304 + v305 deploys |
+| 2 Prod | **change (positive ×2)** | v303 → v304 (AC-39 Wave 1) → v305 (AC-40 Wave 1) — two deploys live; both machines healthy after each |
+| 3 Scheduler | clean | Job 12 cron LIVE persists across v303 → v304 → v305; cycle 2 observed clean at 04:00 UTC May 16 (AC-30 dual-machine race de-rated to YELLOW with n=2 evidence; ledger updated this session) |
+| 4 Database | **change** | `leave_requests.notice_timing_days INTEGER` column added (AC-39 Wave 1); init-db idempotent ALTER ran clean on v304 + v305 boot |
+| 5 Background jobs | clean | No regressions; AC-34 manual button remains available |
+| 6 Anomalies | strategic clarity | 18 commits all forward-motion; 0 rabbit holes; "audit-only drift" pattern corrected mid-session via Manish challenge; two-step ship discipline proven twice in production |
+
+**Layer 1 ritual (seventh application) learnings:**
+- The "Health Check zone with change" verdict can be celebratory — two production deploys + a schema migration all clean is the operational ideal, not an anomaly
+- Sample-size discipline paid off — Day 29 cycle 1 observation + Day 30 cycle 2 observation gave the n=2 evidence base to de-rate AC-30 honestly
+- Pre-deploy discipline (HB15) caught orphaned dist artifact before AC-39 Wave 1 ship — resolved via separate atomic chore commit (14a) before Wave 1 ship (14b); same-session friction surfaced at the right gate
+
+---
+
 ## Session totals
 
 | Metric | Value |
